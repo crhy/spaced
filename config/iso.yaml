@@ -1,0 +1,27 @@
+# Spaced Linux 6.26 ISO Configuration
+iso_name: spaced-linux-6.26
+version: "6.26"
+arch: amd64
+
+# Package sources
+apt:
+  mirror: "http://deb.devuan.org/merged"
+  components: [main, contrib, non-free]
+  suite: ceres
+
+# Distribution
+dist: Devuan
+suite: ceres
+
+# Boot options
+boot:
+  timeout: 5
+  background: "/usr/share/backgrounds/spaced/SimpleBackb.png"
+
+# Live user
+live_user: user
+live_password: "1"
+root_password: "spaced"
+
+# Installer
+installer: calamares

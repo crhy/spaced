@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Spaced Linux Session Init
+Exec=/usr/local/bin/spaced-init-session
+NoDisplay=true
+X-MATE-Autostart-Delay=5
+X-MATE-Autostart-Phase=Applications
+X-MATE-Autostart-Notify=true

@@ -1,0 +1,45 @@
+# Spaced Linux 6.26 Desktop Configuration
+
+theme:
+  gtk: Spaced-Dark
+  metacity: Spaced-Dark
+  icons: Papirus-Dark
+
+background:
+  filename: /usr/share/backgrounds/spaced/SpacedBack.png
+  options: zoom
+  draw_background: true
+  show_desktop_icons: false
+
+panel:
+  layout: spaced-linux
+  position: bottom
+  applets:
+    - brisk-menu
+    - window-list
+    - notification-area
+    - clock
+    - show-desktop
+
+clock:
+  format: 12-hour
+  show_date: false
+  show_weather: false
+  temperature_unit: fahrenheit
+  speed_unit: mph
+
+lightdm:
+  greeter: lightdm-gtk-greeter
+  autologin: user
+  autologin_timeout: 0
+  background: /usr/share/backgrounds/spaced/SimpleBackc.png
+  theme: Spaced-Dark
+  icons: Papirus-Dark
+  logo: /usr/share/pixmaps/spaced-logo.png
+
+session:
+  - mate-session
+
+wallpaper:
+  method: caja
+  fallback: feh

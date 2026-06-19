@@ -1,0 +1,33 @@
+#!/bin/bash
+# spaced-init-session — post-login session settings
+
+sleep 3
+
+PANEL_PID=$(pgrep -u "$USER" mate-panel 2>/dev/null | head -1)
+if [ -z "$PANEL_PID" ]; then
+    logger -t spaced-init-session "ERROR: mate-panel not found"
+    exit 1
+fi
+
+DBUS_ADDR=$(tr '\0' '\n' < "/proc/$PANEL_PID/environ" 2>/dev/null | grep DBUS_SESSION_BUS_ADDRESS | cut -d= -f2-)
+if [ -z "$DBUS_ADDR" ]; then
+    logger -t spaced-init-session "ERROR: Could not get DBUS address"
+    exit 1
+fi
+export DBUS_SESSION_BUS_ADDRESS="$DBUS_ADDR"
+export DISPLAY="${DISPLAY:-:0}"
+
+# Theme
+gsettings set org.mate.interface gtk-theme 'Spaced-Dark' 2>/dev/null
+gsettings set org.gnome.desktop.interface gtk-theme 'Spaced-Dark' 2>/dev/null
+gsettings set org.mate.Marco.general theme 'Spaced-Dark' 2>/dev/null
+gsettings set org.mate.interface icon-theme 'Papirus-Dark' 2>/dev/null
+
+# Desktop wallpaper via MATE/Caja (no feh)
+gsettings set org.mate.background show-desktop-icons false 2>/dev/null
+gsettings set org.mate.background draw-background true 2>/dev/null
+gsettings set org.mate.background picture-filename '/usr/share/backgrounds/spaced/SpacedBack.png' 2>/dev/null
+gsettings set org.mate.background picture-options 'zoom' 2>/dev/null
+
+logger -t spaced-init-session "Settings applied successfully"
+exit 0

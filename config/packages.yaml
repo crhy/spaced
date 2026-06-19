@@ -1,0 +1,117 @@
+# Spaced Linux 6.26 Package Selection
+
+# Desktop environment
+desktop:
+  - task-mate-desktop
+  - mate-desktop-environment-extras
+  - mate-terminal
+  - mate-settings-daemon
+  - caja
+
+# Display manager
+display_manager:
+  - lightdm
+  - lightdm-gtk-greeter
+
+# Window manager
+window_manager:
+  - marco
+
+# Panel
+panel:
+  - mate-panel
+  - mate-panel-applets-common
+
+# Brisk menu
+brisk:
+  - brisk-menu
+
+# Network
+network:
+  - network-manager
+  - network-manager-gnome
+  - network-manager-openvpn
+  - network-manager-openconnect
+
+# Audio
+audio:
+  - pulseaudio
+  - pulseaudio-module-x11
+  - pavucontrol
+
+# Themes & icons
+themes:
+  - papirus-icon-theme
+  - papirus-folders
+
+# Graphics
+graphics:
+  - mesa-utils
+  - mesa-va-drivers
+  - xserver-xorg-video-qxl
+  - xserver-xorg-video-intel
+
+# File managers
+file_managers:
+  - caja
+  - caja-open-terminal
+  - caja-share
+
+# Applications
+applications:
+  - gedit
+  - eom
+  - pluma
+  - engrampa
+  - atril
+  - mate-calc
+  - mate-screenshot
+
+# Terminal
+terminal:
+  - mate-terminal
+
+# Flatpak
+flatpak:
+  - flatpak
+  - xdg-desktop-portal-gtk
+  - xdg-desktop-portal
+
+# Firmware
+firmware:
+  - firmware-linux
+  - firmware-linux-nonfree
+  - firmware-iwlwifi
+  - firmware-realtek
+
+# System tools
+system:
+  - sudo
+  - rsync
+  - curl
+  - wget
+  - git
+  - xdotool
+  - imagemagick
+  - x11-utils
+  - x11-xserver-utils
+  - x11-xkb-utils
+  - htop
+  - pciutils
+  - usbutils
+  - ssh
+  - feh
+  - plymouth
+  - plymouth-themes
+
+# Installer
+installer:
+  - calamares
+  - calamares-settings-debian
+
+# Live boot
+live:
+  - live-boot
+  - live-config
+  - squashfs-tools
+  - xorriso
