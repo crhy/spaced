@@ -1,0 +1,33 @@
+# Spaced Linux — Project Instructions
+
+## Purpose
+
+Spaced Linux 7.26: A Devuan Ceres-based distribution with a MATE desktop, Flatpak-primary application model, and Windows XP-style desktop layout.
+
+## Key Architecture
+
+- **Base**: Devuan Excalibur → dist-upgrade to Ceres (rolling, sysvinit)
+- **Desktop**: MATE + Compiz by default, with Marco as the fallback
+- **Apps**: Flatpak/Flathub for user applications, native debs for system tools
+- **Build**: KVM VM for development, live-build or manual rootfs for ISO
+- **Installer**: Calamares
+
+## Desktop Layout
+
+Single bottom panel, Windows XP style:
+```
+[Brisk Menu] [Window List] .............................. [Notification Area] [Clock]
+```
+
+## User Preferences
+
+- Keep it lean, fast-booting, and responsive
+- No systemd — sysvinit only
+- Implement only what's asked; no feature creep
+- Prefer bash scripts over inline code
+- Progressive disclosure — reference files only when needed
+
+## Commands
+
+- Test config: `python3 -c "import glob, yaml; [yaml.safe_load(open(path)) for path in glob.glob('config/*.yaml')]"`
+- Script syntax: `find scripts -name '*.sh' -exec bash -n {} +`
