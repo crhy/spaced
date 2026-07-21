@@ -1,0 +1,38 @@
+desktop-image: "../splash.png"
+desktop-color: "#14151a"
+title-color: "#d8d8d8"
+title-font: "Unifont Regular 16"
+title-text: "Spaced Linux 7.26"
+message-font: "Unifont Regular 16"
+terminal-font: "Unifont Regular 16"
+
++ boot_menu {
+    left = 10%
+    top = 52%
+    width = 80%
+    height = 48%-80
+    item_color = "#a8a8a8"
+    item_font = "Unifont Regular 16"
+    selected_item_color = "#ffffff"
+    selected_item_font = "Unifont Regular 16"
+    item_height = 16
+    item_padding = 0
+    item_spacing = 4
+    icon_width = 0
+    icon_height = 0
+    item_icon_space = 0
+}
+
++ progress_bar {
+    id = "__timeout__"
+    left = 15%
+    top = 100%-80
+    width = 70%
+    height = 16
+    font = "Unifont Regular 16"
+    text_color = "#14151a"
+    fg_color = "#d8d8d8"
+    bg_color = "#55565a"
+    border_color = "#a8a8a8"
+    text = "@TIMEOUT_NOTIFICATION_LONG@"
+}

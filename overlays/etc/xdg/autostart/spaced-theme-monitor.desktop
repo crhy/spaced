@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Spaced Linux Theme Integration
+Comment=Apply panel and dock details for the selected Spaced theme
+Exec=/usr/local/bin/spaced-theme-monitor
+NoDisplay=true
+X-MATE-Autostart-Phase=Applications

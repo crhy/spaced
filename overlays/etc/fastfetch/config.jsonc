@@ -1,0 +1,35 @@
+{
+    "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+    "logo": {
+        "source": "/usr/share/fastfetch/logos/spaced-linux.txt",
+        "color": {
+            "1": "#aaaaaa",
+            "2": "#aaaaaa"
+        }
+    },
+    "display": {
+        "separator": " → ",
+        "color": "#aaaaaa"
+    },
+    "modules": [
+        "title",
+        "separator",
+        "os",
+        "host",
+        "kernel",
+        "uptime",
+        "packages",
+        "shell",
+        "de",
+        "wm",
+        "terminal",
+        "cpu",
+        "gpu",
+        "memory",
+        "disk",
+        "battery",
+        "localip",
+        "bluetooth",
+        "colors"
+    ]
+}

@@ -1,0 +1,37 @@
+---
+componentName: spaced
+welcomeStyleCalamares: true
+welcomeExpandingLogo: true
+windowExpanding: normal
+windowSize: 800px,580px
+windowPlacement: center
+
+strings:
+    productName:         Spaced Linux
+    shortProductName:    Spaced Linux
+    version:             7.26
+    shortVersion:        7.26
+    versionedName:       Spaced Linux 7.26
+    shortVersionedName:  Spaced Linux 7.26
+    bootloaderEntryName: Spaced Linux
+    productUrl:          https://github.com/crhy/spaced
+    supportUrl:          https://github.com/crhy/spaced/issues
+    knownIssuesUrl:      https://github.com/crhy/spaced/issues
+    releaseNotesUrl:     https://github.com/crhy/spaced/releases
+
+sidebar: widget
+navigation: widget
+
+images:
+    productLogo:         ../../../../usr/share/backgrounds/spaced/SpacedIconb.png
+    productIcon:         ../../../../usr/share/backgrounds/spaced/SpacedIconb.png
+    productWelcome:      ../../../../usr/share/backgrounds/spaced/SpacedIconb.png
+
+slideshow: "slideshow/Show.qml"
+slideshowAPI: 2
+
+style:
+    SidebarBackground:        "#111827"
+    SidebarText:              "#FFFFFF"
+    SidebarTextCurrent:       "#FFFFFF"
+    SidebarBackgroundCurrent: "#374151"

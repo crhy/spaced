@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Tracker file search
+Comment=Disable Tracker indexing to save memory on the live desktop
+Exec=/bin/true
+NoDisplay=true
+X-MATE-Autostart-enabled=false
+Hidden=true

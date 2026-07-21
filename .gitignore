@@ -1,8 +1,22 @@
 build/
 *.iso
+*.qcow2
 *.swp
 *.swo
 *~
 .DS_Store
 __pycache__/
 *.pyc
+
+# Generated when running live-build directly from live-build/
+/live-build/.build/
+/live-build/binary/
+/live-build/cache/
+/live-build/chroot/
+/live-build/local/
+/live-build/*.contents
+/live-build/*.files
+/live-build/*.iso
+/live-build/*.packages
+/live-build/chroot.files
+/live-build/chroot.packages.*

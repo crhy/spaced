@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=X-GNOME-Metatheme
+Name=Spaced Linux Dark
+Comment=Default dark Spaced Linux theme
+Encoding=UTF-8
+
+[X-GNOME-Metatheme]
+Name=Spaced Linux Dark
+GtkTheme=Spaced-Linux-Dark
+MetacityTheme=Spaced-Linux-Dark
+IconTheme=Spaced-Icons-Linux-Dark
+CursorTheme=Adwaita
+BackgroundImage=/usr/share/backgrounds/spaced/SpacedBack.jpg
+BackgroundColor=#1a1a1a

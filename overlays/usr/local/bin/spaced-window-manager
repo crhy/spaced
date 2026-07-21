@@ -1,0 +1,41 @@
+#!/bin/bash
+# Run Compiz as MATE's window manager and fall back to Marco if Compiz cannot
+# start or crashes while the X session is still alive. Wallpaper rendering
+# deliberately remains MATE's job.
+set -u
+
+can_compiz() {
+    # Need an X display and a working GLX direct-rendering context.
+    [ -n "${DISPLAY:-}" ] || return 1
+    command -v glxinfo >/dev/null 2>&1 || return 1
+    glxinfo 2>/dev/null | grep -q "direct rendering: Yes" || return 1
+    # Compiz also needs the GLX extension advertised by the server.
+    glxinfo 2>/dev/null | grep -qi "OpenGL renderer string" || return 1
+    return 0
+}
+
+if command -v compiz >/dev/null 2>&1 && can_compiz; then
+    logger -t spaced-window-manager "Starting Compiz"
+    compiz ccp --replace
+    status=$?
+    if [ "$status" -eq 0 ]; then
+        logger -t spaced-window-manager "Compiz exited normally with the desktop session"
+        exit 0
+    fi
+
+    # During logout the X server can disappear before every session child has
+    # reaped. Do not mistake that normal teardown for a crash or start Marco
+    # against a dead display.
+    if ! xprop -root >/dev/null 2>&1; then
+        logger -t spaced-window-manager "Compiz exited with status $status after X closed"
+        exit "$status"
+    fi
+    logger -t spaced-window-manager "Compiz crashed with status $status; starting Marco"
+else
+    logger -t spaced-window-manager "Compiz unavailable; starting Marco"
+fi
+
+# The decorator is started by Compiz's decoration plugin. Do not leave it
+# consuming memory or drawing stale frames after a fallback.
+pkill -u "$(id -u)" -x gtk-window-decorator 2>/dev/null || true
+exec marco --replace

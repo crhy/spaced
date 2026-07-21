@@ -1,0 +1,119 @@
+#!/bin/bash
+# Apply only the desktop details MATE metathemes cannot encode.
+set -u
+
+THEMES_JSON=/usr/share/spaced-themes/themes.json
+THEME_ID=${1:-}
+
+if [ -z "$THEME_ID" ]; then
+    echo "Usage: $0 <theme-id>" >&2
+    exit 2
+fi
+
+assignments=$(python3 - "$THEMES_JSON" "$THEME_ID" <<'PY'
+import json
+import shlex
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as source:
+    themes = json.load(source)["themes"]
+
+for theme in themes:
+    if theme["id"] == sys.argv[2]:
+        for key in ("name", "wallpaper", "panel_layout", "panel_position", "panel_size", "panel_color", "cairo_dock", "dark"):
+            print(f"{key}={shlex.quote(str(theme.get(key, '')))}")
+        break
+else:
+    sys.exit(1)
+PY
+) || {
+    echo "Unknown Spaced Linux theme: $THEME_ID" >&2
+    exit 1
+}
+eval "$assignments"
+
+# MATE owns painting. Setting the standard key once is enough and still lets a
+# user choose another background afterwards without a watcher fighting them.
+if [ -f "$wallpaper" ]; then
+    gsettings set org.mate.background picture-filename "$wallpaper" 2>/dev/null || true
+    gsettings set org.mate.background picture-options 'zoom' 2>/dev/null || true
+fi
+
+# Keep applications that support MATE's dark preference aligned with the
+# selected metatheme. Brisk is the principal consumer on this desktop.
+if gsettings writable com.solus-project.brisk-menu dark-theme >/dev/null 2>&1; then
+    gsettings set com.solus-project.brisk-menu dark-theme "${dark,,}" 2>/dev/null || true
+fi
+
+# MATE Terminal does not reliably follow a metatheme's text colors. Keep its
+# default profile explicitly readable whenever the user changes a Spaced theme.
+terminal_profile='org.mate.terminal.profile:/org/mate/terminal/profiles/default/'
+if [ "$dark" = True ]; then
+    terminal_background='#000000'
+    terminal_foreground='#888888'
+else
+    terminal_background='#ffffff'
+    terminal_foreground='#000000'
+fi
+if gsettings writable "$terminal_profile" foreground-color >/dev/null 2>&1; then
+    gsettings set "$terminal_profile" use-theme-colors false 2>/dev/null || true
+    gsettings set "$terminal_profile" background-color "$terminal_background" 2>/dev/null || true
+    gsettings set "$terminal_profile" foreground-color "$terminal_foreground" 2>/dev/null || true
+fi
+
+# All layouts use one stable panel. Move and resize that panel in place; never
+# replace mate-panel, which can lose the notification-area X selection.
+gsettings set org.mate.panel default-layout "$panel_layout" 2>/dev/null || true
+for id in bottom top; do
+    schema="org.mate.panel.toplevel:/org/mate/panel/toplevels/$id/"
+    gsettings list-keys "$schema" >/dev/null 2>&1 || continue
+    gsettings set "$schema" orientation "$panel_position" 2>/dev/null || true
+    gsettings set "$schema" size "$panel_size" 2>/dev/null || true
+    background_schema="${schema}background/"
+    if [ -n "$panel_color" ]; then
+        gsettings set "$background_schema" type 'color' 2>/dev/null || true
+        gsettings set "$background_schema" color "$panel_color" 2>/dev/null || true
+        gsettings set "$background_schema" opacity 65535 2>/dev/null || true
+    else
+        gsettings set "$background_schema" type 'none' 2>/dev/null || true
+    fi
+    if [ "$panel_position" = top ]; then
+        gsettings set "$schema" y 0 2>/dev/null || true
+        gsettings set "$schema" y-bottom -1 2>/dev/null || true
+    else
+        gsettings set "$schema" y -1 2>/dev/null || true
+        gsettings set "$schema" y-bottom 0 2>/dev/null || true
+    fi
+done
+
+if [ "$cairo_dock" = True ]; then
+    if command -v cairo-dock >/dev/null 2>&1 && ! pgrep -u "$(id -u)" -x cairo-dock >/dev/null; then
+        dock_config=${XDG_CONFIG_HOME:-$HOME/.config}/cairo-dock
+        default_theme=/usr/share/cairo-dock/themes/Default-Single
+        if [ ! -d "$dock_config/current_theme" ] && [ -d "$default_theme" ]; then
+            rm -f "$dock_config/current_theme"
+            mkdir -p "$dock_config/current_theme"
+            cp -a "$default_theme/." "$dock_config/current_theme/"
+        fi
+        if [ -d "$dock_config/current_theme" ] && \
+           [ ! -e "$dock_config/current_theme/.spaced-launchers-v1" ]; then
+            rm -rf "$dock_config/current_theme/launchers"
+            mkdir -p "$dock_config/current_theme/launchers"
+            cp -a /usr/share/spaced-themes/cairo-dock/launchers/. \
+                "$dock_config/current_theme/launchers/"
+            touch "$dock_config/current_theme/.spaced-launchers-v1"
+        fi
+        if [ -f "$dock_config/current_theme/cairo-dock.conf" ]; then
+            sed -i -e 's/^modules=.*/modules=/' \
+                -e 's/^visibility=.*/visibility=0/' \
+                "$dock_config/current_theme/cairo-dock.conf"
+        fi
+        # The software backend avoids the black/error overlay seen with forced
+        # OpenGL under QEMU while remaining lighter than a full dock plug-in set.
+        cairo-dock -c -f -a -d "$dock_config" >/dev/null 2>&1 8>&- &
+    fi
+else
+    pkill -u "$(id -u)" -x cairo-dock 2>/dev/null || true
+fi
+
+logger -t spaced-switch-theme "Applied desktop extras for $name"

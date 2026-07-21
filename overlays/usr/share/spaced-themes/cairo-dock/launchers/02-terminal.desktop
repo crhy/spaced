@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Terminal
+Comment=Open a terminal
+Exec=mate-terminal
+Icon=utilities-terminal
+StartupWMClass=Mate-terminal
+Terminal=false
+Container=_MainDock_
+Order=1
+Icon Type=0

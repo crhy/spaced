@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <metacity_theme>
 <info>
-	<name>Greybird</name>
+	<name>Spaced-Dark</name>
 	<author>Satyajit Sahoo</author>
 	<copyright>GPL</copyright>
 	<date>July, 2012</date>
@@ -103,15 +103,15 @@
 <!-- ::: TITLEBAR ::: -->
 <draw_ops name="titlebar_gradient">
 	<gradient type="vertical" x="0" y="0" width="width" height="19">
-		<color value="shade/gtk:bg[NORMAL]/1.07"/>
-		<color value="shade/gtk:bg[NORMAL]/1.0"/>
+		<color value="#484848"/>
+		<color value="#303030"/>
 	</gradient>
 </draw_ops>
 
 <draw_ops name="titlebar_gradient_unfocused">
 	<gradient type="vertical" x="0" y="0" width="width" height="19">
-		<color value="shade/gtk:bg[NORMAL]/1.07"/>
-		<color value="shade/gtk:bg[NORMAL]/1.0"/>
+		<color value="#3d3d3d"/>
+		<color value="#303030"/>
 	</gradient>
 </draw_ops>
 
@@ -152,19 +152,19 @@
 <draw_ops name="title">
 	<title x="(0 `max` ((width - title_width) / 2)) + 2"
                y="(1 `max` ((height - title_height) / 2)) + 1"
-               color="shade/gtk:bg[NORMAL]/1.4" />
+               color="#111111" />
 	<title x="(0 `max` ((width - title_width) / 2)) + 2"
                y="(0 `max` ((height - title_height) / 2))"
-               color="shade/gtk:fg[NORMAL]/1.2" />
+               color="#f4f4f4" />
 </draw_ops>
 
 <draw_ops name="title_unfocused">
 	<title x="(0 `max` ((width - title_width) / 2)) + 2"
                y="(1 `max` ((height - title_height) / 2)) + 1"
-               color="shade/gtk:bg[NORMAL]/1.2" />
+               color="#202020" />
 	<title x="(0 `max` ((width - title_width) / 2)) + 2"
                y="(0 `max` ((height - title_height) / 2))"
-               color="shade/gtk:fg[NORMAL]/2.0" />
+               color="#aaaaaa" />
 </draw_ops>
 
 <!-- ::: BUTTON ICONS ::: -->

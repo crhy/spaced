@@ -27,7 +27,7 @@
 /***************
  * base states *
  ***************/
-.background {
+.background:not(.caja-desktop-window) {
     background-color: @theme_bg_color;
     color: @theme_fg_color;
 }
@@ -1760,14 +1760,14 @@ notebook > header tab:backdrop.reorderable-page {
 notebook > header tab:checked,
 notebook > header tab:backdrop:checked,
 notebook > header tab:checked > label:backdrop {
-    background-color: @panel_bg_color;
-    color: @theme_selected_fg_color
+    background-color: @theme_base_color;
+    color: @theme_text_color;
 }
 
 notebook > header tab:checked.reorderable-page,
 notebook > header tab:backdrop:checked.reorderable-page {
     border-color: @dark_shadow;
-    background-color: @panel_bg_color;
+    background-color: @theme_base_color;
 }
 
 notebook > header tab:checked.reorderable-page:hover {
@@ -4814,4 +4814,38 @@ GtkBubbleWindow toolbar {
 .window-frame.csdtooltip {
     border-radius: 4px;
     box-shadow: none;
+}
+
+/* CCSM adds this class to its main GtkWindow. Its nested event boxes and
+ * viewports otherwise use GTK's white fallback, making labels and checks
+ * unreadable in dark themes. Keep the rule palette-based so every Spaced
+ * theme retains its own colors. */
+.ccsm-window,
+.ccsm-window box,
+.ccsm-window eventbox,
+.ccsm-window notebook,
+.ccsm-window stack,
+.ccsm-window scrolledwindow,
+.ccsm-window viewport,
+.ccsm-window .notebook {
+    background-color: @theme_bg_color;
+    color: @theme_fg_color;
+}
+
+.ccsm-window .view,
+.ccsm-window viewport.view,
+.ccsm-window treeview.view,
+.ccsm-window iconview.view {
+    background-color: @theme_base_color;
+    color: @theme_text_color;
+}
+
+.ccsm-window label {
+    color: @theme_fg_color;
+}
+
+.ccsm-window .view:selected,
+.ccsm-window row:selected {
+    background-color: @theme_selected_bg_color;
+    color: @theme_selected_fg_color;
 }

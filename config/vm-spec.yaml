@@ -1,0 +1,24 @@
+vm_name: spaced-linux
+ram_mb: 4096
+cpus: 4
+disk_size_gb: 25
+disk_format: qcow2
+disk_path: build/images/spaced-linux.qcow2
+
+iso:
+  path: build/iso/spaced-linux-7.26-amd64.iso
+
+network:
+  mode: user
+  hostfwd:
+    - guest_port: 22
+      host_port: 2222
+
+display:
+  type: gtk
+  gpu: virtio
+  width: 1440
+  height: 900
+  input:
+    - usb-kbd
+    - usb-tablet

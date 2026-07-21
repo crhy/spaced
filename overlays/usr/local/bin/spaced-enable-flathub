@@ -1,0 +1,19 @@
+#!/bin/bash
+# Register Flathub for the current user once networking is available.
+set -u
+
+command -v flatpak >/dev/null 2>&1 || exit 0
+
+# NetworkManager may still be connecting when desktop autostart runs. Retry in
+# the background so a transient boot-time failure does not leave a newly
+# installed system without its primary application remote.
+for attempt in $(seq 1 90); do
+    flatpak remotes --user --columns=name 2>/dev/null | grep -Fxq flathub && exit 0
+    /usr/bin/flatpak remote-add --user --if-not-exists flathub \
+        https://flathub.org/repo/flathub.flatpakrepo >/dev/null 2>&1 || true
+    /usr/bin/flatpak remotes --user --columns=name 2>/dev/null | grep -Fxq flathub && exit 0
+    sleep 2
+done
+
+logger -t spaced-enable-flathub "Flathub was not reachable during login"
+exit 1

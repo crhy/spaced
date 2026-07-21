@@ -1,0 +1,23 @@
+#!/bin/bash
+# Show once on the first installed-system login; menu launches may force it.
+set -eu
+
+force=false
+if [ "${1:-}" = --force ]; then
+    force=true
+fi
+
+state_dir=${XDG_CONFIG_HOME:-$HOME/.config}/spaced-linux
+seen_file=$state_dir/welcome-shown
+
+if [ "$force" = false ]; then
+    # Never obscure the live desktop or compete with the installer launcher.
+    if [ -e /run/live/medium ] || [ -e /lib/live/mount/medium ]; then
+        exit 0
+    fi
+    [ ! -e "$seen_file" ] || exit 0
+fi
+
+mkdir -p "$state_dir"
+touch "$seen_file"
+exec /usr/lib/spaced-linux/spaced-welcome.py

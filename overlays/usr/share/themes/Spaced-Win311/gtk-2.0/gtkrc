@@ -1,0 +1,2 @@
+gtk-color-scheme = "bg_color:#c0c0c0\nfg_color:#000000\nbase_color:#ffffff\ntext_color:#000000\nselected_bg_color:#000080\nselected_fg_color:#ffffff\npanel_bg_color:#000080\npanel_fg_color:#ffffff"
+include "/usr/share/themes/Spaced-Dark/gtk-2.0/gtkrc-shared"

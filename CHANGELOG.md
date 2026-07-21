@@ -1,5 +1,10 @@
 # Changelog
 
+## 7.26 - Unreleased
+- Updated the release to Devuan Ceres with sysvinit.
+- Made Compiz the default MATE window manager with automatic Marco fallback.
+- Added the complete Spaced Linux desktop, package, installer, and live-boot configuration.
+
 ## 6.26 - 2026-06-19
 - Initial release of Spaced Linux 6.26
 - Based on Devuan Ceres (rolling, sysvinit)

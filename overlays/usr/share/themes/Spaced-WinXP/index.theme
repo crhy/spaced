@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=X-GNOME-Metatheme
+Name=Spaced Windows XP
+Comment=Windows XP inspired theme
+Encoding=UTF-8
+
+[X-GNOME-Metatheme]
+Name=Spaced Windows XP
+GtkTheme=Spaced-WinXP
+MetacityTheme=Spaced-WinXP
+IconTheme=Spaced-Icons-WinXP
+CursorTheme=Adwaita
+BackgroundImage=/usr/share/backgrounds/spaced/winxp.jpg
+BackgroundColor=#6b8e3f

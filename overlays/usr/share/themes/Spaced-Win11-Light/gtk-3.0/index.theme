@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Gtk
+Name=Spaced-Win11-Light
+Comment=Spaced Linux Spaced-Win11-Light GTK3 theme
+
+[Settings]
+gtk-theme-name = "Spaced-Win11-Light"

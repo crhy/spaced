@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=X-GNOME-Metatheme
+Name=Spaced Windows 3.11
+Comment=Windows 3.11 for Workgroups inspired theme
+Encoding=UTF-8
+
+[X-GNOME-Metatheme]
+Name=Spaced Windows 3.11
+GtkTheme=Spaced-Win311
+MetacityTheme=Spaced-Win311
+IconTheme=Spaced-Icons-Win311
+CursorTheme=Adwaita
+BackgroundImage=/usr/share/backgrounds/spaced/win311.jpg
+BackgroundColor=#008080

@@ -1,0 +1,14 @@
+# LightDM's greeter may leave its private AT-SPI address in the inherited
+# environment. The installed user's desktop cannot access that socket; GTK's
+# accessibility bridge can then crash the notification-area applet and panel.
+# Let AT-SPI discover or launch the user's own session bus instead.
+case ${AT_SPI_BUS_ADDRESS:-} in
+    *var/lib/lightdm*) unset AT_SPI_BUS_ADDRESS ;;
+esac
+
+# at-spi-bus-launcher also publishes the address on the X root window. Xorg
+# retains that property after the greeter helper exits, so clear it before any
+# user GTK process can discover lightdm's now-stale socket.
+if [ -n "${DISPLAY:-}" ] && command -v xprop >/dev/null 2>&1; then
+    xprop -root -remove AT_SPI_BUS >/dev/null 2>&1 || true
+fi

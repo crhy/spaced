@@ -1,21 +1,53 @@
 [org.mate.interface]
-gtk-theme='Spaced-Dark'
-icon-theme='Papirus-Dark'
+gtk-theme='Spaced-Linux-Dark'
+icon-theme='Spaced-Icons-Linux-Dark'
 
 [org.gnome.desktop.interface]
-gtk-theme='Spaced-Dark'
+gtk-theme='Spaced-Linux-Dark'
+clock-format='12h'
+clock-show-date=false
+
+[org.mate.panel.applet.clock]
+format='12-hour'
+show-date=false
+
+[org.mate.peripherals-mouse]
+cursor-theme='Adwaita'
 
 [org.mate.Marco.general]
-theme='Spaced-Dark'
+theme='Spaced-Linux-Dark'
+
+[org.mate.session.required-components]
+windowmanager='spaced-window-manager'
 
 [org.mate.background]
-picture-filename='/usr/share/backgrounds/spaced/SpacedBack.png'
+picture-filename='/usr/share/backgrounds/spaced/SpacedBack.jpg'
 picture-options='zoom'
-draw-background=false
-show-desktop-icons=false
+draw-background=true
+show-desktop-icons=true
 background-fade=false
+color-shading-type='solid'
+primary-color='#1a1a1a'
+
+# MATE is the sole wallpaper owner. No session helper toggles or repaints this
+# setting, which avoids the boot flash and solid-color race.
+[org.mate.SettingsDaemon.plugins.background]
+active=true
+
+[org.gnome.desktop.background]
+picture-uri='file:///usr/share/backgrounds/spaced/SpacedBack.jpg'
+picture-options='zoom'
 color-shading-type='solid'
 primary-color='#1a1a1a'
 
 [org.mate.panel]
 default-layout='spaced-linux'
+
+
+[org.mate.terminal.profile:/org/mate/terminal/profiles/default]
+background-color='#000000'
+foreground-color='#888888'
+bold-color='#ffffff'
+use-theme-colors=false
+background-type='solid'
+palette='#000000:#cc0000:#4e9a06:#c4a000:#3465a4:#75507b:#06989a:#d3d7cf:#555753:#ef2929:#8ae234:#fce94f:#729fcf:#ad7fa8:#34e2e2:#eeeeee'

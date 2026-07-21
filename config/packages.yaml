@@ -1,12 +1,17 @@
-# Spaced Linux 6.26 Package Selection
+# Spaced Linux 7.26 Package Selection
 
 # Desktop environment
 desktop:
-  - task-mate-desktop
-  - mate-desktop-environment-extras
-  - mate-terminal
-  - mate-settings-daemon
   - caja
+  - gvfs-backends
+  - mate-control-center
+  - mate-desktop
+  - mate-menus
+  - mate-notification-daemon
+  - mate-polkit
+  - mate-session-manager
+  - mate-settings-daemon
+  - mate-terminal
 
 # Display manager
 display_manager:
@@ -15,103 +20,141 @@ display_manager:
 
 # Window manager
 window_manager:
+  - compiz
+  - compiz-mate
+  - compiz-plugins-extra
+  - compiz-plugins-main
+  - compizconfig-settings-manager
   - marco
 
 # Panel
 panel:
   - mate-panel
-  - mate-panel-applets-common
 
 # Brisk menu
 brisk:
-  - brisk-menu
+  - mate-applet-brisk-menu
 
 # Network
 network:
   - network-manager
   - network-manager-gnome
-  - network-manager-openvpn
-  - network-manager-openconnect
 
 # Audio
 audio:
   - pulseaudio
-  - pulseaudio-module-x11
   - pavucontrol
 
 # Themes & icons
 themes:
   - papirus-icon-theme
-  - papirus-folders
+
+# Cairo Dock (started only by the macOS and Android themes)
+dock:
+  - cairo-dock-core
 
 # Graphics
 graphics:
   - mesa-utils
-  - mesa-va-drivers
-  - xserver-xorg-video-qxl
+  - xserver-xorg-input-libinput
   - xserver-xorg-video-intel
 
 # File managers
 file_managers:
-  - caja
   - caja-open-terminal
-  - caja-share
 
 # Applications
 applications:
-  - gedit
   - eom
   - pluma
   - engrampa
   - atril
   - mate-calc
-  - mate-screenshot
-
-# Terminal
-terminal:
-  - mate-terminal
+  - mate-utils
+  # Small GTK first-run application; keep these explicit so the welcome UI
+  # does not depend on an incidental desktop-package dependency.
+  - python3
+  - python3-gi
+  - gir1.2-gtk-3.0
 
 # Flatpak
 flatpak:
   - flatpak
   - xdg-desktop-portal-gtk
   - xdg-desktop-portal
+  # Supplies xdg-desktop-menu, used after successful installs to make Brisk
+  # notice newly exported launchers without requiring a logout or panel restart.
+  - xdg-utils
 
 # Firmware
 firmware:
-  - firmware-linux
-  - firmware-linux-nonfree
+  # Common desktop/laptop hardware only. live-build's broad firmware mode also
+  # pulls server accelerators, Qualcomm boards, and legacy NVIDIA payloads.
+  - firmware-amd-graphics
+  - firmware-atheros
+  - firmware-brcm80211
+  - firmware-intel-graphics
+  - firmware-intel-sound
   - firmware-iwlwifi
   - firmware-realtek
+  - firmware-sof-signed
 
 # System tools
 system:
   - sudo
+  # Recommends are disabled, so install elogind's PAM session module
+  # explicitly. MATE and polkit need an active local session for shutdown,
+  # reboot, and other seat-level actions.
+  - libpam-elogind
+  # APT recommends are disabled; curl and Flatpak otherwise install without a
+  # trust store and every HTTPS remote (including Flathub) fails with curl 77.
+  - ca-certificates
+  - locales
+  - console-setup
+  # Calamares' hwclock job needs the binary split out of util-linux in Ceres.
+  - util-linux-extra
+  # Keep both GRUB platform module sets in the copied system. The active
+  # grub-pc and grub-efi packages conflict, but these -bin packages coexist,
+  # allowing Calamares to install either BIOS or UEFI without a download.
+  - grub-pc-bin
+  - grub-efi-amd64-bin
+  - efibootmgr
+  # Required to create the FAT32 EFI System Partition.
+  - dosfstools
   - rsync
   - curl
   - wget
   - git
   - xdotool
-  - imagemagick
   - x11-utils
   - x11-xserver-utils
   - x11-xkb-utils
   - htop
   - pciutils
   - usbutils
-  - ssh
-  - feh
+  - openssh-client
+  - openssh-server
   - plymouth
   - plymouth-themes
+  - fastfetch
 
 # Installer
 installer:
   - calamares
+  # Calamares uses unsquashfs to copy the live filesystem into the target.
+  # The packages module removes this from the completed installation.
+  - squashfs-tools
+  - qml6-module-qtquick-window
+  # Supplies the standard module configuration; Spaced branding/settings
+  # replace its Debian-facing defaults in the overlay.
   - calamares-settings-debian
 
 # Live boot
 live:
   - live-boot
   - live-config
-  - squashfs-tools
-  - xorriso
+  - live-config-sysvinit
+  - sysvinit-core
+  - systemd-standalone-sysusers
+  - systemd-standalone-tmpfiles
+  - devuan-keyring

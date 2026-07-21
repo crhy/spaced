@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Spaced Window Manager
+Comment=Start Compiz with Marco as a fallback
+Exec=/usr/local/bin/spaced-window-manager
+NoDisplay=true
+X-MATE-Autostart-Phase=WindowManager
+X-MATE-Provides=windowmanager
+X-MATE-WMSettingsModule=compiz
+X-MATE-WMName=compiz

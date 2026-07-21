@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Spaced Linux Welcome
+GenericName=Application Setup
+Comment=Install suggested apps or browse Flathub with Bazaar
+Exec=/usr/local/bin/spaced-welcome --force
+Icon=spaced-linux-menu
+Terminal=false
+Categories=System;
+StartupNotify=true

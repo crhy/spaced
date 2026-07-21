@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=X-GNOME-Metatheme
+Name=Spaced Linux Light
+Comment=Light Spaced Linux theme
+Encoding=UTF-8
+
+[X-GNOME-Metatheme]
+Name=Spaced Linux Light
+GtkTheme=Spaced-Linux-Light
+MetacityTheme=Spaced-Linux-Light
+IconTheme=Spaced-Icons-Linux-Light
+CursorTheme=Adwaita
+BackgroundImage=/usr/share/backgrounds/spaced/SpacedBackLight.jpg
+BackgroundColor=#f0f0f0

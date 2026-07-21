@@ -1,0 +1,123 @@
+#!/bin/bash
+# Spaced Linux live system configuration
+set -e
+
+# Keep the distribution identity consistent across tools that read either path.
+install -Dm0644 /etc/os-release /usr/lib/os-release
+
+# Enable user autologin
+mkdir -p /etc/lightdm/lightdm.conf.d
+cat > /etc/lightdm/lightdm.conf.d/50-spaced.conf <<'LIGHTDM'
+[Seat:*]
+autologin-user=user
+autologin-user-timeout=0
+greeter-session=lightdm-gtk-greeter
+session-setup-script=/usr/local/sbin/spaced-lightdm-session-setup
+user-session=mate
+LIGHTDM
+
+# Compile the defaults supplied by the Spaced Linux overlay.
+glib-compile-schemas /usr/share/glib-2.0/schemas/
+
+# Bazaar's sandboxed libflatpak backend can enumerate only the system
+# installation. Register the bundled, signed Flathub definition without a
+# network request; the per-user login helper remains available for terminal
+# installs that do not need administrator authorization.
+flatpak remote-add --system --if-not-exists flathub \
+    /usr/share/flatpak/remotes.d/flathub.flatpakrepo
+
+# Marco trusts _NET_WM_PID as a host PID when decorating a window. X11 apps
+# inside Flatpak publish a PID from their private namespace, so Marco can look
+# up an unrelated root-owned host process and append the alarming but false
+# "(as superuser)" suffix. There is no setting for this behavior. Neutralize
+# only that root-title format string in libmarco, keeping the library size and
+# every other cross-user title annotation intact. This also covers Compiz,
+# whose GTK decorator uses libmarco-private.
+python3 - <<'PY'
+from pathlib import Path
+
+old = b"%s (as superuser)"
+new = b"%s\0" + b" " * (len(old) - 3)
+libraries = sorted(Path("/usr/lib").glob("*/libmarco-private.so.*.*.*"))
+if not libraries:
+    raise SystemExit("libmarco-private was not found")
+for library in libraries:
+    data = library.read_bytes()
+    occurrences = data.count(old)
+    if occurrences != 1:
+        raise SystemExit(f"{library}: expected one Marco superuser title string, found {occurrences}")
+    library.write_bytes(data.replace(old, new))
+PY
+
+# Create the live user if live-config has not already done so.
+id -u user >/dev/null 2>&1 || useradd -m -s /bin/bash user
+echo "user:1" | chpasswd
+echo "root:spaced" | chpasswd
+usermod -aG sudo,audio,video,plugdev,netdev user
+printf 'user ALL=(ALL:ALL) NOPASSWD: ALL\n' > /etc/sudoers.d/spaced-live
+chmod 0440 /etc/sudoers.d/spaced-live
+
+# Cairo-Dock requires current_theme to be a directory containing a real theme.
+# Seed its smallest bundled layout at image-build time without carrying a
+# second copy of that upstream data in this repository.
+rm -rf /etc/skel/.config/cairo-dock
+if [ -d /usr/share/cairo-dock/themes/Default-Single ]; then
+    mkdir -p /etc/skel/.config/cairo-dock/current_theme
+    cp -a /usr/share/cairo-dock/themes/Default-Single/. \
+        /etc/skel/.config/cairo-dock/current_theme/
+    rm -rf /etc/skel/.config/cairo-dock/current_theme/launchers
+    mkdir -p /etc/skel/.config/cairo-dock/current_theme/launchers
+    cp -a /usr/share/spaced-themes/cairo-dock/launchers/. \
+        /etc/skel/.config/cairo-dock/current_theme/launchers/
+    sed -i -e 's/^modules=.*/modules=/' \
+        -e 's/^visibility=.*/visibility=0/' \
+        /etc/skel/.config/cairo-dock/current_theme/cairo-dock.conf
+    touch /etc/skel/.config/cairo-dock/current_theme/.spaced-launchers-v1
+fi
+
+cp -a /etc/skel/. /home/user/
+chown -R user:user /home/user
+
+# Keep only the supported Spaced themes; remove every other theme directory
+# (Marco/GTK sample themes and any stale leftovers) so they don't clutter
+# the Appearance chooser.
+find /usr/share/themes -mindepth 1 -maxdepth 1 \
+    ! -name Spaced-Dark -a ! -name Spaced-Linux-Dark -a ! -name Spaced-Linux-Light \
+    -a ! -name Spaced-MacOS -a ! -name Spaced-Win311 -a ! -name Spaced-WinXP \
+    -a ! -name Spaced-Mint -a ! -name Spaced-Win11-Light -a ! -name Spaced-Win11-Dark \
+    -a ! -name Spaced-Geoworks -a ! -name Spaced-Android \
+    -exec rm -rf -- {} + || true
+
+# Keep Debian's Calamares module defaults, but never expose its launcher or
+# branding beside the Spaced Linux installer.
+rm -f /usr/share/applications/calamares-install-debian.desktop \
+    /usr/share/applications/calamares.desktop.orig \
+    /usr/share/pixmaps/install-debian.png \
+    /etc/xdg/autostart/calamares-desktop-icon.desktop \
+    /usr/bin/add-calamares-desktop-icon \
+    /usr/bin/calamares-install-debian
+rm -rf /etc/calamares/branding/debian
+
+for icon_theme in /usr/share/icons/Spaced-Icons-*; do
+    [ -d "$icon_theme" ] || continue
+    gtk-update-icon-cache -f "$icon_theme" >/dev/null 2>&1 || true
+done
+
+if command -v plymouth-set-default-theme >/dev/null 2>&1; then
+    plymouth-set-default-theme -R spaced
+fi
+
+apt-get clean
+
+# Enable SSH for remote debugging/administration.
+if [ -f /etc/init.d/ssh ]; then
+    update-rc.d ssh enable 2>/dev/null || true
+    mkdir -p /etc/ssh/sshd_config.d
+    printf 'PasswordAuthentication yes\nPermitRootLogin yes\n' > /etc/ssh/sshd_config.d/10-spaced.conf
+fi
+
+# Serial console getty on ttyS0 for headless debugging.
+if [ -f /etc/inittab ]; then
+    grep -q '^S0:' /etc/inittab || \
+        echo 'S0:12345:respawn:/sbin/getty 115200 ttyS0' >> /etc/inittab
+fi

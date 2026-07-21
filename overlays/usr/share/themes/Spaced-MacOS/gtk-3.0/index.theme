@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Gtk
+Name=Spaced-MacOS
+Comment=Spaced Linux Spaced-MacOS GTK3 theme
+
+[Settings]
+gtk-theme-name = "Spaced-MacOS"

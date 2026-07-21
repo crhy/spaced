@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Gtk
+Name=Spaced-Linux-Light
+Comment=Spaced Linux Spaced-Linux-Light GTK3 theme
+
+[Settings]
+gtk-theme-name = "Spaced-Linux-Light"

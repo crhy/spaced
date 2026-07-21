@@ -1,0 +1,2 @@
+// Suppress the "apt modernize-sources" warning
+APT::Get::ModernizeSources "false";

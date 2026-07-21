@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Gtk
+Name=Spaced-Android
+Comment=Spaced Linux Spaced-Android GTK3 theme
+
+[Settings]
+gtk-theme-name = "Spaced-Android"

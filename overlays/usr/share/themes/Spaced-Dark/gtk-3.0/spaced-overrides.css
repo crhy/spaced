@@ -1,0 +1,119 @@
+/* Cross-theme surface rules. Keep color choices in each theme's gtk.css. */
+.background:not(.caja-desktop-window),
+window:not(.caja-desktop-window),
+window.background:not(.caja-desktop-window),
+dialog,
+headerbar,
+toolbar,
+menubar,
+menu,
+notebook,
+notebook > header,
+notebook > stack,
+stack,
+scrolledwindow,
+viewport,
+frame,
+assistant,
+filechooser,
+filechooserwidget,
+fontchooser,
+fontchooserwidget,
+colorchooser,
+colorchooserwidget {
+    background-color: @theme_bg_color;
+    color: @theme_fg_color;
+}
+
+.view,
+treeview,
+treeview.view,
+iconview,
+iconview.view,
+list,
+listview,
+textview,
+textview.view,
+textview > text,
+entry,
+searchentry,
+spinbutton > entry {
+    background-color: @theme_base_color;
+    color: @theme_text_color;
+}
+
+button,
+togglebutton,
+menubutton,
+combobox > button,
+spinbutton > button {
+    background-color: mix(@theme_fg_color, @theme_bg_color, 0.08);
+    color: @theme_fg_color;
+}
+
+notebook > header tab:checked,
+notebook > header tab:backdrop:checked,
+notebook > header tab:checked > label,
+notebook > header tab:checked > label:backdrop {
+    background-color: @theme_base_color;
+    color: @theme_text_color;
+    border-color: @theme_selected_bg_color;
+}
+
+.mate-panel-menu-bar,
+.gnome-panel-menu-bar,
+.mate-panel-menu-bar menubar,
+.mate-panel-menu-bar menuitem,
+.gnome-panel-menu-bar menubar,
+.gnome-panel-menu-bar menuitem {
+    background-color: @panel_bg_color;
+    color: @panel_fg_color;
+}
+
+.mate-panel-menu-bar #PanelApplet label,
+.mate-panel-menu-bar #PanelApplet image,
+.gnome-panel-menu-bar #PanelApplet label,
+.gnome-panel-menu-bar #PanelApplet image {
+    color: @panel_fg_color;
+}
+
+/* Applets hosted in separate GtkPlug processes do not always inherit the
+ * panel's painted surface. Keep legacy tray hosts (including nm-applet) and
+ * the Wnck Show Desktop button on the theme's panel color instead of the
+ * ordinary application/button background. */
+.mate-panel-menu-bar #PanelApplet,
+.gnome-panel-menu-bar #PanelApplet,
+#MatePanelWidget #PanelApplet,
+PanelApplet,
+MatePanelApplet,
+NaTrayApplet,
+#PanelPlug,
+#PanelPlug > box,
+#PanelPlug > widget,
+#PanelPlug button,
+#PanelApplet,
+#PanelApplet > box,
+#PanelApplet > widget,
+#PanelApplet button:not(.brisk-button),
+#PanelApplet togglebutton:not(.brisk-button),
+.mate-panel-menu-bar #showdesktop-button,
+.gnome-panel-menu-bar #showdesktop-button,
+#PanelApplet #showdesktop-button,
+#showdesktop-button {
+    background-color: @panel_bg_color;
+    background-image: none;
+    color: @panel_fg_color;
+    border-color: alpha(@panel_fg_color, 0.18);
+    box-shadow: none;
+}
+
+/* Caja paints the selected MATE wallpaper before chaining to GTK's window
+ * draw handler. A solid GTK window background would cover that image. */
+window.caja-desktop-window,
+.caja-desktop-window,
+.caja-desktop-window.background,
+.caja-desktop-window * {
+    background: none;
+    background-color: transparent;
+    box-shadow: none;
+}

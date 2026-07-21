@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Spaced Linux Welcome
+Comment=Choose applications for your new Spaced Linux system
+Exec=/usr/local/bin/spaced-welcome
+Icon=spaced-linux-menu
+OnlyShowIn=MATE;
+NoDisplay=true
+X-MATE-Autostart-Delay=8

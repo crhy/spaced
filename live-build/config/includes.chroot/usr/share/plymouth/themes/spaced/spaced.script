@@ -1,0 +1,1 @@
+bg=Image("SpacedBack.png");bg_s=Sprite(bg);bg_s.SetX(Window.GetX()/2-bg.GetWidth()/2);bg_s.SetY(Window.GetY()/2-bg.GetHeight()/2);logo=Image("spaced.png");logo_s=Sprite(logo);logo_s.SetX(Window.GetX()/2-logo.GetWidth()/2);logo_s.SetY(Window.GetY()/2-logo.GetHeight()/2-100);Plymouth.SetBootProgress(0);

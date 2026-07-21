@@ -1,0 +1,117 @@
+{
+  "themes": [
+    {
+      "id": "linux-dark",
+      "name": "Spaced Linux Dark",
+      "gtk_theme": "Spaced-Linux-Dark",
+      "wallpaper": "/usr/share/backgrounds/spaced/SpacedBack.jpg",
+      "panel_layout": "spaced-linux",
+      "panel_position": "bottom",
+      "panel_size": 30,
+      "panel_color": "#2f2f2f",
+      "cairo_dock": false,
+      "dark": true
+    },
+    {
+      "id": "linux-light",
+      "name": "Spaced Linux Light",
+      "gtk_theme": "Spaced-Linux-Light",
+      "wallpaper": "/usr/share/backgrounds/spaced/SpacedBackLight.jpg",
+      "panel_layout": "spaced-linux",
+      "panel_position": "bottom",
+      "panel_size": 30,
+      "cairo_dock": false,
+      "dark": false
+    },
+    {
+      "id": "macos",
+      "name": "Mac OS X",
+      "gtk_theme": "Spaced-MacOS",
+      "wallpaper": "/usr/share/backgrounds/spaced/macos.jpg",
+      "panel_layout": "spaced-macos",
+      "panel_position": "top",
+      "panel_size": 30,
+      "cairo_dock": true,
+      "dark": false
+    },
+    {
+      "id": "win311",
+      "name": "Windows 3.11",
+      "gtk_theme": "Spaced-Win311",
+      "wallpaper": "/usr/share/backgrounds/spaced/win311.jpg",
+      "panel_layout": "spaced-win311",
+      "panel_position": "bottom",
+      "panel_size": 30,
+      "cairo_dock": false,
+      "dark": false
+    },
+    {
+      "id": "winxp",
+      "name": "Windows XP",
+      "gtk_theme": "Spaced-WinXP",
+      "wallpaper": "/usr/share/backgrounds/spaced/winxp.jpg",
+      "panel_layout": "spaced-winxp",
+      "panel_position": "bottom",
+      "panel_size": 30,
+      "cairo_dock": false,
+      "dark": false
+    },
+    {
+      "id": "mint",
+      "name": "Linux Mint",
+      "gtk_theme": "Spaced-Mint",
+      "wallpaper": "/usr/share/backgrounds/spaced/linuxmint.jpg",
+      "panel_layout": "spaced-mint",
+      "panel_position": "bottom",
+      "panel_size": 30,
+      "cairo_dock": false,
+      "dark": true
+    },
+    {
+      "id": "win11-light",
+      "name": "Windows 11 Light",
+      "gtk_theme": "Spaced-Win11-Light",
+      "wallpaper": "/usr/share/backgrounds/spaced/win11light.jpg",
+      "panel_layout": "spaced-win11-light",
+      "panel_position": "bottom",
+      "panel_size": 30,
+      "cairo_dock": false,
+      "dark": false
+    },
+    {
+      "id": "win11-dark",
+      "name": "Windows 11 Dark",
+      "gtk_theme": "Spaced-Win11-Dark",
+      "wallpaper": "/usr/share/backgrounds/spaced/win11dark.jpg",
+      "panel_layout": "spaced-win11-dark",
+      "panel_position": "bottom",
+      "panel_size": 30,
+      "panel_color": "#17243b",
+      "cairo_dock": false,
+      "dark": true
+    },
+    {
+      "id": "geoworks",
+      "name": "GeoWorks",
+      "gtk_theme": "Spaced-Geoworks",
+      "wallpaper": "/usr/share/backgrounds/spaced/geoworks.jpg",
+      "panel_layout": "spaced-geoworks",
+      "panel_position": "bottom",
+      "panel_size": 30,
+      "cairo_dock": false,
+      "dark": false
+    },
+    {
+      "id": "android",
+      "name": "Android",
+      "gtk_theme": "Spaced-Android",
+      "wallpaper": "/usr/share/backgrounds/spaced/android.jpg",
+      "panel_layout": "spaced-android",
+      "panel_position": "top",
+      "panel_size": 30,
+      "panel_color": "#263238",
+      "cairo_dock": true,
+      "dark": true
+    }
+  ]
+}

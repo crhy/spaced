@@ -1,0 +1,8 @@
+# One Flatpak application ID or bundle URL per line.
+# LibreOffice supplies both Writer and Calc in one Flatpak.
+org.atheme.audacious
+io.github.kolunmi.Bazaar
+com.brave.Browser
+org.libreoffice.LibreOffice
+org.videolan.VLC
+https://github.com/crhy/Voice2Text-AI/releases/download/v0.3.2/Voice2Text-AI-v0.3.2-x86_64.flatpak

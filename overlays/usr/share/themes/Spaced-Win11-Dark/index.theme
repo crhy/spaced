@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=X-GNOME-Metatheme
+Name=Spaced Windows 11 Dark
+Comment=Windows 11 dark inspired theme
+Encoding=UTF-8
+
+[X-GNOME-Metatheme]
+Name=Spaced Windows 11 Dark
+GtkTheme=Spaced-Win11-Dark
+MetacityTheme=Spaced-Win11-Dark
+IconTheme=Spaced-Icons-Win11-Dark
+CursorTheme=Adwaita
+BackgroundImage=/usr/share/backgrounds/spaced/win11dark.jpg
+BackgroundColor=#202020

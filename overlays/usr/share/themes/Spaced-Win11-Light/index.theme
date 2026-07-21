@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=X-GNOME-Metatheme
+Name=Spaced Windows 11 Light
+Comment=Windows 11 light inspired theme
+Encoding=UTF-8
+
+[X-GNOME-Metatheme]
+Name=Spaced Windows 11 Light
+GtkTheme=Spaced-Win11-Light
+MetacityTheme=Spaced-Win11-Light
+IconTheme=Spaced-Icons-Win11-Light
+CursorTheme=Adwaita
+BackgroundImage=/usr/share/backgrounds/spaced/win11light.jpg
+BackgroundColor=#e8eef7

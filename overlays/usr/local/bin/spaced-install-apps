@@ -1,0 +1,56 @@
+#!/bin/bash
+# Install Spaced Linux's suggested user Flatpaks without requiring root.
+set -euo pipefail
+
+mode=${1:-}
+list=/usr/share/spaced-welcome/FlatpaksToInstallAfterInstall.txt
+bazaar_id=io.github.kolunmi.Bazaar
+
+case "$mode" in
+    suggested|bazaar) ;;
+    *) echo "Usage: $0 {suggested|bazaar}" >&2; exit 2 ;;
+esac
+
+command -v flatpak >/dev/null 2>&1 || {
+    echo "Flatpak is not installed." >&2
+    exit 1
+}
+
+flatpak remote-add --user --if-not-exists flathub \
+    https://flathub.org/repo/flathub.flatpakrepo
+
+if [ "$mode" = bazaar ]; then
+    flatpak install --user -y flathub "$bazaar_id"
+    exit 0
+fi
+
+[ -r "$list" ] || {
+    echo "Suggested application list is missing." >&2
+    exit 1
+}
+
+refs=()
+bundles=()
+while IFS= read -r entry; do
+    entry=${entry%%#*}
+    entry=${entry//[[:space:]]/}
+    [ -n "$entry" ] || continue
+    case "$entry" in
+        https://*) bundles+=("$entry") ;;
+        *) refs+=("$entry") ;;
+    esac
+done < "$list"
+
+if [ "${#refs[@]}" -gt 0 ]; then
+    flatpak install --user -y flathub "${refs[@]}"
+fi
+
+if [ "${#bundles[@]}" -gt 0 ]; then
+    tmpdir=$(mktemp -d)
+    trap 'rm -rf "$tmpdir"' EXIT
+    for url in "${bundles[@]}"; do
+        bundle="$tmpdir/${url##*/}"
+        curl --fail --location --retry 2 --output "$bundle" "$url"
+        flatpak install --user -y "$bundle"
+    done
+fi

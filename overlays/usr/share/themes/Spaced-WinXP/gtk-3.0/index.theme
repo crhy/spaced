@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Gtk
+Name=Spaced-WinXP
+Comment=Spaced Linux Spaced-WinXP GTK3 theme
+
+[Settings]
+gtk-theme-name = "Spaced-WinXP"

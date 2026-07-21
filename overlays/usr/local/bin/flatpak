@@ -1,0 +1,102 @@
+#!/bin/bash
+# Flatpak intentionally accepts remote .flatpakref files but rejects remote
+# single-file .flatpak bundles. Make the common direct-download command work by
+# downloading an HTTPS bundle to a private temporary file first.
+set -euo pipefail
+
+real_flatpak=${SPACED_FLATPAK_REAL:-/usr/bin/flatpak}
+args=("$@")
+install_command=false
+bundle_index=
+
+refresh_desktop_menus() {
+    local applications
+
+    # Flatpak exports the desktop file before returning. Updating the desktop
+    # database also produces a directory change that menu implementations such
+    # as Brisk notice immediately.
+    for applications in \
+        "$HOME/.local/share/flatpak/exports/share/applications" \
+        /var/lib/flatpak/exports/share/applications; do
+        if [[ -d $applications && -w $applications ]]; then
+            update-desktop-database "$applications" >/dev/null 2>&1 || true
+        fi
+    done
+    xdg-desktop-menu forceupdate --mode user >/dev/null 2>&1 || true
+}
+
+ensure_flathub() {
+    "$real_flatpak" remotes --user --columns=name 2>/dev/null | grep -Fxq flathub && return 0
+    "$real_flatpak" remote-add --user --if-not-exists flathub \
+        https://flathub.org/repo/flathub.flatpakrepo
+}
+
+run_install() {
+    local status
+
+    if "$real_flatpak" "$@"; then
+        refresh_desktop_menus
+        return 0
+    else
+        status=$?
+        return "$status"
+    fi
+}
+
+for index in "${!args[@]}"; do
+    case ${args[$index]} in
+        install)
+            install_command=true
+            ;;
+        https://*.flatpak|https://*.flatpak\?*|https://*.flatpak\#*)
+            if [[ $install_command == true ]]; then
+                if [[ -n $bundle_index ]]; then
+                    printf 'flatpak: only one remote .flatpak bundle can be installed at a time\n' >&2
+                    exit 2
+                fi
+                bundle_index=$index
+            fi
+            ;;
+    esac
+done
+
+# Spaced Linux uses a per-user Flatpak model. Make the familiar
+# `flatpak install flathub APP_ID` command self-healing if the login-time
+# network retry has not registered Flathub yet.
+if [[ $install_command == true ]]; then
+    for argument in "${args[@]}"; do
+        if [[ $argument == flathub ]]; then
+            ensure_flathub
+            break
+        fi
+    done
+fi
+
+if [[ -z $bundle_index ]]; then
+    if [[ $install_command == true ]]; then
+        run_install "${args[@]}"
+        exit $?
+    fi
+    exec "$real_flatpak" "${args[@]}"
+fi
+
+bundle_url=${args[$bundle_index]}
+bundle_file=$(mktemp --tmpdir "spaced-flatpak.XXXXXXXX.flatpak")
+cleanup() {
+    rm -f -- "$bundle_file"
+}
+trap cleanup EXIT HUP INT TERM
+
+printf 'Downloading Flatpak bundle from %s\n' "$bundle_url"
+curl \
+    --fail \
+    --location \
+    --proto '=https' \
+    --proto-redir '=https' \
+    --retry 2 \
+    --show-error \
+    --output "$bundle_file" \
+    "$bundle_url"
+
+args[$bundle_index]=$bundle_file
+run_install "${args[@]}"

@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=X-GNOME-Metatheme
+Name=Spaced Mac OS X
+Comment=Mac OS X inspired theme
+Encoding=UTF-8
+
+[X-GNOME-Metatheme]
+Name=Spaced Mac OS X
+GtkTheme=Spaced-MacOS
+MetacityTheme=Spaced-MacOS
+IconTheme=Spaced-Icons-MacOS
+CursorTheme=Adwaita
+BackgroundImage=/usr/share/backgrounds/spaced/macos.jpg
+BackgroundColor=#dce8f5

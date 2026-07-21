@@ -1,0 +1,15 @@
+# Make Flatpak desktop exports visible to graphical menus from the beginning of
+# the session, including when the first Flatpak is installed after login.
+XDG_DATA_DIRS=${XDG_DATA_DIRS:-/usr/local/share:/usr/share}
+
+case ":$XDG_DATA_DIRS:" in
+    *":$HOME/.local/share/flatpak/exports/share:"*) ;;
+    *) XDG_DATA_DIRS="$HOME/.local/share/flatpak/exports/share:$XDG_DATA_DIRS" ;;
+esac
+
+case ":$XDG_DATA_DIRS:" in
+    *":/var/lib/flatpak/exports/share:"*) ;;
+    *) XDG_DATA_DIRS="/var/lib/flatpak/exports/share:$XDG_DATA_DIRS" ;;
+esac
+
+export XDG_DATA_DIRS

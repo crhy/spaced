@@ -1,0 +1,252 @@
+/* spaced winxp theme — light Luna (windowsxp.webp reference): blue titlebar,
+   green accents, light "wheat" background. Gray base replaced with green. */
+@define-color theme_bg_color #ece9d8;
+@define-color theme_fg_color #000000;
+@define-color theme_base_color #ffffff;
+@define-color theme_text_color #000000;
+@define-color theme_selected_bg_color #316ac5;
+@define-color theme_selected_fg_color #ffffff;
+@define-color theme_tooltip_bg_color #ffffcc;
+@define-color theme_tooltip_fg_color #000000;
+@define-color light_shadow #ffffff;
+@define-color dark_shadow #aca899;
+@define-color info_fg_color rgb(0,0,0);
+@define-color info_bg_color rgb(252,246,202);
+@define-color warning_fg_color rgb(0,0,0);
+@define-color warning_bg_color rgb(250,173,61);
+@define-color question_fg_color rgb(255,255,255);
+@define-color question_bg_color rgb(85,136,238);
+@define-color error_fg_color rgb(255,255,255);
+@define-color error_bg_color rgb(237,54,54);
+@define-color link_color #3c9a3c;
+@define-color link_visited_color #800080;
+@define-color success_color #4e9a06;
+@define-color error_color #cc0000;
+@define-color titlebar_bg_color #235edc;
+@define-color titlebar_fg_color #ffffff;
+@define-color menubar_bg_color #ece9d8;
+@define-color menubar_fg_color #000000;
+@define-color toolbar_bg_color #ece9d8;
+@define-color toolbar_fg_color #000000;
+@define-color menu_bg_color #ffffff;
+@define-color menu_fg_color #000000;
+@define-color panel_bg_color #235edc;
+@define-color panel_fg_color #ffffff;
+@define-color tab_checked_color #3c9a3c;
+@define-color osd_base #333;
+@define-color osd_fg #eee;
+@define-color osd_bg alpha(@osd_base, 0.8);
+@define-color backdrop_selected_bg_color shade(@theme_bg_color, 0.9);
+@define-color backdrop_selected_fg_color @theme_fg_color;
+@define-color wm_bg #235edc;
+@define-color wm_title_focused #ffffff;
+@define-color wm_title_unfocused #b0c4e8;
+@define-color wm_border_focused shade(#235edc, 0.7);
+@define-color wm_border_unfocused shade(#235edc, 0.8);
+
+@import url("/usr/share/themes/Spaced-Dark/gtk-3.0/gtk-widgets.css");
+@import url("/usr/share/themes/Spaced-Dark/gtk-3.0/gtk-widgets-assets.css");
+@import url("/usr/share/themes/Spaced-Dark/gtk-3.0/gtk-widgets-backdrop.css");
+@import url("/usr/share/themes/Spaced-Dark/gtk-3.0/apps/granite-widgets.css");
+@import url("/usr/share/themes/Spaced-Dark/gtk-3.0/apps/unity.css");
+@import url("/usr/share/themes/Spaced-Dark/gtk-3.0/apps/xfce.css");
+@import url("/usr/share/themes/Spaced-Dark/gtk-3.0/apps/lightdm-gtk-greeter.css");
+@import url("/usr/share/themes/Spaced-Dark/gtk-3.0/spaced-overrides.css");
+
+/* Luna reserves blue for frames and selections; ordinary client surfaces use
+ * the warm system face color. This prevents notebook stacks such as
+ * Appearance Preferences from turning into a solid taskbar-blue rectangle. */
+notebook > header,
+notebook > header:backdrop,
+notebook > stack:not(:only-child),
+notebook > stack:not(:only-child):backdrop {
+    background-color: #ece9d8;
+    color: #000000;
+    border-color: #aca899;
+}
+
+notebook > header tab {
+    background-color: #ece9d8;
+    color: #000000;
+    border-color: #aca899;
+}
+
+notebook > header tab:checked,
+notebook > header tab:backdrop:checked,
+notebook > header tab:checked > label,
+notebook > header tab:checked > label:backdrop {
+    background-color: #ffffff;
+    color: #000000;
+    border-color: #7f9db9;
+}
+
+notebook > header.top > tabs > tab:checked {
+    box-shadow: inset 0 -2px #316ac5;
+}
+
+button:not(.brisk-button),
+togglebutton:not(.brisk-button),
+menubutton:not(.brisk-button) {
+    background-color: #ece9d8;
+    background-image: linear-gradient(to bottom, #ffffff, #ece9d8 55%, #d6d2c2);
+    color: #000000;
+    border-color: #7f9db9;
+    border-radius: 3px;
+    box-shadow: inset 1px 1px rgba(255, 255, 255, 0.8),
+                inset -1px -1px rgba(172, 168, 153, 0.7);
+}
+
+button:not(.brisk-button):hover,
+togglebutton:not(.brisk-button):hover,
+menubutton:not(.brisk-button):hover {
+    border-color: #316ac5;
+    background-image: linear-gradient(to bottom, #ffffff, #f3f0df 55%, #ddd8c5);
+}
+
+button:not(.brisk-button):active,
+button:not(.brisk-button):checked,
+togglebutton:not(.brisk-button):active,
+togglebutton:not(.brisk-button):checked {
+    background-image: linear-gradient(to bottom, #d6d2c2, #ece9d8);
+    box-shadow: inset 1px 1px #aca899;
+}
+
+.mate-panel-menu-bar,
+.gnome-panel-menu-bar,
+.mate-panel-menu-bar menubar,
+.mate-panel-menu-bar menuitem,
+.gnome-panel-menu-bar menubar,
+.gnome-panel-menu-bar menuitem {
+    background-color: @panel_bg_color;
+    color: @panel_fg_color;
+}
+
+/* Luna's taskbar is saturated blue, while the Start surface is green. */
+.mate-panel-menu-bar,
+.gnome-panel-menu-bar {
+    background-image: linear-gradient(to bottom, #3b80f7, #245edb 48%, #1941a5);
+    background-color: #245edb;
+    color: #ffffff;
+}
+
+/* Panel applets are buttons in their own plugs. Paint their surface blue so
+ * the Show Desktop corner does not fall back to the beige GTK button color. */
+.mate-panel-menu-bar button,
+.gnome-panel-menu-bar button,
+#PanelApplet button,
+#showdesktop-button {
+    background-image: linear-gradient(to bottom, #3b80f7, #245edb 48%, #1941a5);
+    background-color: #245edb;
+    color: #ffffff;
+    border-color: #1941a5;
+}
+
+.mate-panel-menu-bar .brisk-button,
+.mate-panel-menu-bar button.brisk-button,
+.mate-panel-menu-bar .brisk-button-vertical,
+.gnome-panel-menu-bar .brisk-button,
+.gnome-panel-menu-bar button.brisk-button,
+.gnome-panel-menu-bar .brisk-button-vertical,
+#PanelApplet button.brisk-button,
+#PanelApplet button.brisk-button:hover,
+#PanelApplet button.brisk-button:active,
+#PanelApplet button.brisk-button:checked,
+button.brisk-button,
+button.brisk-button:hover,
+button.brisk-button:active,
+button.brisk-button:checked,
+button.brisk-button-vertical {
+    background-image: linear-gradient(to bottom, #6cbd55, #3c9a3c 55%, #28772d);
+    background-color: #3c9a3c;
+    color: #ffffff;
+    border-color: #1f6b25;
+    border-radius: 6px 10px 10px 6px;
+    font-weight: bold;
+}
+
+.mate-panel-menu-bar #PanelApplet label,
+.mate-panel-menu-bar #PanelApplet image,
+.gnome-panel-menu-bar #PanelApplet label,
+.gnome-panel-menu-bar #PanelApplet image {
+    color: #ffffff;
+}
+
+/* Brisk cannot reproduce Luna's exact two-column Start menu topology, but its
+ * category and application panes map naturally to the pale-blue system-links
+ * column and white programs column. Blue framing and classic selection states
+ * complete the visual hierarchy without changing Brisk's behavior. */
+window.brisk-menu,
+.brisk-menu {
+    background-color: #245edb;
+    color: #000000;
+    border: 3px solid #245edb;
+    border-radius: 6px 6px 0 0;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.45);
+}
+
+.brisk-menu > box {
+    background-color: #245edb;
+}
+
+.brisk-menu entry {
+    margin: 3px;
+    min-height: 24px;
+    background-color: #ffffff;
+    background-image: none;
+    color: #000000;
+    border: 1px solid #7f9db9;
+    border-radius: 2px;
+    box-shadow: inset 1px 1px #d6d2c2;
+}
+
+.brisk-menu .categories-list,
+.brisk-menu .categories-list viewport,
+.brisk-menu .categories-list + box {
+    background-color: #d3e5fa;
+    color: #000000;
+}
+
+.brisk-menu .apps-list,
+.brisk-menu .apps-list row,
+.brisk-menu .apps-list viewport {
+    background-color: #ffffff;
+    color: #000000;
+}
+
+.brisk-menu .categories-list button,
+.brisk-menu .categories-list radiobutton,
+.brisk-menu .categories-list radio,
+.brisk-menu .session-button {
+    background-color: transparent;
+    background-image: none;
+    color: #000000;
+    border-color: transparent;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.brisk-menu .categories-list button:hover,
+.brisk-menu .categories-list button.flat:hover,
+.brisk-menu .categories-list button.flat:checked,
+.brisk-menu .categories-list radiobutton:hover,
+.brisk-menu .categories-list radiobutton:checked,
+.brisk-menu .categories-list radio:hover,
+.brisk-menu .categories-list radio:checked,
+.brisk-menu .apps-list row:hover,
+.brisk-menu .apps-list row:selected {
+    background-color: #316ac5;
+    background-image: none;
+    color: #ffffff;
+}
+
+.brisk-menu .categories-list button:hover label,
+.brisk-menu .categories-list button.flat:hover label,
+.brisk-menu .categories-list button.flat:checked label,
+.brisk-menu .categories-list radiobutton:hover label,
+.brisk-menu .categories-list radiobutton:checked label,
+.brisk-menu .categories-list radio:hover label,
+.brisk-menu .categories-list radio:checked label,
+.brisk-menu .apps-list row:hover label,
+.brisk-menu .apps-list row:selected label {
+    color: #ffffff;
+}

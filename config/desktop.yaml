@@ -1,21 +1,21 @@
-# Spaced Linux 6.26 Desktop Configuration
+# Spaced Linux 7.26 Desktop Configuration
 
 theme:
   gtk: Spaced-Dark
   metacity: Spaced-Dark
-  icons: Papirus-Dark
+  icons: Spaced-Icons-Linux-Dark
 
 background:
   filename: /usr/share/backgrounds/spaced/SpacedBack.png
   options: zoom
   draw_background: true
-  show_desktop_icons: false
+  show_desktop_icons: true
 
 panel:
   layout: spaced-linux
   position: bottom
   applets:
-    - brisk-menu
+    - mate-applet-brisk-menu
     - window-list
     - notification-area
     - clock
@@ -34,11 +34,13 @@ lightdm:
   autologin_timeout: 0
   background: /usr/share/backgrounds/spaced/SimpleBackc.png
   theme: Spaced-Dark
-  icons: Papirus-Dark
+  icons: Spaced-Icons-Linux-Dark
   logo: /usr/share/pixmaps/spaced-logo.png
 
 session:
-  - mate-session
+  desktop: mate-session
+  window_manager: compiz
+  fallback_window_manager: marco
 
 wallpaper:
   method: caja

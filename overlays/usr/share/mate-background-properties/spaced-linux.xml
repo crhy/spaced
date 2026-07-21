@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE wallpapers SYSTEM "mate-wp-list.dtd">
+<wallpapers>
+  <wallpaper deleted="false">
+    <name>Spaced Back</name>
+    <filename>/usr/share/backgrounds/spaced/SpacedBack.jpg</filename>
+    <options>zoom</options>
+    <pcolor>#1a1a1a</pcolor>
+    <scolor>#1a1a1a</scolor>
+    <shade_type>solid</shade_type>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>Spaced Back Light</name>
+    <filename>/usr/share/backgrounds/spaced/SpacedBackLight.jpg</filename>
+    <options>zoom</options>
+    <pcolor>#f0f0f0</pcolor>
+    <scolor>#f0f0f0</scolor>
+    <shade_type>solid</shade_type>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>Spaced Simple (GRUB)</name>
+    <filename>/usr/share/backgrounds/spaced/SimpleBackb.png</filename>
+    <options>zoom</options>
+    <pcolor>#17181d</pcolor>
+    <scolor>#17181d</scolor>
+    <shade_type>solid</shade_type>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>Spaced Orbit 4K</name>
+    <filename>/usr/share/backgrounds/spaced/spaced-orbit-4k.png</filename>
+    <options>zoom</options>
+    <pcolor>#050912</pcolor>
+    <scolor>#050912</scolor>
+    <shade_type>solid</shade_type>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>Spaced Linux Mint</name>
+    <filename>/usr/share/backgrounds/spaced/linuxmint.jpg</filename>
+    <options>zoom</options>
+    <pcolor>#1d1d1d</pcolor>
+    <scolor>#1d1d1d</scolor>
+    <shade_type>solid</shade_type>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>Spaced macOS</name>
+    <filename>/usr/share/backgrounds/spaced/macos.jpg</filename>
+    <options>zoom</options>
+    <pcolor>#3a3a3a</pcolor>
+    <scolor>#3a3a3a</scolor>
+    <shade_type>solid</shade_type>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>Spaced Windows 3.11</name>
+    <filename>/usr/share/backgrounds/spaced/win311.jpg</filename>
+    <options>zoom</options>
+    <pcolor>#808080</pcolor>
+    <scolor>#808080</scolor>
+    <shade_type>solid</shade_type>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>Spaced Windows XP</name>
+    <filename>/usr/share/backgrounds/spaced/winxp.jpg</filename>
+    <options>zoom</options>
+    <pcolor>#235edc</pcolor>
+    <scolor>#235edc</scolor>
+    <shade_type>solid</shade_type>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>Spaced Windows 11 Light</name>
+    <filename>/usr/share/backgrounds/spaced/win11light.jpg</filename>
+    <options>zoom</options>
+    <pcolor>#f3f3f3</pcolor>
+    <scolor>#f3f3f3</scolor>
+    <shade_type>solid</shade_type>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>Spaced Windows 11 Dark</name>
+    <filename>/usr/share/backgrounds/spaced/win11dark.jpg</filename>
+    <options>zoom</options>
+    <pcolor>#0d1430</pcolor>
+    <scolor>#0d1430</scolor>
+    <shade_type>solid</shade_type>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>Spaced GEOS</name>
+    <filename>/usr/share/backgrounds/spaced/geoworks.jpg</filename>
+    <options>zoom</options>
+    <pcolor>#404040</pcolor>
+    <scolor>#404040</scolor>
+    <shade_type>solid</shade_type>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>Spaced Android</name>
+    <filename>/usr/share/backgrounds/spaced/android.jpg</filename>
+    <options>zoom</options>
+    <pcolor>#303030</pcolor>
+    <scolor>#303030</scolor>
+    <shade_type>solid</shade_type>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>Blue Canvas</name>
+    <filename>/usr/share/backgrounds/spaced/bluecanvas.jpg</filename>
+    <options>zoom</options>
+    <pcolor>#1a3a5c</pcolor>
+    <scolor>#1a3a5c</scolor>
+    <shade_type>solid</shade_type>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>Euclid Galactic Core</name>
+    <filename>/usr/share/backgrounds/spaced/euclidgalacticcore.jpg</filename>
+    <options>zoom</options>
+    <pcolor>#0a0a1a</pcolor>
+    <scolor>#0a0a1a</scolor>
+    <shade_type>solid</shade_type>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>Solar System</name>
+    <filename>/usr/share/backgrounds/spaced/solarsystem.jpg</filename>
+    <options>zoom</options>
+    <pcolor>#1a1a2e</pcolor>
+    <scolor>#1a1a2e</scolor>
+    <shade_type>solid</shade_type>
+  </wallpaper>
+</wallpapers>

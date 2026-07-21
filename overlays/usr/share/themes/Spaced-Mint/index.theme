@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=X-GNOME-Metatheme
+Name=Spaced Linux Mint
+Comment=Linux Mint inspired theme
+Encoding=UTF-8
+
+[X-GNOME-Metatheme]
+Name=Spaced Linux Mint
+GtkTheme=Spaced-Mint
+MetacityTheme=Spaced-Mint
+IconTheme=Spaced-Icons-Mint
+CursorTheme=Adwaita
+BackgroundImage=/usr/share/backgrounds/spaced/linuxmint.jpg
+BackgroundColor=#1d1d1d

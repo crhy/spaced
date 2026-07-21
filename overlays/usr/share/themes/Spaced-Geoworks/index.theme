@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=X-GNOME-Metatheme
+Name=Spaced GeoWorks
+Comment=GeoWorks inspired theme
+Encoding=UTF-8
+
+[X-GNOME-Metatheme]
+Name=Spaced GeoWorks
+GtkTheme=Spaced-Geoworks
+MetacityTheme=Spaced-Geoworks
+IconTheme=Spaced-Icons-Geoworks
+CursorTheme=Adwaita
+BackgroundImage=/usr/share/backgrounds/spaced/geoworks.jpg
+BackgroundColor=#d6d6c6

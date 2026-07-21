@@ -1,6 +1,6 @@
-# Spaced Linux 6.26 ISO Configuration
-iso_name: spaced-linux-6.26
-version: "6.26"
+# Spaced Linux 7.26 ISO Configuration
+iso_name: spaced-linux-7.26
+version: "7.26"
 arch: amd64
 
 # Package sources

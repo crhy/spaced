@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Calculator
+Comment=Perform calculations
+Exec=mate-calc
+Icon=accessories-calculator
+StartupWMClass=Mate-calc
+Terminal=false
+Container=_MainDock_
+Order=2
+Icon Type=0

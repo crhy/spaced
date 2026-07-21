@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=X-GNOME-Metatheme
+Name=Spaced Android
+Comment=Android inspired theme
+Encoding=UTF-8
+
+[X-GNOME-Metatheme]
+Name=Spaced Android
+GtkTheme=Spaced-Android
+MetacityTheme=Spaced-Android
+IconTheme=Spaced-Icons-Android
+CursorTheme=Adwaita
+BackgroundImage=/usr/share/backgrounds/spaced/android.jpg
+BackgroundColor=#303030

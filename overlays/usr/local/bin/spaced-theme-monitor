@@ -1,0 +1,69 @@
+#!/bin/bash
+# Apply the small set of desktop extras that a MATE metatheme cannot encode.
+# Folder colors are part of each theme's icon theme and wallpaper rendering is
+# owned by MATE; this helper only reacts once when the selected GTK theme changes.
+set -u
+
+if [ -z "${XDG_RUNTIME_DIR:-}" ]; then
+    export XDG_RUNTIME_DIR="/tmp/runtime-$(id -u)"
+    mkdir -p "$XDG_RUNTIME_DIR" 2>/dev/null || true
+    chmod 700 "$XDG_RUNTIME_DIR" 2>/dev/null || true
+fi
+
+# The session D-Bus is required for gsettings/dconf writes to commit. When this
+# script is launched detached (autostart / init-session), DBUS_SESSION_BUS_ADDRESS
+# may be unset, and every gsettings set would fail silently ("failed to commit
+# changes to dconf"), so theme/wallpaper/panel changes never apply. Point at the
+# session bus socket if it isn't already set.
+if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]; then
+    if [ -S "$XDG_RUNTIME_DIR/bus" ]; then
+        export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
+    fi
+fi
+
+THEMES_JSON="/usr/share/spaced-themes/themes.json"
+# Singleton guard.
+LOCK="$XDG_RUNTIME_DIR/spaced-theme-monitor.lock"
+exec 8>"$LOCK" 2>/dev/null || true
+if ! flock -n 8; then
+    exit 0
+fi
+
+get_gtk() {
+    gsettings get org.mate.interface gtk-theme 2>/dev/null | tr -d "'"
+}
+
+apply_for_gtk() {
+    local gtk_theme="$1"
+    [ -n "$gtk_theme" ] || return 0
+    local id
+    id="$(python3 -c "
+import json,sys
+gtk=sys.argv[1]
+try:
+    d=json.load(open('$THEMES_JSON'))
+except Exception:
+    sys.exit(0)
+for t in d.get('themes',[]):
+    if t.get('gtk_theme')==gtk:
+        print(t['id']); break
+" "$gtk_theme" 2>/dev/null)"
+    [ -n "$id" ] || return 0
+    # This never rewrites the metatheme keys, so Appearance keeps the selected
+    # theme highlighted rather than falling back to "Custom".
+    /usr/local/bin/spaced-switch-theme "$id" 2>/dev/null || true
+}
+
+LAST="$(get_gtk)"
+[ -n "$LAST" ] && apply_for_gtk "$LAST"
+
+# Use dconf's change notification instead of waking up every two seconds.
+while IFS= read -r _; do
+    CUR="$(get_gtk)"
+    [ -n "$CUR" ] || continue
+    [ "$CUR" = "$LAST" ] && continue
+    LAST="$CUR"
+    apply_for_gtk "$CUR"
+done < <(gsettings monitor org.mate.interface gtk-theme 2>/dev/null 8>&-)
+
+exit 0

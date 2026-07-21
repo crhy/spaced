@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Gtk
+Name=Spaced-Mint
+Comment=Spaced Linux Spaced-Mint GTK3 theme
+
+[Settings]
+gtk-theme-name = "Spaced-Mint"

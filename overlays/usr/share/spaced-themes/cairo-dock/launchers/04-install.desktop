@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Install Spaced Linux
+Comment=Install Spaced Linux to disk
+Exec=/usr/local/bin/install-spaced-linux
+Icon=install-spaced-linux
+Terminal=false
+Container=_MainDock_
+Order=3
+Icon Type=0
