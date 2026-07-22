@@ -1,6 +1,12 @@
 # Changelog
 
-## 7.26 - Unreleased
+## 7.26.1 - 2026-07-22
+- Restored out-of-box Wi-Fi support in the live and installed systems.
+- Added wpasupplicant, wireless-regdb, iw, and rfkill explicitly.
+- Expanded firmware coverage for Intel, Realtek, Atheros, Broadcom, and MediaTek wireless hardware.
+- Verified wireless networking on physical laptop hardware.
+
+## 7.26 - 2026-07-22
 - Updated the release to Devuan Ceres with sysvinit.
 - Made Compiz the default MATE window manager with automatic Marco fallback.
 - Added the complete Spaced Linux desktop, package, installer, and live-boot configuration.

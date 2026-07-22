@@ -37,8 +37,12 @@ brisk:
 
 # Network
 network:
+  - iw
   - network-manager
   - network-manager-gnome
+  - rfkill
+  - wireless-regdb
+  - wpasupplicant
 
 # Audio
 audio:
@@ -88,14 +92,18 @@ flatpak:
 
 # Firmware
 firmware:
-  # Common desktop/laptop hardware only. live-build's broad firmware mode also
-  # pulls server accelerators, Qualcomm boards, and legacy NVIDIA payloads.
+  # Desktop and laptop firmware, including current Intel, AMD, Qualcomm
+  # Atheros, Broadcom, Realtek, MediaTek, and common miscellaneous devices.
+  - bluez-firmware
   - firmware-amd-graphics
   - firmware-atheros
   - firmware-brcm80211
   - firmware-intel-graphics
+  - firmware-intel-misc
   - firmware-intel-sound
   - firmware-iwlwifi
+  - firmware-mediatek
+  - firmware-misc-nonfree
   - firmware-realtek
   - firmware-sof-signed
 

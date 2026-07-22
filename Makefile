@@ -34,7 +34,7 @@ deps: ## Install host build and test dependencies
 check: ## Validate configuration, scripts, themes, and desktop entries
 	$(HOST_RUN) scripts/check.sh
 
-clean: ## Remove generated 7.26 build data
+clean: ## Remove generated 7.26.1 build data
 	$(ROOT_RUN) rm -rf "$(abspath $(LB_DIR))"
 	rm -f $(ISO_DIR)/$(ISO_NAME) $(ISO_DIR)/$(ISO_NAME).sha256
 
@@ -83,7 +83,7 @@ lb-build: prepare ## Build the live ISO (requires sudo)
 
 iso-build: lb-build ## Build the live ISO
 
-iso-test: ## Boot the current 7.26 ISO in KVM
+iso-test: ## Boot the current 7.26.1 ISO in KVM
 	test -f $(ISO_DIR)/$(ISO_NAME) || { echo "Missing $(ISO_DIR)/$(ISO_NAME)"; exit 1; }
 	$(VM_RUN) scripts/vm/qemu/test-iso.sh $(abspath $(ISO_DIR)/$(ISO_NAME))
 
@@ -99,4 +99,4 @@ vm-start: ## Boot the installed KVM test disk
 vm-stop: ## Stop a headless KVM test instance
 	$(VM_RUN) scripts/vm/qemu/stop.sh
 
-release: clean lb-build ## Clean-build the Spaced Linux 7.26 ISO
+release: clean lb-build ## Clean-build the Spaced Linux 7.26.1 ISO
