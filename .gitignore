@@ -20,3 +20,6 @@ __pycache__/
 /live-build/*.packages
 /live-build/chroot.files
 /live-build/chroot.packages.*
+
+# Cloudflare Pages build output
+dist/
