@@ -1,5 +1,7 @@
 <p align="center">
-  <img src="overlays/usr/share/pixmaps/spaced-logo.png" alt="Spaced Linux logo" width="180">
+  <a href="https://spacedlinux.com">
+    <img src="branding/spaced-icon-fancy.png" alt="Spaced Linux logo" width="190">
+  </a>
 </p>
 
 <h1 align="center">Spaced Linux 7.26</h1>
@@ -7,14 +9,16 @@
 <p align="center"><strong>Spaced. Polished. Agile. Compiz. Efficient. Devuan.</strong></p>
 
 <p align="center">
-A beautiful, familiar, systemd-free Linux desktop for beginners, power users, and anyone who wants their computer to feel like their own.
+  A beautiful, familiar, systemd-free Linux desktop for beginners, power users,<br>
+  and anyone who wants their computer to feel like their own.
 </p>
 
 <p align="center">
   <a href="https://spacedlinux.com"><strong>Website</strong></a> ·
-  <a href="https://github.com/crhy/spaced/releases"><strong>Downloads</strong></a> ·
+  <a href="https://github.com/crhy/spaced/releases/tag/v7.26"><strong>Download 7.26</strong></a> ·
   <a href="https://github.com/crhy/spaced/issues"><strong>Issues</strong></a> ·
-  <a href="docs/DESIGN.md"><strong>Design</strong></a>
+  <a href="docs/DESIGN.md"><strong>Design</strong></a> ·
+  <a href="#support-spaced-linux"><strong>Support</strong></a>
 </p>
 
 <p align="center">
@@ -23,30 +27,80 @@ A beautiful, familiar, systemd-free Linux desktop for beginners, power users, an
   <img alt="Compiz" src="https://img.shields.io/badge/window%20manager-Compiz-5b5bd6">
   <img alt="Init system" src="https://img.shields.io/badge/init-sysvinit-555555">
   <img alt="Architecture" src="https://img.shields.io/badge/architecture-amd64-2563eb">
+  <img alt="Release" src="https://img.shields.io/badge/release-7.26-0ea5e9">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-black">
 </p>
 
 <p align="center">
-  <img src="SpacedLinuxWallpapers/spaced-orbit-4k.png" alt="Spaced Linux orbital artwork" width="100%">
+  <a href="website/assets/screenshots/desktop-terminal.webp">
+    <img src="website/assets/screenshots/desktop-terminal.webp" alt="Spaced Linux desktop showing system information in a terminal" width="100%">
+  </a>
 </p>
 
 ## Linux that feels familiar. Freedom that goes deeper.
 
-Spaced Linux is a polished desktop distribution built on **Devuan Ceres**, using **sysvinit**, **MATE**, and **Compiz**. It is designed to welcome first-time Linux users without hiding the system from experienced users who want to inspect, customize, automate, and rebuild it.
+Spaced Linux is a polished desktop distribution built on **Devuan Ceres**, using **sysvinit**, **MATE**, and **Compiz**. It welcomes first-time Linux users without hiding the system from experienced users who want to inspect, customize, automate, and rebuild it.
 
-The desktop starts with a familiar layout: one bottom panel, a clear application menu, conventional windows, readable controls, and tools placed where people expect them. Underneath that approachable surface is a lean Devuan base, a deeply configurable Compiz desktop, Flatpak and Flathub integration, a graphical Calamares installer, and a reproducible live-build workflow.
+The desktop begins with a familiar layout: a clear application menu, conventional windows, readable controls, and tools placed where people expect them. Beneath that approachable surface is a lean Devuan base, a deeply configurable Compiz desktop, Flatpak and Flathub integration, a graphical Calamares installer, and a reproducible live-build workflow.
 
 Compiz is not an optional novelty. It is the primary window manager and compositor, providing smooth animation, flexible workspace behavior, window rules, accessibility features, and the visual personality that makes Spaced Linux feel alive. Marco remains available as a dependable fallback.
+
+## Spaced Linux in action
+
+These are real Spaced Linux desktop sessions—not wallpaper mockups. Click any image to view it at full size.
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <a href="website/assets/screenshots/desktop-ai-tools.webp"><img src="website/assets/screenshots/desktop-ai-tools.webp" alt="Voice 2 Text AI application running on Spaced Linux"></a><br>
+      <sub><strong>Modern AI tools</strong> — Voice 2 Text with local model integration.</sub>
+    </td>
+    <td width="50%" align="center">
+      <a href="website/assets/screenshots/desktop-browser.webp"><img src="website/assets/screenshots/desktop-browser.webp" alt="Web browser running on a dark Spaced Linux desktop"></a><br>
+      <sub><strong>Web browsing</strong> — A clean desktop for everyday online work.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <a href="website/assets/screenshots/desktop-music.webp"><img src="website/assets/screenshots/desktop-music.webp" alt="Audacious music player running on Spaced Linux"></a><br>
+      <sub><strong>Music</strong> — Lightweight playback with a classic desktop workflow.</sub>
+    </td>
+    <td width="50%" align="center">
+      <a href="website/assets/screenshots/desktop-video.webp"><img src="website/assets/screenshots/desktop-video.webp" alt="VLC media player running on Spaced Linux"></a><br>
+      <sub><strong>Video</strong> — VLC and modern Flatpak applications fit naturally.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <a href="website/assets/screenshots/desktop-writer.webp"><img src="website/assets/screenshots/desktop-writer.webp" alt="LibreOffice Writer running on Spaced Linux"></a><br>
+      <sub><strong>Word processing</strong> — LibreOffice Writer with a familiar windowed layout.</sub>
+    </td>
+    <td width="50%" align="center">
+      <a href="website/assets/screenshots/desktop-spreadsheet.webp"><img src="website/assets/screenshots/desktop-spreadsheet.webp" alt="LibreOffice Calc running on Spaced Linux"></a><br>
+      <sub><strong>Spreadsheets</strong> — Productive desktop software without systemd.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <a href="website/assets/screenshots/desktop-themes.webp"><img src="website/assets/screenshots/desktop-themes.webp" alt="Spaced Linux theme selection window"></a><br>
+      <sub><strong>Coordinated themes</strong> — Switch the complete desktop personality together.</sub>
+    </td>
+    <td width="50%" align="center">
+      <a href="website/assets/screenshots/desktop-terminal.webp"><img src="website/assets/screenshots/desktop-terminal.webp" alt="Spaced Linux terminal and system information"></a><br>
+      <sub><strong>Transparent and inspectable</strong> — A Linux system that remains yours.</sub>
+    </td>
+  </tr>
+</table>
 
 ## Why beginners feel at home
 
 | Feature | Benefit |
 |---|---|
-| **Familiar desktop** | A classic single-panel workflow avoids the learning curve of unfamiliar shells. |
+| **Familiar desktop** | A classic desktop workflow avoids the learning curve of unfamiliar shells. |
 | **Graphical installation** | Calamares provides a clear installation path for BIOS and UEFI systems. |
-| **Useful defaults** | Networking, audio controls, archive tools, editing, document viewing, and system utilities are ready immediately. |
+| **Useful defaults** | Networking, audio controls, archives, editing, document viewing, and system utilities are ready immediately. |
 | **Modern applications** | Flatpak and Flathub provide current desktop apps without destabilizing the base system. |
-| **Coordinated themes** | A single choice changes the GTK theme, icons, folder colors, wallpaper, panel layout, and optional dock together. |
+| **Coordinated themes** | One choice can change the GTK theme, icons, folder colors, wallpaper, panel layout, and optional dock together. |
 | **Safe fallback** | Marco is available when Compiz is unsuitable for a GPU, VM, or specialized workflow. |
 
 ## Why advanced users keep control
@@ -64,24 +118,11 @@ Compiz is not an optional novelty. It is the primary window manager and composit
 
 Spaced Linux combines a modern system with visual ideas from the best desktop eras. Its theme collection can evoke classic Windows, macOS, Android, Linux Mint, GeoWorks, or the distinctive monochrome Spaced identity without becoming a fragile pile of unrelated tweaks.
 
-<table>
-  <tr>
-    <td width="50%"><img src="SpacedLinuxWallpapers/SpacedBack.png" alt="Spaced Linux dark theme"></td>
-    <td width="50%"><img src="SpacedLinuxWallpapers/SpacedBackLight.png" alt="Spaced Linux light theme"></td>
-  </tr>
-  <tr>
-    <td align="center"><sub>Spaced Dark</sub></td>
-    <td align="center"><sub>Spaced Light</sub></td>
-  </tr>
-  <tr>
-    <td><img src="SpacedLinuxWallpapers/winxp.jpg" alt="Classic desktop theme"></td>
-    <td><img src="SpacedLinuxWallpapers/macos.jpg" alt="Dock-oriented desktop theme"></td>
-  </tr>
-  <tr>
-    <td align="center"><sub>Classic familiarity</sub></td>
-    <td align="center"><sub>Dock-oriented workflow</sub></td>
-  </tr>
-</table>
+<p align="center">
+  <a href="website/assets/screenshots/desktop-themes.webp">
+    <img src="website/assets/screenshots/desktop-themes.webp" alt="Spaced Linux coordinated theme collection" width="100%">
+  </a>
+</p>
 
 ## Core components
 
@@ -97,6 +138,24 @@ Spaced Linux combines a modern system with visual ideas from the best desktop er
 - **Icons:** Spaced overlays based on Papirus
 - **Application delivery:** APT plus Flatpak/Flathub
 - **Target architecture:** amd64
+
+## Download Spaced Linux 7.26
+
+Download the ISO and checksum files from the [Spaced Linux 7.26 release](https://github.com/crhy/spaced/releases/tag/v7.26).
+
+**SHA-256**
+
+```text
+9659b43d1d4c66dae269256a4a17348c8a05543a6a1db1268088bc94fc750db6  spaced-linux-7.26-amd64.iso
+```
+
+Verify the download on Linux:
+
+```bash
+sha256sum -c spaced-linux-7.26-amd64.iso.sha256
+```
+
+Test release images in a virtual machine or on non-critical hardware before adopting them for daily use.
 
 ## Build Spaced Linux
 
@@ -137,9 +196,34 @@ make cache-clean
 
 QEMU defaults to a 1440×900 GTK window and forwards guest SSH to port `2222`.
 
+## Support Spaced Linux
+
+Spaced Linux is an independent project. Donations help cover hosting, testing, hardware, development time, and future releases.
+
+<table>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <a href="https://mempool.space/address/bc1q3kgsasmwyc2knfa8snzqstr7m983sxwleql7l2">
+        <img src="website/assets/donate-bitcoin.png" alt="Donate Bitcoin to Spaced Linux" width="340">
+      </a><br>
+      <strong>Bitcoin</strong><br>
+      <code>bc1q3kgsasmwyc2knfa8snzqstr7m983sxwleql7l2</code>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <a href="https://venmo.com/u/green-jacket">
+        <img src="website/assets/donate-venmo.png" alt="Donate to Spaced Linux with Venmo" width="340">
+      </a><br>
+      <strong>Venmo</strong><br>
+      <code>@green-jacket</code>
+    </td>
+  </tr>
+</table>
+
+Thank you for helping keep an independent, polished, systemd-free desktop available to everyone.
+
 ## Project status
 
-The current release line is **7.26**. Spaced Linux is an independent community project under active development. Test release images in a virtual machine or on non-critical hardware before adopting them for daily use.
+The current release line is **7.26**. Spaced Linux is an independent community project under active development.
 
 ## Contributing
 
