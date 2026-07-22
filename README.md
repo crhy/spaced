@@ -4,16 +4,17 @@
 
 <h1 align="center">Spaced Linux 7.26</h1>
 
+<p align="center"><strong>Spaced. Polished. Agile. Compiz. Efficient. Devuan.</strong></p>
+
 <p align="center">
-  <strong>A polished, Compiz-powered, systemd-free desktop built on Devuan Ceres.</strong>
+A beautiful, familiar, systemd-free Linux desktop for beginners, power users, and anyone who wants their computer to feel like their own.
 </p>
 
 <p align="center">
-  <a href="https://spacedlinuxorg.square.site">Website</a>
-  ·
-  <a href="https://github.com/crhy/spaced/releases">Releases</a>
-  ·
-  <a href="https://github.com/crhy/spaced/issues">Issues</a>
+  <a href="https://spacedlinux.com"><strong>Website</strong></a> ·
+  <a href="https://github.com/crhy/spaced/releases"><strong>Downloads</strong></a> ·
+  <a href="https://github.com/crhy/spaced/issues"><strong>Issues</strong></a> ·
+  <a href="docs/DESIGN.md"><strong>Design</strong></a>
 </p>
 
 <p align="center">
@@ -26,73 +27,80 @@
 </p>
 
 <p align="center">
-  <img src="overlays/usr/share/backgrounds/spaced/SpacedBack.png" alt="Spaced Linux desktop artwork" width="100%">
+  <img src="SpacedLinuxWallpapers/spaced-orbit-4k.png" alt="Spaced Linux orbital artwork" width="100%">
 </p>
 
-## What is Spaced Linux?
+## Linux that feels familiar. Freedom that goes deeper.
 
-Spaced Linux is a lightweight Devuan-based desktop distribution designed to feel immediately familiar without giving up the simplicity of a systemd-free system. It combines a rolling Devuan Ceres foundation with the MATE desktop, Compiz as the primary window manager and compositor, a carefully coordinated monochrome theme, and a classic single-panel workflow.
+Spaced Linux is a polished desktop distribution built on **Devuan Ceres**, using **sysvinit**, **MATE**, and **Compiz**. It is designed to welcome first-time Linux users without hiding the system from experienced users who want to inspect, customize, automate, and rebuild it.
 
-Compiz is central to the Spaced Linux experience rather than an optional visual add-on. It provides the compositing, desktop effects, animations, and flexible window behavior that give the distribution much of its personality. Marco remains available as a dependable fallback for hardware or situations where Compiz is not appropriate.
+The desktop starts with a familiar layout: one bottom panel, a clear application menu, conventional windows, readable controls, and tools placed where people expect them. Underneath that approachable surface is a lean Devuan base, a deeply configurable Compiz desktop, Flatpak and Flathub integration, a graphical Calamares installer, and a reproducible live-build workflow.
 
-The goal is a practical desktop that looks finished, stays understandable, and is useful from the first boot—whether it is running on everyday hardware, inside a virtual machine, or as a customizable base for another system.
+Compiz is not an optional novelty. It is the primary window manager and compositor, providing smooth animation, flexible workspace behavior, window rules, accessibility features, and the visual personality that makes Spaced Linux feel alive. Marco remains available as a dependable fallback.
 
-## Highlights
+## Why beginners feel at home
 
-| | |
+| Feature | Benefit |
 |---|---|
-| **Systemd-free** | Devuan Ceres with `sysvinit` |
-| **Compiz-first desktop** | Compositing, effects, animations, and flexible window management |
-| **Reliable fallback** | Marco remains available when Compiz is unsuitable |
-| **Familiar workflow** | MATE with a single WinXP-style bottom panel |
-| **Eleven distinct themes** | Independent GTK/window palettes, wallpapers, and folder colors over Papirus Dark |
-| **Straightforward menu** | Brisk Menu with Spaced Linux branding |
-| **Modern applications** | Flatpak and Flathub integration |
-| **Graphical installation** | Calamares installer |
-| **Everyday connectivity** | NetworkManager, PulseAudio, and Pavucontrol |
-| **Reproducible images** | Automated `live-build` workflow with QEMU test target |
+| **Familiar desktop** | A classic single-panel workflow avoids the learning curve of unfamiliar shells. |
+| **Graphical installation** | Calamares provides a clear installation path for BIOS and UEFI systems. |
+| **Useful defaults** | Networking, audio controls, archive tools, editing, document viewing, and system utilities are ready immediately. |
+| **Modern applications** | Flatpak and Flathub provide current desktop apps without destabilizing the base system. |
+| **Coordinated themes** | A single choice changes the GTK theme, icons, folder colors, wallpaper, panel layout, and optional dock together. |
+| **Safe fallback** | Marco is available when Compiz is unsuitable for a GPU, VM, or specialized workflow. |
 
-## The desktop experience
+## Why advanced users keep control
 
-Spaced Linux keeps the workflow familiar while using Compiz to make the desktop more capable and expressive:
+| Feature | Benefit |
+|---|---|
+| **Systemd-free architecture** | Devuan Ceres and sysvinit keep service management conventional, understandable, and scriptable. |
+| **APT plus Flatpak** | Use native packages for the operating system and sandboxed apps for fast-moving desktop software. |
+| **Deep Compiz configuration** | Tune effects, window rules, workspaces, keybindings, accessibility, and compositor behavior. |
+| **Reproducible builds** | The repository contains the live-build configuration, package selection, overlays, scripts, and QEMU targets used to make the ISO. |
+| **Plain-text configuration** | Themes, package groups, desktop defaults, and automation remain inspectable and version controlled. |
+| **A practical customization base** | Fork it, rebuild it, replace the artwork, alter package groups, or turn it into another focused distribution. |
 
-- Compiz is the primary window manager and compositor;
-- configurable desktop effects and animations are integrated into the intended experience;
-- Marco is retained as a stable fallback option;
-- one bottom panel replaces multiple bars or docks;
-- the panel provides the application menu, window list, notification area, clock, and show-desktop control;
-- a restrained black-and-gray visual identity ties together the desktop, login screen, installer, and boot presentation;
-- Flatpak support provides current desktop applications without replacing the Devuan base.
+## A desktop with range
+
+Spaced Linux combines a modern system with visual ideas from the best desktop eras. Its theme collection can evoke classic Windows, macOS, Android, Linux Mint, GeoWorks, or the distinctive monochrome Spaced identity without becoming a fragile pile of unrelated tweaks.
 
 <table>
   <tr>
-    <td width="68%"><img src="overlays/usr/share/backgrounds/spaced/SpacedBack.png" alt="Spaced Linux dark desktop wallpaper"></td>
-    <td width="32%"><img src="overlays/usr/share/backgrounds/spaced/SimpleBackb.png" alt="Spaced Linux simplified boot artwork"></td>
+    <td width="50%"><img src="SpacedLinuxWallpapers/SpacedBack.png" alt="Spaced Linux dark theme"></td>
+    <td width="50%"><img src="SpacedLinuxWallpapers/SpacedBackLight.png" alt="Spaced Linux light theme"></td>
   </tr>
   <tr>
-    <td align="center"><sub>Spaced Linux desktop artwork</sub></td>
-    <td align="center"><sub>Simplified boot and installer artwork</sub></td>
+    <td align="center"><sub>Spaced Dark</sub></td>
+    <td align="center"><sub>Spaced Light</sub></td>
+  </tr>
+  <tr>
+    <td><img src="SpacedLinuxWallpapers/winxp.jpg" alt="Classic desktop theme"></td>
+    <td><img src="SpacedLinuxWallpapers/macos.jpg" alt="Dock-oriented desktop theme"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Classic familiarity</sub></td>
+    <td align="center"><sub>Dock-oriented workflow</sub></td>
   </tr>
 </table>
 
 ## Core components
 
-- **Base:** Devuan Ceres, rolling release
+- **Base:** Devuan Ceres 7 “Freia,” rolling release
 - **Init:** sysvinit
-- **Desktop environment:** MATE
-- **Primary window manager and compositor:** Compiz
+- **Desktop:** MATE
+- **Primary window manager:** Compiz
 - **Fallback window manager:** Marco
 - **File manager:** Caja
-- **Menu:** Brisk Menu
-- **Display manager:** LightDM with the GTK greeter
+- **Application menu:** Brisk Menu
+- **Display manager:** LightDM GTK Greeter
 - **Installer:** Calamares
-- **Icons:** Per-theme folder overlays inheriting Papirus Dark
+- **Icons:** Spaced overlays based on Papirus
 - **Application delivery:** APT plus Flatpak/Flathub
 - **Target architecture:** amd64
 
-## Build the ISO
+## Build Spaced Linux
 
-A Devuan or Debian-based build host is recommended.
+A Devuan- or Debian-based build host is recommended.
 
 ```bash
 git clone https://github.com/crhy/spaced.git
@@ -107,45 +115,37 @@ The completed ISO is written beneath:
 build/iso/
 ```
 
-### Test the ISO in QEMU
+### Test in QEMU
 
 ```bash
 make iso-test
 ```
 
-### Build with Docker
-
-```bash
-docker build -t spaced-linux-builder .
-docker run --privileged -v "$(pwd)/build:/build" spaced-linux-builder
-```
-
-## Useful build targets
+### Useful targets
 
 ```bash
 make check
-make help       # List available targets
-make deps       # Install build dependencies
-make iso-build  # Build the live ISO
-make iso-test   # Boot the ISO and reusable install disk in GTK QEMU
-make vm-start   # Boot the installed KVM disk
-make release    # Clean and build a release ISO
-make clean      # Remove generated build artifacts, retaining package cache
-make cache-clean # Remove the live-build package cache
+make help
+make deps
+make iso-build
+make iso-test
+make vm-start
+make release
+make clean
+make cache-clean
 ```
 
-QEMU defaults to a 1440×900 GTK window and forwards guest SSH to port 2222.
-Override a busy port with `make iso-test VM_SSH_PORT=2223`.
+QEMU defaults to a 1440×900 GTK window and forwards guest SSH to port `2222`.
 
 ## Project status
 
-The current version line is **7.26**. Spaced Linux is an independent community project and remains under active development. Test release images on non-critical hardware or in a virtual machine before relying on them for daily work.
-
-For the visual overview and project presentation, visit the [Spaced Linux website](https://spacedlinuxorg.square.site).
+The current release line is **7.26**. Spaced Linux is an independent community project under active development. Test release images in a virtual machine or on non-critical hardware before adopting them for daily use.
 
 ## Contributing
 
-Bug reports, documentation improvements, Compiz configuration refinements, theme improvements, package suggestions, and build fixes are welcome. Open an [issue](https://github.com/crhy/spaced/issues) or submit a pull request with a clear description of the change and how it was tested.
+Bug reports, documentation improvements, Compiz refinements, theme work, package suggestions, hardware testing, accessibility improvements, and build fixes are welcome.
+
+Open an [issue](https://github.com/crhy/spaced/issues) or submit a pull request describing what changed and how it was tested.
 
 ## Acknowledgements
 
@@ -153,4 +153,4 @@ Spaced Linux builds on the work of the Devuan, Debian, MATE, Compiz, Calamares, 
 
 ## License
 
-The build configuration and project-specific code in this repository are released under the [MIT License](LICENSE). Individual upstream packages, themes, and components retain their own licenses.
+Project-specific build configuration and code are released under the [MIT License](LICENSE). Upstream packages, artwork, themes, fonts, and components retain their respective licenses.

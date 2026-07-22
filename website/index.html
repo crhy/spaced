@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Spaced Linux 7.26</title>
+  <meta name="description" content="Spaced Linux is a polished, beginner-friendly and power-user-ready Devuan desktop with MATE, Compiz, sysvinit, Flatpak, and Calamares.">
+  <meta name="theme-color" content="#080a0f">
+  <meta property="og:title" content="Spaced Linux 7.26">
+  <meta property="og:description" content="Linux that feels familiar. Freedom that goes deeper.">
+  <meta property="og:image" content="/assets/spaced-orbit-4k.png">
+  <link rel="icon" href="/assets/spaced-logo.png">
+  <link rel="stylesheet" href="/styles.css">
+  <script defer src="/script.js"></script>
+</head>
+<body>
+<header class="header">
+  <a class="brand" href="#top">
+    <img src="/assets/spaced-logo.png" alt="">
+    <span>SPACED <b>LINUX</b></span>
+  </a>
+  <button class="menu" aria-expanded="false">Menu</button>
+  <nav>
+    <a href="#why">Why Spaced</a>
+    <a href="#themes">Themes</a>
+    <a href="#advanced">Advanced</a>
+    <a href="#build">Build</a>
+    <a class="download" href="https://github.com/crhy/spaced/releases">Download</a>
+  </nav>
+</header>
+
+<main id="top">
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-overlay"></div>
+  <div class="hero-copy">
+    <p class="kicker">SPACED LINUX 7.26</p>
+    <h1>Linux that feels familiar.<br><span>Freedom that goes deeper.</span></h1>
+    <p class="lead">A beautiful, systemd-free desktop that combines MATE, Compiz, Devuan, and modern application delivery into one polished experience.</p>
+    <div class="actions">
+      <a class="button primary" href="https://github.com/crhy/spaced/releases">Download Spaced Linux</a>
+      <a class="button" href="https://github.com/crhy/spaced">Explore the source</a>
+    </div>
+    <div class="pills"><span>Devuan Ceres</span><span>sysvinit</span><span>MATE</span><span>Compiz</span><span>Flatpak</span><span>Calamares</span></div>
+  </div>
+</section>
+
+<section id="why" class="section">
+  <div class="heading">
+    <p class="kicker">ONE DESKTOP. TWO AUDIENCES.</p>
+    <h2>Easy to begin. Powerful enough to keep.</h2>
+    <p>Spaced Linux removes needless friction for new users without hiding the operating system from people who want to understand and reshape it.</p>
+  </div>
+  <div class="two">
+    <article class="card">
+      <small>01</small><h3>For beginners</h3>
+      <p>A conventional desktop, clear menus, graphical installation, sensible controls, and modern applications through Flathub.</p>
+      <ul><li>Familiar single-panel workflow</li><li>Calamares graphical installer</li><li>Networking and audio ready</li><li>Coordinated visual themes</li><li>Marco fallback for difficult hardware</li></ul>
+    </article>
+    <article class="card glow">
+      <small>02</small><h3>For advanced users</h3>
+      <p>A transparent Devuan base with sysvinit, plain-text configuration, Compiz controls, APT, Flatpak, and reproducible ISO builds.</p>
+      <ul><li>No systemd dependency</li><li>Inspectable overlays and scripts</li><li>Deep Compiz configuration</li><li>Theme automation</li><li>QEMU build and test targets</li></ul>
+    </article>
+  </div>
+</section>
+
+<section class="strip">
+  <div><b>Systemd-free</b><span>Devuan Ceres with sysvinit</span></div>
+  <div><b>Compiz-first</b><span>Effects, workspaces, rules, compositing</span></div>
+  <div><b>Modern apps</b><span>APT plus Flatpak and Flathub</span></div>
+  <div><b>Rebuildable</b><span>Version-controlled live-build workflow</span></div>
+</section>
+
+<section id="themes" class="section">
+  <div class="heading split">
+    <div><p class="kicker">A DESKTOP WITH RANGE</p><h2>One system. Many identities.</h2></div>
+    <p>Spaced themes coordinate the wallpaper, GTK appearance, icons, folder colors, panel layout, and optional dock as one complete experience.</p>
+  </div>
+  <div class="gallery">
+    <figure class="wide"><img src="/assets/SpacedBack.png" alt="Spaced Dark"><figcaption><b>Spaced Dark</b><span>Signature monochrome identity</span></figcaption></figure>
+    <figure><img src="/assets/winxp.jpg" alt="Classic theme"><figcaption><b>Classic</b><span>Immediately familiar</span></figcaption></figure>
+    <figure><img src="/assets/macos.jpg" alt="Dock theme"><figcaption><b>Docked</b><span>Elegant app-centered layout</span></figcaption></figure>
+    <figure><img src="/assets/android.jpg" alt="Android theme"><figcaption><b>Mobile-inspired</b><span>Clean and energetic</span></figcaption></figure>
+    <figure><img src="/assets/bluecanvas.jpg" alt="Blue canvas"><figcaption><b>Canvas</b><span>Subtle texture and depth</span></figcaption></figure>
+  </div>
+</section>
+
+<section class="feature">
+  <img src="/assets/solarsystem.jpg" alt="Spaced Linux solar system wallpaper">
+  <div>
+    <p class="kicker">COMPIZ IS PART OF THE DESIGN</p>
+    <h2>A desktop that moves with purpose.</h2>
+    <p>Compiz is the primary window manager and compositor—not a novelty bolted on later. It provides fluid animation, workspace behavior, window organization, accessibility tools, keybindings, and the visual character of Spaced Linux.</p>
+    <p>When compositing is not appropriate, Marco remains available as a dependable fallback.</p>
+    <a href="https://github.com/crhy/spaced/blob/main/docs/DESIGN.md">Read the design documentation →</a>
+  </div>
+</section>
+
+<section id="advanced" class="section">
+  <div class="heading"><p class="kicker">CONTROL WITHOUT CHAOS</p><h2>Built to be understood.</h2></div>
+  <div class="grid">
+    <article><h3>Transparent foundation</h3><p>Devuan and sysvinit keep services and startup behavior conventional and scriptable.</p></article>
+    <article><h3>Native and sandboxed apps</h3><p>APT powers the system while Flatpak delivers current desktop software.</p></article>
+    <article><h3>Plain-text configuration</h3><p>Package groups, overlays, theme mappings, scripts, and defaults live in version control.</p></article>
+    <article><h3>Reproducible images</h3><p>Build, validate, boot, and test the ISO through documented Make and QEMU workflows.</p></article>
+    <article><h3>A customization base</h3><p>Replace artwork, alter packages, create focused editions, or fork a new distribution.</p></article>
+    <article><h3>Independent by design</h3><p>A practical desktop vision rather than a large vendor's appliance ecosystem.</p></article>
+  </div>
+</section>
+
+<section id="build" class="section build">
+  <div><p class="kicker">BUILD IT YOURSELF</p><h2>The complete distro lives in the repository.</h2><p>Clone the project on a Debian- or Devuan-based host and build the same release image used by the project.</p></div>
+  <pre><code><span>$</span> git clone https://github.com/crhy/spaced.git
+<span>$</span> cd spaced
+<span>$</span> make deps
+<span>$</span> make release</code></pre>
+</section>
+
+<section class="cta">
+  <div>
+    <p class="kicker">READY FOR MORE SPACE?</p>
+    <h2>Try a desktop that respects your experience—and your curiosity.</h2>
+    <div class="actions"><a class="button primary" href="https://github.com/crhy/spaced/releases">Get Spaced Linux 7.26</a><a class="button" href="https://github.com/crhy/spaced/issues">Join the project</a></div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="brand"><img src="/assets/spaced-logo.png" alt=""><span>SPACED <b>LINUX</b></span></div>
+  <p>Spaced. Polished. Agile. Compiz. Efficient. Devuan.</p>
+  <div><a href="https://github.com/crhy/spaced">GitHub</a> · <a href="https://github.com/crhy/spaced/releases">Releases</a> · <a href="https://github.com/crhy/spaced/issues">Issues</a></div>
+</footer>
+</body>
+</html>
