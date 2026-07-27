@@ -146,7 +146,9 @@ Download the ISO and checksum files from the [Spaced Linux 7.26.2 release](https
 
 **SHA-256**
 
-The SHA-256 checksum will be published with the final release assets.
+```text
+ce6b956343be26116b880771113e96640d0e8a6c22c082991a9af4a657839a1f  spaced-linux-7.26.2-amd64.iso
+```
 
 Verify the download on Linux:
 

@@ -13,13 +13,13 @@ lb config noauto \
     --linux-flavours amd64 \
     --linux-packages linux-image \
     --memtest none \
-    --mirror-bootstrap "http://deb.devuan.org/merged" \
-    --mirror-chroot "http://deb.devuan.org/merged" \
-    --mirror-binary "http://deb.devuan.org/merged" \
+    --mirror-bootstrap "http://pkgmaster.devuan.org/merged" \
+    --mirror-chroot "http://pkgmaster.devuan.org/merged" \
+    --mirror-binary "http://pkgmaster.devuan.org/merged" \
     --parent-distribution ceres \
-    --parent-mirror-bootstrap "http://deb.devuan.org/merged" \
-    --parent-mirror-chroot "http://deb.devuan.org/merged" \
-    --parent-mirror-binary "http://deb.devuan.org/merged" \
+    --parent-mirror-bootstrap "http://pkgmaster.devuan.org/merged" \
+    --parent-mirror-chroot "http://pkgmaster.devuan.org/merged" \
+    --parent-mirror-binary "http://pkgmaster.devuan.org/merged" \
     --security false \
     --updates false \
     --backports false \
