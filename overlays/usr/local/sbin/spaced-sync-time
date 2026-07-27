@@ -1,0 +1,8 @@
+#!/bin/bash
+set -euo pipefail
+if command -v chronyd >/dev/null 2>&1; then
+  chronyd -q 'pool pool.ntp.org iburst' || true
+elif command -v ntpd >/dev/null 2>&1; then
+  ntpd -gq || true
+fi
+hwclock --systohc --utc 2>/dev/null || true

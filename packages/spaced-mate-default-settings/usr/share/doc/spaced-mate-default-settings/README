@@ -1,0 +1,5 @@
+Spaced Linux MATE Defaults
+
+This package provides the MATE defaults dependency required by
+mate-session-manager while preserving Spaced Linux's own themes,
+Compiz configuration, panel layouts, icons, and GSettings defaults.

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Spaced NVIDIA Driver Installer
+Comment=Detect and install the recommended NVIDIA driver
+Exec=spaced-nvidia-installer
+Icon=video-display
+Terminal=false
+Categories=Settings;HardwareSettings;

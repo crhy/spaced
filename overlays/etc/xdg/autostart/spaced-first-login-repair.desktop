@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Spaced First Login Repair
+Exec=/usr/local/bin/spaced-first-login-repair
+OnlyShowIn=MATE;
+NoDisplay=true
+X-MATE-Autostart-Delay=3

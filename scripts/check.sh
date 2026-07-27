@@ -4,6 +4,30 @@ set -euo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$ROOT"
 
+# Ensure the live-build package generator handles valid indentationless YAML
+# emitted by PyYAML, rather than silently producing an empty image package list.
+generated_packages=$(scripts/iso/package-list.sh)
+
+if [[ -z "$generated_packages" ]]; then
+    echo "scripts/iso/package-list.sh produced an empty package list" >&2
+    exit 1
+fi
+
+for required_package in \
+    libglib2.0-bin \
+    polkitd \
+    pkexec \
+    chrony \
+    firmware-nvidia-graphics \
+    xserver-xorg-video-nouveau
+do
+    if ! grep -Fxq "$required_package" <<<"$generated_packages"; then
+        echo "Generated package list is missing: $required_package" >&2
+        exit 1
+    fi
+done
+
+
 python3 - <<'PY'
 import glob
 import json
@@ -30,6 +54,10 @@ assert not forbidden_packages.intersection(packages), "obsolete runtime/build-he
 assert "xdg-utils" in packages, "Flatpak menu refresh requires xdg-desktop-menu from xdg-utils"
 assert "ca-certificates" in packages, "HTTPS clients require an explicit CA trust store when recommends are disabled"
 assert "libpam-elogind" in packages, "MATE shutdown requires elogind PAM session registration"
+assert "libglib2.0-bin" in packages, "glib-compile-schemas is required by the image configuration hook"
+assert "policykit-1" not in packages, "Devuan Ceres replaces policykit-1 with polkitd and pkexec"
+assert {"polkitd", "pkexec"}.issubset(packages), "Spaced utilities require Devuan Ceres polkitd and pkexec packages"
+assert "dbus-x11" in packages, "SysVinit MATE and GTK portals require the dbus-x11 alternative"
 
 live_build_config = Path("live-build/auto/config").read_text(encoding="utf-8")
 assert "--firmware-chroot false" in live_build_config, "broad live-build firmware injection is enabled"
@@ -352,3 +380,47 @@ if command -v desktop-file-validate >/dev/null 2>&1; then
 fi
 
 echo "All source checks passed."
+
+# Spaced Linux must use Devuan repositories exclusively.
+if grep -RInE \
+    'https?://([^/]*\.)?(deb\.debian\.org|security\.debian\.org|ftp\.debian\.org)' \
+    live-build config overlays scripts Makefile
+then
+    echo "Direct Debian repository URL detected. Use Devuan /merged only." >&2
+    exit 1
+fi
+
+generated_packages=$(scripts/iso/package-list.sh)
+
+for required_package in \
+    dbus-x11 \
+    elogind \
+    libelogind-compat \
+    libpam-elogind \
+    dconf-gsettings-backend \
+    debian-mate-default-settings
+do
+    if ! grep -Fxq "$required_package" <<<"$generated_packages"; then
+        echo "Generated package list is missing: $required_package" >&2
+        exit 1
+    fi
+done
+
+for forbidden_package in \
+    dbus-user-session \
+    systemd \
+    systemd-sysv
+do
+    if grep -Fxq "$forbidden_package" <<<"$generated_packages"; then
+        echo "Forbidden package requested: $forbidden_package" >&2
+        exit 1
+    fi
+done
+
+if grep -RInE \
+    'https?://([^/]*\.)?(deb\.debian\.org|security\.debian\.org|ftp\.debian\.org)' \
+    live-build config overlays scripts Makefile
+then
+    echo "Direct Debian repository URL detected." >&2
+    exit 1
+fi

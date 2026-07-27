@@ -1,0 +1,14 @@
+Package: spaced-mate-default-settings
+Version: 7.26.1
+Section: x11
+Priority: optional
+Architecture: all
+Maintainer: Spaced Linux Team
+Depends: dconf-gsettings-backend
+Provides: debian-mate-default-settings
+Conflicts: debian-mate-default-settings
+Replaces: debian-mate-default-settings
+Description: Spaced Linux default settings for the MATE desktop
+ Supplies the MATE defaults capability required by mate-session-manager.
+ The actual desktop, panel, Compiz, theme, icon, and application defaults
+ are maintained by Spaced Linux.

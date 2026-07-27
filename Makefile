@@ -19,7 +19,7 @@ VM_XRES ?= 1440
 VM_YRES ?= 900
 VM_RUN := $(HOST_RUN) env SPACED_VM_SSH_PORT=$(VM_SSH_PORT) SPACED_VM_XRES=$(VM_XRES) SPACED_VM_YRES=$(VM_YRES)
 
-.PHONY: help check deps clean cache-clean prepare lb-config lb-build iso-build iso-test vm-create vm-install vm-start vm-stop release
+.PHONY: help check deps clean cache-clean prepare lb-config lb-build iso-build iso-test iso-test-safe vm-create vm-install vm-start vm-stop release
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -34,7 +34,7 @@ deps: ## Install host build and test dependencies
 check: ## Validate configuration, scripts, themes, and desktop entries
 	$(HOST_RUN) scripts/check.sh
 
-clean: ## Remove generated 7.26.1 build data
+clean: ## Remove generated 7.26.2 build data
 	$(ROOT_RUN) rm -rf "$(abspath $(LB_DIR))"
 	rm -f $(ISO_DIR)/$(ISO_NAME) $(ISO_DIR)/$(ISO_NAME).sha256
 
@@ -56,6 +56,7 @@ prepare: ## Stage authored live-build configuration
 	cd ../..
 	mkdir -p \
 		$(LB_DIR)/config/package-lists \
+		$(LB_DIR)/config/packages.chroot \
 		$(LB_DIR)/config/includes.chroot \
 		$(LB_DIR)/config/hooks/live \
 		$(LB_DIR)/config/bootloaders
@@ -69,6 +70,8 @@ prepare: ## Stage authored live-build configuration
 	cp scripts/iso/01-configure.chroot \
 		$(LB_DIR)/config/hooks/live/01-configure.chroot
 	chmod +x $(LB_DIR)/config/hooks/live/01-configure.chroot
+	scripts/iso/build-local-packages.sh
+	cp $(BUILD_DIR)/cache/local-packages/*.deb $(LB_DIR)/config/packages.chroot/
 
 lb-config: prepare ## Generate the complete live-build tree
 
@@ -83,9 +86,13 @@ lb-build: prepare ## Build the live ISO (requires sudo)
 
 iso-build: lb-build ## Build the live ISO
 
-iso-test: ## Boot the current 7.26.1 ISO in KVM
+iso-test: ## Boot the current 7.26.2 ISO in KVM
 	test -f $(ISO_DIR)/$(ISO_NAME) || { echo "Missing $(ISO_DIR)/$(ISO_NAME)"; exit 1; }
 	$(VM_RUN) scripts/vm/qemu/test-iso.sh $(abspath $(ISO_DIR)/$(ISO_NAME))
+
+iso-test-safe: ## Boot ISO in KVM with safe graphics
+	test -f $(ISO_DIR)/$(ISO_NAME)
+	$(HOST_RUN) qemu-system-x86_64 -enable-kvm -m 4096 -cpu host -cdrom $(ISO_DIR)/$(ISO_NAME) -boot d -vga std -display gtk
 
 vm-create: ## Create the reusable 25 GB KVM test disk
 	$(VM_RUN) scripts/vm/qemu/create.sh
@@ -99,4 +106,4 @@ vm-start: ## Boot the installed KVM test disk
 vm-stop: ## Stop a headless KVM test instance
 	$(VM_RUN) scripts/vm/qemu/stop.sh
 
-release: clean lb-build ## Clean-build the Spaced Linux 7.26.1 ISO
+release: clean lb-build ## Clean-build the Spaced Linux 7.26.2 ISO
