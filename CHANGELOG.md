@@ -1,6 +1,6 @@
 # Changelog
 
-## 7.26.1 - 2026-07-22
+## 7.26.2 - 2026-07-27
 - Restored out-of-box Wi-Fi support in the live and installed systems.
 - Added wpasupplicant, wireless-regdb, iw, and rfkill explicitly.
 - Expanded firmware coverage for Intel, Realtek, Atheros, Broadcom, and MediaTek wireless hardware.

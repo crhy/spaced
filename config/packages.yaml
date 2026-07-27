@@ -1,6 +1,3 @@
-# Spaced Linux 7.26 Package Selection
-
-# Desktop environment
 desktop:
   - caja
   - gvfs-backends
@@ -9,16 +6,11 @@ desktop:
   - mate-menus
   - mate-notification-daemon
   - mate-polkit
-  - mate-session-manager
   - mate-settings-daemon
   - mate-terminal
-
-# Display manager
 display_manager:
   - lightdm
   - lightdm-gtk-greeter
-
-# Window manager
 window_manager:
   - compiz
   - compiz-mate
@@ -26,48 +18,37 @@ window_manager:
   - compiz-plugins-main
   - compizconfig-settings-manager
   - marco
-
-# Panel
 panel:
   - mate-panel
-
-# Brisk menu
 brisk:
   - mate-applet-brisk-menu
-
-# Network
 network:
-  - iw
   - network-manager
-  - network-manager-gnome
+  - network-manager-applet
+  - nm-connection-editor
+  - iw
   - rfkill
   - wireless-regdb
   - wpasupplicant
-
-# Audio
 audio:
   - pulseaudio
   - pavucontrol
-
-# Themes & icons
 themes:
   - papirus-icon-theme
-
-# Cairo Dock (started only by the macOS and Android themes)
 dock:
   - cairo-dock-core
-
-# Graphics
 graphics:
   - mesa-utils
   - xserver-xorg-input-libinput
   - xserver-xorg-video-intel
-
-# File managers
+  - xserver-xorg-video-all
+  - xserver-xorg-video-nouveau
+  - xserver-xorg-video-fbdev
+  - xserver-xorg-video-vesa
+  - libgl1-mesa-dri
+  - mesa-vulkan-drivers
 file_managers:
   - caja-open-terminal
-
-# Applications
 applications:
   - eom
   - pluma
@@ -75,25 +56,15 @@ applications:
   - atril
   - mate-calc
   - mate-utils
-  # Small GTK first-run application; keep these explicit so the welcome UI
-  # does not depend on an incidental desktop-package dependency.
   - python3
   - python3-gi
   - gir1.2-gtk-3.0
-
-# Flatpak
 flatpak:
   - flatpak
   - xdg-desktop-portal-gtk
   - xdg-desktop-portal
-  # Supplies xdg-desktop-menu, used after successful installs to make Brisk
-  # notice newly exported launchers without requiring a logout or panel restart.
   - xdg-utils
-
-# Firmware
 firmware:
-  # Desktop and laptop firmware, including current Intel, AMD, Qualcomm
-  # Atheros, Broadcom, Realtek, MediaTek, and common miscellaneous devices.
   - bluez-firmware
   - firmware-amd-graphics
   - firmware-atheros
@@ -106,28 +77,18 @@ firmware:
   - firmware-misc-nonfree
   - firmware-realtek
   - firmware-sof-signed
-
-# System tools
+  - firmware-nvidia-graphics
 system:
+  - libglib2.0-bin
   - sudo
-  # Recommends are disabled, so install elogind's PAM session module
-  # explicitly. MATE and polkit need an active local session for shutdown,
-  # reboot, and other seat-level actions.
   - libpam-elogind
-  # APT recommends are disabled; curl and Flatpak otherwise install without a
-  # trust store and every HTTPS remote (including Flathub) fails with curl 77.
   - ca-certificates
   - locales
   - console-setup
-  # Calamares' hwclock job needs the binary split out of util-linux in Ceres.
   - util-linux-extra
-  # Keep both GRUB platform module sets in the copied system. The active
-  # grub-pc and grub-efi packages conflict, but these -bin packages coexist,
-  # allowing Calamares to install either BIOS or UEFI without a download.
   - grub-pc-bin
   - grub-efi-amd64-bin
   - efibootmgr
-  # Required to create the FAT32 EFI System Partition.
   - dosfstools
   - rsync
   - curl
@@ -145,19 +106,20 @@ system:
   - plymouth
   - plymouth-themes
   - fastfetch
-
-# Installer
+  - chrony
+  - dkms
+  - os-prober
+  - polkitd
+  - pkexec
+  - dbus-x11
+  - elogind
+  - libelogind-compat
+  - dconf-gsettings-backend
 installer:
   - calamares
-  # Calamares uses unsquashfs to copy the live filesystem into the target.
-  # The packages module removes this from the completed installation.
   - squashfs-tools
   - qml6-module-qtquick-window
-  # Supplies the standard module configuration; Spaced branding/settings
-  # replace its Debian-facing defaults in the overlay.
   - calamares-settings-debian
-
-# Live boot
 live:
   - live-boot
   - live-config

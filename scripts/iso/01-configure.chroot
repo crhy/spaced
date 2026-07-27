@@ -16,6 +16,13 @@ session-setup-script=/usr/local/sbin/spaced-lightdm-session-setup
 user-session=mate
 LIGHTDM
 
+# Install MATE session support after the local Spaced defaults package.
+dpkg -s spaced-mate-default-settings >/dev/null 2>&1 || {
+    echo "spaced-mate-default-settings was not installed" >&2
+    exit 1
+}
+DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends mate-session-manager
+
 # Compile the defaults supplied by the Spaced Linux overlay.
 glib-compile-schemas /usr/share/glib-2.0/schemas/
 
@@ -105,6 +112,19 @@ done
 
 if command -v plymouth-set-default-theme >/dev/null 2>&1; then
     plymouth-set-default-theme -R spaced
+fi
+
+# Universal NVIDIA-safe live image.
+rm -f /etc/X11/xorg.conf /etc/X11/xorg.conf.d/*nvidia*.conf 2>/dev/null || true
+rm -f /etc/modprobe.d/nvidia-installer-disable-nouveau.conf 2>/dev/null || true
+# Synchronize build/live clock when networking is available.
+/usr/local/sbin/spaced-sync-time || true
+# Enable chrony on installed/live systems.
+[ ! -e /etc/init.d/chrony ] || update-rc.d chrony defaults
+# Let GRUB discover other installed operating systems.
+if [ -f /etc/default/grub ]; then
+  sed -i 's/^#\?GRUB_DISABLE_OS_PROBER=.*/GRUB_DISABLE_OS_PROBER=false/' /etc/default/grub
+  grep -q '^GRUB_DISABLE_OS_PROBER=' /etc/default/grub || echo 'GRUB_DISABLE_OS_PROBER=false' >> /etc/default/grub
 fi
 
 apt-get clean

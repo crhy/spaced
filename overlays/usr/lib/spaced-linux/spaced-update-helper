@@ -1,0 +1,26 @@
+#!/bin/bash
+set -euo pipefail
+export DEBIAN_FRONTEND=noninteractive
+step() { printf 'SPACED_STEP:%s:%s\n' "$1" "$2"; }
+log() { printf '%s\n' "$*"; }
+step 5 'Refreshing APT package lists'
+apt-get update
+step 25 'Installing APT upgrades'
+apt-get -y dist-upgrade
+step 60 'Removing obsolete APT packages'
+apt-get -y autoremove --purge
+apt-get clean
+step 70 'Updating system Flatpaks'
+if command -v flatpak >/dev/null 2>&1; then
+  flatpak update -y --system || true
+fi
+step 82 'Repairing boot menu entries'
+if command -v update-grub >/dev/null 2>&1; then
+  update-grub
+fi
+step 90 'Refreshing initramfs'
+if command -v update-initramfs >/dev/null 2>&1; then
+  update-initramfs -u -k all
+fi
+step 100 'System updates complete'
+log 'APT and system Flatpak updates completed.'

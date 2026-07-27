@@ -1,0 +1,41 @@
+#!/bin/bash
+set -u
+marker="$HOME/.config/spaced/first-login-repair-v2"
+[ -e "$marker" ] && exit 0
+mkdir -p "$(dirname "$marker")"
+# Make GTK-aware applications, including LibreOffice, follow the selected desktop theme.
+export SAL_USE_VCLPLUGIN=gtk3
+# Ensure a MATE clock applet exists without resetting the user's entire panel.
+if command -v gsettings >/dev/null 2>&1 && gsettings list-schemas | grep -qx org.mate.panel; then
+  objects=$(gsettings get org.mate.panel object-id-list 2>/dev/null || printf '[]')
+  if ! printf '%s' "$objects" | grep -q "'clock'"; then
+    python3 - "$objects" <<'PY' >/tmp/spaced-panel-objects.$$
+import ast,sys
+v=ast.literal_eval(sys.argv[1]);
+if 'clock' not in v:v.append('clock')
+print(repr(v))
+PY
+    gsettings set org.mate.panel object-id-list "$(cat /tmp/spaced-panel-objects.$$)" || true
+    rm -f /tmp/spaced-panel-objects.$$
+  fi
+  base='org.mate.panel.object:/org/mate/panel/objects/clock/'
+  gsettings set "$base" object-type 'applet' || true
+  gsettings set "$base" toplevel-id 'top' || true
+  gsettings set "$base" position 0 || true
+  gsettings set "$base" panel-right-stick true || true
+  gsettings set "$base" applet-iid 'ClockAppletFactory::ClockApplet' || true
+fi
+# Apply automatic 2x scaling only on genuinely high-density displays.
+if command -v xdpyinfo >/dev/null 2>&1; then
+  dpi=$(xdpyinfo 2>/dev/null | awk '/resolution:/{gsub(/x.*/,"",$2); print int($2); exit}')
+  if [ "${dpi:-0}" -ge 150 ]; then
+    gsettings set org.mate.interface window-scaling-factor 2 2>/dev/null || true
+    gsettings set org.mate.interface text-scaling-factor 1.15 2>/dev/null || true
+  fi
+fi
+# Re-assert the selected theme values after Calamares creates the account.
+for schema in org.mate.interface org.mate.Marco.general; do
+  gsettings list-schemas 2>/dev/null | grep -qx "$schema" || continue
+  gsettings get "$schema" gtk-theme >/dev/null 2>&1 || true
+done
+touch "$marker"

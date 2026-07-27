@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Spaced Update
+Comment=Update APT and Flatpak applications together
+Exec=spaced-update
+Icon=system-software-update
+Terminal=false
+Categories=System;

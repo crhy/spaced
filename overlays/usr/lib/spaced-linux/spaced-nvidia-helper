@@ -1,0 +1,13 @@
+#!/bin/bash
+set -euo pipefail
+export DEBIAN_FRONTEND=noninteractive
+if ! lspci -nn | grep -qi nvidia; then echo 'No NVIDIA GPU detected.'; exit 2; fi
+apt-get update
+apt-get install -y "linux-headers-$(uname -r)" dkms nvidia-detect
+recommend=$(nvidia-detect 2>&1 | awk '/recommended package/{getline; gsub(/^[[:space:]]+|[[:space:]]+$/,""); print; exit}')
+case "$recommend" in nvidia-driver|nvidia-tesla-*-driver|nvidia-open-kernel-dkms) ;; *) recommend=nvidia-driver ;; esac
+echo "Installing $recommend"
+apt-get install -y "$recommend"
+update-initramfs -u -k all
+update-grub || true
+echo 'Driver installed. Reboot to activate it.'
