@@ -21,7 +21,7 @@ dpkg -s spaced-mate-default-settings >/dev/null 2>&1 || {
     echo "spaced-mate-default-settings was not installed" >&2
     exit 1
 }
-DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends mate-session-manager
+DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::ForceIPv4=true -o Acquire::Retries=6 -o Acquire::http::Timeout=30 install -y --no-install-recommends mate-session-manager
 
 # Compile the defaults supplied by the Spaced Linux overlay.
 glib-compile-schemas /usr/share/glib-2.0/schemas/

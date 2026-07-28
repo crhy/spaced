@@ -17,9 +17,11 @@ ROOT_RUN := $(shell command -v flatpak-spawn >/dev/null 2>&1 && printf 'flatpak-
 VM_SSH_PORT ?= 2222
 VM_XRES ?= 1440
 VM_YRES ?= 900
+SAFE_XRES ?= 1920
+SAFE_YRES ?= 1080
 VM_RUN := $(HOST_RUN) env SPACED_VM_SSH_PORT=$(VM_SSH_PORT) SPACED_VM_XRES=$(VM_XRES) SPACED_VM_YRES=$(VM_YRES)
 
-.PHONY: help check deps clean cache-clean prepare lb-config lb-build iso-build iso-test iso-test-safe vm-create vm-install vm-start vm-stop release
+.PHONY: help check deps clean cache-clean prepare lb-config lb-build iso-build iso-test iso-test-safe iso-test-safe-1024 iso-test-safe-1080 vm-create vm-install vm-start vm-stop release
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -28,7 +30,7 @@ help: ## Show available targets
 deps: ## Install host build and test dependencies
 	$(ROOT_RUN) apt-get update
 	$(ROOT_RUN) apt-get install -y \
-		live-build debootstrap xorriso squashfs-tools \
+		live-build debootstrap xorriso squashfs-tools grub-common \
 		qemu-system-x86 ovmf rsync
 
 check: ## Validate configuration, scripts, themes, and desktop entries
@@ -65,6 +67,7 @@ prepare: ## Stage authored live-build configuration
 	cp -a live-build/config/includes.chroot/usr/share/plymouth/themes/spaced \
 		$(LB_DIR)/config/includes.chroot/usr/share/plymouth/themes/
 	cp -a live-build/config/bootloaders/. $(LB_DIR)/config/bootloaders/
+	install -Dm644 /usr/share/grub/unicode.pf2 $(LB_DIR)/config/bootloaders/grub-pc/fonts/unicode.pf2
 	scripts/iso/package-list.sh > \
 		$(LB_DIR)/config/package-lists/spaced.list.chroot
 	cp scripts/iso/01-configure.chroot \
@@ -90,9 +93,26 @@ iso-test: ## Boot the current 7.26.2 ISO in KVM
 	test -f $(ISO_DIR)/$(ISO_NAME) || { echo "Missing $(ISO_DIR)/$(ISO_NAME)"; exit 1; }
 	$(VM_RUN) scripts/vm/qemu/test-iso.sh $(abspath $(ISO_DIR)/$(ISO_NAME))
 
-iso-test-safe: ## Boot ISO in KVM with safe graphics
+iso-test-safe: ## Boot ISO with safe 2D graphics at the selected resolution
 	test -f $(ISO_DIR)/$(ISO_NAME)
-	$(HOST_RUN) qemu-system-x86_64 -enable-kvm -m 4096 -cpu host -cdrom $(ISO_DIR)/$(ISO_NAME) -boot d -vga std -display gtk
+	$(HOST_RUN) qemu-system-x86_64 \
+		-enable-kvm \
+		-cpu host \
+		-smp 4 \
+		-m 4096 \
+		-device qemu-xhci,id=xhci \
+		-device usb-kbd,bus=xhci.0 \
+		-device usb-tablet,bus=xhci.0 \
+		-device "virtio-vga,edid=on,xres=$(SAFE_XRES),yres=$(SAFE_YRES)" \
+		-cdrom $(ISO_DIR)/$(ISO_NAME) \
+		-boot d \
+		-display gtk
+
+iso-test-safe-1024: ## Boot safe graphics at 1024x768
+	$(MAKE) iso-test-safe SAFE_XRES=1024 SAFE_YRES=768
+
+iso-test-safe-1080: ## Boot safe graphics at 1920x1080
+	$(MAKE) iso-test-safe SAFE_XRES=1920 SAFE_YRES=1080
 
 vm-create: ## Create the reusable 25 GB KVM test disk
 	$(VM_RUN) scripts/vm/qemu/create.sh
