@@ -61,8 +61,8 @@ assert "dbus-x11" in packages, "SysVinit MATE and GTK portals require the dbus-x
 
 live_build_config = Path("live-build/auto/config").read_text(encoding="utf-8")
 assert "--firmware-chroot false" in live_build_config, "broad live-build firmware injection is enabled"
-assert "pkgmaster.devuan.org/merged" in live_build_config, "build mirror is not pinned to pkgmaster"
-assert "deb.devuan.org/merged" not in live_build_config, "rotating build mirror can mix repository snapshots"
+mirror_urls = [line.split(chr(34))[1] for line in live_build_config.splitlines() if "--mirror-" in line or "--parent-mirror-" in line]
+assert len(mirror_urls) == 6 and len(set(mirror_urls)) == 1 and mirror_urls[0].endswith("/merged") and mirror_urls[0] != "http://deb.devuan.org/merged", "build mirrors must use one fixed Devuan /merged endpoint"
 qemu_common = Path("scripts/vm/qemu/common.sh").read_text(encoding="utf-8")
 assert "-rtc base=utc" in qemu_common and "-rtc base=localtime" not in qemu_common, \
     "QEMU must expose a UTC hardware clock to the Linux guest"
@@ -397,8 +397,7 @@ for required_package in \
     elogind \
     libelogind-compat \
     libpam-elogind \
-    dconf-gsettings-backend \
-    debian-mate-default-settings
+    dconf-gsettings-backend
 do
     if ! grep -Fxq "$required_package" <<<"$generated_packages"; then
         echo "Generated package list is missing: $required_package" >&2

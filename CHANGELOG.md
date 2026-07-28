@@ -1,5 +1,11 @@
 # Changelog
 
+## 7.26.3 - 2026-07-28
+- Fixed the GRUB Unicode font warning and restored the Spaced boot background.
+- Safe Graphics now keeps normal display modes available instead of forcing the old 800x600 framebuffer.
+- Added 1024x768 and 1920x1080 QEMU test targets.
+- Pinned live builds to a fixed Devuan mirror and added retry handling for the MATE session package download.
+
 ## 7.26.2 - 2026-07-27
 - Restored out-of-box Wi-Fi support in the live and installed systems.
 - Added wpasupplicant, wireless-regdb, iw, and rfkill explicitly.
