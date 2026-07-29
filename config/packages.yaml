@@ -51,6 +51,7 @@ file_managers:
   - caja-open-terminal
 applications:
   - eom
+  - gdebi-core
   - pluma
   - engrampa
   - atril

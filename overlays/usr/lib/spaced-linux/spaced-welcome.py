@@ -83,6 +83,15 @@ class WelcomeWindow(Gtk.Window):
         self.bazaar.connect("clicked", self._start_install, "bazaar")
         surface.pack_start(self.bazaar, True, True, 0)
 
+        self.nvidia_btn = self._choice(
+            "video-display",
+            "Install NVIDIA Drivers",
+            "Set up proprietary NVIDIA graphics drivers",
+        )
+        self.nvidia_btn.set_margin_top(18)
+        self.nvidia_btn.connect("clicked", self._open_nvidia_installer)
+        surface.pack_start(self.nvidia_btn, True, True, 0)
+
         status_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         status_box.set_halign(Gtk.Align.CENTER)
         status_box.set_margin_top(18)
@@ -119,6 +128,12 @@ class WelcomeWindow(Gtk.Window):
         row.pack_end(arrow, False, False, 0)
         button.add(row)
         return button
+
+    def _open_nvidia_installer(self, button):
+        subprocess.Popen(
+            ["spaced-nvidia-installer"],
+            start_new_session=True,
+        )
 
     def _start_install(self, _button, mode):
         self.suggested.set_sensitive(False)
