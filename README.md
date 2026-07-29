@@ -208,6 +208,14 @@ The current release line is **7.26.4**. Spaced Linux is an independent community
 
 ## Contributing
 
+### NVIDIA Recovery Guide
+
+Spaced Linux includes a verified, transactional NVIDIA driver installer with automatic rollback, pre-reboot verification, and post-reboot desktop checks. For installation steps, SSH recovery procedures, DKMS troubleshooting, Secure Boot limitations, and the full error-code reference see:
+
+- [docs/NVIDIA-RECOVERY.md](docs/NVIDIA-RECOVERY.md)
+
+## Contributing
+
 Bug reports, documentation improvements, Compiz refinements, theme work, package suggestions, hardware testing, accessibility improvements, and build fixes are welcome.
 
 Open an [issue](https://github.com/crhy/spaced/issues) or submit a pull request describing what changed and how it was tested.

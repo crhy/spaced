@@ -79,6 +79,12 @@ firmware:
   - firmware-realtek
   - firmware-sof-signed
   - firmware-nvidia-graphics
+printing:
+  - cups
+  - cups-client
+  - cups-filters
+  - cups-ipp-utils
+  - system-config-printer
 system:
   - libglib2.0-bin
   - sudo
