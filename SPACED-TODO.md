@@ -124,3 +124,11 @@ Spaced Linux 7.26.4 is ready to leave prerelease status only when:
 - [ ] Brave opens web links and GitHub authentication flows by default.
 - [ ] Existing data drives are accessible without unsafe blanket permission changes.
 - [ ] Normal boot, Safe Graphics, QEMU, and clean physical installation tests all pass against the exact release ISO.
+
+## Screenshot-driven visual polish
+
+The detailed implementation and validation plan is tracked in:
+
+- [`docs/VISUAL-POLISH-CHECKLIST.md`](docs/VISUAL-POLISH-CHECKLIST.md)
+
+Important guardrail: Calamares partition bars and destructive disk-operation warnings remain bright and highly differentiated for user safety.
