@@ -1,0 +1,162 @@
+#!/usr/bin/python3
+import hashlib
+import os
+import pwd
+import subprocess
+import time
+from pathlib import Path
+
+import gi
+
+gi.require_version("Gtk", "3.0")
+from gi.repository import Gtk
+
+PENDING = Path("/var/lib/spaced-nvidia-installer/reboot-required")
+HELPER = "/usr/lib/spaced-linux/spaced-nvidia-helper"
+
+
+def run(command, timeout=15):
+    try:
+        result = subprocess.run(
+            command,
+            check=False,
+            capture_output=True,
+            text=True,
+            errors="replace",
+            timeout=timeout,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return 125, "", str(exc)
+    return result.returncode, result.stdout.strip(), result.stderr.strip()
+
+
+def marker_id():
+    data = PENDING.read_bytes()
+    return hashlib.sha256(data).hexdigest()[:20]
+
+
+def ack_path():
+    directory = Path.home() / ".cache" / "spaced-nvidia-installer"
+    directory.mkdir(parents=True, exist_ok=True)
+    return directory / f"verified-{marker_id()}"
+
+
+def collect_checks():
+    details = []
+    failures = []
+
+    rc, output, error = run(["lspci", "-nnk", "-d", "10de:"])
+    details.append("PCI driver:\n" + (output or error or "No NVIDIA PCI output"))
+    if rc != 0 or "Kernel driver in use: nvidia" not in output:
+        failures.append("The NVIDIA GPU is not bound to the nvidia kernel driver.")
+
+    rc, output, error = run([
+        "nvidia-smi",
+        "--query-gpu=name,driver_version",
+        "--format=csv,noheader",
+    ])
+    details.append("nvidia-smi:\n" + (output or error or "No output"))
+    if rc != 0 or not output:
+        failures.append("nvidia-smi could not communicate with the NVIDIA driver.")
+
+    rc, output, error = run(["sh", "-c", "lsmod | grep -E '^(nvidia|nouveau)' || true"])
+    details.append("Loaded modules:\n" + (output or "No NVIDIA/Nouveau modules listed"))
+    if not any(line.startswith("nvidia ") for line in output.splitlines()):
+        failures.append("The core nvidia module is not loaded.")
+    if any(line.startswith("nouveau ") for line in output.splitlines()):
+        failures.append("Nouveau is still loaded after the NVIDIA reboot.")
+
+    rc, output, error = run(["glxinfo", "-B"])
+    details.append("OpenGL:\n" + (output or error or "No output"))
+    lowered = output.lower()
+    if rc != 0:
+        failures.append("OpenGL renderer information could not be read.")
+    if "opengl vendor string: nvidia corporation" not in lowered:
+        failures.append("OpenGL is not using the NVIDIA userspace driver.")
+    if any(token in lowered for token in ("zink", "nvk", "llvmpipe", "softpipe")):
+        failures.append("OpenGL is still using NVK/Zink or software rendering.")
+
+    rc, output, error = run(["wmctrl", "-m"])
+    details.append("Window manager:\n" + (output or error or "No output"))
+    if rc != 0 or "Name: Compiz" not in output:
+        failures.append("Compiz is not the active window manager.")
+
+    for process, label in (("mate-panel", "MATE panel"), ("caja", "Caja desktop")):
+        rc, output, _ = run(["pgrep", "-x", process])
+        details.append(f"{label}: " + ("running" if rc == 0 and output else "not running"))
+        if rc != 0 or not output:
+            failures.append(f"{label} is not running.")
+
+    return failures, "\n\n".join(details)
+
+
+def wait_for_session():
+    last = ([], "")
+    for _ in range(30):
+        last = collect_checks()
+        failures, _ = last
+        transient = [
+            item
+            for item in failures
+            if "Compiz" in item or "panel" in item or "Caja" in item or "OpenGL" in item
+        ]
+        if not transient:
+            return last
+        time.sleep(1)
+    return last
+
+
+def show_success(details):
+    dialog = Gtk.MessageDialog(
+        message_type=Gtk.MessageType.INFO,
+        buttons=Gtk.ButtonsType.CLOSE,
+        text="NVIDIA driver verified",
+    )
+    dialog.format_secondary_text(
+        "The NVIDIA kernel driver, NVIDIA OpenGL, Compiz, the MATE panel, and Caja are all running correctly."
+    )
+    dialog.run()
+    dialog.destroy()
+    ack_path().write_text(details + "\n", encoding="utf-8")
+
+
+def show_failure(failures, details):
+    dialog = Gtk.MessageDialog(
+        message_type=Gtk.MessageType.ERROR,
+        buttons=Gtk.ButtonsType.NONE,
+        text="NVIDIA startup verification failed",
+    )
+    dialog.format_secondary_text("\n".join(f"• {item}" for item in failures))
+    dialog.add_button("Keep System Running", Gtk.ResponseType.CANCEL)
+    dialog.add_button("Restore Nouveau and Reboot", Gtk.ResponseType.OK)
+    response = dialog.run()
+    dialog.destroy()
+    log_dir = Path.home() / ".cache" / "spaced-nvidia-installer"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    (log_dir / f"failed-{marker_id()}.log").write_text(details + "\n", encoding="utf-8")
+    if response == Gtk.ResponseType.OK:
+        user = pwd.getpwuid(os.getuid()).pw_name
+        subprocess.Popen([
+            "pkexec",
+            HELPER,
+            "--rollback",
+            "--reboot-after",
+            "--desktop-user",
+            user,
+        ])
+
+
+def main():
+    if not PENDING.is_file():
+        return
+    if ack_path().exists():
+        return
+    failures, details = wait_for_session()
+    if failures:
+        show_failure(failures, details)
+    else:
+        show_success(details)
+
+
+if __name__ == "__main__":
+    main()

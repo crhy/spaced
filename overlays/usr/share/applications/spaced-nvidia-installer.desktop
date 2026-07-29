@@ -1,8 +1,10 @@
 [Desktop Entry]
 Type=Application
 Name=Spaced NVIDIA Driver Installer
-Comment=Detect and install the recommended NVIDIA driver
+Comment=Install, verify, and recover NVIDIA drivers for Spaced Linux
 Exec=spaced-nvidia-installer
 Icon=video-display
 Terminal=false
-Categories=Settings;HardwareSettings;
+Categories=System;
+Keywords=NVIDIA;GPU;Graphics;Driver;Hardware;
+StartupNotify=true

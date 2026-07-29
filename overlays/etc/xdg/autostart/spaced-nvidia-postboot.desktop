@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Spaced NVIDIA Post-Reboot Verification
+Comment=Verify NVIDIA, OpenGL, and Compiz after a driver installation
+Exec=/usr/bin/python3 /usr/lib/spaced-linux/spaced-nvidia-postboot.py
+Terminal=false
+NoDisplay=true
+X-MATE-Autostart-enabled=true
+OnlyShowIn=MATE;
