@@ -6,7 +6,7 @@
 GRUB_DEFAULT=0
 GRUB_TIMEOUT=5
 GRUB_DISTRIBUTOR="Spaced Linux"
-GRUB_CMDLINE_LINUX_DEFAULT="quiet video=Virtual-1:1280x1024"
+GRUB_CMDLINE_LINUX_DEFAULT="quiet"
 GRUB_CMDLINE_LINUX=""
 
 # If your computer has multiple operating systems installed, then you

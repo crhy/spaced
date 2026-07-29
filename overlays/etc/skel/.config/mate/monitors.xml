@@ -1,17 +1,3 @@
-<monitors version="1">
-  <configuration>
-    <clone>no</clone>
-    <output name="Virtual-1">
-      <vendor>unknown</vendor>
-      <product>unknown</product>
-      <serial>unknown</serial>
-      <width>1280</width>
-      <height>1024</height>
-      <rate>60</rate>
-      <x>0</x>
-      <y>0</y>
-      <rotation>normal</rotation>
-      <reflect>x</reflect>
-    </output>
-  </configuration>
+# SPDX-License-Identifier: MIT
+<monitors version="2">
 </monitors>
