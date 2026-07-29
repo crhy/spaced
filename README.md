@@ -4,7 +4,7 @@
   </a>
 </p>
 
-<h1 align="center">Spaced Linux 7.26.3</h1>
+<h1 align="center">Spaced Linux 7.26.4</h1>
 
 <p align="center"><strong>Spaced. Polished. Agile. Compiz. Efficient. Devuan.</strong></p>
 
@@ -15,7 +15,7 @@
 
 <p align="center">
   <a href="https://spacedlinux.com"><strong>Website</strong></a> ·
-  <a href="https://github.com/crhy/spaced/releases/tag/v7.26.3"><strong>Download 7.26.3</strong></a> ·
+  <a href="https://github.com/crhy/spaced/releases/tag/v7.26.4"><strong>Download 7.26.4</strong></a> ·
   <a href="https://github.com/crhy/spaced/issues"><strong>Issues</strong></a> ·
   <a href="docs/DESIGN.md"><strong>Design</strong></a> ·
   <a href="#support-spaced-linux"><strong>Support</strong></a>
@@ -27,13 +27,13 @@
   <img alt="Compiz" src="https://img.shields.io/badge/window%20manager-Compiz-5b5bd6">
   <img alt="Init system" src="https://img.shields.io/badge/init-sysvinit-555555">
   <img alt="Architecture" src="https://img.shields.io/badge/architecture-amd64-2563eb">
-  <img alt="Release" src="https://img.shields.io/badge/release-7.26.3-0ea5e9">
+  <img alt="Release" src="https://img.shields.io/badge/release-7.26.4-0ea5e9">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-black">
 </p>
 
 <p align="center">
-  <a href="website/assets/screenshots/desktop-terminal.webp">
-    <img src="website/assets/screenshots/desktop-terminal.webp" alt="Spaced Linux desktop showing system information in a terminal" width="100%">
+  <a href="website/assets/screenshots/desktop-control-center.webp">
+    <img src="website/assets/screenshots/desktop-control-center.webp" alt="Spaced Linux dark desktop with the Control Center and hardware monitoring" width="100%">
   </a>
 </p>
 
@@ -52,42 +52,22 @@ These are real Spaced Linux desktop sessions—not wallpaper mockups. Click any 
 <table>
   <tr>
     <td width="50%" align="center">
-      <a href="website/assets/screenshots/desktop-ai-tools.webp"><img src="website/assets/screenshots/desktop-ai-tools.webp" alt="Voice 2 Text AI application running on Spaced Linux"></a><br>
-      <sub><strong>Modern AI tools</strong> — Voice 2 Text with local model integration.</sub>
+      <a href="website/assets/screenshots/desktop-compiz.webp"><img src="website/assets/screenshots/desktop-compiz.webp" alt="Spaced Linux Compiz workspace cube with a terminal"></a><br>
+      <sub><strong>Compiz-first desktop</strong> — Workspaces, accessibility, motion, and organization are part of the core experience.</sub>
     </td>
     <td width="50%" align="center">
-      <a href="website/assets/screenshots/desktop-browser.webp"><img src="website/assets/screenshots/desktop-browser.webp" alt="Web browser running on a dark Spaced Linux desktop"></a><br>
-      <sub><strong>Web browsing</strong> — A clean desktop for everyday online work.</sub>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" align="center">
-      <a href="website/assets/screenshots/desktop-music.webp"><img src="website/assets/screenshots/desktop-music.webp" alt="Audacious music player running on Spaced Linux"></a><br>
-      <sub><strong>Music</strong> — Lightweight playback with a classic desktop workflow.</sub>
-    </td>
-    <td width="50%" align="center">
-      <a href="website/assets/screenshots/desktop-video.webp"><img src="website/assets/screenshots/desktop-video.webp" alt="VLC media player running on Spaced Linux"></a><br>
-      <sub><strong>Video</strong> — VLC and modern Flatpak applications fit naturally.</sub>
+      <a href="website/assets/screenshots/desktop-welcome.webp"><img src="website/assets/screenshots/desktop-welcome.webp" alt="Welcome to Spaced Linux first-run application"></a><br>
+      <sub><strong>Friendly first run</strong> — Start installing software or open the browser from one clear welcome screen.</sub>
     </td>
   </tr>
   <tr>
     <td width="50%" align="center">
-      <a href="website/assets/screenshots/desktop-writer.webp"><img src="website/assets/screenshots/desktop-writer.webp" alt="LibreOffice Writer running on Spaced Linux"></a><br>
-      <sub><strong>Word processing</strong> — LibreOffice Writer with a familiar windowed layout.</sub>
+      <a href="website/assets/screenshots/desktop-bazaar.webp"><img src="website/assets/screenshots/desktop-bazaar.webp" alt="Bazaar application store running on Spaced Linux"></a><br>
+      <sub><strong>Modern applications</strong> — Flatpak and Flathub provide current software without dependency chaos.</sub>
     </td>
     <td width="50%" align="center">
-      <a href="website/assets/screenshots/desktop-spreadsheet.webp"><img src="website/assets/screenshots/desktop-spreadsheet.webp" alt="LibreOffice Calc running on Spaced Linux"></a><br>
-      <sub><strong>Spreadsheets</strong> — Productive desktop software without systemd.</sub>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" align="center">
-      <a href="website/assets/screenshots/desktop-themes.webp"><img src="website/assets/screenshots/desktop-themes.webp" alt="Spaced Linux theme selection window"></a><br>
-      <sub><strong>Coordinated themes</strong> — Switch the complete desktop personality together.</sub>
-    </td>
-    <td width="50%" align="center">
-      <a href="website/assets/screenshots/desktop-terminal.webp"><img src="website/assets/screenshots/desktop-terminal.webp" alt="Spaced Linux terminal and system information"></a><br>
-      <sub><strong>Transparent and inspectable</strong> — A Linux system that remains yours.</sub>
+      <a href="website/assets/screenshots/desktop-theme-cube-dark.webp"><img src="website/assets/screenshots/desktop-theme-cube-dark.webp" alt="Spaced Linux dark coordinated theme displayed across the Compiz workspace cube"></a><br>
+      <sub><strong>Coordinated themes</strong> — GTK, icons, wallpaper, panels, and Compiz presentation move together.</sub>
     </td>
   </tr>
 </table>
@@ -119,8 +99,8 @@ These are real Spaced Linux desktop sessions—not wallpaper mockups. Click any 
 Spaced Linux combines a modern system with visual ideas from the best desktop eras. Its theme collection can evoke classic Windows, macOS, Android, Linux Mint, GeoWorks, or the distinctive monochrome Spaced identity without becoming a fragile pile of unrelated tweaks.
 
 <p align="center">
-  <a href="website/assets/screenshots/desktop-themes.webp">
-    <img src="website/assets/screenshots/desktop-themes.webp" alt="Spaced Linux coordinated theme collection" width="100%">
+  <a href="website/assets/screenshots/desktop-themes-current.webp">
+    <img src="website/assets/screenshots/desktop-themes-current.webp" alt="Spaced Linux coordinated theme collection" width="100%">
   </a>
 </p>
 
@@ -139,21 +119,21 @@ Spaced Linux combines a modern system with visual ideas from the best desktop er
 - **Application delivery:** APT plus Flatpak/Flathub
 - **Target architecture:** amd64
 
-## Download Spaced Linux 7.26.3
+## Download Spaced Linux 7.26.4
 
-Download the ISO and checksum files from the [Spaced Linux 7.26.3 release](https://github.com/crhy/spaced/releases/tag/v7.26.3).
+Download the ISO and checksum files from the [Spaced Linux 7.26.4 release](https://github.com/crhy/spaced/releases/tag/v7.26.4).
 
 
 **SHA-256**
 
 ```text
-08958fafca62ee2d8c51f89a38c0db07ffb27ee0347779e59bb025c38688b812  spaced-linux-7.26.3-amd64.iso
+0e864c967fa1fd19b55df8298218fdaef5215915dd3addcc4e17135535307321  spaced-linux-7.26.4-amd64.iso
 ```
 
 Verify the download on Linux:
 
 ```bash
-sha256sum -c spaced-linux-7.26.3-amd64.iso.sha256
+sha256sum -c spaced-linux-7.26.4-amd64.iso.sha256
 ```
 
 Test release images in a virtual machine or on non-critical hardware before adopting them for daily use.
@@ -224,7 +204,7 @@ Thank you for helping keep an independent, polished, systemd-free desktop availa
 
 ## Project status
 
-The current release line is **7.26.3**. Spaced Linux is an independent community project under active development.
+The current release line is **7.26.4**. Spaced Linux is an independent community project under active development.
 
 ## Contributing
 
