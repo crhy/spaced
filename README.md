@@ -32,8 +32,8 @@
 </p>
 
 <p align="center">
-  <a href="website/assets/screenshots/desktop-terminal.webp">
-    <img src="website/assets/screenshots/desktop-terminal.webp" alt="Spaced Linux desktop showing system information in a terminal" width="100%">
+  <a href="website/assets/screenshots/desktop-control-center.webp">
+    <img src="website/assets/screenshots/desktop-control-center.webp" alt="Spaced Linux dark desktop with the Control Center and hardware monitoring" width="100%">
   </a>
 </p>
 
@@ -52,42 +52,22 @@ These are real Spaced Linux desktop sessions—not wallpaper mockups. Click any 
 <table>
   <tr>
     <td width="50%" align="center">
-      <a href="website/assets/screenshots/desktop-ai-tools.webp"><img src="website/assets/screenshots/desktop-ai-tools.webp" alt="Voice 2 Text AI application running on Spaced Linux"></a><br>
-      <sub><strong>Modern AI tools</strong> — Voice 2 Text with local model integration.</sub>
+      <a href="website/assets/screenshots/desktop-compiz.webp"><img src="website/assets/screenshots/desktop-compiz.webp" alt="Spaced Linux Compiz workspace cube with a terminal"></a><br>
+      <sub><strong>Compiz-first desktop</strong> — Workspaces, accessibility, motion, and organization are part of the core experience.</sub>
     </td>
     <td width="50%" align="center">
-      <a href="website/assets/screenshots/desktop-browser.webp"><img src="website/assets/screenshots/desktop-browser.webp" alt="Web browser running on a dark Spaced Linux desktop"></a><br>
-      <sub><strong>Web browsing</strong> — A clean desktop for everyday online work.</sub>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" align="center">
-      <a href="website/assets/screenshots/desktop-music.webp"><img src="website/assets/screenshots/desktop-music.webp" alt="Audacious music player running on Spaced Linux"></a><br>
-      <sub><strong>Music</strong> — Lightweight playback with a classic desktop workflow.</sub>
-    </td>
-    <td width="50%" align="center">
-      <a href="website/assets/screenshots/desktop-video.webp"><img src="website/assets/screenshots/desktop-video.webp" alt="VLC media player running on Spaced Linux"></a><br>
-      <sub><strong>Video</strong> — VLC and modern Flatpak applications fit naturally.</sub>
+      <a href="website/assets/screenshots/desktop-welcome.webp"><img src="website/assets/screenshots/desktop-welcome.webp" alt="Welcome to Spaced Linux first-run application"></a><br>
+      <sub><strong>Friendly first run</strong> — Start installing software or open the browser from one clear welcome screen.</sub>
     </td>
   </tr>
   <tr>
     <td width="50%" align="center">
-      <a href="website/assets/screenshots/desktop-writer.webp"><img src="website/assets/screenshots/desktop-writer.webp" alt="LibreOffice Writer running on Spaced Linux"></a><br>
-      <sub><strong>Word processing</strong> — LibreOffice Writer with a familiar windowed layout.</sub>
+      <a href="website/assets/screenshots/desktop-bazaar.webp"><img src="website/assets/screenshots/desktop-bazaar.webp" alt="Bazaar application store running on Spaced Linux"></a><br>
+      <sub><strong>Modern applications</strong> — Flatpak and Flathub provide current software without dependency chaos.</sub>
     </td>
     <td width="50%" align="center">
-      <a href="website/assets/screenshots/desktop-spreadsheet.webp"><img src="website/assets/screenshots/desktop-spreadsheet.webp" alt="LibreOffice Calc running on Spaced Linux"></a><br>
-      <sub><strong>Spreadsheets</strong> — Productive desktop software without systemd.</sub>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%" align="center">
-      <a href="website/assets/screenshots/desktop-themes.webp"><img src="website/assets/screenshots/desktop-themes.webp" alt="Spaced Linux theme selection window"></a><br>
-      <sub><strong>Coordinated themes</strong> — Switch the complete desktop personality together.</sub>
-    </td>
-    <td width="50%" align="center">
-      <a href="website/assets/screenshots/desktop-terminal.webp"><img src="website/assets/screenshots/desktop-terminal.webp" alt="Spaced Linux terminal and system information"></a><br>
-      <sub><strong>Transparent and inspectable</strong> — A Linux system that remains yours.</sub>
+      <a href="website/assets/screenshots/desktop-theme-cube-dark.webp"><img src="website/assets/screenshots/desktop-theme-cube-dark.webp" alt="Spaced Linux dark coordinated theme displayed across the Compiz workspace cube"></a><br>
+      <sub><strong>Coordinated themes</strong> — GTK, icons, wallpaper, panels, and Compiz presentation move together.</sub>
     </td>
   </tr>
 </table>
@@ -119,8 +99,8 @@ These are real Spaced Linux desktop sessions—not wallpaper mockups. Click any 
 Spaced Linux combines a modern system with visual ideas from the best desktop eras. Its theme collection can evoke classic Windows, macOS, Android, Linux Mint, GeoWorks, or the distinctive monochrome Spaced identity without becoming a fragile pile of unrelated tweaks.
 
 <p align="center">
-  <a href="website/assets/screenshots/desktop-themes.webp">
-    <img src="website/assets/screenshots/desktop-themes.webp" alt="Spaced Linux coordinated theme collection" width="100%">
+  <a href="website/assets/screenshots/desktop-themes-current.webp">
+    <img src="website/assets/screenshots/desktop-themes-current.webp" alt="Spaced Linux coordinated theme collection" width="100%">
   </a>
 </p>
 
