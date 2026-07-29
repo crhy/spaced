@@ -269,7 +269,7 @@ check_secure_boot() {
     local state
     state="$(mokutil --sb-state 2>&1 || true)"
     printf '%s\n' "$state"
-    if printf '%s\n' "$state" | grep -qi 'SecureBoot enabled'; then
+    if grep -qi 'SecureBoot enabled' <<<"$state"; then
         fatal 10 "Secure Boot is enabled. Disable Secure Boot in firmware, boot Spaced Linux again, and rerun the installer. No graphics-driver changes were made."
     fi
 }
@@ -317,7 +317,9 @@ install_official_repository() {
     apt-get update || fatal 22 "NVIDIA's repository was enabled, but its package index could not be downloaded."
     require_candidate nvidia-driver-assistant 23
     apt-get install -y nvidia-driver-assistant || fatal 23 "NVIDIA Driver Assistant could not be installed."
-    if ! nvidia-driver-assistant --list-supported-distros 2>&1 | grep -Eqi "Debian(:|[[:space:]])?${DEBIAN_VERSION}|Debian.*${DEBIAN_VERSION}"; then
+    local supported_distros
+    supported_distros="$(nvidia-driver-assistant --list-supported-distros 2>&1 || true)"
+    if ! grep -Eqi "Debian(:|[[:space:]])?${DEBIAN_VERSION}|Debian.*${DEBIAN_VERSION}" <<<"$supported_distros"; then
         warning "NVIDIA Driver Assistant does not officially list Debian $DEBIAN_VERSION, but attempting installation anyway."
     fi
     if [ "$(apt_candidate "nvidia-driver-pinning-$DRIVER_BRANCH")" != "(none)" ] && [ -n "$(apt_candidate "nvidia-driver-pinning-$DRIVER_BRANCH")" ]; then
@@ -517,13 +519,15 @@ EOF_DCONF
 
 verify_modprobe_policy() {
     status "Verifying module policy"
-    local config
-    config="$(modprobe --showconfig)"
-    if printf '%s\n' "$config" | grep -Eqi '^[[:space:]]*(blacklist|install)[[:space:]]+(nvidia|nvidia_drm|nvidia_modeset|nvidia_uvm|nvidia_peermem)([[:space:]]|$)'; then
-        printf '%s\n' "$config" | grep -Ei '^[[:space:]]*(blacklist|install)[[:space:]]+(nvidia|nvidia_drm|nvidia_modeset|nvidia_uvm|nvidia_peermem)([[:space:]]|$)' || true
+    local config line
+    config="$(modprobe --showconfig 2>/dev/null || true)"
+    if grep -Eqi '^[[:space:]]*(blacklist|install)[[:space:]]+(nvidia|nvidia_drm|nvidia_modeset|nvidia_uvm|nvidia_peermem)([[:space:]]|$)' <<<"$config"; then
+        while IFS= read -r line; do
+            printf '%s\n' "$line"
+        done <<<"$(grep -Ei '^[[:space:]]*(blacklist|install)[[:space:]]+(nvidia|nvidia_drm|nvidia_modeset|nvidia_uvm|nvidia_peermem)([[:space:]]|$)' <<<"$config")"
         fatal 42 "An active modprobe rule still blocks an NVIDIA module."
     fi
-    printf '%s\n' "$config" | grep -Eqi '^[[:space:]]*blacklist[[:space:]]+nouveau([[:space:]]|$)' || fatal 43 "Nouveau is not blacklisted in the final module policy."
+    grep -Eqi '^[[:space:]]*blacklist[[:space:]]+nouveau([[:space:]]|$)' <<<"$config" || fatal 43 "Nouveau is not blacklisted in the final module policy."
     modprobe -S "$KERNEL" -n -v nvidia 2>&1 | tee "$RUN_DIR/modprobe-nvidia-dry-run.txt"
     grep -Eqi '(/bin/false|/bin/true)' "$RUN_DIR/modprobe-nvidia-dry-run.txt" && fatal 42 "The NVIDIA module is redirected by an install rule." || true
 }
@@ -536,7 +540,7 @@ verify_initramfs() {
     listing="$(lsinitramfs "$initrd")" || fatal 41 "The rebuilt initramfs could not be inspected."
     for module in nvidia nvidia-modeset nvidia-uvm nvidia-drm; do
         pattern="/${module}\\.ko([.][A-Za-z0-9]+)?$"
-        printf '%s\n' "$listing" | grep -Eq "$pattern" || fatal 44 "The rebuilt initramfs does not contain $module.ko."
+        grep -Eq "$pattern" <<<"$listing" || fatal 44 "The rebuilt initramfs does not contain $module.ko."
         printf 'Initramfs contains: %s.ko\n' "$module"
     done
 }
@@ -545,7 +549,9 @@ verify_userspace_and_grub() {
     status "Verifying Xorg, GLX, GRUB, and Compiz configuration"
     [ -x /usr/bin/nvidia-smi ] || fatal 45 "nvidia-smi is missing after driver installation."
     [ -f /usr/lib/xorg/modules/drivers/nvidia_drv.so ] || fatal 45 "The NVIDIA Xorg driver is missing."
-    ! ldd /usr/lib/xorg/modules/drivers/nvidia_drv.so 2>/dev/null | grep -q 'not found' || fatal 45 "The NVIDIA Xorg driver has an unresolved library dependency."
+    local ldd_out
+    ldd_out="$(ldd /usr/lib/xorg/modules/drivers/nvidia_drv.so 2>/dev/null || true)"
+    grep -q 'not found' <<<"$ldd_out" && fatal 45 "The NVIDIA Xorg driver has an unresolved library dependency."
     [ -x /usr/local/bin/spaced-window-manager ] || fatal 46 "The Compiz launcher is missing or not executable."
     command -v compiz >/dev/null 2>&1 || fatal 46 "Compiz is not installed."
     command -v glxinfo >/dev/null 2>&1 || fatal 46 "glxinfo is not installed."
