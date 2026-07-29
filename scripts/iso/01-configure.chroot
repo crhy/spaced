@@ -136,8 +136,8 @@ if [ -f /etc/init.d/ssh ]; then
     printf 'PasswordAuthentication yes\nPermitRootLogin yes\n' > /etc/ssh/sshd_config.d/10-spaced.conf
 fi
 
-# Serial console getty on ttyS0 for headless debugging.
+# Do not enable a serial getty by default. Many physical systems do not
+# expose a usable ttyS0, causing SysVinit to repeatedly respawn getty.
 if [ -f /etc/inittab ]; then
-    grep -q '^S0:' /etc/inittab || \
-        echo 'S0:12345:respawn:/sbin/getty 115200 ttyS0' >> /etc/inittab
+    sed -i '/^S0:.*ttyS0/d' /etc/inittab
 fi

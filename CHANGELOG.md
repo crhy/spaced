@@ -1,5 +1,9 @@
 # Changelog
 
+## 7.26.4 - 2026-07-28
+- Fixed Safe Graphics booting on physical NVIDIA hardware by using the standard framebuffer fallback.
+- Removed the default ttyS0 console and serial getty that caused SysVinit respawn warnings on systems without a usable serial port.
+
 ## 7.26.3 - 2026-07-28
 - Fixed the GRUB Unicode font warning and restored the Spaced boot background.
 - Safe Graphics now keeps normal display modes available instead of forcing the old 800x600 framebuffer.
