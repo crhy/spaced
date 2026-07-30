@@ -15,6 +15,7 @@ fi
 
 for required_package in \
     libglib2.0-bin \
+    mate-media \
     polkitd \
     pkexec \
     chrony \
@@ -297,6 +298,18 @@ assert themes_by_id["linux-dark"]["panel_color"] == "#2f2f2f", \
 android_layout = (root / "usr/share/mate-panel/layouts/spaced-android.layout").read_text(encoding="utf-8")
 assert "BriskMenuFactory::BriskMenu" in android_layout, "Android layout is missing the Brisk menu"
 
+# Validate all themed panel layouts have consistent applet composition
+import glob as _glob
+panel_layouts = [p for p in (root / "usr/share/mate-panel/layouts").glob("spaced-*.layout")]
+assert len(panel_layouts) >= 9, f"expected at least 9 panel layouts, found {len(panel_layouts)}"
+required_applets = {"BriskMenuFactory::BriskMenu", "WnckletFactory::WindowListApplet",
+                    "NotificationAreaAppletFactory::NotificationArea",
+                    "VolAppletFactory::VolumePagerApplet", "ClockAppletFactory::ClockApplet"}
+for layout_path in panel_layouts:
+    text = layout_path.read_text(encoding="utf-8")
+    missing = required_applets - {a for a in required_applets if a in text}
+    assert not missing, f"{layout_path.name}: missing applets {missing}"
+
 schema_override = (root / "usr/share/glib-2.0/schemas/90_spaced-linux.gschema.override").read_text(encoding="utf-8")
 assert "format='12-hour'" in schema_override and "show-date=false" in schema_override, \
     "clock does not default to 12-hour time without the date"
@@ -407,6 +420,7 @@ done
 
 for forbidden_package in \
     dbus-user-session \
+    pavucontrol \
     systemd \
     systemd-sysv
 do
