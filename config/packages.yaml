@@ -32,7 +32,7 @@ network:
   - wpasupplicant
 audio:
   - pulseaudio
-  - pavucontrol
+  - mate-media
 themes:
   - papirus-icon-theme
 dock:

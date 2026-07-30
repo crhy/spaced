@@ -18,6 +18,7 @@ panel:
     - mate-applet-brisk-menu
     - window-list
     - notification-area
+    - volume-control-applet
     - clock
     - show-desktop
 

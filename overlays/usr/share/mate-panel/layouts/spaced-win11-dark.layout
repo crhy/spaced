@@ -23,6 +23,13 @@ toplevel-id=bottom
 position=60
 relative-to-edge=end
 
+[Object volume-control-applet]
+object-type=applet
+applet-iid=VolAppletFactory::VolumePagerApplet
+toplevel-id=bottom
+position=63
+relative-to-edge=end
+
 [Object clock]
 object-type=applet
 applet-iid=ClockAppletFactory::ClockApplet
