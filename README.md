@@ -70,6 +70,12 @@ These are real Spaced Linux desktop sessions—not wallpaper mockups. Click any 
       <sub><strong>Coordinated themes</strong> — GTK, icons, wallpaper, panels, and Compiz presentation move together.</sub>
     </td>
   </tr>
+  <tr>
+    <td width="50%" align="center">
+      <a href="website/assets/screenshots/desktop-macos.webp"><img src="website/assets/screenshots/desktop-macos.webp" alt="Spaced Linux macOS-style themed desktop"></a><br>
+      <sub><strong>A familiar favorite</strong> — The macOS-inspired theme is one of the many coordinated Spaced Linux desktop looks.</sub>
+    </td>
+  </tr>
 </table>
 
 ## Why beginners feel at home
