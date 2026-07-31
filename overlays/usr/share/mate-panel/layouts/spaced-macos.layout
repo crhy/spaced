@@ -25,7 +25,7 @@ relative-to-edge=end
 
 [Object volume-control-applet]
 object-type=applet
-applet-iid=VolAppletFactory::VolumePagerApplet
+applet-iid=GvcAppletFactory::GvcApplet
 toplevel-id=bottom
 position=63
 relative-to-edge=end

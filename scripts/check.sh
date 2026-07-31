@@ -268,7 +268,10 @@ assert "core;ccp;" in compiz_text, "Compiz profile does not activate ccp"
 assert ";dbus;" not in compiz_text, "Compiz D-Bus plug-in crashes the Ceres live session"
 assert ";wobbly;" not in compiz_text and ";animation;" not in compiz_text, \
     "distracting Compiz animations are enabled by default"
-assert "cube;3d;expo;focuspoll;rotate;scale;ezoom;" in compiz_text, "Compiz desktop effects regressed"
+assert ";clone;" not in compiz_text and ";expo;" not in compiz_text, \
+    "Clone Output or Expo is enabled by default"
+assert "firepaint" in compiz_text, "Compiz paint-fire-on-screen plugin is not enabled"
+assert "cube;3d;focuspoll;rotate;scale;ezoom;" in compiz_text, "Compiz desktop effects regressed"
 assert "compiz-plugins-extra" in packages, "Compiz 3D Windows plug-in package is missing"
 assert "as_zoom_in_key = <Shift><Super>Up" in compiz_text, "Compiz enhanced zoom shortcut regressed"
 window_manager = (root / "usr/local/bin/spaced-window-manager").read_text(encoding="utf-8")
@@ -304,7 +307,7 @@ panel_layouts = [p for p in (root / "usr/share/mate-panel/layouts").glob("spaced
 assert len(panel_layouts) >= 9, f"expected at least 9 panel layouts, found {len(panel_layouts)}"
 required_applets = {"BriskMenuFactory::BriskMenu", "WnckletFactory::WindowListApplet",
                     "NotificationAreaAppletFactory::NotificationArea",
-                    "VolAppletFactory::VolumePagerApplet", "ClockAppletFactory::ClockApplet"}
+                    "GvcAppletFactory::GvcApplet", "ClockAppletFactory::ClockApplet"}
 for layout_path in panel_layouts:
     text = layout_path.read_text(encoding="utf-8")
     missing = required_applets - {a for a in required_applets if a in text}

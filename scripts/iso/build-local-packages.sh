@@ -12,7 +12,7 @@ rm -f "$OUTPUT"/spaced-mate-default-settings_*.deb
 dpkg-deb \
     --root-owner-group \
     --build "$SOURCE" \
-    "$OUTPUT/spaced-mate-default-settings_7.26.1_all.deb"
+    "$OUTPUT/spaced-mate-default-settings_7.26.4_all.deb"
 
 dpkg-deb --info \
-    "$OUTPUT/spaced-mate-default-settings_7.26.1_all.deb"
+    "$OUTPUT/spaced-mate-default-settings_7.26.4_all.deb"

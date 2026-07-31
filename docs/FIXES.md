@@ -19,6 +19,7 @@ testing the 7.26 live image. Superseded experiments are intentionally omitted.
 | Rebuild time | `live-build` package/bootstrap cache now lives at `build/cache/live-build` and survives normal clean builds. `make cache-clean` removes it explicitly. |
 | Mirror-sync build failures | Build-time repositories use Devuan's package master rather than the rotating CDN, preventing different build phases from receiving mismatched Ceres snapshots. |
 | Flathub build failure | The image no longer contacts Flathub from inside the build chroot. A small idempotent MATE autostart registers the per-user remote when networking is available. |
+| systemd-free Devuan | **NO systemd packages may be included in this distro.** Spaced Linux is a Devuan distribution and uses sysvinit exclusively. `systemd`, `systemd-sysusers`, and all full-systemd packages are forbidden. Only `systemd-standalone-sysusers` and `systemd-standalone-tmpfiles` are permitted — these are standalone Debian tools that provide only the sysusers/tmpfiles D-Bus APIs without installing systemd itself, enabling packages like dhcpcd-base to configure on a sysvinit system. Debian-only packages requiring systemd (e.g., `dhcpcd-base`) must be excluded from debootstrap via `--exclude` in `live-build/auto/config`. |
 
 Run `make check` before building. Use `make iso-build`, then `make iso-test` for
 the live image and installer, or `make vm-start` after installation.
