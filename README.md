@@ -133,7 +133,7 @@ Download the ISO and checksum files from the [Spaced Linux 7.26.4 release](https
 **SHA-256**
 
 ```text
-0e864c967fa1fd19b55df8298218fdaef5215915dd3addcc4e17135535307321  spaced-linux-7.26.4-amd64.iso
+22c2ba3a6142375aad4da50c860bc82552e211154e9e901ed4a78a33f9a5f9fb  spaced-linux-7.26.4-amd64.iso
 ```
 
 Verify the download on Linux:

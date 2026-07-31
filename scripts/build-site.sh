@@ -8,6 +8,7 @@ rm -rf "$DIST"
 mkdir -p "$ASSETS"
 
 cp "$ROOT/website/index.html" "$DIST/index.html"
+cp "$ROOT/website/themes.html" "$DIST/themes.html"
 cp "$ROOT/website/styles.css" "$DIST/styles.css"
 cp "$ROOT/website/script.js" "$DIST/script.js"
 cp "$ROOT/website/_headers" "$DIST/_headers"
