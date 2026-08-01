@@ -75,6 +75,10 @@ These are real Spaced Linux desktop sessions—not wallpaper mockups. Click any 
       <a href="website/assets/screenshots/desktop-macos.webp"><img src="website/assets/screenshots/desktop-macos.webp" alt="Spaced Linux macOS-style themed desktop"></a><br>
       <sub><strong>A familiar favorite</strong> — The macOS-inspired theme is one of the many coordinated Spaced Linux desktop looks.</sub>
     </td>
+    <td width="50%" align="center">
+      <a href="website/assets/screenshots/desktop-ai-tools.webp"><img src="website/assets/screenshots/desktop-ai-tools.webp" alt="Spaced Linux running the Voice2Text local speech-to-text application"></a><br>
+      <sub><strong>Private AI</strong> — Voice2Text transcribes speech locally on-device, part of the flatpak-driven AI workflow.</sub>
+    </td>
   </tr>
 </table>
 
