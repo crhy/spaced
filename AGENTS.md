@@ -16,7 +16,7 @@ Spaced Linux 7.26: A Devuan Ceres-based distribution with a MATE desktop, Flatpa
 
 Single bottom panel, Windows XP style:
 ```
-[Brisk Menu] [Window List] .............................. [Notification Area] [Clock]
+[Brisk Menu] [Window List] ...................... [Volume] [Notification Area] [Clock]
 ```
 
 ## User Preferences

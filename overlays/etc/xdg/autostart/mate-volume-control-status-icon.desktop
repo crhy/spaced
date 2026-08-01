@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Volume Control
+Comment=Show desktop volume control
+Exec=mate-volume-control-status-icon
+Icon=multimedia-volume-control
+Terminal=false
+NoDisplay=true
+OnlyShowIn=MATE;
+Hidden=true

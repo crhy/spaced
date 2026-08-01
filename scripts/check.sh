@@ -313,6 +313,12 @@ for layout_path in panel_layouts:
     missing = required_applets - {a for a in required_applets if a in text}
     assert not missing, f"{layout_path.name}: missing applets {missing}"
 
+# The panel GvcApplet is the single volume control; mate-media's tray icon must
+# not autostart on top of it or every login shows two volume icons.
+tray_volume_autostart = (root / "etc/xdg/autostart/mate-volume-control-status-icon.desktop")
+tray_volume_text = tray_volume_autostart.read_text(encoding="utf-8")
+assert "Hidden=true" in tray_volume_text, "mate-media tray volume icon still autostarts alongside the panel applet"
+
 schema_override = (root / "usr/share/glib-2.0/schemas/90_spaced-linux.gschema.override").read_text(encoding="utf-8")
 assert "format='12-hour'" in schema_override and "show-date=false" in schema_override, \
     "clock does not default to 12-hour time without the date"

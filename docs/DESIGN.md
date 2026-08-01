@@ -16,11 +16,12 @@
 
 Single bottom panel, 28px:
 ```
-[Brisk Menu] [Window List] .............................. [Notification Area] [Clock]
+[Brisk Menu] [Window List] ...................... [Volume] [Notification Area] [Clock]
 ```
 - **Brisk Menu** — far left, with Simple Icon
 - **Window List** — immediately right of Brisk Menu (app switcher)
 - **Spacer** — expandable, pushes right items to the right
+- **Volume** — the panel GvcApplet, next to the notification area (the tray icon is disabled to avoid a double volume control)
 - **Notification Area** — just left of the clock
 - **Clock** — far right, 12-hour format, no date
 
