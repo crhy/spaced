@@ -33,6 +33,14 @@ position=60
 relative-to-edge=end
 locked=true
 
+[Object volume-control-applet]
+object-type=applet
+applet-iid=GvcAppletFactory::GvcApplet
+toplevel-id=bottom
+position=63
+relative-to-edge=end
+locked=true
+
 [Object clock]
 object-type=applet
 applet-iid=ClockAppletFactory::ClockApplet
@@ -53,12 +61,44 @@ locked=true
 ## Layout Structure
 
 ```
-[BriskMenu] [WindowList] ..................... [NotificationArea] [Clock] [ShowDesktop]
-    ↓             ↓                            ↓                   ↓           ↓
-  pos 0        pos 20                      pos 60, end         pos 66, end  pos 0, end
+[BriskMenu] [WindowList] ........ [Volume] [NotificationArea] [Clock] [ShowDesktop]
+    ↓             ↓                  ↓           ↓             ↓         ↓
+  pos 0        pos 20            pos 63,end  pos 60,end    pos 66,end  pos 0,end
 ```
 
 All applets are `locked=true`.
+
+## One panel for every theme
+
+Every one of the nine themed layouts (`spaced-linux`, `spaced-macos`,
+`spaced-android`, `spaced-win311`, `spaced-winxp`, `spaced-mint`,
+`spaced-win11-light`, `spaced-win11-dark`, `spaced-geoworks`) uses the exact
+same applet composition above. The files differ only in the toplevel's
+`orientation` line. Switching themes therefore never adds, removes, or
+rearranges applets — the panel keeps `[BriskMenu] [WindowList] … [Volume]
+[NotificationArea] [Clock] [ShowDesktop]` no matter which theme is selected.
+
+## Panel position and docks per theme
+
+| Theme               | Panel position | cairo-dock |
+|---------------------|----------------|------------|
+| Spaced Linux Dark   | bottom         | off        |
+| Spaced Linux Light  | bottom         | off        |
+| Mac OS X            | **top**        | **on**     |
+| Windows 3.11        | bottom         | off        |
+| Windows XP          | bottom         | off        |
+| Linux Mint          | bottom         | off        |
+| Windows 11 Light    | bottom         | off        |
+| Windows 11 Dark     | bottom         | off        |
+| GeoWorks            | bottom         | off        |
+| Android             | **top**        | **on**     |
+
+Android and Mac OS X move the single panel to the top edge and enable the
+cairo-dock at the bottom edge; every other theme keeps the panel at the
+bottom with the dock off. `panel_position` and `cairo_dock` in
+`/usr/share/spaced-themes/themes.json` drive this via `spaced-switch-theme`,
+which moves/resizes the existing panel in place and never restarts mate-panel
+(see `docs/FIXES.md`).
 
 ## Clock Preferences
 

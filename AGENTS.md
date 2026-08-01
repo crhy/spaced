@@ -14,10 +14,12 @@ Spaced Linux 7.26: A Devuan Ceres-based distribution with a MATE desktop, Flatpa
 
 ## Desktop Layout
 
-Single bottom panel, Windows XP style:
+Single panel (bottom by default; top for Android and Mac OS X, which also
+enable the cairo-dock at the bottom). Windows XP style:
 ```
-[Brisk Menu] [Window List] ...................... [Volume] [Notification Area] [Clock]
+[Brisk Menu] [Window List] ........ [Volume] [Notification Area] [Clock] [Show Desktop]
 ```
+The panel applet set is identical for every theme (see `docs/matepanel.md`).
 
 ## User Preferences
 

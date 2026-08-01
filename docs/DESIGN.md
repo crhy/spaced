@@ -14,9 +14,9 @@
 
 ## Panel Layout (Windows XP Style)
 
-Single bottom panel, 28px:
+Single panel, 30px:
 ```
-[Brisk Menu] [Window List] ...................... [Volume] [Notification Area] [Clock]
+[Brisk Menu] [Window List] ........ [Volume] [Notification Area] [Clock] [Show Desktop]
 ```
 - **Brisk Menu** — far left, with Simple Icon
 - **Window List** — immediately right of Brisk Menu (app switcher)
@@ -24,6 +24,11 @@ Single bottom panel, 28px:
 - **Volume** — the panel GvcApplet, next to the notification area (the tray icon is disabled to avoid a double volume control)
 - **Notification Area** — just left of the clock
 - **Clock** — far right, 12-hour format, no date
+- **Show Desktop** — far right corner, after the clock
+
+Every theme shares this same single-panel applet composition (see
+`docs/matepanel.md`). The panel stays at the bottom by default; Android and
+Mac OS X place it at the top edge with the cairo-dock at the bottom.
 
 ## Theming
 

@@ -307,11 +307,23 @@ panel_layouts = [p for p in (root / "usr/share/mate-panel/layouts").glob("spaced
 assert len(panel_layouts) >= 9, f"expected at least 9 panel layouts, found {len(panel_layouts)}"
 required_applets = {"BriskMenuFactory::BriskMenu", "WnckletFactory::WindowListApplet",
                     "NotificationAreaAppletFactory::NotificationArea",
-                    "GvcAppletFactory::GvcApplet", "ClockAppletFactory::ClockApplet"}
+                    "GvcAppletFactory::GvcApplet", "ClockAppletFactory::ClockApplet",
+                    "WnckletFactory::ShowDesktopApplet"}
 for layout_path in panel_layouts:
     text = layout_path.read_text(encoding="utf-8")
     missing = required_applets - {a for a in required_applets if a in text}
     assert not missing, f"{layout_path.name}: missing applets {missing}"
+    assert "locked=true" in text, f"{layout_path.name}: panel applets are not locked"
+
+# Every theme shares the same single-panel layout; only the orientation changes.
+canonical_layout = (root / "usr/share/mate-panel/layouts/spaced-linux.layout").read_text(encoding="utf-8")
+for layout_path in panel_layouts:
+    if layout_path.name == "spaced-linux.layout":
+        continue
+    text = layout_path.read_text(encoding="utf-8")
+    diff = [ln for ln in text.splitlines() if ln not in canonical_layout.splitlines()]
+    assert diff == [] or diff == ["orientation=top"], \
+        f"{layout_path.name} diverges from the single-panel layout: {diff}"
 
 # The panel GvcApplet is the single volume control; mate-media's tray icon must
 # not autostart on top of it or every login shows two volume icons.

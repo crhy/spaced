@@ -29,14 +29,24 @@ folder_color, cairo_dock, cairo_dock_position, panel_position, panel_size`.
 
 Current mapping (folder_color → wallpaper):
 - default → grey / SpacedBack.jpg      (gtk_theme: Spaced-Dark)
-- macos   → blue / macos.jpg           (cairo_dock)
+- macos   → blue / macos.jpg           (cairo_dock, top panel)
 - win311  → bluegrey / win311.jpg
 - winxp   → blue / winxp.jpg
-- android → teal / android.jpg          (cairo_dock)
+- android → teal / android.jpg          (cairo_dock, top panel)
 - mint    → green / linuxmint.jpg       (cairo_dock)
 - win11-light → blue / win11light.jpg
 - win11-dark  → blue / win11dark.jpg
 - geoworks → bluegrey / geoworks.jpg
+
+## Panel is identical for every theme
+
+All nine `panel_layout`s share the exact same applet composition
+(`BriskMenu`, `WindowList`, `NotificationArea`, `GvcApplet`, `Clock`,
+`ShowDesktop`, all `locked=true`); the layout files differ only in the
+toplevel's orientation. `panel_position` in `themes.json` moves the panel to
+the top edge for Android and Mac OS X; `cairo_dock=true` for those two also
+launches the dock at the bottom. See `docs/matepanel.md` for the full panel
+specification.
 
 ## Folder colors (Papirus)
 `spaced-switch-theme set_folder_color` repoints every `places/folder.svg`
