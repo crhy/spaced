@@ -4,7 +4,7 @@
   </a>
 </p>
 
-<h1 align="center">Spaced Linux 7.26.4</h1>
+<h1 align="center">Spaced Linux 7.26.5</h1>
 
 <p align="center"><strong>Spaced. Polished. Agile. Compiz. Efficient. Devuan.</strong></p>
 
@@ -15,7 +15,7 @@
 
 <p align="center">
   <a href="https://spacedlinux.com"><strong>Website</strong></a> ·
-  <a href="https://github.com/crhy/spaced/releases/tag/v7.26.4"><strong>Download 7.26.4</strong></a> ·
+  <a href="https://github.com/crhy/spaced/releases/tag/v7.26.5"><strong>Download 7.26.5</strong></a> ·
   <a href="https://github.com/crhy/spaced/issues"><strong>Issues</strong></a> ·
   <a href="docs/DESIGN.md"><strong>Design</strong></a> ·
   <a href="#support-spaced-linux"><strong>Support</strong></a>
@@ -27,7 +27,7 @@
   <img alt="Compiz" src="https://img.shields.io/badge/window%20manager-Compiz-5b5bd6">
   <img alt="Init system" src="https://img.shields.io/badge/init-sysvinit-555555">
   <img alt="Architecture" src="https://img.shields.io/badge/architecture-amd64-2563eb">
-  <img alt="Release" src="https://img.shields.io/badge/release-7.26.4-0ea5e9">
+  <img alt="Release" src="https://img.shields.io/badge/release-7.26.5-0ea5e9">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-black">
 </p>
 
@@ -129,21 +129,21 @@ Spaced Linux combines a modern system with visual ideas from the best desktop er
 - **Application delivery:** APT plus Flatpak/Flathub
 - **Target architecture:** amd64
 
-## Download Spaced Linux 7.26.4
+## Download Spaced Linux 7.26.5
 
-Download the ISO and checksum files from the [Spaced Linux 7.26.4 release](https://github.com/crhy/spaced/releases/tag/v7.26.4).
+Download the ISO and checksum files from the [Spaced Linux 7.26.5 release](https://github.com/crhy/spaced/releases/tag/v7.26.5).
 
 
 **SHA-256**
 
 ```text
-22c2ba3a6142375aad4da50c860bc82552e211154e9e901ed4a78a33f9a5f9fb  spaced-linux-7.26.4-amd64.iso
+ebc81b9226eb5ee89a6e71bf14caae15b518b58f45f183318d291e4548129afc  spaced-linux-7.26.5-amd64.iso
 ```
 
 Verify the download on Linux:
 
 ```bash
-sha256sum -c spaced-linux-7.26.4-amd64.iso.sha256
+sha256sum -c spaced-linux-7.26.5-amd64.iso.sha256
 ```
 
 Test release images in a virtual machine or on non-critical hardware before adopting them for daily use.
@@ -214,7 +214,7 @@ Thank you for helping keep an independent, polished, systemd-free desktop availa
 
 ## Project status
 
-The current release line is **7.26.4**. Spaced Linux is an independent community project under active development.
+The current release line is **7.26.5**. Spaced Linux is an independent community project under active development.
 
 ## Contributing
 
