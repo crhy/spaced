@@ -440,3 +440,13 @@ then
     echo "Direct Debian repository URL detected." >&2
     exit 1
 fi
+
+version=$(cat VERSION)
+if ! grep -q "PRETTY_NAME=\"Spaced Linux $version\"" overlays/etc/os-release; then
+    echo "overlays/etc/os-release does not match VERSION ($version)" >&2
+    exit 1
+fi
+if ! grep -q "VERSION_ID=\"$version\"" overlays/etc/os-release; then
+    echo "overlays/etc/os-release VERSION_ID does not match VERSION ($version)" >&2
+    exit 1
+fi
