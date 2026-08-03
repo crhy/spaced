@@ -59,6 +59,7 @@ assert "libglib2.0-bin" in packages, "glib-compile-schemas is required by the im
 assert "policykit-1" not in packages, "Devuan Ceres replaces policykit-1 with polkitd and pkexec"
 assert {"polkitd", "pkexec"}.issubset(packages), "Spaced utilities require Devuan Ceres polkitd and pkexec packages"
 assert "dbus-x11" in packages, "SysVinit MATE and GTK portals require the dbus-x11 alternative"
+assert {"bluez", "bluez-tools"}.issubset(packages), "Bluetooth stack is not included by default (issue #77)"
 
 live_build_config = Path("live-build/auto/config").read_text(encoding="utf-8")
 assert "--firmware-chroot false" in live_build_config, "broad live-build firmware injection is enabled"
@@ -230,6 +231,10 @@ assert {"locales", "console-setup"}.issubset(packages), \
     "Calamares locale or keyboard support is incomplete"
 assert {"util-linux-extra", "grub-pc-bin", "grub-efi-amd64-bin", "efibootmgr", "dosfstools"}.issubset(packages), \
     "Calamares offline BIOS/UEFI install dependencies are incomplete"
+assert "os-prober" in packages, "GRUB cannot detect other operating systems without os-prober"
+default_grub = (root / "etc/default/grub").read_text(encoding="utf-8")
+assert "GRUB_DISABLE_OS_PROBER=false" in default_grub and "#GRUB_DISABLE_OS_PROBER=false" not in default_grub, \
+    "GRUB os-prober is still disabled, so other OSes never appear in the boot menu (issue #11)"
 assert "qml6-module-qtquick-window" in packages, "Calamares slideshow QML dependency is missing"
 assert "squashfs-tools" in packages, "Calamares cannot unpack the live filesystem without unsquashfs"
 calamares_users = yaml.safe_load((root / "etc/calamares/modules/users.conf").read_text(encoding="utf-8"))
@@ -284,6 +289,18 @@ assert "#PanelApplet #showdesktop-button" in shared_gtk, \
     "panel applet buttons do not inherit each theme's panel color"
 assert "#PanelPlug" in shared_gtk and "NaTrayApplet" in shared_gtk, \
     "legacy NetworkManager tray plugs do not inherit the panel color"
+assert "min-width: 24px" in shared_gtk and "min-height: 26px" in shared_gtk, \
+    "window and dialog buttons still have a tiny click target (issues #6/#64/#65)"
+for glyph in ("object-select-symbolic.svg", "list-remove-symbolic.svg", "media-record-symbolic.svg"):
+    glyph_path = icon_root / "hicolor/scalable/actions" / glyph
+    assert glyph_path.is_file(), f"checkbox/radio glyph is missing: {glyph} (issue #78)"
+mimeapps = (root / "usr/share/applications/mimeapps.list").read_text(encoding="utf-8")
+assert "x-scheme-handler/http=com.brave.Browser.desktop" in mimeapps \
+    and "x-scheme-handler/https=com.brave.Browser.desktop" in mimeapps \
+    and "text/html=com.brave.Browser.desktop" in mimeapps, \
+    "web links are not defaulted to Brave (issue #35)"
+gschema = (root / "usr/share/glib-2.0/schemas/90_spaced-linux.gschema.override").read_text(encoding="utf-8")
+assert "text-scaling-factor=1.2" in gschema, "HiDPI text scaling is not configured (issue #6/#64)"
 wallpaper_catalog = (root / "usr/share/mate-background-properties/spaced-linux.xml").read_text(encoding="utf-8")
 assert "SimpleBackb.png" in wallpaper_catalog, "GRUB background is missing from MATE wallpapers"
 assert "spaced-orbit-4k.png" in wallpaper_catalog, "4K Spaced Orbit wallpaper is missing from MATE wallpapers"

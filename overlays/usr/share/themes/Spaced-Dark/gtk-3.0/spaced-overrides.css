@@ -1,4 +1,17 @@
 /* Cross-theme surface rules. Keep color choices in each theme's gtk.css. */
+
+/* Forgiving click targets and a slightly larger look at high DPI. The classic
+ * Blackbird engine uses a tight 2px vertical padding; widen the hitbox without
+ * changing the visual density of .flat/.image-button toolbar controls. */
+button:not(.flat):not(.image-button),
+togglebutton,
+menubutton,
+combobox > button,
+spinbutton > button {
+    min-width: 24px;
+    min-height: 26px;
+    padding: 5px 10px;
+}
 .background:not(.caja-desktop-window),
 window:not(.caja-desktop-window),
 window.background:not(.caja-desktop-window),

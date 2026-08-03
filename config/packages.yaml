@@ -30,6 +30,9 @@ network:
   - rfkill
   - wireless-regdb
   - wpasupplicant
+bluetooth:
+  - bluez
+  - bluez-tools
 audio:
   - pulseaudio
   - mate-media

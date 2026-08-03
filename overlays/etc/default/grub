@@ -14,7 +14,7 @@ GRUB_CMDLINE_LINUX=""
 # for guest OSes installed via LVM or raw disk devices, running
 # os-prober can cause damage to those guest OSes as it mounts
 # filesystems to look for things.
-#GRUB_DISABLE_OS_PROBER=false
+GRUB_DISABLE_OS_PROBER=false
 
 # Uncomment to enable BadRAM filtering, modify to suit your needs
 # This works with Linux (no patch required) and with any kernel that obtains
