@@ -80,6 +80,16 @@ These are real Spaced Linux desktop sessions—not wallpaper mockups. Click any 
       <sub><strong>Private AI</strong> — Voice2Text transcribes speech locally on-device, part of the flatpak-driven AI workflow.</sub>
     </td>
   </tr>
+  <tr>
+    <td width="50%" align="center">
+      <a href="website/assets/themes/theme-win11dark.webp"><img src="website/assets/themes/theme-win11dark.webp" alt="Spaced Linux Windows 11 dark themed desktop"></a><br>
+      <sub><strong>Windows 11 dark</strong> — A modern dark look inspired by Windows 11, coordinated across GTK, icons, and panels.</sub>
+    </td>
+    <td width="50%" align="center">
+      <a href="website/assets/themes/theme-winxp.webp"><img src="website/assets/themes/theme-winxp.webp" alt="Spaced Linux Windows XP themed desktop"></a><br>
+      <sub><strong>Windows XP</strong> — A nostalgic Windows XP-style desktop that stays fast and familiar.</sub>
+    </td>
+  </tr>
 </table>
 
 ## Why beginners feel at home
