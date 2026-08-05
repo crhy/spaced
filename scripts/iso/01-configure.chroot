@@ -56,6 +56,37 @@ for library in libraries:
     library.write_bytes(data.replace(old, new))
 PY
 
+# mate-control-center opens its shell at a hardcoded stock default of
+# 975x600, but its icon grid only fills roughly 760x560, leaving an odd
+# empty band at the bottom and right of the window. There is no window-rule
+# mechanism in Marco and no gsettings key for this, so resize the compiled-in
+# default by patching the two 32-bit immediates (mov $width,%r8d ; mov
+# $height,%r9d) inside create_main_window.
+python3 - <<'PY'
+from pathlib import Path
+
+default_width, default_height = 760, 560
+path = Path("/usr/bin/mate-control-center")
+data = path.read_bytes()
+
+def patch_immediate(data_bytes, opcode, old_imm, new_imm):
+    # match: opcode + 4-byte little-endian immediate
+    old = opcode + old_imm.to_bytes(4, "little")
+    new = opcode + new_imm.to_bytes(4, "little")
+    occurrences = data_bytes.count(old)
+    if occurrences != 1:
+        raise SystemExit(
+            f"mate-control-center: expected one {old_imm:#x} immediate, "
+            f"found {occurrences}")
+    return data_bytes.replace(old, new)
+
+# width:  mov $0x3cf(975),%r8d  -> 760
+data = patch_immediate(data, b"\x41\xb8", 0x3cf, default_width)
+# height: mov $0x258(600),%r9d  -> 560
+data = patch_immediate(data, b"\x41\xb9", 0x258, default_height)
+path.write_bytes(data)
+PY
+
 # Create the live user if live-config has not already done so.
 id -u user >/dev/null 2>&1 || useradd -m -s /bin/bash user
 echo "user:1" | chpasswd
