@@ -1,0 +1,15 @@
+Package: spaced-meta
+Version: 7.26.5
+Section: metapackages
+Priority: optional
+Architecture: all
+Maintainer: Spaced Linux Team
+Depends: base-files
+Provides: spaced-release
+Breaks: base-files (<< 13)
+Replaces: base-files (<< 13)
+Description: Spaced Linux release version tracking
+ Tracks the Spaced Linux release version so that in-place OS updates
+ are delivered through the package repository. The installed version is
+ written to /etc/os-release, and upgrading this package upgrades the
+ reported Spaced Linux version to match the release.

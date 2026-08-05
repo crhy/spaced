@@ -2,17 +2,26 @@
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
-SOURCE="$ROOT/packages/spaced-mate-default-settings"
-OUTPUT="$ROOT/build/cache/local-packages"
+OUTPUT="${LOCAL_PACKAGE_OUTPUT:-$ROOT/build/cache/local-packages}"
+VERSION="$(cat "$ROOT/VERSION")"
 
 mkdir -p "$OUTPUT"
 
-rm -f "$OUTPUT"/spaced-mate-default-settings_*.deb
+build() {
+    local pkg="$1"
+    local dir="$ROOT/packages/$pkg"
+    local control="$dir/DEBIAN/control"
+    # Use the version from debrelease/VERSION unless the control file pins one.
+    local ver="$VERSION"
+    if grep -q '^Version:' "$control"; then
+        ver="$(awk -F': ' '/^Version:/{print $2; exit}' "$control")"
+    fi
+    local out="$OUTPUT/${pkg}_${ver}_all.deb"
+    rm -f "$out"
+    dpkg-deb --root-owner-group --build "$dir" "$out"
+    dpkg-deb --info "$out" | sed -n '1,12p'
+    echo "    -> $out"
+}
 
-dpkg-deb \
-    --root-owner-group \
-    --build "$SOURCE" \
-    "$OUTPUT/spaced-mate-default-settings_7.26.5_all.deb"
-
-dpkg-deb --info \
-    "$OUTPUT/spaced-mate-default-settings_7.26.5_all.deb"
+build spaced-mate-default-settings
+build spaced-meta

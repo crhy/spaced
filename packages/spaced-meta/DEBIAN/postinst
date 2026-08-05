@@ -1,0 +1,24 @@
+#!/bin/sh
+set -e
+
+VERSION="$(dpkg-query -W -f='${Version}' spaced-meta 2>/dev/null || true)"
+if [ -z "$VERSION" ]; then
+    VERSION="$2"
+fi
+CODENAME="$(printf '%s' "$VERSION" | tr -d '.')"
+
+cat > /etc/os-release <<EOF
+PRETTY_NAME="Spaced Linux $VERSION"
+NAME="Spaced Linux"
+VERSION_ID="$VERSION"
+VERSION="$VERSION"
+VERSION_CODENAME="$CODENAME"
+BUILD_ID="$VERSION"
+ID=spaced
+ID_LIKE=debian
+HOME_URL="https://github.com/crhy/spaced"
+SUPPORT_URL="https://github.com/crhy/spaced/issues"
+BUG_REPORT_URL="https://github.com/crhy/spaced/issues"
+EOF
+
+exit 0

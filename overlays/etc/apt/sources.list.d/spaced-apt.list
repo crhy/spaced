@@ -1,0 +1,3 @@
+# Spaced Linux apt repository (GitHub Pages).
+# Unsigned for now — trusted=yes is required until a signing key is added.
+deb [trusted=yes] https://crhy.github.io/spaced-apt spaced main
