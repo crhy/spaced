@@ -57,7 +57,7 @@ for library in libraries:
 PY
 
 # mate-control-center opens its shell at a hardcoded stock default of
-# 975x600, but its icon grid only fills roughly 760x560, leaving an odd
+# 975x600, but its icon grid only fills roughly 743x633, leaving an odd
 # empty band at the bottom and right of the window. There is no window-rule
 # mechanism in Marco and no gsettings key for this, so resize the compiled-in
 # default by patching the two 32-bit immediates (mov $width,%r8d ; mov
@@ -65,7 +65,7 @@ PY
 python3 - <<'PY'
 from pathlib import Path
 
-default_width, default_height = 760, 560
+default_width, default_height = 743, 633
 path = Path("/usr/bin/mate-control-center")
 data = path.read_bytes()
 
@@ -80,9 +80,9 @@ def patch_immediate(data_bytes, opcode, old_imm, new_imm):
             f"found {occurrences}")
     return data_bytes.replace(old, new)
 
-# width:  mov $0x3cf(975),%r8d  -> 760
+# width:  mov $0x3cf(975),%r8d  -> 743
 data = patch_immediate(data, b"\x41\xb8", 0x3cf, default_width)
-# height: mov $0x258(600),%r9d  -> 560
+# height: mov $0x258(600),%r9d  -> 633
 data = patch_immediate(data, b"\x41\xb9", 0x258, default_height)
 path.write_bytes(data)
 PY
