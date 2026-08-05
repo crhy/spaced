@@ -98,6 +98,8 @@ system:
   - ca-certificates
   - locales
   - console-setup
+  # Temporary Ceres transition pin; see scripts/iso/stage-transition-packages.sh.
+  - xkb-data=2.47-1
   - util-linux-extra
   - grub-pc-bin
   - grub-efi-amd64-bin

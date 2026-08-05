@@ -32,7 +32,7 @@ deps: ## Install host build and test dependencies
 	$(ROOT_RUN) apt-get update
 	$(ROOT_RUN) apt-get install -y \
 		live-build debootstrap xorriso squashfs-tools grub-common \
-		qemu-system-x86 ovmf rsync
+		qemu-system-x86 ovmf rsync curl
 
 check: ## Validate configuration, scripts, themes, and desktop entries
 	$(HOST_RUN) scripts/check.sh
@@ -76,6 +76,7 @@ prepare: ## Stage authored live-build configuration
 		$(LB_DIR)/config/hooks/live/01-configure.chroot
 	chmod +x $(LB_DIR)/config/hooks/live/01-configure.chroot
 	$(HOST_RUN) scripts/iso/build-local-packages.sh
+	$(HOST_RUN) scripts/iso/stage-transition-packages.sh
 	cp $(LOCAL_PACKAGE_DIR)/*.deb $(LB_DIR)/config/packages.chroot/
 
 lb-config: prepare ## Generate the complete live-build tree
