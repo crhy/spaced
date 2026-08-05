@@ -1,12 +1,12 @@
 # Spaced Linux 8.26 Desktop Configuration
 
 theme:
-  gtk: Spaced-Dark
-  metacity: Spaced-Dark
+  gtk: Spaced-Linux-Dark
+  metacity: Spaced-Linux-Dark
   icons: Spaced-Icons-Linux-Dark
 
 background:
-  filename: /usr/share/backgrounds/spaced/SpacedBack.png
+  filename: /usr/share/backgrounds/spaced/SpacedBack.jpg
   options: zoom
   draw_background: true
   show_desktop_icons: true

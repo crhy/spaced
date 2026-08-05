@@ -83,7 +83,7 @@ All user apps installed via Flatpak/Flathub:
 
 ## Visual Identity
 - Name: Spaced Linux
-- Codename: 726
+- Codename: 826
 - Monochrome aesthetic with Spaced iconography
 
 ## Future

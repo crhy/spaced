@@ -62,10 +62,17 @@ for path in glob.glob("config/*.yaml"):
         loaded_yaml[path] = yaml.safe_load(source)
 
 version = Path("VERSION").read_text(encoding="utf-8").strip()
+release_code = version.replace(".", "")
 iso_config = loaded_yaml["config/iso.yaml"]
 assert iso_config["version"] == version, "config/iso.yaml version does not match VERSION"
 assert iso_config["iso_name"] == f"spaced-linux-{version}", \
     "config/iso.yaml ISO name does not match VERSION"
+os_release = Path("overlays/etc/os-release").read_text(encoding="utf-8")
+lsb_release = Path("overlays/etc/lsb-release").read_text(encoding="utf-8")
+assert f'VERSION_CODENAME="{release_code}"' in os_release, \
+    "os-release codename does not match VERSION"
+assert f"DISTRIB_CODENAME={release_code}" in lsb_release, \
+    "lsb-release codename does not match VERSION"
 for path in (
     "README.md",
     "website/index.html",
