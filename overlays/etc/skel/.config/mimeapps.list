@@ -1,0 +1,14 @@
+[Default Applications]
+x-scheme-handler/http=com.brave.Browser.desktop
+x-scheme-handler/https=com.brave.Browser.desktop
+x-scheme-handler/ftp=com.brave.Browser.desktop
+x-scheme-handler/about=com.brave.Browser.desktop
+x-scheme-handler/unknown=com.brave.Browser.desktop
+text/html=com.brave.Browser.desktop
+application/xhtml+xml=com.brave.Browser.desktop
+
+[Added Associations]
+x-scheme-handler/http=com.brave.Browser.desktop;
+x-scheme-handler/https=com.brave.Browser.desktop;
+text/html=com.brave.Browser.desktop;
+application/xhtml+xml=com.brave.Browser.desktop;

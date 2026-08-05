@@ -4,7 +4,7 @@
   </a>
 </p>
 
-<h1 align="center">Spaced Linux 7.26.5</h1>
+<h1 align="center">Spaced Linux 8.26</h1>
 
 <p align="center"><strong>Spaced. Polished. Agile. Compiz. Efficient. Devuan.</strong></p>
 
@@ -15,7 +15,7 @@
 
 <p align="center">
   <a href="https://spacedlinux.com"><strong>Website</strong></a> ·
-  <a href="https://github.com/crhy/spaced/releases/tag/v7.26.5"><strong>Download 7.26.5</strong></a> ·
+  <a href="https://github.com/crhy/spaced/releases"><strong>Download releases</strong></a> ·
   <a href="https://github.com/crhy/spaced/issues"><strong>Issues</strong></a> ·
   <a href="docs/DESIGN.md"><strong>Design</strong></a> ·
   <a href="#support-spaced-linux"><strong>Support</strong></a>
@@ -27,7 +27,7 @@
   <img alt="Compiz" src="https://img.shields.io/badge/window%20manager-Compiz-5b5bd6">
   <img alt="Init system" src="https://img.shields.io/badge/init-sysvinit-555555">
   <img alt="Architecture" src="https://img.shields.io/badge/architecture-amd64-2563eb">
-  <img alt="Release" src="https://img.shields.io/badge/release-7.26.5-0ea5e9">
+  <img alt="Release" src="https://img.shields.io/badge/release-8.26-0ea5e9">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-black">
 </p>
 
@@ -126,7 +126,7 @@ Spaced Linux combines a modern system with visual ideas from the best desktop er
 
 ## Core components
 
-- **Base:** Devuan Ceres 7 “Freia,” rolling release
+- **Base:** Devuan Ceres (unstable), rolling release
 - **Init:** sysvinit
 - **Desktop:** MATE
 - **Primary window manager:** Compiz
@@ -139,21 +139,14 @@ Spaced Linux combines a modern system with visual ideas from the best desktop er
 - **Application delivery:** APT plus Flatpak/Flathub
 - **Target architecture:** amd64
 
-## Download Spaced Linux 7.26.5
+## Download Spaced Linux
 
-Download the ISO and checksum files from the [Spaced Linux 7.26.5 release](https://github.com/crhy/spaced/releases/tag/v7.26.5).
-
-
-**SHA-256**
-
-```text
-ebc81b9226eb5ee89a6e71bf14caae15b518b58f45f183318d291e4548129afc  spaced-linux-7.26.5-amd64.iso
-```
+Download the ISO and its matching checksum from the [Spaced Linux releases page](https://github.com/crhy/spaced/releases).
 
 Verify the download on Linux:
 
 ```bash
-sha256sum -c spaced-linux-7.26.5-amd64.iso.sha256
+sha256sum -c spaced-linux-8.26-amd64.iso.sha256
 ```
 
 Test release images in a virtual machine or on non-critical hardware before adopting them for daily use.
@@ -224,7 +217,7 @@ Thank you for helping keep an independent, polished, systemd-free desktop availa
 
 ## Project status
 
-The current release line is **7.26.5**. Spaced Linux is an independent community project under active development.
+The current development line is **8.26**. Spaced Linux is an independent community project under active development.
 
 ## Contributing
 

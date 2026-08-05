@@ -1,29 +1,63 @@
 #!/bin/bash
 set -u
-marker="$HOME/.config/spaced/first-login-repair-v2"
+marker="$HOME/.config/spaced/first-login-repair-v3"
 [ -e "$marker" ] && exit 0
 mkdir -p "$(dirname "$marker")"
 # Make GTK-aware applications, including LibreOffice, follow the selected desktop theme.
 export SAL_USE_VCLPLUGIN=gtk3
-# Ensure a MATE clock applet exists without resetting the user's entire panel.
+# Repair only missing canonical applets. Package upgrades do not cause MATE to
+# merge a newer layout into an existing dconf profile, which left upgraded
+# systems without the volume applet. Avoid a full panel reset so user-added
+# launchers and placement survive.
 if command -v gsettings >/dev/null 2>&1 && gsettings list-schemas | grep -qx org.mate.panel; then
   objects=$(gsettings get org.mate.panel object-id-list 2>/dev/null || printf '[]')
-  if ! printf '%s' "$objects" | grep -q "'clock'"; then
-    python3 - "$objects" <<'PY' >/tmp/spaced-panel-objects.$$
-import ast,sys
-v=ast.literal_eval(sys.argv[1]);
-if 'clock' not in v:v.append('clock')
-print(repr(v))
+  toplevels=$(gsettings get org.mate.panel toplevel-id-list 2>/dev/null || printf '[]')
+  case "$toplevels" in
+    *"'bottom'"*) panel=bottom ;;
+    *"'top'"*) panel=top ;;
+    *) panel=bottom ;;
+  esac
+
+  canonical_applets=(
+    'brisk-menu|BriskMenuFactory::BriskMenu|0|false'
+    'window-list|WnckletFactory::WindowListApplet|20|false'
+    'notification-area|NotificationAreaAppletFactory::NotificationArea|60|true'
+    'volume-control-applet|GvcAppletFactory::GvcApplet|63|true'
+    'clock|ClockAppletFactory::ClockApplet|66|true'
+    'show-desktop|WnckletFactory::ShowDesktopApplet|0|true'
+  )
+  missing=()
+  for applet in "${canonical_applets[@]}"; do
+    IFS='|' read -r id iid position right_stick <<<"$applet"
+    base="org.mate.panel.object:/org/mate/panel/objects/$id/"
+    configured_iid=$(gsettings get "$base" applet-iid 2>/dev/null || printf "''")
+    if [[ "$objects" != *"'$id'"* ]] || [ "$configured_iid" != "'$iid'" ]; then
+      gsettings set "$base" object-type 'applet' || true
+      gsettings set "$base" toplevel-id "$panel" || true
+      gsettings set "$base" position "$position" || true
+      gsettings set "$base" panel-right-stick "$right_stick" || true
+      gsettings set "$base" applet-iid "$iid" || true
+      missing+=("$id")
+    fi
+  done
+
+  if [ "${#missing[@]}" -gt 0 ]; then
+    repaired_objects=$(python3 - "$objects" "${missing[@]}" <<'PY'
+import ast
+import sys
+
+serialized = sys.argv[1]
+if serialized.startswith("@as "):
+    serialized = serialized[4:]
+objects = ast.literal_eval(serialized)
+for object_id in sys.argv[2:]:
+    if object_id not in objects:
+        objects.append(object_id)
+print(repr(objects))
 PY
-    gsettings set org.mate.panel object-id-list "$(cat /tmp/spaced-panel-objects.$$)" || true
-    rm -f /tmp/spaced-panel-objects.$$
+    )
+    gsettings set org.mate.panel object-id-list "$repaired_objects" || true
   fi
-  base='org.mate.panel.object:/org/mate/panel/objects/clock/'
-  gsettings set "$base" object-type 'applet' || true
-  gsettings set "$base" toplevel-id 'top' || true
-  gsettings set "$base" position 0 || true
-  gsettings set "$base" panel-right-stick true || true
-  gsettings set "$base" applet-iid 'ClockAppletFactory::ClockApplet' || true
 fi
 # Apply automatic 2x scaling only on genuinely high-density displays.
 if command -v xdpyinfo >/dev/null 2>&1; then

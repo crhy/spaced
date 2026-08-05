@@ -8,9 +8,49 @@ togglebutton,
 menubutton,
 combobox > button,
 spinbutton > button {
-    min-width: 24px;
-    min-height: 26px;
+    min-width: 28px;
+    min-height: 28px;
     padding: 5px 10px;
+}
+
+/* Make switch state obvious in applications such as MenuLibre. The inherited
+ * Blackbird rules target the older trough:active selector, which leaves modern
+ * GTK 3 switches as a nearly black, empty outline. */
+switch {
+    min-width: 44px;
+    min-height: 24px;
+    padding: 2px;
+    border: 1px solid shade(@theme_bg_color, 0.70);
+    border-radius: 14px;
+    background-color: shade(@theme_bg_color, 0.82);
+    background-image: none;
+}
+
+switch:checked {
+    border-color: shade(@theme_selected_bg_color, 0.82);
+    background-color: @theme_selected_bg_color;
+}
+
+switch slider,
+switch > slider {
+    min-width: 20px;
+    min-height: 20px;
+    margin: 0;
+    border: 1px solid shade(@theme_bg_color, 0.62);
+    border-radius: 11px;
+    background-color: @theme_base_color;
+    background-image: none;
+    box-shadow: 0 1px 2px alpha(#000000, 0.35);
+}
+
+switch:checked slider,
+switch:checked > slider {
+    border-color: shade(@theme_selected_bg_color, 0.70);
+    background-color: @theme_selected_fg_color;
+}
+
+switch:disabled {
+    opacity: 0.55;
 }
 .background:not(.caja-desktop-window),
 window:not(.caja-desktop-window),

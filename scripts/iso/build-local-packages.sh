@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
-OUTPUT="${LOCAL_PACKAGE_OUTPUT:-$ROOT/build/cache/local-packages}"
+OUTPUT="${LOCAL_PACKAGE_OUTPUT:-$ROOT/build/local-packages}"
 VERSION="$(cat "$ROOT/VERSION")"
 
 mkdir -p "$OUTPUT"

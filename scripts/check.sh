@@ -3,6 +3,8 @@ set -euo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$ROOT"
+CHECK_TMP=$(mktemp -d)
+trap 'rm -rf "$CHECK_TMP"' EXIT
 
 # Ensure the live-build package generator handles valid indentationless YAML
 # emitted by PyYAML, rather than silently producing an empty image package list.
@@ -15,6 +17,11 @@ fi
 
 for required_package in \
     libglib2.0-bin \
+    dbus-x11 \
+    elogind \
+    libelogind-compat \
+    libpam-elogind \
+    dconf-gsettings-backend \
     mate-media \
     polkitd \
     pkexec \
@@ -28,10 +35,22 @@ do
     fi
 done
 
+for forbidden_package in \
+    dbus-user-session \
+    pavucontrol \
+    systemd \
+    systemd-sysv
+do
+    if grep -Fxq "$forbidden_package" <<<"$generated_packages"; then
+        echo "Forbidden package requested: $forbidden_package" >&2
+        exit 1
+    fi
+done
 
 python3 - <<'PY'
 import glob
 import json
+from collections import Counter
 from pathlib import Path
 from xml.etree import ElementTree
 
@@ -42,9 +61,27 @@ for path in glob.glob("config/*.yaml"):
     with open(path, encoding="utf-8") as source:
         loaded_yaml[path] = yaml.safe_load(source)
 
+version = Path("VERSION").read_text(encoding="utf-8").strip()
+iso_config = loaded_yaml["config/iso.yaml"]
+assert iso_config["version"] == version, "config/iso.yaml version does not match VERSION"
+assert iso_config["iso_name"] == f"spaced-linux-{version}", \
+    "config/iso.yaml ISO name does not match VERSION"
+for path in (
+    "README.md",
+    "website/index.html",
+    "website/themes.html",
+    "live-build/auto/config",
+    "overlays/etc/calamares/branding/spaced/branding.desc",
+    "overlays/etc/calamares/branding/spaced/slideshow/Show.qml",
+    "live-build/config/bootloaders/grub-pc/grub.cfg",
+    "live-build/config/bootloaders/grub-pc/live-theme/theme.txt",
+):
+    assert f"Spaced Linux {version}" in Path(path).read_text(encoding="utf-8"), \
+        f"{path} does not identify the current release"
+
 package_groups = loaded_yaml["config/packages.yaml"]
 packages = [package for group in package_groups.values() for package in group]
-duplicates = sorted({package for package in packages if packages.count(package) > 1})
+duplicates = sorted(package for package, count in Counter(packages).items() if count > 1)
 assert not duplicates, f"duplicate packages in config/packages.yaml: {duplicates}"
 forbidden_packages = {
     "cairo-dock", "cairo-dock-plug-ins", "feh", "imagemagick",
@@ -105,7 +142,15 @@ for theme in themes:
         "metacity-1/metacity-theme-1.xml",
     ):
         assert (directory / relative).is_file(), f"{name}: missing {relative}"
-    ElementTree.parse(directory / "metacity-1/metacity-theme-1.xml")
+    metacity_path = directory / "metacity-1/metacity-theme-1.xml"
+    ElementTree.parse(metacity_path)
+    metacity = metacity_path.read_text(encoding="utf-8")
+    assert '<distance name="title_vertical_pad" value="5"/>' in metacity, \
+        f"{name}: normal titlebar click target is too small"
+    assert '<distance name="title_vertical_pad" value="3"/>' in metacity, \
+        f"{name}: utility titlebar click target is too small"
+    assert 'width="width" height="19"' not in metacity, \
+        f"{name}: titlebar gradient does not cover the enlarged hit target"
 
     metadata = (directory / "index.theme").read_text(encoding="utf-8")
     values = {}
@@ -159,6 +204,9 @@ assert "io.github.kolunmi.Bazaar" in flatpak_installer, "Bazaar installer action
 for app_id in ("org.atheme.audacious", "io.github.kolunmi.Bazaar", "com.brave.Browser",
                "org.libreoffice.LibreOffice", "org.videolan.VLC"):
     assert app_id in flatpak_list, f"suggested Flatpak is missing: {app_id}"
+assert "https://github.com/crhy/Voice2Text-AI/releases/latest/download/Voice2Text-AI.flatpak" in flatpak_list, \
+    "Voice2Text does not use GitHub's stable latest-release URL"
+assert "/releases/download/v" not in flatpak_list, "Voice2Text is pinned to a stale release"
 assert {"python3-gi", "gir1.2-gtk-3.0"}.issubset(packages), \
     "first-run GTK application dependencies are missing"
 assert flatpak_wrapper_path.stat().st_mode & 0o111, "Flatpak HTTPS-bundle wrapper is not executable"
@@ -289,8 +337,10 @@ assert "#PanelApplet #showdesktop-button" in shared_gtk, \
     "panel applet buttons do not inherit each theme's panel color"
 assert "#PanelPlug" in shared_gtk and "NaTrayApplet" in shared_gtk, \
     "legacy NetworkManager tray plugs do not inherit the panel color"
-assert "min-width: 24px" in shared_gtk and "min-height: 26px" in shared_gtk, \
+assert "min-width: 28px" in shared_gtk and "min-height: 28px" in shared_gtk, \
     "window and dialog buttons still have a tiny click target (issues #6/#64/#65)"
+assert "switch:checked" in shared_gtk and "min-width: 44px" in shared_gtk, \
+    "modern GTK switches do not expose a clear on/off state"
 for glyph in ("object-select-symbolic.svg", "list-remove-symbolic.svg", "media-record-symbolic.svg"):
     glyph_path = icon_root / "hicolor/scalable/actions" / glyph
     assert glyph_path.is_file(), f"checkbox/radio glyph is missing: {glyph} (issue #78)"
@@ -299,6 +349,11 @@ assert "x-scheme-handler/http=com.brave.Browser.desktop" in mimeapps \
     and "x-scheme-handler/https=com.brave.Browser.desktop" in mimeapps \
     and "text/html=com.brave.Browser.desktop" in mimeapps, \
     "web links are not defaulted to Brave (issue #35)"
+skel_mimeapps = (root / "etc/skel/.config/mimeapps.list").read_text(encoding="utf-8")
+assert "x-scheme-handler/http=com.brave.Browser.desktop" in skel_mimeapps \
+    and "x-scheme-handler/https=com.brave.Browser.desktop" in skel_mimeapps \
+    and "text/html=com.brave.Browser.desktop" in skel_mimeapps, \
+    "new user profiles do not preserve Brave as the web handler (issue #35)"
 gschema = (root / "usr/share/glib-2.0/schemas/90_spaced-linux.gschema.override").read_text(encoding="utf-8")
 assert "text-scaling-factor=1.2" in gschema, "HiDPI text scaling is not configured (issue #6/#64)"
 wallpaper_catalog = (root / "usr/share/mate-background-properties/spaced-linux.xml").read_text(encoding="utf-8")
@@ -319,7 +374,6 @@ android_layout = (root / "usr/share/mate-panel/layouts/spaced-android.layout").r
 assert "BriskMenuFactory::BriskMenu" in android_layout, "Android layout is missing the Brisk menu"
 
 # Validate all themed panel layouts have consistent applet composition
-import glob as _glob
 panel_layouts = [p for p in (root / "usr/share/mate-panel/layouts").glob("spaced-*.layout")]
 assert len(panel_layouts) >= 9, f"expected at least 9 panel layouts, found {len(panel_layouts)}"
 required_applets = {"BriskMenuFactory::BriskMenu", "WnckletFactory::WindowListApplet",
@@ -412,15 +466,45 @@ assert "terminal_background='#000000'" in switcher and "terminal_foreground='#88
 assert "terminal_background='#ffffff'" in switcher and "terminal_foreground='#000000'" in switcher, \
     "light themes do not use black on white in MATE Terminal"
 
+first_login_repair = (root / "usr/local/bin/spaced-first-login-repair").read_text(encoding="utf-8")
+assert "first-login-repair-v3" in first_login_repair, "panel migration marker was not advanced"
+for object_id in ("brisk-menu", "window-list", "notification-area",
+                  "volume-control-applet", "clock", "show-desktop"):
+    assert object_id in first_login_repair, f"panel migration does not repair {object_id}"
+
+update_app = (root / "usr/lib/spaced-linux/spaced-update.py").read_text(encoding="utf-8")
+update_helper = (root / "usr/lib/spaced-linux/spaced-update-helper").read_text(encoding="utf-8")
+assert "Technical details" in update_app and "Gtk.ComboBox" not in update_app, \
+    "Spaced Update regressed to the Progress / CLI mode selector"
+assert "spaced-primary-action" in update_app and "spaced-update-list" in update_app, \
+    "Spaced Update theme-aware interface is incomplete"
+assert 'if [ "$MODE" != "all" ]' in update_helper and "No Flatpak applications were selected" in update_helper, \
+    "Spaced Update helper does not validate privileged update requests"
+
 fastfetch_logo = (root / "usr/share/fastfetch/logos/spaced-linux.txt").read_text(encoding="utf-8")
 assert "~**+<{{{{{{{{)+~~" in fastfetch_logo, "fastfetch logo is not the current Spaced ASCII art"
 PY
 
 python3 -m json.tool overlays/usr/share/spaced-themes/themes.json >/dev/null
 
-find scripts -name '*.sh' -exec bash -n {} +
-find overlays/usr/local/bin -type f -exec bash -n {} +
-python3 -m py_compile overlays/usr/lib/spaced-linux/spaced-welcome.py
+while IFS= read -r -d '' path; do
+    first_line=$(head -n 1 "$path" 2>/dev/null || true)
+    case "$path:$first_line" in
+        *.sh:*|*bash*) bash -n "$path" ;;
+        *'/bin/sh'*) sh -n "$path" ;;
+    esac
+done < <(find scripts overlays packages live-build/auto -type f \
+    \( -name '*.sh' -o -perm /111 -o -path '*/Xsession.d/*' \) -print0)
+
+find overlays -type f -name '*.py' -print0 | \
+    xargs -0 -r env PYTHONPYCACHEPREFIX="$CHECK_TMP/pycache" python3 -m py_compile
+
+if find overlays live-build -type f \
+    \( -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.webp' -o -iname '*.svg' \) \
+    -perm /111 -print -quit | grep -q .; then
+    echo "Static image assets must not be executable." >&2
+    exit 1
+fi
 
 if command -v desktop-file-validate >/dev/null 2>&1; then
     # Cairo-Dock launcher files intentionally carry its legacy Container,
@@ -430,49 +514,12 @@ if command -v desktop-file-validate >/dev/null 2>&1; then
         -exec desktop-file-validate {} +
 fi
 
-echo "All source checks passed."
-
 # Spaced Linux must use Devuan repositories exclusively.
 if grep -RInE \
     'https?://([^/]*\.)?(deb\.debian\.org|security\.debian\.org|ftp\.debian\.org)' \
     live-build config overlays scripts Makefile
 then
     echo "Direct Debian repository URL detected. Use Devuan /merged only." >&2
-    exit 1
-fi
-
-generated_packages=$(scripts/iso/package-list.sh)
-
-for required_package in \
-    dbus-x11 \
-    elogind \
-    libelogind-compat \
-    libpam-elogind \
-    dconf-gsettings-backend
-do
-    if ! grep -Fxq "$required_package" <<<"$generated_packages"; then
-        echo "Generated package list is missing: $required_package" >&2
-        exit 1
-    fi
-done
-
-for forbidden_package in \
-    dbus-user-session \
-    pavucontrol \
-    systemd \
-    systemd-sysv
-do
-    if grep -Fxq "$forbidden_package" <<<"$generated_packages"; then
-        echo "Forbidden package requested: $forbidden_package" >&2
-        exit 1
-    fi
-done
-
-if grep -RInE \
-    'https?://([^/]*\.)?(deb\.debian\.org|security\.debian\.org|ftp\.debian\.org)' \
-    live-build config overlays scripts Makefile
-then
-    echo "Direct Debian repository URL detected." >&2
     exit 1
 fi
 
@@ -485,3 +532,5 @@ if ! grep -q "VERSION_ID=\"$version\"" overlays/etc/os-release; then
     echo "overlays/etc/os-release VERSION_ID does not match VERSION ($version)" >&2
     exit 1
 fi
+
+echo "All source checks passed."

@@ -10,6 +10,7 @@ BUILD_DIR := build
 ISO_DIR := $(BUILD_DIR)/iso
 LB_DIR := $(BUILD_DIR)/live-build
 CACHE_DIR := $(BUILD_DIR)/cache/live-build
+LOCAL_PACKAGE_DIR := $(BUILD_DIR)/local-packages
 
 # Codex/IDE terminals run inside a Flatpak. On a regular shell this is empty.
 HOST_RUN := $(shell command -v flatpak-spawn >/dev/null 2>&1 && printf 'flatpak-spawn --host')
@@ -36,8 +37,9 @@ deps: ## Install host build and test dependencies
 check: ## Validate configuration, scripts, themes, and desktop entries
 	$(HOST_RUN) scripts/check.sh
 
-clean: ## Remove generated 7.26.4 build data
+clean: ## Remove generated build data for the current release
 	$(ROOT_RUN) rm -rf "$(abspath $(LB_DIR))"
+	rm -rf "$(abspath $(LOCAL_PACKAGE_DIR))"
 	rm -f $(ISO_DIR)/$(ISO_NAME) $(ISO_DIR)/$(ISO_NAME).sha256
 
 cache-clean: ## Remove cached live-build packages and bootstrap data
@@ -74,7 +76,7 @@ prepare: ## Stage authored live-build configuration
 		$(LB_DIR)/config/hooks/live/01-configure.chroot
 	chmod +x $(LB_DIR)/config/hooks/live/01-configure.chroot
 	scripts/iso/build-local-packages.sh
-	cp $(BUILD_DIR)/cache/local-packages/*.deb $(LB_DIR)/config/packages.chroot/
+	cp $(LOCAL_PACKAGE_DIR)/*.deb $(LB_DIR)/config/packages.chroot/
 
 lb-config: prepare ## Generate the complete live-build tree
 
@@ -89,7 +91,7 @@ lb-build: prepare ## Build the live ISO (requires sudo)
 
 iso-build: lb-build ## Build the live ISO
 
-iso-test: ## Boot the current 7.26.4 ISO in KVM
+iso-test: ## Boot the current release ISO in KVM
 	test -f $(ISO_DIR)/$(ISO_NAME) || { echo "Missing $(ISO_DIR)/$(ISO_NAME)"; exit 1; }
 	$(VM_RUN) scripts/vm/qemu/test-iso.sh $(abspath $(ISO_DIR)/$(ISO_NAME))
 
@@ -126,4 +128,4 @@ vm-start: ## Boot the installed KVM test disk
 vm-stop: ## Stop a headless KVM test instance
 	$(VM_RUN) scripts/vm/qemu/stop.sh
 
-release: clean lb-build ## Clean-build the Spaced Linux 7.26.4 ISO
+release: clean lb-build ## Clean-build the current Spaced Linux ISO

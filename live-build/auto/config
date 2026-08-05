@@ -6,10 +6,10 @@ lb config noauto \
     --debian-installer none \
     --bootappend-live "boot=live components quiet splash nouveau.modeset=1 username=user hostname=spaced console=ttyS0" \
     --binary-image iso-hybrid \
-    --iso-application "Spaced Linux 7.26.5" \
+    --iso-application "Spaced Linux 8.26" \
     --iso-preparer "Spaced Linux Team" \
     --iso-publisher "Spaced Linux" \
-    --iso-volume "SpacedLinux7265" \
+    --iso-volume "SpacedLinux826" \
     --linux-flavours amd64 \
     --linux-packages linux-image \
     --memtest none \

@@ -5,4 +5,5 @@ io.github.kolunmi.Bazaar
 com.brave.Browser
 org.libreoffice.LibreOffice
 org.videolan.VLC
-https://github.com/crhy/Voice2Text-AI/releases/download/v0.3.2/Voice2Text-AI-v0.3.2-x86_64.flatpak
+# GitHub redirects this stable URL to the newest published release asset.
+https://github.com/crhy/Voice2Text-AI/releases/latest/download/Voice2Text-AI.flatpak

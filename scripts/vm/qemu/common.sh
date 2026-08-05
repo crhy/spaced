@@ -1,9 +1,10 @@
 #!/bin/bash
 
 PROJECT_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)
+SPACED_VERSION=$(<"$PROJECT_ROOT/VERSION")
 VM_DISK=${SPACED_VM_DISK:-$PROJECT_ROOT/build/images/spaced-linux.qcow2}
 VM_DISK_SIZE=${SPACED_VM_DISK_SIZE:-25G}
-VM_ISO=${SPACED_VM_ISO:-$PROJECT_ROOT/build/iso/spaced-linux-7.26-amd64.iso}
+VM_ISO=${SPACED_VM_ISO:-$PROJECT_ROOT/build/iso/spaced-linux-$SPACED_VERSION-amd64.iso}
 VM_SSH_PORT=${SPACED_VM_SSH_PORT:-2222}
 VM_PID_FILE=${SPACED_VM_PID_FILE:-/tmp/spaced-linux-vm.pid}
 VM_XRES=${SPACED_VM_XRES:-1440}

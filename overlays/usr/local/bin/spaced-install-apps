@@ -3,7 +3,7 @@
 set -euo pipefail
 
 mode=${1:-}
-list=/usr/share/spaced-welcome/FlatpaksToInstallAfterInstall.txt
+list=${SPACED_APP_LIST:-/usr/share/spaced-welcome/FlatpaksToInstallAfterInstall.txt}
 bazaar_id=io.github.kolunmi.Bazaar
 
 case "$mode" in
@@ -50,7 +50,8 @@ if [ "${#bundles[@]}" -gt 0 ]; then
     trap 'rm -rf "$tmpdir"' EXIT
     for url in "${bundles[@]}"; do
         bundle="$tmpdir/${url##*/}"
-        curl --fail --location --retry 2 --output "$bundle" "$url"
+        curl --fail --location --retry 3 --retry-all-errors \
+            --connect-timeout 15 --output "$bundle" "$url"
         flatpak install --user -y "$bundle"
     done
 fi
