@@ -4,6 +4,8 @@ SHELL := /bin/bash
 MAKEFLAGS += --no-builtin-rules
 
 VERSION := $(shell cat VERSION)
+BUILD_UID := $(shell id -u)
+BUILD_GID := $(shell id -g)
 ARCH := amd64
 ISO_NAME := spaced-linux-$(VERSION)-$(ARCH).iso
 BUILD_DIR := build
@@ -52,6 +54,7 @@ prepare: ## Stage authored live-build configuration
 	fi
 	$(ROOT_RUN) rm -rf "$(abspath $(LB_DIR))"
 	mkdir -p $(LB_DIR)/auto $(CACHE_DIR) $(ISO_DIR)
+	$(ROOT_RUN) install -d -o $(BUILD_UID) -g $(BUILD_GID) "$(abspath $(ISO_DIR))"
 	ln -s ../cache/live-build $(LB_DIR)/cache
 	cp live-build/auto/config $(LB_DIR)/auto/config
 	chmod +x $(LB_DIR)/auto/config
