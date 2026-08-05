@@ -69,7 +69,7 @@ prepare: ## Stage authored live-build configuration
 	cp -a live-build/config/includes.chroot/usr/share/plymouth/themes/spaced \
 		$(LB_DIR)/config/includes.chroot/usr/share/plymouth/themes/
 	cp -a live-build/config/bootloaders/. $(LB_DIR)/config/bootloaders/
-	install -Dm644 /usr/share/grub/unicode.pf2 $(LB_DIR)/config/bootloaders/grub-pc/fonts/unicode.pf2
+	$(HOST_RUN) install -Dm644 /usr/share/grub/unicode.pf2 $(LB_DIR)/config/bootloaders/grub-pc/fonts/unicode.pf2
 	scripts/iso/package-list.sh > \
 		$(LB_DIR)/config/package-lists/spaced.list.chroot
 	cp scripts/iso/01-configure.chroot \
