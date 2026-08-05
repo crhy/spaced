@@ -27,13 +27,16 @@ restarts Caja.
 ## Runtime flow
 
 MATE applies GTK, Marco, icons, cursor, and wallpaper from the selected
-metatheme. `spaced-theme-monitor` listens for an actual GTK theme change and
-runs `spaced-switch-theme` once. That helper only handles details a metatheme
-cannot encode: panel edge/size and whether Cairo Dock is running.
+metatheme. `spaced-theme-monitor` listens for actual theme and wallpaper
+changes and keeps a small fallback under `~/.config/spaced/`. At login it
+restores those user choices before running `spaced-switch-theme`. This protects
+newly installed accounts from losing their last dconf writes on the first
+reboot. The helper only handles details a metatheme cannot encode: panel
+edge/size and whether Cairo Dock is running.
 
-Wallpaper drawing belongs exclusively to MATE's settings daemon. No polling
-wallpaper monitor, root-pixmap helper, `draw-background` toggle, or Compiz
-restart is used.
+Wallpaper drawing belongs exclusively to MATE's settings daemon. Its fallback
+state is updated from dconf change notifications, not polling. No root-pixmap
+helper, `draw-background` toggle, or Compiz restart is used.
 
 The existing panel is moved and resized in place. It is never replaced during
 a theme change, which preserves the notification-area selection and avoids the

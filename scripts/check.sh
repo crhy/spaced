@@ -461,6 +461,7 @@ vm_install = Path("scripts/vm/qemu/install.sh").read_text(encoding="utf-8")
 assert "-boot order=c,once=d" in vm_install, "installer KVM does not boot the installed disk after reboot"
 
 switcher = (root / "usr/local/bin/spaced-switch-theme").read_text(encoding="utf-8")
+theme_monitor = (root / "usr/local/bin/spaced-theme-monitor").read_text(encoding="utf-8")
 assert "background_schema" in switcher and "panel_color" in switcher, \
     "theme switcher does not apply explicit panel colors"
 assert "cairo-dock -c -f" in switcher, "Cairo-Dock must use its QEMU-safe plug-in-free mode"
@@ -472,6 +473,13 @@ assert "terminal_background='#000000'" in switcher and "terminal_foreground='#88
     "dark themes do not use gray on black in MATE Terminal"
 assert "terminal_background='#ffffff'" in switcher and "terminal_foreground='#000000'" in switcher, \
     "light themes do not use black on white in MATE Terminal"
+for state_name in ("gtk-theme", "icon-theme", "marco-theme", "wallpaper"):
+    assert state_name in theme_monitor, f"theme monitor does not persist {state_name}"
+assert theme_monitor.index("apply_for_gtk \"$LAST\"") < theme_monitor.index(
+    "restore_setting org.mate.background picture-filename wallpaper"), \
+    "theme monitor must restore a custom wallpaper after metatheme extras"
+assert "gsettings monitor org.mate.background picture-filename" not in theme_monitor, \
+    "wallpaper persistence must reuse the generic event-driven monitor"
 
 first_login_repair = (root / "usr/local/bin/spaced-first-login-repair").read_text(encoding="utf-8")
 assert "first-login-repair-v3" in first_login_repair, "panel migration marker was not advanced"

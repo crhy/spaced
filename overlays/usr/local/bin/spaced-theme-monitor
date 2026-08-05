@@ -22,6 +22,7 @@ if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]; then
 fi
 
 THEMES_JSON="/usr/share/spaced-themes/themes.json"
+STATE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/spaced"
 # Singleton guard.
 LOCK="$XDG_RUNTIME_DIR/spaced-theme-monitor.lock"
 exec 8>"$LOCK" 2>/dev/null || true
@@ -31,6 +32,40 @@ fi
 
 get_gtk() {
     gsettings get org.mate.interface gtk-theme 2>/dev/null | tr -d "'"
+}
+
+save_setting() {
+    local schema="$1" key="$2" name="$3" value tmp
+    value="$(gsettings get "$schema" "$key" 2>/dev/null)" || return 0
+    [ -n "$value" ] || return 0
+    mkdir -p "$STATE_DIR" 2>/dev/null || return 0
+    chmod 700 "$STATE_DIR" 2>/dev/null || true
+    tmp="$STATE_DIR/.$name.$$"
+    printf '%s\n' "$value" >"$tmp" || return 0
+    chmod 600 "$tmp" 2>/dev/null || true
+    mv -f "$tmp" "$STATE_DIR/$name"
+}
+
+restore_setting() {
+    local schema="$1" key="$2" name="$3" value=''
+    [ -s "$STATE_DIR/$name" ] || return 1
+    IFS= read -r value <"$STATE_DIR/$name" || [ -n "$value" ] || return 1
+    [ -n "$value" ] || return 1
+    gsettings set "$schema" "$key" "$value" 2>/dev/null || return 1
+}
+
+save_desktop_state() {
+    save_setting org.mate.interface gtk-theme gtk-theme
+    save_setting org.mate.interface icon-theme icon-theme
+    save_setting org.mate.Marco.general theme marco-theme
+    save_setting org.mate.background picture-filename wallpaper
+}
+
+watch_setting() {
+    local schema="$1" key="$2" name="$3"
+    while IFS= read -r _; do
+        save_setting "$schema" "$key" "$name"
+    done < <(gsettings monitor "$schema" "$key" 2>/dev/null)
 }
 
 apply_for_gtk() {
@@ -54,8 +89,27 @@ for t in d.get('themes',[]):
     /usr/local/bin/spaced-switch-theme "$id" 2>/dev/null || true
 }
 
+# Dconf can lose the last session's writes when a newly installed account is
+# first populated from the live user. Keep a tiny, user-owned fallback for the
+# four visual choices users expect to survive a reboot. Restore the metatheme
+# before its extra panel/dock work, then restore the wallpaper so a custom
+# background is not replaced by the metatheme's suggested image.
+restore_setting org.mate.interface gtk-theme gtk-theme || true
+restore_setting org.mate.interface icon-theme icon-theme || true
+restore_setting org.mate.Marco.general theme marco-theme || true
 LAST="$(get_gtk)"
 [ -n "$LAST" ] && apply_for_gtk "$LAST"
+restore_setting org.mate.background picture-filename wallpaper || true
+save_desktop_state
+
+# Persist the companion keys even when MATE writes them after gtk-theme.
+watch_setting org.mate.interface icon-theme icon-theme 8>&- &
+icon_watch_pid=$!
+watch_setting org.mate.Marco.general theme marco-theme 8>&- &
+marco_watch_pid=$!
+watch_setting org.mate.background picture-filename wallpaper 8>&- &
+wallpaper_watch_pid=$!
+trap 'kill "$icon_watch_pid" "$marco_watch_pid" "$wallpaper_watch_pid" 2>/dev/null || true' EXIT
 
 # Use dconf's change notification instead of waking up every two seconds.
 while IFS= read -r _; do
@@ -64,6 +118,7 @@ while IFS= read -r _; do
     [ "$CUR" = "$LAST" ] && continue
     LAST="$CUR"
     apply_for_gtk "$CUR"
+    save_desktop_state
 done < <(gsettings monitor org.mate.interface gtk-theme 2>/dev/null 8>&-)
 
 exit 0
