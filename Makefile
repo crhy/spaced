@@ -70,12 +70,12 @@ prepare: ## Stage authored live-build configuration
 		$(LB_DIR)/config/includes.chroot/usr/share/plymouth/themes/
 	cp -a live-build/config/bootloaders/. $(LB_DIR)/config/bootloaders/
 	$(HOST_RUN) install -Dm644 /usr/share/grub/unicode.pf2 $(LB_DIR)/config/bootloaders/grub-pc/fonts/unicode.pf2
-	scripts/iso/package-list.sh > \
+	$(HOST_RUN) scripts/iso/package-list.sh > \
 		$(LB_DIR)/config/package-lists/spaced.list.chroot
 	cp scripts/iso/01-configure.chroot \
 		$(LB_DIR)/config/hooks/live/01-configure.chroot
 	chmod +x $(LB_DIR)/config/hooks/live/01-configure.chroot
-	scripts/iso/build-local-packages.sh
+	$(HOST_RUN) scripts/iso/build-local-packages.sh
 	cp $(LOCAL_PACKAGE_DIR)/*.deb $(LB_DIR)/config/packages.chroot/
 
 lb-config: prepare ## Generate the complete live-build tree
