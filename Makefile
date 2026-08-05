@@ -13,8 +13,8 @@ CACHE_DIR := $(BUILD_DIR)/cache/live-build
 LOCAL_PACKAGE_DIR := $(BUILD_DIR)/local-packages
 
 # Codex/IDE terminals run inside a Flatpak. On a regular shell this is empty.
-HOST_RUN := $(shell command -v flatpak-spawn >/dev/null 2>&1 && printf 'flatpak-spawn --host')
-ROOT_RUN := $(shell command -v flatpak-spawn >/dev/null 2>&1 && printf 'flatpak-spawn --host pkexec' || printf 'sudo')
+HOST_RUN ?= $(shell command -v flatpak-spawn >/dev/null 2>&1 && printf 'flatpak-spawn --host')
+ROOT_RUN ?= $(shell command -v flatpak-spawn >/dev/null 2>&1 && printf 'flatpak-spawn --host pkexec' || printf 'sudo')
 VM_SSH_PORT ?= 2222
 VM_XRES ?= 1440
 VM_YRES ?= 900

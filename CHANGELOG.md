@@ -15,6 +15,7 @@
 - Added a checksum-verified temporary Ceres transition pin for `xkb-data 2.47-1`, resolving the repository window where `keyboard-configuration 1.248` rejects the newly published 2.48 package.
 - Corrected the internal 8.26 release codename and aligned the desktop configuration reference with the actual default Spaced Linux Dark theme and JPEG wallpaper.
 - Preserved GTK, icon, Marco, and wallpaper choices across reboot with an event-driven per-user fallback for first-installed-account dconf state, without polling or overriding custom backgrounds.
+- Made the host and privilege runners overridable so automated or IDE builds can avoid a blocked graphical PolicyKit prompt.
 
 ## 7.26.5 - 2026-08-01
 - Replaced the Voice2Text screenshot with the current 1920x1080 capture in the Calamares slideshow, on the website showcase, and in the README gallery.
