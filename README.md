@@ -56,7 +56,7 @@ These are real Spaced Linux desktop sessions—not wallpaper mockups. Click any 
       <sub><strong>Compiz-first desktop</strong> — Workspaces, accessibility, motion, and organization are part of the core experience.</sub>
     </td>
     <td width="50%" align="center">
-      <a href="website/assets/screenshots/desktop-welcome.webp"><img src="website/assets/screenshots/desktop-welcome.webp" alt="Welcome to Spaced Linux first-run application"></a><br>
+      <a href="website/assets/screenshots/desktop-welcome.webp?v=8.26"><img src="website/assets/screenshots/desktop-welcome.webp?v=8.26" alt="Welcome to Spaced Linux first-run application"></a><br>
       <sub><strong>Friendly first run</strong> — Start installing software or open the browser from one clear welcome screen.</sub>
     </td>
   </tr>

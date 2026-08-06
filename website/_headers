@@ -6,3 +6,10 @@
 
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
+
+# Screenshots are refreshed per release. A short, non-immutable lifetime lets
+# new renders reach visitors immediately instead of being frozen for a year by
+# the rule above (which Cloudflare Pages deploy purges cannot reach for
+# already-cached immutable responses).
+/assets/screenshots/*
+  Cache-Control: public, max-age=3600
