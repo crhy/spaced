@@ -25,7 +25,7 @@ navigation: widget
 images:
     productLogo:         ../../../../usr/share/backgrounds/spaced/SpacedIconb.png
     productIcon:         ../../../../usr/share/backgrounds/spaced/SpacedIconb.png
-    productWelcome:      logo.png
+    productWelcome:      ../../../../usr/share/backgrounds/spaced/SpacedIconb.png
 
 slideshow: "slideshow/Show.qml"
 slideshowAPI: 2
