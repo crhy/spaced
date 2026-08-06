@@ -1,0 +1,91 @@
+{
+    "schemaVersion": 1,
+    "project": {
+        "name": "Spaced Linux",
+        "repository": "crhy/spaced",
+        "versionFile": "VERSION",
+        "target": {
+            "distribution": "Devuan Ceres",
+            "architecture": "amd64",
+            "init": "sysvinit"
+        }
+    },
+    "host": {
+        "supportedFamilies": [
+            "Devuan",
+            "Debian"
+        ],
+        "packageManager": "apt",
+        "dependencies": {
+            "core": [
+                "bash",
+                "ca-certificates",
+                "dpkg",
+                "git",
+                "make",
+                "python3",
+                "python3-yaml"
+            ],
+            "build": [
+                "curl",
+                "debootstrap",
+                "grub-common",
+                "live-build",
+                "rsync",
+                "squashfs-tools",
+                "xorriso"
+            ],
+            "virtualization": [
+                "ovmf",
+                "qemu-system-x86",
+                "qemu-utils"
+            ],
+            "optionalValidation": [
+                "desktop-file-utils"
+            ]
+        }
+    },
+    "projectDependencies": {
+        "isoPackages": {
+            "format": "yaml",
+            "manifest": "config/packages.yaml",
+            "generator": "scripts/iso/package-list.sh",
+            "generatedPath": "build/live-build/config/package-lists/spaced.list.chroot"
+        },
+        "localDebianPackages": {
+            "builder": "scripts/iso/build-local-packages.sh",
+            "sources": [
+                "packages/spaced-mate-default-settings",
+                "packages/spaced-meta"
+            ],
+            "outputDirectory": "build/local-packages"
+        },
+        "externalArtifacts": [
+            {
+                "name": "xkb-data",
+                "version": "2.47-1",
+                "architecture": "all",
+                "sha256": "18f9d6c6999767fdde091b03fdddc635d2b4f7ec3dbb210621c9f2062b7ef1cb",
+                "stagingScript": "scripts/iso/stage-transition-packages.sh",
+                "reason": "Temporary Devuan Ceres compatibility pin for keyboard-configuration 1.248"
+            }
+        ]
+    },
+    "commands": {
+        "installDependencies": "make deps",
+        "validate": "make check",
+        "buildIso": "make iso-build",
+        "buildRelease": "make release",
+        "testIso": "make iso-test"
+    },
+    "constraints": {
+        "forbiddenInitPackages": [
+            "systemd",
+            "systemd-sysv"
+        ],
+        "notes": [
+            "APT packages for the live ISO remain authoritative in config/packages.yaml.",
+            "This file describes dependency locations and host tooling; it does not duplicate the complete ISO package list."
+        ]
+    }
+}
