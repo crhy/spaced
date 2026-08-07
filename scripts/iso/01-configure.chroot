@@ -33,13 +33,14 @@ glib-compile-schemas /usr/share/glib-2.0/schemas/
 flatpak remote-add --system --if-not-exists flathub \
     /usr/share/flatpak/remotes.d/flathub.flatpakrepo
 
-# Marco trusts _NET_WM_PID as a host PID when decorating a window. X11 apps
-# inside Flatpak publish a PID from their private namespace, so Marco can look
-# up an unrelated root-owned host process and append the alarming but false
-# "(as superuser)" suffix. There is no setting for this behavior. Neutralize
-# only that root-title format string in libmarco, keeping the library size and
-# every other cross-user title annotation intact. This also covers Compiz,
-# whose GTK decorator uses libmarco-private.
+# Compiz's GTK window decorator, which it links from the MATE window
+# decoration library, trusts _NET_WM_PID as a host PID when decorating a
+# window. X11 apps inside Flatpak publish a PID from their private namespace,
+# so the decorator can look up an unrelated root-owned host process and append
+# the alarming but false "(as superuser)" suffix. There is no setting for this
+# behavior. Neutralize only that root-title format string in the decoration
+# library, keeping the library size and every other cross-user title
+# annotation intact.
 python3 - <<'PY'
 from pathlib import Path
 
@@ -52,14 +53,14 @@ for library in libraries:
     data = library.read_bytes()
     occurrences = data.count(old)
     if occurrences != 1:
-        raise SystemExit(f"{library}: expected one Marco superuser title string, found {occurrences}")
+        raise SystemExit(f"{library}: expected one superuser title string, found {occurrences}")
     library.write_bytes(data.replace(old, new))
 PY
 
 # mate-control-center opens its shell at a hardcoded stock default of
 # 975x600, but its icon grid only fills roughly 743x633, leaving an odd
 # empty band at the bottom and right of the window. There is no window-rule
-# mechanism in Marco and no gsettings key for this, so resize the compiled-in
+# mechanism and no gsettings key for this, so resize the compiled-in
 # default by patching the two 32-bit immediates (mov $width,%r8d ; mov
 # $height,%r9d) inside create_main_window.
 python3 - <<'PY'
@@ -117,7 +118,7 @@ cp -a /etc/skel/. /home/user/
 chown -R user:user /home/user
 
 # Keep only the supported Spaced themes; remove every other theme directory
-# (Marco/GTK sample themes and any stale leftovers) so they don't clutter
+# (stock sample themes and any stale leftovers) so they don't clutter
 # the Appearance chooser.
 find /usr/share/themes -mindepth 1 -maxdepth 1 \
     ! -name Spaced-Dark -a ! -name Spaced-Linux-Dark -a ! -name Spaced-Linux-Light \
@@ -167,8 +168,3 @@ if [ -f /etc/init.d/ssh ]; then
     printf 'PasswordAuthentication yes\nPermitRootLogin yes\n' > /etc/ssh/sshd_config.d/10-spaced.conf
 fi
 
-# Serial console getty on ttyS0 for headless debugging.
-if [ -f /etc/inittab ]; then
-    grep -q '^S0:' /etc/inittab || \
-        echo 'S0:12345:respawn:/sbin/getty 115200 ttyS0' >> /etc/inittab
-fi
