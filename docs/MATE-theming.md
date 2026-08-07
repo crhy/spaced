@@ -10,7 +10,7 @@ Each directory under `overlays/usr/share/themes/Spaced-*` owns:
 
 - its GTK 2 palette;
 - its GTK 3 palette and theme metadata;
-- its Marco/Metacity window decoration;
+- its window decoration;
 - its top-level MATE metatheme metadata;
 - its wallpaper selection; and
 - the name of its matching `Spaced-Icons-*` icon overlay.
@@ -26,7 +26,7 @@ restarts Caja.
 
 ## Runtime flow
 
-MATE applies GTK, Marco, icons, cursor, and wallpaper from the selected
+MATE applies GTK, icons, cursor, and wallpaper from the selected
 metatheme. `spaced-theme-monitor` listens for actual theme and wallpaper
 changes and keeps a small fallback under `~/.config/spaced/`. At login it
 restores those user choices before running `spaced-switch-theme`. This protects
@@ -44,9 +44,8 @@ tray-applet crash.
 
 ## Compiz
 
-MATE starts `/usr/local/bin/spaced-window-manager` as its required window
-manager. The script verifies GLX, starts `compiz ccp --replace`, and starts
-Marco if Compiz is unavailable or exits.
+MATE starts `/usr/local/bin/spaced-window-manager` as its window
+manager. The script verifies GLX and starts `compiz ccp --replace`.
 
 The Compiz profile is stored at the Compiz 0.8 path:
 

@@ -193,7 +193,7 @@ assert "flatpak remote-add --system --if-not-exists flathub" in build_hook \
     and "/usr/share/flatpak/remotes.d/flathub.flatpakrepo" in build_hook, \
     "Bazaar's sandboxed backend does not get a real system Flathub remote"
 assert 'old = b"%s (as superuser)"' in build_hook and "data.replace(old, new)" in build_hook, \
-    "Flatpak X11 windows retain Marco's false superuser title suffix"
+    "Flatpak X11 windows retain the false superuser title suffix"
 
 welcome_app = root / "usr/lib/spaced-linux/spaced-welcome.py"
 welcome_launcher = root / "usr/share/applications/spaced-welcome.desktop"
@@ -473,7 +473,9 @@ assert "terminal_background='#000000'" in switcher and "terminal_foreground='#88
     "dark themes do not use gray on black in MATE Terminal"
 assert "terminal_background='#ffffff'" in switcher and "terminal_foreground='#000000'" in switcher, \
     "light themes do not use black on white in MATE Terminal"
-for state_name in ("gtk-theme", "icon-theme", "marco-theme", "wallpaper"):
+assert "color-scheme 'prefer-dark'" in switcher and "color-scheme 'default'" in switcher, \
+    "theme switching does not drive the toolkit color scheme"
+for state_name in ("gtk-theme", "icon-theme", "window-theme", "wallpaper"):
     assert state_name in theme_monitor, f"theme monitor does not persist {state_name}"
 assert theme_monitor.index("apply_for_gtk \"$LAST\"") < theme_monitor.index(
     "restore_setting org.mate.background picture-filename wallpaper"), \

@@ -45,6 +45,17 @@ if gsettings writable com.solus-project.brisk-menu dark-theme >/dev/null 2>&1; t
     gsettings set com.solus-project.brisk-menu dark-theme "${dark,,}" 2>/dev/null || true
 fi
 
+# Toolkit-level dark preference. GTK apps that honor the GNOME/MATE color
+# scheme (LibreOffice via the gtk3 VCL plugin, Qt apps via their GTK theme)
+# follow the metatheme instead of staying bright on a dark theme.
+if gsettings writable org.gnome.desktop.interface color-scheme >/dev/null 2>&1; then
+    if [ "$dark" = True ]; then
+        gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' 2>/dev/null || true
+    else
+        gsettings set org.gnome.desktop.interface color-scheme 'default' 2>/dev/null || true
+    fi
+fi
+
 # MATE Terminal does not reliably follow a metatheme's text colors. Keep its
 # default profile explicitly readable whenever the user changes a Spaced theme.
 terminal_profile='org.mate.terminal.profile:/org/mate/terminal/profiles/default/'

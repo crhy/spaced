@@ -1,7 +1,7 @@
 #!/bin/bash
-# Run Compiz as MATE's window manager and fall back to Marco if Compiz cannot
-# start or crashes while the X session is still alive. Wallpaper rendering
-# deliberately remains MATE's job.
+# Run Compiz as MATE's window manager. There is no fallback window manager:
+# if Compiz cannot start the desktop session fails loudly rather than silently
+# replacing it. Wallpaper rendering deliberately remains MATE's job.
 set -u
 
 can_compiz() {
@@ -14,8 +14,13 @@ can_compiz() {
     return 0
 }
 
-if command -v compiz >/dev/null 2>&1 && can_compiz; then
-    logger -t spaced-window-manager "Starting Compiz"
+if ! command -v compiz >/dev/null 2>&1 || ! can_compiz; then
+    logger -t spaced-window-manager "Compiz is unavailable; ending the session without a window manager"
+    exit 1
+fi
+
+logger -t spaced-window-manager "Starting Compiz"
+while :; do
     compiz ccp --replace
     status=$?
     if [ "$status" -eq 0 ]; then
@@ -24,18 +29,14 @@ if command -v compiz >/dev/null 2>&1 && can_compiz; then
     fi
 
     # During logout the X server can disappear before every session child has
-    # reaped. Do not mistake that normal teardown for a crash or start Marco
-    # against a dead display.
+    # reaped. Do not mistake that normal teardown for a crash.
     if ! xprop -root >/dev/null 2>&1; then
         logger -t spaced-window-manager "Compiz exited with status $status after X closed"
         exit "$status"
     fi
-    logger -t spaced-window-manager "Compiz crashed with status $status; starting Marco"
-else
-    logger -t spaced-window-manager "Compiz unavailable; starting Marco"
-fi
 
-# The decorator is started by Compiz's decoration plugin. Do not leave it
-# consuming memory or drawing stale frames after a fallback.
-pkill -u "$(id -u)" -x gtk-window-decorator 2>/dev/null || true
-exec marco --replace
+    # Compiz is the only window manager. Restart it so the session never runs
+    # with no window manager; taskman session manager reports the restart.
+    logger -t spaced-window-manager "Compiz crashed with status $status; restarting"
+    sleep 1
+done

@@ -115,9 +115,6 @@
 			<Filename>org.libreoffice.LibreOffice.xsltfilter.desktop</Filename>
 		</Include>
 		<Include>
-			<Filename>marco.desktop</Filename>
-		</Include>
-		<Include>
 			<Filename>nm-applet.desktop</Filename>
 		</Include>
 		<Include>
@@ -155,7 +152,6 @@
 			<Filename>caja.desktop</Filename>
 			<Filename>compiz.desktop</Filename>
 			<Filename>org.libreoffice.LibreOffice.xsltfilter.desktop</Filename>
-			<Filename>marco.desktop</Filename>
 			<Filename>nm-applet.desktop</Filename>
 			<Filename>xdg-desktop-portal-gtk.desktop</Filename>
 			<Filename>spaced-window-manager.desktop</Filename>

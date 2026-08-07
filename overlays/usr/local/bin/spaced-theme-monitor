@@ -57,7 +57,7 @@ restore_setting() {
 save_desktop_state() {
     save_setting org.mate.interface gtk-theme gtk-theme
     save_setting org.mate.interface icon-theme icon-theme
-    save_setting org.mate.Marco.general theme marco-theme
+    save_setting org.mate.Marco.general theme window-theme
     save_setting org.mate.background picture-filename wallpaper
 }
 
@@ -96,7 +96,7 @@ for t in d.get('themes',[]):
 # background is not replaced by the metatheme's suggested image.
 restore_setting org.mate.interface gtk-theme gtk-theme || true
 restore_setting org.mate.interface icon-theme icon-theme || true
-restore_setting org.mate.Marco.general theme marco-theme || true
+restore_setting org.mate.Marco.general theme window-theme || true
 LAST="$(get_gtk)"
 [ -n "$LAST" ] && apply_for_gtk "$LAST"
 restore_setting org.mate.background picture-filename wallpaper || true
@@ -105,11 +105,11 @@ save_desktop_state
 # Persist the companion keys even when MATE writes them after gtk-theme.
 watch_setting org.mate.interface icon-theme icon-theme 8>&- &
 icon_watch_pid=$!
-watch_setting org.mate.Marco.general theme marco-theme 8>&- &
-marco_watch_pid=$!
+watch_setting org.mate.Marco.general theme window-theme 8>&- &
+window_theme_watch_pid=$!
 watch_setting org.mate.background picture-filename wallpaper 8>&- &
 wallpaper_watch_pid=$!
-trap 'kill "$icon_watch_pid" "$marco_watch_pid" "$wallpaper_watch_pid" 2>/dev/null || true' EXIT
+trap 'kill "$icon_watch_pid" "$window_theme_watch_pid" "$wallpaper_watch_pid" 2>/dev/null || true' EXIT
 
 # Use dconf's change notification instead of waking up every two seconds.
 while IFS= read -r _; do

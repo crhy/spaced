@@ -2,8 +2,8 @@
 <!--
   Minimal org.gnome.metacity schema.
 
-  Devuan Ceres ships Marco (not Metacity), so the upstream
-  org.gnome.metacity GSettings schema is absent. MATE 1.26's
+  Devuan Ceres does not ship the upstream org.gnome.metacity GSettings
+  schema. MATE 1.26's
   mate-appearance-properties reads this schema to render the Metacity
   window preview inside each theme thumbnail; without it the capplet
   logs "No such schema org.gnome.metacity" and produces NO theme

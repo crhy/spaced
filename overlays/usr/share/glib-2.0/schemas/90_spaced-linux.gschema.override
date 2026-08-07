@@ -5,6 +5,7 @@ icon-theme='Spaced-Icons-Linux-Dark'
 [org.gnome.desktop.interface]
 gtk-theme='Spaced-Linux-Dark'
 icon-theme='Spaced-Icons-Linux-Dark'
+color-scheme='prefer-dark'
 clock-format='12h'
 clock-show-date=false
 text-scaling-factor=1.2

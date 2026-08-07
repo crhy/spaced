@@ -76,7 +76,6 @@ prepare: ## Stage authored live-build configuration
 		$(LB_DIR)/config/hooks/live/01-configure.chroot
 	chmod +x $(LB_DIR)/config/hooks/live/01-configure.chroot
 	$(HOST_RUN) scripts/iso/build-local-packages.sh
-	$(HOST_RUN) scripts/iso/stage-transition-packages.sh
 	cp $(LOCAL_PACKAGE_DIR)/*.deb $(LB_DIR)/config/packages.chroot/
 
 lb-config: prepare ## Generate the complete live-build tree

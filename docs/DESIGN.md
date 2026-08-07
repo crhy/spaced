@@ -1,4 +1,4 @@
-# Spaced Linux 8.26 Design
+# Spaced Linux 8.26.1 Design
 
 ## Base System
 - **Distro:** Devuan Ceres 7 (Freia) — rolling release, no systemd
@@ -7,7 +7,7 @@
 
 ## Desktop
 - **Environment:** MATE 1.26
-- **Window manager:** Compiz by default; Marco is the automatic fallback
+- **Window manager:** Compiz
 - **Compiz effects:** Desktop cube/rotate, wobbly windows, fade, grid, animation, scale, and switcher
 - **Display Manager:** LightDM (autologin)
 - **Default Session:** MATE with Compiz as window manager
@@ -65,7 +65,7 @@ Mac OS X place it at the top edge with the cairo-dock at the bottom.
 ## Applications
 
 ### System (native debs)
-- MATE desktop core, Compiz, Marco fallback, LightDM, NetworkManager
+- MATE desktop core, Compiz, LightDM, NetworkManager
 - Flatpak + Flathub
 - MATE terminal, Caja file manager, Pluma text editor
 - Synaptic, Gdebi
@@ -83,7 +83,7 @@ All user apps installed via Flatpak/Flathub:
 
 ## Visual Identity
 - Name: Spaced Linux
-- Codename: 826
+- Codename: 8261
 - Monochrome aesthetic with Spaced iconography
 
 ## Future

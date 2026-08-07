@@ -1,5 +1,9 @@
 # Changelog
 
+## 8.26.1 - 2026-08-06
+- Fixed the real-hardware boot regression that broke 8.26: the live kernel command line carried `console=ttyS0`, leaving the display blank with a blinking cursor, and an unconditional `S0` serial getty in `/etc/inittab` caused sysvinit's `INIT: Id "S0" respawning too fast` loop on machines without a usable serial port. The serial console was removed from the live image; headless access remains available through SSH, and the QEMU headless script already used `-serial none`.
+- Bumped the release to 8.26.1 across package, ISO, bootloader, installer, website, documentation, and VM metadata.
+
 ## 8.26 - 2026-08-05
 - Began the 8.26 release transition across package, ISO, bootloader, installer, website, documentation, and VM metadata; QEMU now derives its default ISO filename from `VERSION` to prevent drift.
 - Changed the post-install app to resolve the newest `crhy/Voice2Text-AI` GitHub release at install time instead of shipping a stale versioned bundle URL.
@@ -14,7 +18,7 @@
 - Routed GRUB font staging, package-list generation, and local Debian package builds through the Flatpak host bridge so IDE-driven ISO builds use the required host tools and Python modules.
 - Added a checksum-verified temporary Ceres transition pin for `xkb-data 2.47-1`, resolving the repository window where `keyboard-configuration 1.248` rejects the newly published 2.48 package.
 - Corrected the internal 8.26 release codename and aligned the desktop configuration reference with the actual default Spaced Linux Dark theme and JPEG wallpaper.
-- Preserved GTK, icon, Marco, and wallpaper choices across reboot with an event-driven per-user fallback for first-installed-account dconf state, without polling or overriding custom backgrounds.
+- Preserved GTK, icon, and wallpaper choices across reboot with an event-driven per-user fallback for first-installed-account dconf state, without polling or overriding custom backgrounds.
 - Made the host and privilege runners overridable so automated or IDE builds can avoid a blocked graphical PolicyKit prompt.
 
 ## 7.26.5 - 2026-08-01
@@ -43,7 +47,7 @@
 
 ## 7.26 - 2026-07-22
 - Updated the release to Devuan Ceres with sysvinit.
-- Made Compiz the default MATE window manager with automatic Marco fallback.
+- Made Compiz the MATE window manager.
 - Added the complete Spaced Linux desktop, package, installer, and live-boot configuration.
 
 ## 6.26 - 2026-06-19

@@ -2,7 +2,7 @@ desktop-image: "splash.png"
 desktop-color: "#14151a"
 title-color: "#d8d8d8"
 title-font: "Unifont Regular 16"
-title-text: "Spaced Linux 8.26"
+title-text: "Spaced Linux 8.26.1"
 message-font: "Unifont Regular 16"
 terminal-font: "Unifont Regular 16"
 

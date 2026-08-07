@@ -4,7 +4,7 @@
   </a>
 </p>
 
-<h1 align="center">Spaced Linux 8.26</h1>
+<h1 align="center">Spaced Linux 8.26.1</h1>
 
 <p align="center"><strong>Spaced. Polished. Agile. Compiz. Efficient. Devuan.</strong></p>
 
@@ -27,7 +27,7 @@
   <img alt="Compiz" src="https://img.shields.io/badge/window%20manager-Compiz-5b5bd6">
   <img alt="Init system" src="https://img.shields.io/badge/init-sysvinit-555555">
   <img alt="Architecture" src="https://img.shields.io/badge/architecture-amd64-2563eb">
-  <img alt="Release" src="https://img.shields.io/badge/release-8.26-0ea5e9">
+  <img alt="Release" src="https://img.shields.io/badge/release-8.26.1-0ea5e9">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-black">
 </p>
 
@@ -43,7 +43,7 @@ Spaced Linux is a polished desktop distribution built on **Devuan Ceres**, using
 
 The desktop begins with a familiar layout: a clear application menu, conventional windows, readable controls, and tools placed where people expect them. Beneath that approachable surface is a lean Devuan base, a deeply configurable Compiz desktop, Flatpak and Flathub integration, a graphical Calamares installer, and a reproducible live-build workflow.
 
-Compiz is not an optional novelty. It is the primary window manager and compositor, providing smooth animation, flexible workspace behavior, window rules, accessibility features, and the visual personality that makes Spaced Linux feel alive. Marco remains available as a dependable fallback.
+Compiz is not an optional novelty. It is the window manager and compositor, providing smooth animation, flexible workspace behavior, window rules, accessibility features, and the visual personality that makes Spaced Linux feel alive.
 
 ## Spaced Linux in action
 
@@ -56,7 +56,7 @@ These are real Spaced Linux desktop sessions—not wallpaper mockups. Click any 
       <sub><strong>Compiz-first desktop</strong> — Workspaces, accessibility, motion, and organization are part of the core experience.</sub>
     </td>
     <td width="50%" align="center">
-      <a href="website/assets/screenshots/desktop-welcome.webp?v=8.26"><img src="website/assets/screenshots/desktop-welcome.webp?v=8.26" alt="Welcome to Spaced Linux first-run application"></a><br>
+      <a href="website/assets/screenshots/desktop-welcome.webp?v=8.26.1"><img src="website/assets/screenshots/desktop-welcome.webp?v=8.26.1" alt="Welcome to Spaced Linux first-run application"></a><br>
       <sub><strong>Friendly first run</strong> — Start installing software or open the browser from one clear welcome screen.</sub>
     </td>
   </tr>
@@ -101,7 +101,6 @@ These are real Spaced Linux desktop sessions—not wallpaper mockups. Click any 
 | **Useful defaults** | Networking, audio controls, archives, editing, document viewing, and system utilities are ready immediately. |
 | **Modern applications** | Flatpak and Flathub provide current desktop apps without destabilizing the base system. |
 | **Coordinated themes** | One choice can change the GTK theme, icons, folder colors, wallpaper, panel layout, and optional dock together. |
-| **Safe fallback** | Marco is available when Compiz is unsuitable for a GPU, VM, or specialized workflow. |
 
 ## Why advanced users keep control
 
@@ -130,7 +129,6 @@ Spaced Linux combines a modern system with visual ideas from the best desktop er
 - **Init:** sysvinit
 - **Desktop:** MATE
 - **Primary window manager:** Compiz
-- **Fallback window manager:** Marco
 - **File manager:** Caja
 - **Application menu:** Brisk Menu
 - **Display manager:** LightDM GTK Greeter
@@ -146,7 +144,7 @@ Download the ISO and its matching checksum from the [Spaced Linux releases page]
 Verify the download on Linux:
 
 ```bash
-sha256sum -c spaced-linux-8.26-amd64.iso.sha256
+sha256sum -c spaced-linux-8.26.1-amd64.iso.sha256
 ```
 
 Test release images in a virtual machine or on non-critical hardware before adopting them for daily use.
@@ -217,7 +215,7 @@ Thank you for helping keep an independent, polished, systemd-free desktop availa
 
 ## Project status
 
-The current development line is **8.26**. Spaced Linux is an independent community project under active development.
+The current development line is **8.26.1**. Spaced Linux is an independent community project under active development.
 
 ## Contributing
 

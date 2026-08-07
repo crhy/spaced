@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=Spaced Window Manager
-Comment=Start Compiz with Marco as a fallback
+Comment=Start Compiz as MATE's window manager
 Exec=/usr/local/bin/spaced-window-manager
 NoDisplay=true
 X-MATE-Autostart-Phase=WindowManager

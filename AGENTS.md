@@ -2,12 +2,12 @@
 
 ## Purpose
 
-Spaced Linux 8.26: A Devuan Ceres-based distribution with a MATE desktop, Flatpak-primary application model, and Windows XP-style desktop layout.
+Spaced Linux 8.26.1: A Devuan Ceres-based distribution with a MATE desktop, Flatpak-primary application model, and Windows XP-style desktop layout.
 
 ## Key Architecture
 
 - **Base**: Devuan Excalibur → dist-upgrade to Ceres (rolling, sysvinit)
-- **Desktop**: MATE + Compiz by default, with Marco as the fallback
+- **Desktop**: MATE + Compiz
 - **Apps**: Flatpak/Flathub for user applications, native debs for system tools
 - **Build**: KVM VM for development, live-build or manual rootfs for ISO
 - **Installer**: Calamares

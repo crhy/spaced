@@ -68,7 +68,7 @@ if command -v xdpyinfo >/dev/null 2>&1; then
   fi
 fi
 # Re-assert the selected theme values after Calamares creates the account.
-for schema in org.mate.interface org.mate.Marco.general; do
+for schema in org.mate.interface; do
   gsettings list-schemas 2>/dev/null | grep -qx "$schema" || continue
   gsettings get "$schema" gtk-theme >/dev/null 2>&1 || true
 done
