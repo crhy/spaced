@@ -1,6 +1,6 @@
-# Spaced Linux 8.26.1 ISO Configuration
-iso_name: spaced-linux-8.26.1
-version: "8.26.1"
+# Spaced Linux 8.26.2 ISO Configuration
+iso_name: spaced-linux-8.26.2
+version: "8.26.2"
 arch: amd64
 
 # Package sources

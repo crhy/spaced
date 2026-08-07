@@ -107,11 +107,37 @@ assert {"bluez", "bluez-tools"}.issubset(packages), "Bluetooth stack is not incl
 
 live_build_config = Path("live-build/auto/config").read_text(encoding="utf-8")
 assert "--firmware-chroot false" in live_build_config, "broad live-build firmware injection is enabled"
+assert "docs/BOOTING.md" in Path("README.md").read_text(encoding="utf-8"), \
+    "boot documentation reference regressed in README.md"
 mirror_urls = [line.split(chr(34))[1] for line in live_build_config.splitlines() if "--mirror-" in line or "--parent-mirror-" in line]
 assert len(mirror_urls) == 6 and len(set(mirror_urls)) == 1 and mirror_urls[0].endswith("/merged") and mirror_urls[0] != "http://deb.devuan.org/merged", "build mirrors must use one fixed Devuan /merged endpoint"
+
+# Real-hardware boot must never depend on the QEMU/KVM virtual display name
+# (video=Virtual-1) or a forced early GPU modeset; both freeze boot on real
+# machines, and the previous occurrence regressed the 8.26 ISO (blinking cursor
+# at top-left, no framebuffer). The serial-console parameter that caused the
+# same symptom before it is forbidden too.
+live_grub_cfg = Path("live-build/config/bootloaders/grub-pc/grub.cfg").read_text(encoding="utf-8")
+assert "video=" not in live_grub_cfg and "Virtual-1" not in live_grub_cfg, \
+    "live GRUB still passes the QEMU-only video=Virtual-1 display, freezing real hardware"
+assert "console=ttyS0" not in live_grub_cfg and "ttyS0" not in live_build_config, \
+    "serial console must not be re-added to the live kernel command line"
+assert "nouveau.modeset=1" not in live_grub_cfg and "nouveau.modeset=1" not in live_build_config, \
+    "forced early nouveau modeset must not return to the default boot path"
+assert "--bootappend-live" in live_build_config and "boot=live components quiet splash" in live_build_config, \
+    "default live boot append line regressed"
 qemu_common = Path("scripts/vm/qemu/common.sh").read_text(encoding="utf-8")
 assert "-rtc base=utc" in qemu_common and "-rtc base=localtime" not in qemu_common, \
     "QEMU must expose a UTC hardware clock to the Linux guest"
+
+# The VM GPU must stay a single stable card. Layering virtio-gpu/virtio-vga on
+# top of QEMU's default VGA exposes two DRM cards to the guest, stalling Xorg
+# and leaving LightDM on a black screen (blinking cursor) in every test VM.
+makefile_text = Path("Makefile").read_text(encoding="utf-8")
+for gpu_source in (qemu_common, makefile_text):
+    assert "virtio-gpu-pci" not in gpu_source and "virtio-vga" not in gpu_source, \
+        "test VM must use a single GPU; dual virtio VGA leaves the guest on a black screen"
+    assert "-vga std" in gpu_source, "test VM must expose exactly one VGA (QEMU standard VGA)"
 
 root = Path("overlays")
 theme_root = root / "usr/share/themes"

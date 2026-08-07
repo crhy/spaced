@@ -1,4 +1,4 @@
-# Spaced Linux 8.26.1 Design
+# Spaced Linux 8.26.2 Design
 
 ## Base System
 - **Distro:** Devuan Ceres 7 (Freia) — rolling release, no systemd
@@ -83,7 +83,7 @@ All user apps installed via Flatpak/Flathub:
 
 ## Visual Identity
 - Name: Spaced Linux
-- Codename: 8261
+- Codename: 8262
 - Monochrome aesthetic with Spaced iconography
 
 ## Future

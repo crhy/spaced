@@ -105,7 +105,7 @@ iso-test-safe: ## Boot ISO with safe 2D graphics at the selected resolution
 		-device qemu-xhci,id=xhci \
 		-device usb-kbd,bus=xhci.0 \
 		-device usb-tablet,bus=xhci.0 \
-		-device "virtio-vga,edid=on,xres=$(SAFE_XRES),yres=$(SAFE_YRES)" \
+		-vga std \
 		-cdrom $(ISO_DIR)/$(ISO_NAME) \
 		-boot d \
 		-display gtk

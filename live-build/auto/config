@@ -4,12 +4,12 @@ lb config noauto \
     --distribution ceres \
     --archive-areas "main contrib non-free non-free-firmware" \
     --debian-installer none \
-    --bootappend-live "boot=live components quiet splash nouveau.modeset=1 username=user hostname=spaced" \
+    --bootappend-live "boot=live components quiet splash username=user hostname=spaced" \
     --binary-image iso-hybrid \
-    --iso-application "Spaced Linux 8.26.1" \
+    --iso-application "Spaced Linux 8.26.2" \
     --iso-preparer "Spaced Linux Team" \
     --iso-publisher "Spaced Linux" \
-    --iso-volume "SpacedLinux8261" \
+    --iso-volume "SpacedLinux8262" \
     --linux-flavours amd64 \
     --linux-packages linux-image \
     --memtest none \

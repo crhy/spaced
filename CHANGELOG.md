@@ -1,8 +1,11 @@
 # Changelog
 
-## 8.26.1 - 2026-08-06
+## 8.26.2 - 2026-08-07
 - Fixed the real-hardware boot regression that broke 8.26: the live kernel command line carried `console=ttyS0`, leaving the display blank with a blinking cursor, and an unconditional `S0` serial getty in `/etc/inittab` caused sysvinit's `INIT: Id "S0" respawning too fast` loop on machines without a usable serial port. The serial console was removed from the live image; headless access remains available through SSH, and the QEMU headless script already used `-serial none`.
-- Bumped the release to 8.26.1 across package, ISO, bootloader, installer, website, documentation, and VM metadata.
+- Fixed the remaining real-hardware boot regressions in the live GRUB menu: the default entry still passed the QEMU-only `video=Virtual-1:1280x1024` display, which leaves real machines on a blank screen with a blinking cursor, and the default boot append line forced `nouveau.modeset=1`, which can hang NVIDIA hardware before the desktop loads. The live menu no longer passes any `video=` argument and the default boot no longer forces GPU modesetting; the safe graphics entry uses a clean `nomodeset` line, and a new verbose boot entry (`noplymouth console=tty0 noquiet loglevel=7`) captures the full boot log for diagnosis.
+- Documented the complete live boot chain, stock-Devuan comparison, all historical boot failures, and troubleshooting in `docs/BOOTING.md`, and hardened `make check` to reject `video=`, `Virtual-1`, `console=ttyS0`, and forced early `nouveau.modeset=1` so these regressions cannot ship again.
+- Fixed the test-VM black screen: the QEMU harness exposed two GPUs (an explicit virtio-gpu on top of the default VGA), which stalled the guest's X and left an autologin on a blinking cursor. `make iso-test` and `iso-test-safe` now use a single `-vga std`, and `make check` rejects a second virtio GPU.
+- Bumped the release to 8.26.2 across package, ISO, bootloader, installer, website, documentation, and VM metadata.
 
 ## 8.26 - 2026-08-05
 - Began the 8.26 release transition across package, ISO, bootloader, installer, website, documentation, and VM metadata; QEMU now derives its default ISO filename from `VERSION` to prevent drift.

@@ -36,8 +36,12 @@ build_common_args() {
         # guest several hours behind and breaks signed repository metadata.
         -rtc base=utc
     )
+# Use QEMU's built-in standard VGA as the single GPU. Adding an explicit
+    # virtio-gpu device on top of the default VGA exposes two DRM cards, which
+    # makes the guest's Xorg stall and leaves LightDM on a black screen with a
+    # blinking cursor. One stable card boots the desktop.
     QEMU_GTK=(
-        -device "virtio-gpu-pci,edid=on,xres=$VM_XRES,yres=$VM_YRES"
+        -vga std
         -display gtk
     )
 }
