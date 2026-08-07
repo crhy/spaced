@@ -32,8 +32,8 @@
 </p>
 
 <p align="center">
-  <a href="website/assets/screenshots/desktop-control-center.webp">
-    <img src="website/assets/screenshots/desktop-control-center.webp" alt="Spaced Linux dark desktop with the Control Center and hardware monitoring" width="100%">
+  <a href="website/assets/screenshots/desktop-hero.webp">
+    <img src="website/assets/screenshots/desktop-hero.webp" alt="Spaced Linux desktop" width="100%">
   </a>
 </p>
 
