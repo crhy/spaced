@@ -27,9 +27,9 @@ is hand-written and must be kept consistent with `live-build/auto/config`'s
 
 | Entry | Command line | Purpose |
 |---|---|---|
-| Start Spaced Linux | `@APPEND_LIVE@` (`boot=live components quiet splash username=user hostname=spaced`) | Default hardware-agnostic boot |
+| Start Spaced Linux | `@APPEND_LIVE@` (`boot=live components quiet splash username=user hostname=spaced`) | Default hardware-agnostic boot; live-boot rescans media for up to 60 seconds |
 | safe graphics | `boot=live components nosplash nomodeset` + nouveau/`nvidia-drm.modeset=0` | Drives that hang on kernel modeset; text console |
-| verbose boot | `boot=live components noplymouth console=tty0 noquiet loglevel=7` | Full serial-to-VGA boot log for diagnosis |
+| verbose boot | `boot=live components noplymouth console=tty0 noquiet loglevel=7` | Full VGA boot log for diagnosis |
 | Verify the boot medium | `@APPEND_VERIFY_CHECKSUMS@` | `live-boot` medium integrity check |
 
 `--bootappend-live` lives in `live-build/auto/config` and supplies the default
@@ -52,6 +52,10 @@ present in stock Devuan:
 1. A QEMU-only display name in the kernel command line
 2. A forced early GPU modeset
 3. A forced serial console
+
+Spaced also gives live-boot up to 60 seconds to discover the boot medium. This
+does not alter a normal boot; it prevents a slow USB controller or flash drive
+from dropping into initramfs before `/run/live/medium` appears.
 
 All three are now forbidden (see "Hardening" below). Other intentional
 differences (autologin LightDM, `nouveau.modeset=0`/blacklist in the safe
@@ -111,7 +115,8 @@ the early kernel-time force is gone. The safe graphics entry explicitly sets
 - `video=` or `Virtual-1` anywhere in the live GRUB config
 - `console=ttyS0` or `ttyS0` in the live kernel command line
 - `nouveau.modeset=1` in the default boot path
-- The `boot=live components quiet splash` default append line changing shape
+- Addition of `live-media-timeout=`; in the shipped live-boot version this
+  delays scanning instead of extending it and can suppress every scan
 - A `virtio-gpu-pci` / `virtio-vga` test-VM GPU (must stay a single `-vga std`)
 
 `make check` runs this gate before any ISO is produced. If you are changing
@@ -121,8 +126,12 @@ boot configuration, run:
 make check
 ```
 
-and, after building, `make iso-test` (QEMU) plus a real USB boot before
-release.
+and, after building, `make iso-smoke` (KVM plus VirtualBox BIOS and EFI) and a
+real USB boot before release. The automated checks wait for live SSH and the
+complete MATE session (panel, Caja, and Compiz), so a passing result verifies
+that the kernel, initramfs, live medium, network, display manager, and desktop
+startup all completed. KVM and VirtualBox screenshots are written to
+`build/test-artifacts/`; VirtualBox rejects blank captures.
 
 ## The test-VM black screen on this project
 

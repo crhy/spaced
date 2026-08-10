@@ -104,6 +104,23 @@ assert "policykit-1" not in packages, "Devuan Ceres replaces policykit-1 with po
 assert {"polkitd", "pkexec"}.issubset(packages), "Spaced utilities require Devuan Ceres polkitd and pkexec packages"
 assert "dbus-x11" in packages, "SysVinit MATE and GTK portals require the dbus-x11 alternative"
 assert {"bluez", "bluez-tools"}.issubset(packages), "Bluetooth stack is not included by default (issue #77)"
+assert {"caja-admin", "gigolo", "timeshift"}.issubset(packages), \
+    "administrator, Windows-share, or backup desktop integration is missing"
+assert {"gnome-keyring", "libcanberra-gtk3-module", "accountsservice"}.issubset(packages), \
+    "Flatpak/keyring or LightDM desktop integration is incomplete"
+defaults_control = (Path("packages/spaced-mate-default-settings/DEBIAN/control")
+                    .read_text(encoding="utf-8"))
+for package in ("accountsservice", "caja-admin", "gigolo", "gnome-keyring",
+                "libcanberra-gtk3-module", "timeshift", "xdg-desktop-portal-gtk"):
+    assert package in defaults_control, \
+        f"installed-system desktop updates do not depend on {package}"
+defaults_postinst = (Path("packages/spaced-mate-default-settings/DEBIAN/postinst")
+                     .read_text(encoding="utf-8"))
+assert "autologin-user=user" in defaults_postinst and "glib-compile-schemas" in defaults_postinst, \
+    "desktop package does not migrate LightDM or compile updated settings"
+local_package_builder = Path("scripts/iso/build-local-packages.sh").read_text(encoding="utf-8")
+assert "stage_desktop_defaults" in local_package_builder and "usr/share/themes" in local_package_builder, \
+    "spaced-mate-default-settings remains an empty metadata package"
 
 live_build_config = Path("live-build/auto/config").read_text(encoding="utf-8")
 assert "--firmware-chroot false" in live_build_config, "broad live-build firmware injection is enabled"
@@ -126,6 +143,8 @@ assert "nouveau.modeset=1" not in live_grub_cfg and "nouveau.modeset=1" not in l
     "forced early nouveau modeset must not return to the default boot path"
 assert "--bootappend-live" in live_build_config and "boot=live components quiet splash" in live_build_config, \
     "default live boot append line regressed"
+assert "live-media-timeout=" not in live_build_config + live_grub_cfg, \
+    "live-media-timeout suppresses scanning and can force an initramfs failure"
 qemu_common = Path("scripts/vm/qemu/common.sh").read_text(encoding="utf-8")
 assert "-rtc base=utc" in qemu_common and "-rtc base=localtime" not in qemu_common, \
     "QEMU must expose a UTC hardware clock to the Linux guest"
@@ -234,6 +253,8 @@ assert welcome_app.is_file() and welcome_launcher.is_file() and welcome_autostar
 assert "/run/live/medium" in welcome_wrapper and "welcome-shown" in welcome_wrapper, \
     "first-run application is not limited to one installed-system launch"
 assert "io.github.kolunmi.Bazaar" in flatpak_installer, "Bazaar installer action is missing"
+assert "attempt $attempt of 3" in flatpak_installer and "continuing with the remaining applications" in flatpak_installer, \
+    "suggested Flatpaks still fail as one all-or-nothing batch"
 for app_id in ("org.atheme.audacious", "io.github.kolunmi.Bazaar", "com.brave.Browser",
                "org.libreoffice.LibreOffice", "org.videolan.VLC"):
     assert app_id in flatpak_list, f"suggested Flatpak is missing: {app_id}"
@@ -272,6 +293,15 @@ assert "AT_SPI_BUS_ADDRESS" in session_reset and "var/lib/lightdm" in session_re
 lightdm_config = (root / "etc/lightdm/lightdm.conf").read_text(encoding="utf-8")
 assert "session-setup-script=/usr/local/sbin/spaced-lightdm-session-setup" in lightdm_config, \
     "LightDM does not clean up greeter helpers before starting the user session"
+assert "autologin-user=" not in lightdm_config and "greeter-hide-users=false" in lightdm_config, \
+    "installed LightDM either retains the live user or hides the remembered user list"
+installed_lightdm = (root / "etc/lightdm/lightdm.conf.d/60-spaced-installed.conf").read_text(encoding="utf-8")
+assert "greeter-hide-users=false" in installed_lightdm, \
+    "desktop update package lacks the installed-system LightDM user-list policy"
+live_configure = Path("scripts/iso/01-configure.chroot").read_text(encoding="utf-8")
+assert "[LightDM]\n" in live_configure and "[LightDM]\n# Reuse Plymouth" in live_configure \
+    and "minimum-vt=1\n\n[Seat:*]" in live_configure, \
+    "live LightDM may deadlock waiting for an inactive VT in headless KVM"
 lightdm_setup = (root / "usr/local/sbin/spaced-lightdm-session-setup").read_text(encoding="utf-8")
 assert "at-spi-bus-launcher" in lightdm_setup and "at-spi2-registryd" in lightdm_setup, \
     "LightDM session cleanup does not stop stale greeter accessibility helpers"
@@ -344,6 +374,12 @@ calamares_launcher = (root / "usr/local/bin/install-spaced-linux").read_text(enc
 assert "sudo --preserve-env=DISPLAY,XAUTHORITY,DBUS_SESSION_BUS_ADDRESS" in calamares_launcher, \
     "Calamares launcher does not use the authorized live-session sudo path"
 assert "pkexec calamares" not in calamares_launcher, "Calamares launcher still uses broken pkexec authorization"
+assert all(setting in calamares_launcher for setting in (
+    "QT_QUICK_BACKEND=software", "QSG_RHI_BACKEND=software", "LIBGL_ALWAYS_SOFTWARE=1")), \
+    "Calamares does not force its VirtualBox-safe Qt software rendering path"
+calamares_locale = yaml.safe_load((root / "etc/calamares/modules/locale.conf").read_text(encoding="utf-8"))
+assert calamares_locale["region"] == "America" and calamares_locale["zone"] == "Los_Angeles", \
+    "Calamares does not initially select Los Angeles"
 
 compiz = root / "etc/skel/.config/compiz/compizconfig/Default.ini"
 assert compiz.is_file(), "Compiz profile is not in the Compiz 0.8 path"
@@ -448,8 +484,8 @@ for menu_directory, color in ((menu_on_dark, "#f3f3f3"), (menu_on_light, "#20202
 for theme in themes:
     icon_metadata = (icon_root / f"Spaced-Icons-{theme['gtk_theme'].removeprefix('Spaced-')}" / "index.theme")
     menu_variant = "Spaced-Menu-On-Dark" if theme["dark"] else "Spaced-Menu-On-Light"
-    assert icon_metadata.is_file() and f"Inherits={menu_variant},hicolor,Papirus-Dark" in icon_metadata.read_text(encoding="utf-8"), \
-        f"{theme['name']}: icon theme does not select the correct transparent S menu icon"
+    assert icon_metadata.is_file() and f"Inherits={menu_variant},Papirus-Dark,hicolor" in icon_metadata.read_text(encoding="utf-8"), \
+        f"{theme['name']}: scalable Papirus icons do not precede low-resolution hicolor fallbacks"
 
 for theme_name, panel_color in (("Spaced-Win11-Dark", "#17243b"),
                                 ("Spaced-Android", "#263238"),
@@ -521,6 +557,8 @@ assert "Technical details" in update_app and "Gtk.ComboBox" not in update_app, \
     "Spaced Update regressed to the Progress / CLI mode selector"
 assert "spaced-primary-action" in update_app and "spaced-update-list" in update_app, \
     "Spaced Update theme-aware interface is incomplete"
+assert "installed_after_update = read_installed_version()" in update_app and "finish_update" in update_app, \
+    "Spaced Update does not refresh the installed OS version after an update"
 assert 'if [ "$MODE" != "all" ]' in update_helper and "No Flatpak applications were selected" in update_helper, \
     "Spaced Update helper does not validate privileged update requests"
 

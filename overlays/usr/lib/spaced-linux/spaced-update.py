@@ -797,13 +797,8 @@ class App(Gtk.Window):
                 raise RuntimeError(
                     f"System update helper exited with status {status}"
                 )
-            GLib.idle_add(tab.setstep, 100, "System update complete")
-            GLib.idle_add(
-                tab.set_message,
-                "emblem-ok-symbolic",
-                "Your system is updated",
-                "A reboot is recommended to finish applying kernel and system changes.",
-            )
+            installed_after_update = read_installed_version()
+            GLib.idle_add(tab.finish_update, installed_after_update)
             GLib.idle_add(tab.logline, "Finished successfully.")
         except Exception as error:
             GLib.idle_add(tab.logline, f"ERROR: {error}")
@@ -824,6 +819,7 @@ class OsUpdateTab(Gtk.Box):
         add_style(self, "spaced-page")
         self.app = app
         self.installed = read_installed_version()
+        self.latest_release = None
 
         hero = add_style(Gtk.Box(spacing=14), "spaced-card")
         self.message_icon = add_style(
@@ -887,6 +883,41 @@ class OsUpdateTab(Gtk.Box):
         self.message_title.set_text(title)
         self.message.set_text(detail)
 
+    def finish_update(self, installed):
+        previous = self.installed
+        self.installed = installed
+        self.inst.set_text(installed or "Unknown")
+        self.setstep(100, "System update complete")
+
+        if installed and installed != previous:
+            self.set_message(
+                "emblem-ok-symbolic",
+                f"Updated to Spaced Linux {installed}",
+                "The installed release marker advanced successfully. "
+                "A reboot is recommended.",
+            )
+        elif installed and self.latest_release and version_key(
+            self.latest_release
+        ) > version_key(installed):
+            self.set_message(
+                "dialog-warning-symbolic",
+                "Packages updated; release marker unchanged",
+                f"The system still reports {installed}. The configured repository "
+                f"has not delivered the {self.latest_release} release marker yet.",
+            )
+            self.details.set_expanded(True)
+            self.logline(
+                f"Installed release remains {installed}; latest published release "
+                f"is {self.latest_release}."
+            )
+        else:
+            self.set_message(
+                "emblem-ok-symbolic",
+                "Your system packages are current",
+                "No newer installed release marker was reported. A reboot is "
+                "recommended if a kernel or core library changed.",
+            )
+
     def logline(self, text):
         self.details.append(text)
 
@@ -934,6 +965,7 @@ class OsUpdateTab(Gtk.Box):
             return
 
         self.latest.set_text(latest)
+        self.latest_release = latest
         if self.installed and version_key(latest) > version_key(self.installed):
             self.set_message(
                 "software-update-available-symbolic",

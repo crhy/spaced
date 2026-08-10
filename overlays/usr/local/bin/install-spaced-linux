@@ -16,10 +16,15 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-export QT_AUTO_SCREEN_SCALE_FACTOR=1
 xhost +si:localuser:root >/dev/null 2>&1 || true
 # The live account's temporary NOPASSWD sudo rule is removed from the installed
 # system by Calamares. pkexec cannot authorize reliably in the live MATE
 # session, so preserve only the display/session variables Calamares needs.
+# Force Qt Quick's software path for the installer: VirtualBox's emulated VMSVGA
+# adapter can otherwise wedge the QML slideshow after the first page.
 sudo --preserve-env=DISPLAY,XAUTHORITY,DBUS_SESSION_BUS_ADDRESS \
-    /usr/bin/calamares
+    env QT_AUTO_SCREEN_SCALE_FACTOR=1 \
+        QT_QUICK_BACKEND=software \
+        QSG_RHI_BACKEND=software \
+        LIBGL_ALWAYS_SOFTWARE=1 \
+        /usr/bin/calamares

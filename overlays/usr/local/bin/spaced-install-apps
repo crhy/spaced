@@ -20,30 +20,44 @@ flatpak remote-add --user --if-not-exists flathub \
     https://flathub.org/repo/flathub.flatpakrepo
 
 if [ "$mode" = bazaar ]; then
-    flatpak install --user -y flathub "$bazaar_id"
-    exit 0
+    refs=("$bazaar_id")
+else
+    [ -r "$list" ] || {
+        echo "Suggested application list is missing." >&2
+        exit 1
+    }
 fi
 
-[ -r "$list" ] || {
-    echo "Suggested application list is missing." >&2
-    exit 1
-}
-
-refs=()
 bundles=()
-while IFS= read -r entry; do
-    entry=${entry%%#*}
-    entry=${entry//[[:space:]]/}
-    [ -n "$entry" ] || continue
-    case "$entry" in
-        https://*) bundles+=("$entry") ;;
-        *) refs+=("$entry") ;;
-    esac
-done < "$list"
-
-if [ "${#refs[@]}" -gt 0 ]; then
-    flatpak install --user -y flathub "${refs[@]}"
+if [ "$mode" = suggested ]; then
+    refs=()
+    while IFS= read -r entry; do
+        entry=${entry%%#*}
+        entry=${entry//[[:space:]]/}
+        [ -n "$entry" ] || continue
+        case "$entry" in
+            https://*) bundles+=("$entry") ;;
+            *) refs+=("$entry") ;;
+        esac
+    done < "$list"
 fi
+
+failures=()
+for ref in "${refs[@]}"; do
+    installed=false
+    for attempt in 1 2 3; do
+        echo "Installing $ref (attempt $attempt of 3)…"
+        if flatpak install --user -y flathub "$ref"; then
+            installed=true
+            break
+        fi
+        [ "$attempt" -eq 3 ] || sleep $((attempt * 2))
+    done
+    if [ "$installed" != true ]; then
+        failures+=("$ref")
+        echo "Could not install $ref; continuing with the remaining applications." >&2
+    fi
+done
 
 if [ "${#bundles[@]}" -gt 0 ]; then
     tmpdir=$(mktemp -d)
@@ -52,6 +66,14 @@ if [ "${#bundles[@]}" -gt 0 ]; then
         bundle="$tmpdir/${url##*/}"
         curl --fail --location --retry 3 --retry-all-errors \
             --connect-timeout 15 --output "$bundle" "$url"
-        flatpak install --user -y "$bundle"
+        if ! flatpak install --user -y "$bundle"; then
+            failures+=("$url")
+        fi
     done
+fi
+
+if [ "${#failures[@]}" -gt 0 ]; then
+    printf 'The following applications could not be installed:\n' >&2
+    printf '  %s\n' "${failures[@]}" >&2
+    exit 1
 fi
