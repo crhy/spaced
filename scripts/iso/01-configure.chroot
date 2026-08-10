@@ -8,6 +8,11 @@ install -Dm0644 /etc/os-release /usr/lib/os-release
 # Enable user autologin
 mkdir -p /etc/lightdm/lightdm.conf.d
 cat > /etc/lightdm/lightdm.conf.d/50-spaced.conf <<'LIGHTDM'
+[LightDM]
+# Reuse Plymouth's active VT. Headless KVM can otherwise leave Xorg waiting
+# forever for a switch from tty1 to LightDM's traditional tty7.
+minimum-vt=1
+
 [Seat:*]
 autologin-user=user
 autologin-user-timeout=0
@@ -167,4 +172,3 @@ if [ -f /etc/init.d/ssh ]; then
     mkdir -p /etc/ssh/sshd_config.d
     printf 'PasswordAuthentication yes\nPermitRootLogin yes\n' > /etc/ssh/sshd_config.d/10-spaced.conf
 fi
-

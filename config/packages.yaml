@@ -1,5 +1,6 @@
 desktop:
   - caja
+  - caja-admin
   - gvfs-backends
   - mate-control-center
   - mate-desktop
@@ -22,6 +23,7 @@ panel:
 brisk:
   - mate-applet-brisk-menu
 network:
+  - gigolo
   - network-manager
   - network-manager-applet
   - nm-connection-editor
@@ -67,9 +69,13 @@ applications:
   - mintstick
 flatpak:
   - flatpak
+  - gnome-keyring
+  - libcanberra-gtk3-module
   - xdg-desktop-portal-gtk
   - xdg-desktop-portal
   - xdg-utils
+backup:
+  - timeshift
 firmware:
   - bluez-firmware
   - firmware-amd-graphics
@@ -91,6 +97,7 @@ printing:
   - cups-ipp-utils
   - system-config-printer
 system:
+  - accountsservice
   - libglib2.0-bin
   - sudo
   - libpam-elogind

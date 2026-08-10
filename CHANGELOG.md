@@ -1,5 +1,17 @@
 # Changelog
 
+## 8.26.3 - 2026-08-10
+- Bumped the release to 8.26.3 across package, ISO, bootloader, installer, website, documentation, and VM metadata.
+- Added unattended ISO smoke tests for KVM and VirtualBox BIOS/EFI boot paths, requiring both guest SSH and a running MATE session and retaining desktop screenshots.
+- Made the live LightDM session reuse Plymouth's active VT so headless KVM does not leave Xorg blocked forever waiting for a tty1-to-tty7 switch; the setting is removed with the live-only configuration during installation.
+- Made Calamares use Qt software rendering so the installer slideshow remains responsive with VirtualBox VMSVGA, and set its deterministic offline starting location to Los Angeles.
+- Fixed the reproducible initramfs “Unable to find a medium containing a live file system” failure by removing `live-media-timeout=60`; with the shipped live-boot logic that value delayed scanning until the search loop had already ended.
+- Removed the live account from the installed LightDM base configuration, exposed the user list for remembered-user login, and added AccountsService explicitly.
+- Fixed drive, optical-media, ISO, and volume icon fallback across every theme by resolving scalable Papirus assets before low-resolution hicolor fallbacks.
+- Made suggested Flatpak installs retry independently and continue past a failed application, and added the keyring and GTK portal-support packages explicitly.
+- Added Caja's administrator extension, Gigolo Windows-share browsing, and Timeshift backup support.
+- Made Spaced Update reread `/etc/os-release` after APT completes and distinguish a successful package update from a repository that has not yet delivered the newest `spaced-meta` release marker.
+
 ## 8.26.2 - 2026-08-07
 - Fixed the real-hardware boot regression that broke 8.26: the live kernel command line carried `console=ttyS0`, leaving the display blank with a blinking cursor, and an unconditional `S0` serial getty in `/etc/inittab` caused sysvinit's `INIT: Id "S0" respawning too fast` loop on machines without a usable serial port. The serial console was removed from the live image; headless access remains available through SSH, and the QEMU headless script already used `-serial none`.
 - Fixed the remaining real-hardware boot regressions in the live GRUB menu: the default entry still passed the QEMU-only `video=Virtual-1:1280x1024` display, which leaves real machines on a blank screen with a blinking cursor, and the default boot append line forced `nouveau.modeset=1`, which can hang NVIDIA hardware before the desktop loads. The live menu no longer passes any `video=` argument and the default boot no longer forces GPU modesetting; the safe graphics entry uses a clean `nomodeset` line, and a new verbose boot entry (`noplymouth console=tty0 noquiet loglevel=7`) captures the full boot log for diagnosis.

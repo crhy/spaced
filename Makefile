@@ -16,13 +16,17 @@ LOCAL_PACKAGE_DIR := $(BUILD_DIR)/local-packages
 HOST_RUN ?= $(shell command -v flatpak-spawn >/dev/null 2>&1 && printf 'flatpak-spawn --host')
 ROOT_RUN ?= $(shell command -v flatpak-spawn >/dev/null 2>&1 && printf 'flatpak-spawn --host pkexec' || printf 'sudo')
 VM_SSH_PORT ?= 2222
+VBOX_SSH_PORT ?= 2223
+ISO_SMOKE_TIMEOUT ?= 240
 VM_XRES ?= 1440
 VM_YRES ?= 900
 SAFE_XRES ?= 1920
 SAFE_YRES ?= 1080
 VM_RUN := $(HOST_RUN) env SPACED_VM_SSH_PORT=$(VM_SSH_PORT) SPACED_VM_XRES=$(VM_XRES) SPACED_VM_YRES=$(VM_YRES)
+ISO_SMOKE_RUN := $(HOST_RUN) env SPACED_ISO_SMOKE_TIMEOUT=$(ISO_SMOKE_TIMEOUT)
+VBOX_RUN := $(ISO_SMOKE_RUN) SPACED_VBOX_SSH_PORT=$(VBOX_SSH_PORT)
 
-.PHONY: help check deps clean cache-clean prepare lb-config lb-build iso-build iso-test iso-test-safe iso-test-safe-1024 iso-test-safe-1080 vm-create vm-install vm-start vm-stop release
+.PHONY: help check deps clean cache-clean prepare lb-config lb-build iso-build iso-test iso-smoke iso-smoke-kvm iso-smoke-virtualbox iso-smoke-virtualbox-efi iso-test-safe iso-test-safe-1024 iso-test-safe-1080 vm-create vm-install vm-start vm-stop release
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -32,7 +36,7 @@ deps: ## Install host build and test dependencies
 	$(ROOT_RUN) apt-get update
 	$(ROOT_RUN) apt-get install -y \
 		live-build debootstrap xorriso squashfs-tools grub-common \
-		qemu-system-x86 ovmf rsync curl
+		qemu-system-x86 ovmf rsync curl sshpass
 
 check: ## Validate configuration, scripts, themes, and desktop entries
 	$(HOST_RUN) scripts/check.sh
@@ -94,6 +98,20 @@ iso-build: lb-build ## Build the live ISO
 iso-test: ## Boot the current release ISO in KVM
 	test -f $(ISO_DIR)/$(ISO_NAME) || { echo "Missing $(ISO_DIR)/$(ISO_NAME)"; exit 1; }
 	$(VM_RUN) scripts/vm/qemu/test-iso.sh $(abspath $(ISO_DIR)/$(ISO_NAME))
+
+iso-smoke: iso-smoke-kvm iso-smoke-virtualbox iso-smoke-virtualbox-efi ## Smoke-test the ISO in KVM and VirtualBox BIOS/EFI
+
+iso-smoke-kvm: ## Headlessly boot the ISO in KVM and wait for live SSH
+	test -f $(ISO_DIR)/$(ISO_NAME) || { echo "Missing $(ISO_DIR)/$(ISO_NAME)"; exit 1; }
+	$(ISO_SMOKE_RUN) SPACED_VM_SSH_PORT=$(VM_SSH_PORT) scripts/vm/qemu/smoke-iso.sh $(abspath $(ISO_DIR)/$(ISO_NAME))
+
+iso-smoke-virtualbox: ## Headlessly boot the ISO in VirtualBox BIOS mode
+	test -f $(ISO_DIR)/$(ISO_NAME) || { echo "Missing $(ISO_DIR)/$(ISO_NAME)"; exit 1; }
+	$(VBOX_RUN) SPACED_VBOX_FIRMWARE=bios scripts/vm/virtualbox/smoke-iso.sh $(abspath $(ISO_DIR)/$(ISO_NAME))
+
+iso-smoke-virtualbox-efi: ## Headlessly boot the ISO in VirtualBox EFI mode
+	test -f $(ISO_DIR)/$(ISO_NAME) || { echo "Missing $(ISO_DIR)/$(ISO_NAME)"; exit 1; }
+	$(VBOX_RUN) SPACED_VBOX_FIRMWARE=efi scripts/vm/virtualbox/smoke-iso.sh $(abspath $(ISO_DIR)/$(ISO_NAME))
 
 iso-test-safe: ## Boot ISO with safe 2D graphics at the selected resolution
 	test -f $(ISO_DIR)/$(ISO_NAME)

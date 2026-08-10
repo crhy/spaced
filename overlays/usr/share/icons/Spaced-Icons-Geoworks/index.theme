@@ -1,7 +1,7 @@
 [Icon Theme]
 Name=Spaced GeoWorks folder icons
 Comment=Spaced GeoWorks folder color over Papirus Dark
-Inherits=Spaced-Menu-On-Light,hicolor,Papirus-Dark
+Inherits=Spaced-Menu-On-Light,Papirus-Dark,hicolor
 Directories=scalable/places
 
 [scalable/places]

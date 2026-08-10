@@ -1,0 +1,29 @@
+#!/bin/sh
+set -e
+
+# 7.26.x installed the live account's autologin in LightDM's package-owned
+# base file. Remove only those exact stale lines; the installed-system drop-in
+# supplied by this package keeps the user chooser visible.
+if [ -f /etc/lightdm/lightdm.conf ]; then
+    sed -i \
+        -e '/^autologin-user=user$/d' \
+        -e '/^autologin-user-timeout=0$/d' \
+        /etc/lightdm/lightdm.conf
+fi
+
+if command -v glib-compile-schemas >/dev/null 2>&1; then
+    glib-compile-schemas /usr/share/glib-2.0/schemas
+fi
+
+if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+    for theme in /usr/share/icons/Spaced-*; do
+        [ -d "$theme" ] || continue
+        gtk-update-icon-cache -f "$theme" >/dev/null 2>&1 || true
+    done
+fi
+
+if command -v update-desktop-database >/dev/null 2>&1; then
+    update-desktop-database -q /usr/share/applications || true
+fi
+
+exit 0
