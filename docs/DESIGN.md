@@ -1,4 +1,4 @@
-# Spaced Linux 8.26.3 Design
+# Spaced Linux 8.26.4 Design
 
 ## Base System
 - **Distro:** Devuan Ceres 7 (Freia) — rolling release, no systemd

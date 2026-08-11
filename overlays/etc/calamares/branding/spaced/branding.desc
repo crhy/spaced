@@ -9,10 +9,10 @@ windowPlacement: center
 strings:
     productName:         Spaced Linux
     shortProductName:    Spaced Linux
-    version:             8.26.3
-    shortVersion:        8.26.3
-    versionedName:       Spaced Linux 8.26.3
-    shortVersionedName:  Spaced Linux 8.26.3
+    version:             8.26.4
+    shortVersion:        8.26.4
+    versionedName:       Spaced Linux 8.26.4
+    shortVersionedName:  Spaced Linux 8.26.4
     bootloaderEntryName: Spaced Linux
     productUrl:          https://github.com/crhy/spaced
     supportUrl:          https://github.com/crhy/spaced/issues
@@ -23,15 +23,15 @@ sidebar: widget
 navigation: widget
 
 images:
-    productLogo:         ../../../../usr/share/backgrounds/spaced/SpacedIconb.png
-    productIcon:         ../../../../usr/share/backgrounds/spaced/SpacedIconb.png
-    productWelcome:      ../../../../usr/share/backgrounds/spaced/SpacedIconb.png
+    productLogo:         spaced-logo.png
+    productIcon:         spaced-logo.png
+    productWelcome:      spaced-logo.png
 
 slideshow: "slideshow/Show.qml"
 slideshowAPI: 2
 
 style:
-    SidebarBackground:        "#111827"
-    SidebarText:              "#FFFFFF"
-    SidebarTextCurrent:       "#FFFFFF"
-    SidebarBackgroundCurrent: "#374151"
+    SidebarBackground:        "#1b1b1f"
+    SidebarText:              "#e8e8ea"
+    SidebarTextCurrent:       "#ffffff"
+    SidebarBackgroundCurrent: "#3a3a40"

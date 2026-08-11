@@ -36,7 +36,7 @@ deps: ## Install host build and test dependencies
 	$(ROOT_RUN) apt-get update
 	$(ROOT_RUN) apt-get install -y \
 		live-build debootstrap xorriso squashfs-tools grub-common \
-		qemu-system-x86 ovmf rsync curl sshpass
+		qemu-system-x86 qemu-utils ovmf rsync curl sshpass
 
 check: ## Validate configuration, scripts, themes, and desktop entries
 	$(HOST_RUN) scripts/check.sh
@@ -56,6 +56,24 @@ prepare: ## Stage authored live-build configuration
 	fi
 	$(ROOT_RUN) rm -rf "$(abspath $(LB_DIR))"
 	mkdir -p $(LB_DIR)/auto $(CACHE_DIR) $(ISO_DIR)
+	# A bootstrap cache copied or created outside the privileged build can retain
+	# the invoking user's ownership for core image paths. Package postinst scripts
+	# correctly reject that unsafe state, so discard only the bootstrap cache and
+	# retain the much larger downloaded package cache.
+	unsafe_bootstrap=
+	if [[ -d "$(CACHE_DIR)/bootstrap" ]]; then
+		for path in '' etc usr usr/bin usr/sbin; do
+			owner=$$(stat -c '%u:%g' "$(CACHE_DIR)/bootstrap$${path:+/$$path}")
+			if [[ "$$owner" != 0:0 ]]; then
+				unsafe_bootstrap=1
+				break
+			fi
+		done
+	fi
+	if [[ -n "$$unsafe_bootstrap" ]]; then
+		echo "Discarding unsafe live-build bootstrap cache (core paths are not root-owned)"
+		$(ROOT_RUN) rm -rf "$(abspath $(CACHE_DIR))/bootstrap"
+	fi
 	ln -s ../cache/live-build $(LB_DIR)/cache
 	cp live-build/auto/config $(LB_DIR)/auto/config
 	chmod +x $(LB_DIR)/auto/config
@@ -79,6 +97,10 @@ prepare: ## Stage authored live-build configuration
 	cp scripts/iso/01-configure.chroot \
 		$(LB_DIR)/config/hooks/live/01-configure.chroot
 	chmod +x $(LB_DIR)/config/hooks/live/01-configure.chroot
+	# live-build copies this tree with ownership preserved. Make every image
+	# path root-owned so security-sensitive package scripts (notably OpenSSH)
+	# do not reject /usr or /usr/bin as an unsafe ownership transition.
+	$(ROOT_RUN) chown -R 0:0 "$(abspath $(LB_DIR)/config/includes.chroot)"
 	$(HOST_RUN) scripts/iso/build-local-packages.sh
 	cp $(LOCAL_PACKAGE_DIR)/*.deb $(LB_DIR)/config/packages.chroot/
 
@@ -90,7 +112,8 @@ lb-build: prepare ## Build the live ISO (requires sudo)
 	test -n "$$iso"
 	rm -f $(ISO_DIR)/$(ISO_NAME) $(ISO_DIR)/$(ISO_NAME).sha256
 	cp "$$iso" $(ISO_DIR)/$(ISO_NAME)
-	sha256sum $(ISO_DIR)/$(ISO_NAME) > $(ISO_DIR)/$(ISO_NAME).sha256
+	cd $(ISO_DIR)
+	sha256sum $(ISO_NAME) > $(ISO_NAME).sha256
 	@echo "Built $(ISO_DIR)/$(ISO_NAME)"
 
 iso-build: lb-build ## Build the live ISO

@@ -63,11 +63,28 @@ if [ "${#bundles[@]}" -gt 0 ]; then
     tmpdir=$(mktemp -d)
     trap 'rm -rf "$tmpdir"' EXIT
     for url in "${bundles[@]}"; do
-        bundle="$tmpdir/${url##*/}"
-        curl --fail --location --retry 3 --retry-all-errors \
-            --connect-timeout 15 --output "$bundle" "$url"
-        if ! flatpak install --user -y "$bundle"; then
+        name=${url##*/}
+        bundle="$tmpdir/$name"
+        installed=false
+        for attempt in 1 2 3; do
+            echo "Downloading $name (attempt $attempt of 3)…"
+            # --continue-at resumes an interrupted large bundle so a flaky
+            # connection does not restart a multi-hundred-MB transfer.
+            if curl --fail --location --retry 3 --retry-all-errors \
+                --connect-timeout 15 --continue-at - --output "$bundle" "$url"; then
+                if flatpak install --user -y "$bundle"; then
+                    installed=true
+                    break
+                fi
+                # The bundle is corrupt after a failed install; drop it so the
+                # next attempt re-downloads cleanly instead of reusing it.
+                rm -f "$bundle"
+            fi
+            [ "$attempt" -eq 3 ] || sleep $((attempt * 3))
+        done
+        if [ "$installed" != true ]; then
             failures+=("$url")
+            echo "Could not install $name; continuing with the remaining applications." >&2
         fi
     done
 fi

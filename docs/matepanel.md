@@ -1,4 +1,4 @@
-# Spaced Linux 8.26.3 — MATE Panel Layout
+# Spaced Linux 8.26.4 — MATE Panel Layout
 
 ## Layout File
 

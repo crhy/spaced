@@ -78,6 +78,59 @@ colorchooserwidget {
     color: @theme_fg_color;
 }
 
+/* Toolbars and breadcrumb/path surfaces sit flush with the window instead of
+ * painting a rectangular shelf. The engine's gradient band and the raised
+ * square backgrounds behind breadcrumb and toolbar buttons made every
+ * toolbar look like a nested box inside the window. */
+toolbar,
+.primary-toolbar,
+.primary-toolbar toolbar {
+    background-image: none;
+    background-color: @theme_bg_color;
+}
+
+.primary-toolbar {
+    border-color: shade(@theme_bg_color, 0.7);
+}
+
+.primary-toolbar .raised button,
+.primary-toolbar .raisedbutton,
+.primary-toolbar button,
+.primary-toolbar combobox,
+toolbar button,
+toolbar combobox,
+.path-bar button,
+.pathbar button,
+.breadcrumb {
+    border-color: transparent;
+    background-color: transparent;
+    background-image: none;
+    box-shadow: none;
+}
+
+.primary-toolbar button:hover,
+.primary-toolbar .raised button:hover,
+toolbar button:hover,
+.path-bar button:hover,
+.pathbar button:hover {
+    border-color: shade(@theme_bg_color, 0.75);
+    background-color: shade(@theme_bg_color, 1.12);
+    background-image: none;
+}
+
+.primary-toolbar button:active,
+.primary-toolbar button:checked,
+.primary-toolbar .raised button:active,
+.primary-toolbar .raised button:checked,
+toolbar button:active,
+toolbar button:checked,
+.path-bar button:checked,
+.pathbar button:checked {
+    border-color: shade(@theme_bg_color, 0.55);
+    background-color: shade(@theme_bg_color, 0.90);
+    background-image: none;
+}
+
 .view,
 treeview,
 treeview.view,
@@ -95,13 +148,68 @@ spinbutton > entry {
     color: @theme_text_color;
 }
 
-button,
+/* Modern flat buttons: clean 1px outline, calm surface, and an accent that
+ * only appears on hover or for the suggested action. The engine's raised
+ * 3D borders were the source of every "ugly button" report. */
+button:not(.flat):not(.image-button),
 togglebutton,
 menubutton,
 combobox > button,
 spinbutton > button {
-    background-color: mix(@theme_fg_color, @theme_bg_color, 0.08);
+    padding: 5px 10px;
+    border: 1px solid shade(@theme_bg_color, 0.62);
+    border-radius: 4px;
+    background-color: mix(@theme_fg_color, @theme_bg_color, 0.10);
+    background-image: none;
     color: @theme_fg_color;
+    box-shadow: none;
+}
+
+button:not(.flat):not(.image-button):hover,
+button:not(.flat):not(.image-button):focus:hover,
+togglebutton:hover,
+menubutton:hover,
+combobox > button:hover,
+spinbutton > button:hover {
+    background-color: shade(mix(@theme_fg_color, @theme_bg_color, 0.10), 1.22);
+    border-color: shade(@theme_selected_bg_color, 0.75);
+}
+
+button:not(.flat):not(.image-button):active,
+button:not(.flat):not(.image-button):checked,
+button:not(.flat):not(.image-button):active:hover,
+togglebutton:active,
+togglebutton:checked,
+menubutton:active,
+combobox > button:active,
+combobox > button:checked,
+spinbutton > button:active {
+    background-color: shade(mix(@theme_fg_color, @theme_bg_color, 0.10), 0.82);
+    border-color: shade(@theme_bg_color, 0.5);
+    box-shadow: inset 0 1px 2px alpha(#000000, 0.3);
+}
+
+button:not(.flat):not(.image-button):disabled,
+togglebutton:disabled,
+menubutton:disabled,
+combobox > button:disabled,
+spinbutton > button:disabled {
+    background-color: mix(@theme_fg_color, @theme_bg_color, 0.05);
+    border-color: shade(@theme_bg_color, 0.7);
+    color: mix(@theme_fg_color, @theme_bg_color, 0.45);
+}
+
+/* Dialog default actions get a quiet accent border so the recommended choice
+ * stands out without a full accent fill. */
+button.default,
+button.suggested-action {
+    border-color: shade(@theme_selected_bg_color, 0.70);
+    color: shade(@theme_selected_fg_color, 0.96);
+}
+
+button.default:hover,
+button.suggested-action:hover {
+    border-color: shade(@theme_selected_bg_color, 0.62);
 }
 
 notebook > header tab:checked,

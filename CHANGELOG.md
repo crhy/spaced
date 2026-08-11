@@ -1,5 +1,19 @@
 # Changelog
 
+## 8.26.4 - 2026-08-10
+- Bumped the release to 8.26.4 across package, ISO, bootloader, installer, website, documentation, and VM metadata.
+- Removed the visible nested-container boxes from every theme by keeping GtkBox, GtkGrid, GtkPaned, and other pure layout containers transparent instead of painting them, and flattened toolbars, breadcrumbs, and raised toolbar buttons so file managers and dialogs no longer show square tool shelves.
+- Modernized the default buttons with clean 1px outlines, soft radius, calm hover/active states, and a quiet accent border on suggested actions, together with refreshed first-run application rows in the Welcome window (issue #87).
+- Fixed the false “Compiz is not the active window manager” NVIDIA warning: the post-boot check now trusts the running Compiz process when `wmctrl` is missing or still catching up, waits longer for the session to settle, and the system ships `wmctrl` explicitly.
+- Made standard-DPI displays explicitly set the 100% window-scaling factor instead of leaving an unset or stale factor behind, while high-density displays keep their automatic 2x scaling (issue #64).
+- Made the large Voice2Text bundle download resume interrupted transfers with `curl --continue-at` and retry download plus install independently across three attempts, discarding a corrupt bundle before re-downloading.
+- Cleaned Calamares branding: the transparent `spaced-logo.png` mark replaces the tiled icon in every installer image slot, the sidebar and widget surfaces use neutral grays instead of blue-tinted shades, and the Qt Quick slideshow scrollbar uses a light accent instead of the default blue (issue #86).
+- Enlarged the real titlebar-button hitboxes in every Metacity theme with explicit 24 px (22 px utility) button geometry and taller titlebars, keeping glyphs centered (issue #65).
+- Added `wmctrl`, the Qt Quick Controls grayscale accent file, and the transparent installer logo to the validation gate.
+- Made release builds discard bootstrap caches whose core filesystem paths are not root-owned, preventing security-sensitive package installers from inheriting an unsafe build UID, and added the missing `qemu-utils` host dependency.
+- Made release checksum files portable by recording the ISO basename instead of a repository-relative build path.
+- Accepted the candidate through KVM and VirtualBox BIOS/EFI live boots plus a complete VirtualBox install, ISO-detached reboot, LightDM login, and installed-system audit.
+
 ## 8.26.3 - 2026-08-10
 - Bumped the release to 8.26.3 across package, ISO, bootloader, installer, website, documentation, and VM metadata.
 - Added unattended ISO smoke tests for KVM and VirtualBox BIOS/EFI boot paths, requiring both guest SSH and a running MATE session and retaining desktop screenshots.

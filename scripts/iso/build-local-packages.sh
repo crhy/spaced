@@ -16,6 +16,11 @@ build() {
         ver="$(awk -F': ' '/^Version:/{print $2; exit}' "$control")"
     fi
     local out="$OUTPUT/${pkg}_${ver}_all.deb"
+    # prepare copies every .deb in this directory into live-build. Remove only
+    # stale versions of the package being rebuilt so an old release cannot be
+    # staged beside the current one after an incremental build.
+    find "$OUTPUT" -maxdepth 1 -type f -name "${pkg}_*_all.deb" \
+        ! -name "${pkg}_${ver}_all.deb" -delete
     rm -f "$out"
     dpkg-deb --root-owner-group --build "$dir" "$out"
     dpkg-deb --info "$out" | sed -n '1,12p'
@@ -46,6 +51,7 @@ stage_desktop_defaults() {
         etc/xdg/autostart/spaced-nvidia-postboot.desktop \
         etc/xdg/autostart/spaced-theme-monitor.desktop \
         etc/xdg/autostart/spaced-welcome.desktop \
+        etc/xdg/QtProject/qtquickcontrols2.conf \
         usr/lib/spaced-linux \
         usr/local/bin \
         usr/share/applications/mimeapps.list \
@@ -71,7 +77,6 @@ stage_desktop_defaults() {
     done
 
     for path in "$ROOT"/overlays/usr/share/themes/Spaced-*; do
-        [ "${path##*/}" = Spaced-Dark ] && continue
         (cd "$ROOT/overlays" && cp -a --parents "${path#"$ROOT/overlays/"}" "$stage")
     done
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 set -u
-marker="$HOME/.config/spaced/first-login-repair-v3"
+marker="$HOME/.config/spaced/first-login-repair-v4"
 [ -e "$marker" ] && exit 0
 mkdir -p "$(dirname "$marker")"
 # Make GTK-aware applications, including LibreOffice, follow the selected desktop theme.
@@ -59,12 +59,17 @@ PY
     gsettings set org.mate.panel object-id-list "$repaired_objects" || true
   fi
 fi
-# Apply automatic 2x scaling only on genuinely high-density displays.
+# Apply automatic scaling and always leave the window-scaling factor explicit:
+# standard (96 DPI) displays get exactly 100%, and genuinely high-density
+# displays get 2x. An unset or leftover factor would otherwise make dialogs
+# inconsistent after a theme change or an upgraded profile.
 if command -v xdpyinfo >/dev/null 2>&1; then
   dpi=$(xdpyinfo 2>/dev/null | awk '/resolution:/{gsub(/x.*/,"",$2); print int($2); exit}')
   if [ "${dpi:-0}" -ge 150 ]; then
     gsettings set org.mate.interface window-scaling-factor 2 2>/dev/null || true
     gsettings set org.mate.interface text-scaling-factor 1.15 2>/dev/null || true
+  else
+    gsettings set org.mate.interface window-scaling-factor 1 2>/dev/null || true
   fi
 fi
 # Re-assert the selected theme values after Calamares creates the account.

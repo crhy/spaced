@@ -18,11 +18,11 @@ QGroupBox,
 QScrollArea,
 QStackedWidget {
     background-color: #25282c;
-    border-color: #44484f;
+    border-color: #3f4046;
 }
 
 QGroupBox {
-    border: 1px solid #44484f;
+    border: 1px solid #3f4046;
     border-radius: 4px;
     margin-top: 10px;
     padding-top: 8px;
@@ -45,7 +45,7 @@ QTreeView,
 QTableView {
     background-color: #17191c;
     color: #f1f3f4;
-    border: 1px solid #4b5058;
+    border: 1px solid #4b4b52;
     border-radius: 3px;
     padding: 4px;
 }
@@ -63,22 +63,22 @@ QTableView:focus {
 
 QPushButton,
 QToolButton {
-    background-color: #34383e;
+    background-color: #33363c;
     color: #f1f3f4;
-    border: 1px solid #555b64;
+    border: 1px solid #52525a;
     border-radius: 4px;
     padding: 6px 12px;
 }
 
 QPushButton:hover,
 QToolButton:hover {
-    background-color: #414750;
-    border-color: #6f7782;
+    background-color: #3d4147;
+    border-color: #6a6a73;
 }
 
 QPushButton:pressed,
 QToolButton:pressed {
-    background-color: #2b2f34;
+    background-color: #2b2e33;
 }
 
 QPushButton:disabled,
@@ -91,19 +91,19 @@ QToolButton:disabled {
 QComboBox::drop-down,
 QSpinBox::up-button,
 QSpinBox::down-button {
-    background-color: #34383e;
-    border-color: #555b64;
+    background-color: #33363c;
+    border-color: #52525a;
 }
 
 QTabWidget::pane {
     background-color: #25282c;
-    border: 1px solid #44484f;
+    border: 1px solid #3f4046;
 }
 
 QTabBar::tab {
     background-color: #2b2e33;
     color: #c9cdd2;
-    border: 1px solid #44484f;
+    border: 1px solid #3f4046;
     padding: 6px 10px;
 }
 
@@ -116,15 +116,15 @@ QHeaderView::section {
     background-color: #30343a;
     color: #f1f3f4;
     border: 0;
-    border-right: 1px solid #4b5058;
-    border-bottom: 1px solid #4b5058;
+    border-right: 1px solid #4b4b52;
+    border-bottom: 1px solid #4b4b52;
     padding: 5px;
 }
 
 QProgressBar {
     background-color: #17191c;
     color: #ffffff;
-    border: 1px solid #4b5058;
+    border: 1px solid #4b4b52;
     border-radius: 4px;
     text-align: center;
 }
@@ -165,6 +165,6 @@ QScrollBar::sub-page {
 QToolTip {
     background-color: #30343a;
     color: #ffffff;
-    border: 1px solid #606772;
+    border: 1px solid #585861;
     padding: 4px;
 }
