@@ -27,7 +27,8 @@ for required_package in \
     pkexec \
     chrony \
     firmware-nvidia-graphics \
-    xserver-xorg-video-nouveau
+    xserver-xorg-video-nouveau \
+    wmctrl
 do
     if ! grep -Fxq "$required_package" <<<"$generated_packages"; then
         echo "Generated package list is missing: $required_package" >&2
@@ -111,7 +112,8 @@ assert {"gnome-keyring", "libcanberra-gtk3-module", "accountsservice"}.issubset(
 defaults_control = (Path("packages/spaced-mate-default-settings/DEBIAN/control")
                     .read_text(encoding="utf-8"))
 for package in ("accountsservice", "caja-admin", "gigolo", "gnome-keyring",
-                "libcanberra-gtk3-module", "timeshift", "xdg-desktop-portal-gtk"):
+                "libcanberra-gtk3-module", "timeshift", "wmctrl",
+                "xdg-desktop-portal-gtk"):
     assert package in defaults_control, \
         f"installed-system desktop updates do not depend on {package}"
 defaults_postinst = (Path("packages/spaced-mate-default-settings/DEBIAN/postinst")
@@ -121,6 +123,8 @@ assert "autologin-user=user" in defaults_postinst and "glib-compile-schemas" in 
 local_package_builder = Path("scripts/iso/build-local-packages.sh").read_text(encoding="utf-8")
 assert "stage_desktop_defaults" in local_package_builder and "usr/share/themes" in local_package_builder, \
     "spaced-mate-default-settings remains an empty metadata package"
+assert '-name "${pkg}_*_all.deb"' in local_package_builder and "-delete" in local_package_builder, \
+    "local package builds can leave stale release versions in ISO staging"
 
 live_build_config = Path("live-build/auto/config").read_text(encoding="utf-8")
 assert "--firmware-chroot false" in live_build_config, "broad live-build firmware injection is enabled"
@@ -153,6 +157,14 @@ assert "-rtc base=utc" in qemu_common and "-rtc base=localtime" not in qemu_comm
 # top of QEMU's default VGA exposes two DRM cards to the guest, stalling Xorg
 # and leaving LightDM on a black screen (blinking cursor) in every test VM.
 makefile_text = Path("Makefile").read_text(encoding="utf-8")
+assert "qemu-system-x86 qemu-utils" in makefile_text, \
+    "make deps omits qemu-img, which the reusable VM scripts require"
+assert "Discarding unsafe live-build bootstrap cache" in makefile_text, \
+    "Makefile must reject cached bootstrap trees with unsafe core ownership"
+assert "sha256sum $(ISO_NAME) > $(ISO_NAME).sha256" in makefile_text, \
+    "release checksum must use the downloadable ISO basename"
+assert 'chown -R 0:0 "$(abspath $(LB_DIR)/config/includes.chroot)"' in makefile_text, \
+    "live-build overlay staging can preserve non-root ownership in /usr"
 for gpu_source in (qemu_common, makefile_text):
     assert "virtio-gpu-pci" not in gpu_source and "virtio-vga" not in gpu_source, \
         "test VM must use a single GPU; dual virtio VGA leaves the guest on a black screen"
@@ -181,6 +193,8 @@ assert "Spaced-Dark" not in present, "internal GTK base is still exposed as a du
 
 private_assets = [p for p in theme_root.rglob("*") if p.is_file() and not p.stat().st_mode & 0o004]
 assert not private_assets, f"theme assets are unreadable after root-owned ISO install: {private_assets}"
+generated_python = list(root.rglob("__pycache__")) + list(root.rglob("*.py[co]"))
+assert not generated_python, f"generated Python bytecode would leak into the image: {generated_python}"
 
 for theme in themes:
     name = theme["gtk_theme"]
@@ -192,17 +206,27 @@ for theme in themes:
         "gtk-3.0/index.theme",
         "metacity-1/index.theme",
         "metacity-1/metacity-theme-1.xml",
+        "metacity-1/metacity-theme-3.xml",
     ):
         assert (directory / relative).is_file(), f"{name}: missing {relative}"
-    metacity_path = directory / "metacity-1/metacity-theme-1.xml"
-    ElementTree.parse(metacity_path)
-    metacity = metacity_path.read_text(encoding="utf-8")
-    assert '<distance name="title_vertical_pad" value="5"/>' in metacity, \
-        f"{name}: normal titlebar click target is too small"
-    assert '<distance name="title_vertical_pad" value="3"/>' in metacity, \
-        f"{name}: utility titlebar click target is too small"
-    assert 'width="width" height="19"' not in metacity, \
-        f"{name}: titlebar gradient does not cover the enlarged hit target"
+    for metacity_version in (1, 3):
+        metacity_path = directory / f"metacity-1/metacity-theme-{metacity_version}.xml"
+        ElementTree.parse(metacity_path)
+        metacity = metacity_path.read_text(encoding="utf-8")
+        assert '<distance name="title_vertical_pad" value="6"/>' in metacity, \
+            f"{name} v{metacity_version}: normal titlebar click target is too small"
+        assert '<distance name="title_vertical_pad" value="4"/>' in metacity, \
+            f"{name} v{metacity_version}: utility titlebar click target is too small"
+        assert '<distance name="button_width" value="24"/>' in metacity \
+            and '<distance name="button_height" value="24"/>' in metacity, \
+            f"{name} v{metacity_version}: normal titlebar buttons lack the 24px hitbox"
+        assert '<distance name="button_width" value="22"/>' in metacity \
+            and '<distance name="button_height" value="22"/>' in metacity, \
+            f"{name} v{metacity_version}: utility titlebar buttons lack the 22px hitbox"
+        assert '<aspect_ratio name="button"' not in metacity, \
+            f"{name} v{metacity_version}: Marco rejects aspect ratio with explicit button dimensions"
+        assert 'width="width" height="19"' not in metacity, \
+            f"{name} v{metacity_version}: titlebar gradient does not cover the enlarged hit target"
 
     metadata = (directory / "index.theme").read_text(encoding="utf-8")
     values = {}
@@ -233,12 +257,17 @@ assert launcher.stat().st_mode & 0o111, "Calamares desktop launcher is not execu
 assert "Name=Install Spaced Linux" in launcher.read_text(encoding="utf-8")
 
 build_hook = Path("scripts/iso/01-configure.chroot").read_text(encoding="utf-8")
+package_builder = Path("scripts/iso/build-local-packages.sh").read_text(encoding="utf-8")
 assert "flathub.org" not in build_hook, "image build must not depend on live Flathub access"
 assert "flatpak remote-add --system --if-not-exists flathub" in build_hook \
     and "/usr/share/flatpak/remotes.d/flathub.flatpakrepo" in build_hook, \
     "Bazaar's sandboxed backend does not get a real system Flathub remote"
 assert 'old = b"%s (as superuser)"' in build_hook and "data.replace(old, new)" in build_hook, \
     "Flatpak X11 windows retain the false superuser title suffix"
+assert "etc/xdg/QtProject/qtquickcontrols2.conf" in package_builder, \
+    "update package omits the Calamares Qt Quick styling"
+assert 'Spaced-Dark ] && continue' not in package_builder, \
+    "update package omits the shared GTK engine used by every Spaced theme"
 
 welcome_app = root / "usr/lib/spaced-linux/spaced-welcome.py"
 welcome_launcher = root / "usr/share/applications/spaced-welcome.desktop"
@@ -255,6 +284,9 @@ assert "/run/live/medium" in welcome_wrapper and "welcome-shown" in welcome_wrap
 assert "io.github.kolunmi.Bazaar" in flatpak_installer, "Bazaar installer action is missing"
 assert "attempt $attempt of 3" in flatpak_installer and "continuing with the remaining applications" in flatpak_installer, \
     "suggested Flatpaks still fail as one all-or-nothing batch"
+assert "--continue-at -" in flatpak_installer, "large Flatpak bundle downloads do not resume"
+assert "Some suggested apps could not be installed" in welcome_app.read_text(encoding="utf-8"), \
+    "Welcome still exposes raw installer URLs instead of a useful failure message"
 for app_id in ("org.atheme.audacious", "io.github.kolunmi.Bazaar", "com.brave.Browser",
                "org.libreoffice.LibreOffice", "org.videolan.VLC"):
     assert app_id in flatpak_list, f"suggested Flatpak is missing: {app_id}"
@@ -366,8 +398,10 @@ for screenshot in ("MacOS.png", "ModernAItools.png", "Music.png", "Spreadsheet.p
 assert "Open Bazaar after installation to explore the full catalog" in slideshow, \
     "Calamares slideshow does not explain the application catalog"
 branding = (root / "etc/calamares/branding/spaced/branding.desc").read_text(encoding="utf-8")
-assert branding.count("../../../../usr/share/backgrounds/spaced/SpacedIconb.png") == 3, \
-    "Calamares internal branding does not use the detailed Spaced icon"
+assert branding.count("spaced-logo.png") == 3, \
+    "Calamares internal branding does not use the transparent Spaced logo"
+assert "SpacedIconb" not in branding, \
+    "Calamares internal branding still uses the tiled icon with a background"
 assert "Icon=install-spaced-linux" in launcher.read_text(encoding="utf-8"), \
     "Calamares desktop launcher does not use the light download-arrow icon"
 calamares_launcher = (root / "usr/local/bin/install-spaced-linux").read_text(encoding="utf-8")
@@ -401,6 +435,21 @@ assert 'if [ "$status" -eq 0 ]' in window_manager and "xprop -root" in window_ma
     "normal logout is still treated as a Compiz crash"
 
 shared_gtk = (theme_root / "Spaced-Dark/gtk-3.0/spaced-overrides.css").read_text(encoding="utf-8")
+engine_gtk = (theme_root / "Spaced-Dark/gtk-3.0/gtk.css").read_text(encoding="utf-8")
+painted_layout = {line.strip().rstrip(",") for line in engine_gtk.splitlines()} & {
+    "box", "grid", "paned", "fixed", "layout", "alignment",
+    "eventbox", "aspectframe", "revealer", "overlay",
+}
+assert not painted_layout, \
+    f"GTK catch-all still paints pure layout containers: {sorted(painted_layout)}"
+layout_containers = {
+    "box", "grid", "paned", "fixed", "layout", "alignment",
+    "eventbox", "aspectframe", "revealer", "overlay",
+}
+for catch_all_name in ("Spaced-Dark", "Spaced-Linux-Dark", "Spaced-Linux-Light"):
+    catch_all = (theme_root / catch_all_name / "gtk-3.0/gtk.css").read_text(encoding="utf-8")
+    painted = {line.strip().rstrip(",") for line in catch_all.splitlines()} & layout_containers
+    assert not painted, f"{catch_all_name} catch-all still paints layout containers: {sorted(painted)}"
 assert ".caja-desktop-window" in shared_gtk, "GTK CSS does not preserve Caja's wallpaper paint layer"
 assert "#PanelApplet #showdesktop-button" in shared_gtk, \
     "panel applet buttons do not inherit each theme's panel color"
@@ -410,6 +459,15 @@ assert "min-width: 28px" in shared_gtk and "min-height: 28px" in shared_gtk, \
     "window and dialog buttons still have a tiny click target (issues #6/#64/#65)"
 assert "switch:checked" in shared_gtk and "min-width: 44px" in shared_gtk, \
     "modern GTK switches do not expose a clear on/off state"
+assert ".path-bar button" in shared_gtk and "toolbar button" in shared_gtk, \
+    "breadcrumb and toolbar buttons are not flattened onto the window surface"
+assert "border-radius: 4px" in shared_gtk and "button.default" in shared_gtk, \
+    "default buttons are not modernized with soft radius and accent outline"
+welcome_app_css = welcome_app.read_text(encoding="utf-8")
+assert "border-radius: 10px" in welcome_app_css and "border: 1px solid #3a3f47" in welcome_app_css, \
+    "first-run Welcome cards are not modernized"
+assert "print(output.rstrip(), file=sys.stderr)" in welcome_app_css, \
+    "Welcome failure details are neither user-friendly nor retained in the session log"
 for glyph in ("object-select-symbolic.svg", "list-remove-symbolic.svg", "media-record-symbolic.svg"):
     glyph_path = icon_root / "hicolor/scalable/actions" / glyph
     assert glyph_path.is_file(), f"checkbox/radio glyph is missing: {glyph} (issue #78)"
@@ -537,6 +595,13 @@ assert "terminal_background='#ffffff'" in switcher and "terminal_foreground='#00
     "light themes do not use black on white in MATE Terminal"
 assert "color-scheme 'prefer-dark'" in switcher and "color-scheme 'default'" in switcher, \
     "theme switching does not drive the toolkit color scheme"
+assert "gtk-application-prefer-dark-theme" not in switcher \
+    and "gtk-application-prefer-dark-theme" not in schema_override, \
+    "theme switching uses a nonexistent GSettings key instead of the portal color scheme"
+qt_quick_config = (root / "etc/xdg/QtProject/qtquickcontrols2.conf").read_text(encoding="utf-8")
+assert "Style=Universal" in qt_quick_config and "Theme=Dark" in qt_quick_config \
+    and "Accent=#cfd3d8" in qt_quick_config, \
+    "Qt Quick slideshow scrollbar does not use a light grayscale accent"
 for state_name in ("gtk-theme", "icon-theme", "window-theme", "wallpaper"):
     assert state_name in theme_monitor, f"theme monitor does not persist {state_name}"
 assert theme_monitor.index("apply_for_gtk \"$LAST\"") < theme_monitor.index(
@@ -546,10 +611,17 @@ assert "gsettings monitor org.mate.background picture-filename" not in theme_mon
     "wallpaper persistence must reuse the generic event-driven monitor"
 
 first_login_repair = (root / "usr/local/bin/spaced-first-login-repair").read_text(encoding="utf-8")
-assert "first-login-repair-v3" in first_login_repair, "panel migration marker was not advanced"
+assert "first-login-repair-v4" in first_login_repair, "first-login repair marker was not advanced"
+assert "window-scaling-factor 1" in first_login_repair, \
+    "standard-DPI profiles do not get an explicit 100% scaling factor"
 for object_id in ("brisk-menu", "window-list", "notification-area",
                   "volume-control-applet", "clock", "show-desktop"):
     assert object_id in first_login_repair, f"panel migration does not repair {object_id}"
+
+nvidia_postboot = (root / "usr/lib/spaced-linux/spaced-nvidia-postboot.py").read_text(encoding="utf-8")
+assert 'wm_name.lower() != "compiz"' in nvidia_postboot \
+    and '["pgrep", "-u", str(os.getuid()), "-x", "compiz"]' in nvidia_postboot, \
+    "NVIDIA post-boot verification does not safely handle delayed wmctrl output"
 
 update_app = (root / "usr/lib/spaced-linux/spaced-update.py").read_text(encoding="utf-8")
 update_helper = (root / "usr/lib/spaced-linux/spaced-update-helper").read_text(encoding="utf-8")

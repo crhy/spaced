@@ -78,8 +78,22 @@ def collect_checks():
 
     rc, output, error = run(["wmctrl", "-m"])
     details.append("Window manager:\n" + (output or error or "No output"))
-    if rc != 0 or "Name: Compiz" not in output:
-        failures.append("Compiz is not the active window manager.")
+    wm_name = ""
+    if rc == 0:
+        wm_name = next(
+            (line.partition(":")[2].strip() for line in output.splitlines()
+             if line.lower().startswith("name:")),
+            "",
+        )
+    rc, compiz_out, _ = run(["pgrep", "-u", str(os.getuid()), "-x", "compiz"])
+    details.append("Compiz process: " + ("running" if rc == 0 and compiz_out else "not running"))
+    if wm_name.lower() != "compiz":
+        # wmctrl can miss the WM during the first seconds of a session or be
+        # absent after a partial upgrade; the compositor process itself is the
+        # fallback only when wmctrl could not name a window manager. If it
+        # explicitly names another WM, a stray Compiz process is not success.
+        if wm_name or rc != 0 or not compiz_out:
+            failures.append("Compiz is not the active window manager.")
 
     for process, label in (("mate-panel", "MATE panel"), ("caja", "Caja desktop")):
         rc, output, _ = run(["pgrep", "-x", process])
@@ -92,7 +106,7 @@ def collect_checks():
 
 def wait_for_session():
     last = ([], "")
-    for _ in range(30):
+    for _ in range(45):
         last = collect_checks()
         failures, _ = last
         transient = [

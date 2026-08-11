@@ -117,6 +117,7 @@ system:
   - x11-utils
   - x11-xserver-utils
   - x11-xkb-utils
+  - wmctrl
   - htop
   - pciutils
   - usbutils

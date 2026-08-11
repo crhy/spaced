@@ -1,4 +1,4 @@
-# Spaced Linux 8.26.3 — MATE Themes & Preferences Reference
+# Spaced Linux 8.26.4 — MATE Themes & Preferences Reference
 
 ## How theming works (the pipeline)
 

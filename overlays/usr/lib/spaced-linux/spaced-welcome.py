@@ -2,6 +2,7 @@
 """Small first-run Flatpak chooser for Spaced Linux."""
 
 import subprocess
+import sys
 import threading
 
 import gi
@@ -19,15 +20,15 @@ window.spaced-welcome, window.spaced-welcome box.app-surface {
 .hero-subtitle { font-size: 14px; color: #b8bbc2; }
 .choice-card {
   background-image: none;
-  background-color: #202328;
-  border: 1px solid #50545b;
-  border-radius: 8px;
-  padding: 18px;
+  background-color: #1f2329;
+  border: 1px solid #3a3f47;
+  border-radius: 10px;
+  padding: 18px 20px;
   color: #f4f4f4;
   box-shadow: none;
 }
-.choice-card:hover { background-color: #282c32; border-color: #628fd7; }
-.choice-card:active { background-color: #303640; }
+.choice-card:hover { background-color: #262b33; border-color: #6e9de8; }
+.choice-card:active { background-color: #171a1f; border-color: #4f6bb0; }
 .choice-title { font-size: 20px; font-weight: 700; color: #f4f4f4; }
 .choice-detail { font-size: 12px; color: #b8bbc2; }
 .choice-icon { color: #6e9de8; }
@@ -162,8 +163,16 @@ class WelcomeWindow(Gtk.Window):
         self.suggested.set_sensitive(True)
         self.bazaar.set_sensitive(True)
         if returncode != 0:
-            message = next((line for line in reversed(output.splitlines()) if line.strip()), "Installation failed.")
-            self.status.set_text(message[:110])
+            # Installer diagnostics can end with a very long app ID or URL.
+            # Send those details to the session log instead of putting a raw
+            # download URL into the small status label.
+            if output.strip():
+                print(output.rstrip(), file=sys.stderr)
+            if mode == "bazaar":
+                message = "Bazaar could not be installed. Check your connection and try again."
+            else:
+                message = "Some suggested apps could not be installed. Check your connection and try again."
+            self.status.set_text(message)
             return False
 
         if mode == "bazaar":

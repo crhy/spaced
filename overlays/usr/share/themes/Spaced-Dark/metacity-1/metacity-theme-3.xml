@@ -21,10 +21,11 @@
 	<distance name="left_width" value="1"/>
 	<distance name="right_width" value="1"/>
 	<distance name="bottom_height" value="1"/>
-	<distance name="left_titlebar_edge" value="5"/>
-	<distance name="right_titlebar_edge" value="5"/>
-	<distance name="title_vertical_pad" value="3"/>
-	<aspect_ratio name="button" value="1.0"/>
+	<distance name="left_titlebar_edge" value="6"/>
+	<distance name="right_titlebar_edge" value="6"/>
+	<distance name="title_vertical_pad" value="6"/>
+	<distance name="button_width" value="24"/>
+	<distance name="button_height" value="24"/>
 	<border name="title_border" left="2" right="2" top="5" bottom="0"/>
 	<border name="button_border" left="2" right="2" top="3" bottom="0"/>
 </frame_geometry>
@@ -46,7 +47,9 @@
 </frame_geometry>
 
 <frame_geometry name="small" title_scale="small" parent="normal" rounded_top_left="false" rounded_top_right="false">
-	<distance name="title_vertical_pad" value="5"/>
+	<distance name="title_vertical_pad" value="4"/>
+	<distance name="button_width" value="22"/>
+	<distance name="button_height" value="22"/>
 	<border name="title_border" left="10" right="10" top="0" bottom="1"/>
 	<border name="button_border" left="0" right="0" top="0" bottom="2"/>
 </frame_geometry>
@@ -80,11 +83,11 @@
 
 <!-- ::: TITLES ::: -->
 <draw_ops name="title_focused">
-	<title version="< 3.1"
+	<title version="&lt; 3.1"
                x="(0 `max` ((width - title_width) / 2)) + 2"
                y="(1 `max` ((height - title_height) / 2)) + 1"
                color="C_title_focused_shadow"/>
-	<title version="< 3.1"
+	<title version="&lt; 3.1"
                x="(0 `max` ((width - title_width) / 2)) + 2"
                y="(0 `max` ((height - title_height) / 2))"
                color="C_title_focused"/>
@@ -101,11 +104,11 @@
 </draw_ops>
 
 <draw_ops name="title_unfocused">
-	<title version="< 3.1"
+	<title version="&lt; 3.1"
                x="(0 `max` ((width - title_width) / 2)) + 2"
                y="(1 `max` ((height - title_height) / 2)) + 1"
                color="C_title_unfocused_shadow"/>
-	<title version="< 3.1"
+	<title version="&lt; 3.1"
                x="(0 `max` ((width - title_width) / 2)) + 2"
                y="(0 `max` ((height - title_height) / 2))"
                color="C_title_unfocused"/>
@@ -131,7 +134,7 @@
 </draw_ops>
 
 <draw_ops name="titlebar_fill_focused">
-	<gradient type="vertical" x="0" y="0" width="width" height="19">
+	<gradient type="vertical" x="0" y="0" width="width" height="height">
 		<color value="shade/gtk:custom(wm_bg,gtk:bg[NORMAL])/1.07"/>
 		<color value="shade/gtk:custom(wm_bg,gtk:bg[NORMAL])/1.0"/>
 	</gradient>
@@ -142,7 +145,7 @@
 </draw_ops>
 
 <draw_ops name="titlebar_fill_unfocused">
-	<gradient type="vertical" x="0" y="0" width="width" height="19">
+	<gradient type="vertical" x="0" y="0" width="width" height="height">
 		<color value="shade/gtk:custom(wm_bg,gtk:bg[NORMAL])/1.07"/>
 		<color value="shade/gtk:custom(wm_bg,gtk:bg[NORMAL])/1.0"/>
 	</gradient>

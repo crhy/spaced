@@ -26,7 +26,7 @@ Presentation {
             height: 94; color: "#e817191d"
             Text {
                 anchors.centerIn: parent
-                text: "Welcome to Spaced Linux 8.26.3\nFast, familiar, and free from systemd."
+                text: "Welcome to Spaced Linux 8.26.4\nFast, familiar, and free from systemd."
                 color: "#f4f5f7"; font.pixelSize: 20; font.bold: true
                 horizontalAlignment: Text.AlignHCenter
             }
