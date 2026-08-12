@@ -263,3 +263,12 @@ scale trough {
     background-color: @panel_bg_color;
     color: @panel_fg_color;
 }
+
+/* Spaced-Linux-Light: dark-gray checked indicators with a white mark. */
+check:checked,
+radio:checked {
+    background-color: #4a4a4a;
+    border: 1px solid #333333;
+    border-radius: 3px;
+    color: #ffffff;
+}

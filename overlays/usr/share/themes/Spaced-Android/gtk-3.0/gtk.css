@@ -62,3 +62,13 @@
     background-color: @panel_bg_color;
     color: @panel_fg_color;
 }
+
+/* Spaced-Android: Material teal (#009688) checked indicators with a
+ * white mark. */
+check:checked,
+radio:checked {
+    background-color: #009688;
+    border: 1px solid #00766c;
+    border-radius: 3px;
+    color: #ffffff;
+}

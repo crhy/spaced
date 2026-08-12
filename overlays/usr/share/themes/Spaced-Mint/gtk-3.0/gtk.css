@@ -62,3 +62,13 @@
     background-color: @panel_bg_color;
     color: @panel_fg_color;
 }
+
+/* Spaced-Mint: checked indicators use the classic Mint-Y legacy green
+ * accent (#92b372) with a dark check. */
+check:checked,
+radio:checked {
+    background-color: #92b372;
+    border: 1px solid #6f8f56;
+    border-radius: 3px;
+    color: #111111;
+}

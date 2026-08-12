@@ -78,3 +78,13 @@
 #PanelApplet image {
     color: @panel_fg_color;
 }
+
+/* Spaced-Geoworks: the classic GEOS dark-cyan teal (#008080) checked
+ * indicators with a white mark. */
+check:checked,
+radio:checked {
+    background-color: #008080;
+    border: 1px solid #006060;
+    border-radius: 3px;
+    color: #ffffff;
+}
