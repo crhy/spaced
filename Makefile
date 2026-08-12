@@ -26,7 +26,7 @@ VM_RUN := $(HOST_RUN) env SPACED_VM_SSH_PORT=$(VM_SSH_PORT) SPACED_VM_XRES=$(VM_
 ISO_SMOKE_RUN := $(HOST_RUN) env SPACED_ISO_SMOKE_TIMEOUT=$(ISO_SMOKE_TIMEOUT)
 VBOX_RUN := $(ISO_SMOKE_RUN) SPACED_VBOX_SSH_PORT=$(VBOX_SSH_PORT)
 
-.PHONY: help check deps clean cache-clean prepare lb-config lb-build iso-build iso-test iso-smoke iso-smoke-kvm iso-smoke-virtualbox iso-smoke-virtualbox-efi iso-test-safe iso-test-safe-1024 iso-test-safe-1080 vm-create vm-install vm-start vm-stop release
+.PHONY: help check deps clean cache-clean prepare lb-config lb-build iso-build iso-test iso-smoke iso-smoke-kvm iso-smoke-virtualbox iso-smoke-virtualbox-efi iso-test-safe iso-test-safe-1024 iso-test-safe-1080 vm-create vm-install vm-start vm-stop release apt-repo apt-repo-publish
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -170,3 +170,20 @@ vm-stop: ## Stop a headless KVM test instance
 	$(VM_RUN) scripts/vm/qemu/stop.sh
 
 release: clean lb-build ## Clean-build the current Spaced Linux ISO
+
+APT_REPO_DIR := spaced-apt
+
+apt-repo: ## Rebuild the update repository into ./spaced-apt (from crhy/spaced-apt)
+	@if [ ! -d "$(APT_REPO_DIR)/.git" ]; then \
+		rm -rf "$(APT_REPO_DIR)"; \
+		gh repo clone crhy/spaced-apt "$(APT_REPO_DIR)"; \
+	fi
+	scripts/build-apt-repo.sh "$(APT_REPO_DIR)"
+
+apt-repo-publish: apt-repo ## Rebuild and publish the update repository to crhy/spaced-apt
+	cd "$(APT_REPO_DIR)" && \
+		git add -A && \
+		git -c user.name="Spaced Linux Release" \
+		   -c user.email="release@spaced" \
+			commit -m "Spaced Linux $(VERSION) repository update" && \
+		git push

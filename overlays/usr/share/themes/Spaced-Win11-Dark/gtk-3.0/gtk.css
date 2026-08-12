@@ -43,14 +43,14 @@
 @define-color wm_border_focused shade(#17243b, 0.7);
 @define-color wm_border_unfocused shade(#17243b, 0.8);
 
-@import url("/usr/share/themes/Spaced-Dark/gtk-3.0/gtk-widgets.css");
-@import url("/usr/share/themes/Spaced-Dark/gtk-3.0/gtk-widgets-assets.css");
-@import url("/usr/share/themes/Spaced-Dark/gtk-3.0/gtk-widgets-backdrop.css");
-@import url("/usr/share/themes/Spaced-Dark/gtk-3.0/apps/granite-widgets.css");
-@import url("/usr/share/themes/Spaced-Dark/gtk-3.0/apps/unity.css");
-@import url("/usr/share/themes/Spaced-Dark/gtk-3.0/apps/xfce.css");
-@import url("/usr/share/themes/Spaced-Dark/gtk-3.0/apps/lightdm-gtk-greeter.css");
-@import url("/usr/share/themes/Spaced-Dark/gtk-3.0/spaced-overrides.css");
+@import url("../../Spaced-Dark/gtk-3.0/gtk-widgets.css");
+@import url("../../Spaced-Dark/gtk-3.0/gtk-widgets-assets.css");
+@import url("../../Spaced-Dark/gtk-3.0/gtk-widgets-backdrop.css");
+@import url("../../Spaced-Dark/gtk-3.0/apps/granite-widgets.css");
+@import url("../../Spaced-Dark/gtk-3.0/apps/unity.css");
+@import url("../../Spaced-Dark/gtk-3.0/apps/xfce.css");
+@import url("../../Spaced-Dark/gtk-3.0/apps/lightdm-gtk-greeter.css");
+@import url("../../Spaced-Dark/gtk-3.0/spaced-overrides.css");
 
 .mate-panel,
 .mate-panel > box,

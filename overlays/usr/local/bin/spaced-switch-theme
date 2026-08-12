@@ -20,7 +20,7 @@ with open(sys.argv[1], encoding="utf-8") as source:
 
 for theme in themes:
     if theme["id"] == sys.argv[2]:
-        for key in ("name", "wallpaper", "panel_layout", "panel_position", "panel_size", "panel_color", "cairo_dock", "dark"):
+        for key in ("name", "gtk_theme", "wallpaper", "panel_layout", "panel_position", "panel_size", "panel_color", "cairo_dock", "dark"):
             print(f"{key}={shlex.quote(str(theme.get(key, '')))}")
         break
 else:
@@ -125,6 +125,24 @@ if [ "$cairo_dock" = True ]; then
     fi
 else
     pkill -u "$(id -u)" -x cairo-dock 2>/dev/null || true
+fi
+
+# Sandboxed GTK apps (Flatpaks, Bazaar, VLC) receive the active theme NAME via
+# the session's XSettings, but their sandboxes can only resolve the theme FILES
+# when they are exported to the host theme export directory and Flatpak is
+# granted read access. Real copies are required because symlinks to
+# /usr/share/themes do not survive into the sandbox namespace; refresh them on
+# every switch so package upgrades keep the sandboxes in sync.
+if command -v flatpak >/dev/null 2>&1; then
+    theme_export=${XDG_DATA_HOME:-$HOME/.local/share}/themes
+    mkdir -p "$theme_export"
+    for theme_dir in /usr/share/themes/Spaced-*; do
+        [ -d "$theme_dir" ] || continue
+        rsync -a --delete "$theme_dir/" "$theme_export/${theme_dir##*/}/" 2>/dev/null \
+            || true
+    done
+    flatpak override --user --filesystem=xdg-data/themes:ro >/dev/null 2>&1 || true
+    flatpak override --user --env="GTK_THEME=$gtk_theme" >/dev/null 2>&1 || true
 fi
 
 logger -t spaced-switch-theme "Applied desktop extras for $name"

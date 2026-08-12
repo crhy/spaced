@@ -7,6 +7,7 @@ desktop:
   - mate-menus
   - mate-notification-daemon
   - mate-polkit
+  - mate-power-manager
   - mate-settings-daemon
   - mate-terminal
 display_manager:

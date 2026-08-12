@@ -27,3 +27,4 @@ dist/
 
 # Python bytecode
 *.py[cod]
+spaced-apt/

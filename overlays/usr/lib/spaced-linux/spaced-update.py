@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -14,6 +15,9 @@ from gi.repository import Gdk, GLib, Gtk, Pango
 
 
 GITHUB_API = "https://api.github.com/repos/crhy/spaced/releases/latest"
+# Every Spaced Update release bumps the last two digits of the release
+# version by one (8.26.4.0.1, 8.26.4.0.2, …). Keep VERSION in sync.
+APP_VERSION = "8.26.4.0.1"
 APT_RE = re.compile(
     r"^(\S+?)/\S+\s+(\S+)\s+\S+\s+\[upgradable from:\s+(.+)\]$"
 )
@@ -92,6 +96,22 @@ APP_CSS = b"""
 .spaced-action {
     min-height: 30px;
     padding: 3px 12px;
+    border-radius: 4px;
+}
+
+/* Buttons should follow the flattened Spaced appearance instead of the stock
+   square toolbar boxes, on every host theme (issue #11). */
+.spaced-page button {
+    border-radius: 4px;
+    border: 1px solid alpha(@theme_fg_color, 0.55);
+}
+
+.spaced-page button:hover {
+    border-color: alpha(@theme_fg_color, 0.85);
+}
+
+.spaced-page button:disabled {
+    border-color: alpha(@theme_fg_color, 0.18);
 }
 
 .spaced-progress {
@@ -131,6 +151,17 @@ def version_key(version):
 
 
 def read_installed_version():
+    # Inside a Flatpak the sandbox sees the runtime's /etc/os-release, so read
+    # the host release marker instead.
+    if os.environ.get("FLATPAK_ID"):
+        try:
+            output = run_capture(host(["cat", "/etc/os-release"]), timeout=15)
+            for line in output.splitlines():
+                if line.startswith("VERSION_ID="):
+                    return line.split("=", 1)[1].strip().strip('"')
+        except (OSError, RuntimeError):
+            pass
+        return None
     try:
         with open("/etc/os-release", encoding="utf-8") as source:
             for line in source:
@@ -141,9 +172,18 @@ def read_installed_version():
     return None
 
 
+def host(command):
+    # The Flatpak build runs inside a sandbox that cannot see the host's APT,
+    # Flatpak installation, or pkexec helper. Spawn them on the host through
+    # flatpak-spawn so the interface behaves identically to the system app.
+    if os.environ.get("FLATPAK_ID") and command:
+        return ["flatpak-spawn", "--host"] + list(command)
+    return command
+
+
 def run_capture(command, timeout=60):
     result = subprocess.run(
-        command,
+        host(command),
         capture_output=True,
         text=True,
         timeout=timeout,
@@ -174,6 +214,16 @@ def enumerate_apt():
 
 def enumerate_flatpak():
     if not shutil.which("flatpak"):
+        if not os.environ.get("FLATPAK_ID"):
+            return []
+        probe = subprocess.run(
+            host(["sh", "-c", "command -v flatpak"]),
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+        if probe.returncode:
+            return []
         return []
 
     listed = run_capture(
@@ -348,12 +398,18 @@ class App(Gtk.Window):
         header = Gtk.HeaderBar()
         header.set_show_close_button(True)
         header.set_title("Spaced Update")
-        header.set_subtitle("System and application updates")
+        header.set_subtitle("System and application updates \u00b7 " + APP_VERSION)
+        about = Gtk.Button.new_from_icon_name(
+            "help-about-symbolic", Gtk.IconSize.BUTTON
+        )
+        about.set_tooltip_text("About Spaced Update")
+        about.connect("clicked", self._show_about)
         refresh = Gtk.Button.new_from_icon_name(
             "view-refresh-symbolic", Gtk.IconSize.BUTTON
         )
         refresh.set_tooltip_text("Check for updates")
         refresh.connect("clicked", self.do_check)
+        header.pack_end(about)
         header.pack_end(refresh)
         self.header_refresh = refresh
         self.set_titlebar(header)
@@ -537,6 +593,17 @@ class App(Gtk.Window):
                 step.set_state("error")
                 break
         self.details.set_expanded(True)
+
+    def _show_about(self, *_):
+        about = Gtk.AboutDialog(transient_for=self)
+        about.set_program_name("Spaced Update")
+        about.set_version(APP_VERSION)
+        about.set_comments("Update APT and Flatpak applications together")
+        about.set_website("https://spacedlinux.com")
+        about.set_logo_icon_name("system-software-update")
+        about.set_license_type(Gtk.License.GPL_3_0)
+        about.connect("response", lambda d, _r: d.destroy())
+        about.show_all()
 
     def do_check(self, *_):
         self.checkbtn.set_sensitive(False)
@@ -747,7 +814,7 @@ class App(Gtk.Window):
 
     def run_flatpak_update(self, scope, refs):
         process = subprocess.Popen(
-            ["flatpak", "update", "-y", scope] + refs,
+            host(["flatpak", "update", "-y", scope] + refs),
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
@@ -759,7 +826,7 @@ class App(Gtk.Window):
 
     def run_cmd(self, command, log_callback, step_callback, progress_range=(0, 100)):
         process = subprocess.Popen(
-            command,
+            host(command),
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,

@@ -109,6 +109,8 @@ assert {"caja-admin", "gigolo", "timeshift"}.issubset(packages), \
     "administrator, Windows-share, or backup desktop integration is missing"
 assert {"gnome-keyring", "libcanberra-gtk3-module", "accountsservice"}.issubset(packages), \
     "Flatpak/keyring or LightDM desktop integration is incomplete"
+assert "mate-power-manager" in packages, \
+    "MATE Power Management Control Center panel is not included (issue #98)"
 defaults_control = (Path("packages/spaced-mate-default-settings/DEBIAN/control")
                     .read_text(encoding="utf-8"))
 for package in ("accountsservice", "caja-admin", "gigolo", "gnome-keyring",
@@ -248,6 +250,8 @@ for theme in themes:
 
     gtk3 = (directory / "gtk-3.0/gtk.css").read_text(encoding="utf-8")
     assert "spaced-overrides.css" in gtk3, f"{name}: shared GTK3 surface rules are not loaded"
+    assert 'url("/usr/share/themes/' not in gtk3, \
+        f"{name}: absolute theme imports break relocation (flatpak and unpacked themes)"
     gtk2 = (directory / "gtk-2.0/gtkrc").read_text(encoding="utf-8")
     assert "gtkrc-shared" in gtk2 and "Raleigh" not in gtk2, f"{name}: GTK2 falls back to another theme"
     assert isinstance(theme.get("dark"), bool), f"{name}: dark-mode preference is missing"
