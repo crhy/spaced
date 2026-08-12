@@ -43,6 +43,9 @@ cd "$OUT/dists/$DIST/$COMP/binary-amd64"
 
 echo "Generating Packages index…"
 apt-ftparchive packages . > Packages
+# Filename must be relative to the repository root (where apt resolves
+# downloads from), not the binary-amd64 directory.
+sed -i "s|^Filename: \./|Filename: dists/$DIST/$COMP/binary-amd64/|" Packages
 gzip -9c Packages > Packages.gz
 
 cd "$OUT/dists/$DIST"

@@ -150,7 +150,10 @@ spinbutton > entry {
 
 /* Modern flat buttons: clean 1px outline, calm surface, and an accent that
  * only appears on hover or for the suggested action. The engine's raised
- * 3D borders were the source of every "ugly button" report. */
+ * 3D borders were the source of every "ugly button" report.
+ * mix() picks factor 0 = first color, so the 0.10 weight must be the
+ * foreground; the previous argument order built buttons from 90% foreground
+ * and produced bright, low-contrast buttons in every dark theme. */
 button:not(.flat):not(.image-button),
 togglebutton,
 menubutton,
@@ -159,7 +162,7 @@ spinbutton > button {
     padding: 5px 10px;
     border: 1px solid shade(@theme_bg_color, 0.62);
     border-radius: 4px;
-    background-color: mix(@theme_fg_color, @theme_bg_color, 0.10);
+    background-color: mix(@theme_bg_color, @theme_fg_color, 0.10);
     background-image: none;
     color: @theme_fg_color;
     box-shadow: none;
@@ -171,7 +174,7 @@ togglebutton:hover,
 menubutton:hover,
 combobox > button:hover,
 spinbutton > button:hover {
-    background-color: shade(mix(@theme_fg_color, @theme_bg_color, 0.10), 1.22);
+    background-color: shade(mix(@theme_bg_color, @theme_fg_color, 0.10), 1.22);
     border-color: shade(@theme_selected_bg_color, 0.75);
 }
 
@@ -184,7 +187,7 @@ menubutton:active,
 combobox > button:active,
 combobox > button:checked,
 spinbutton > button:active {
-    background-color: shade(mix(@theme_fg_color, @theme_bg_color, 0.10), 0.82);
+    background-color: shade(mix(@theme_bg_color, @theme_fg_color, 0.10), 0.82);
     border-color: shade(@theme_bg_color, 0.5);
     box-shadow: inset 0 1px 2px alpha(#000000, 0.3);
 }
@@ -194,9 +197,9 @@ togglebutton:disabled,
 menubutton:disabled,
 combobox > button:disabled,
 spinbutton > button:disabled {
-    background-color: mix(@theme_fg_color, @theme_bg_color, 0.05);
+    background-color: mix(@theme_bg_color, @theme_fg_color, 0.05);
     border-color: shade(@theme_bg_color, 0.7);
-    color: mix(@theme_fg_color, @theme_bg_color, 0.45);
+    color: mix(@theme_bg_color, @theme_fg_color, 0.45);
 }
 
 /* Dialog default actions get a quiet accent border so the recommended choice
