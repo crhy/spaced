@@ -276,3 +276,12 @@ scale trough {
     background-color: @panel_bg_color;
     color: @panel_fg_color;
 }
+
+/* Spaced-Dark only: checked check boxes render a calm light-gray indicator
+ * instead of the engine's accent-color fill. */
+check:checked {
+    background-color: #c8c8c8;
+    border: 1px solid #9a9a9a;
+    border-radius: 3px;
+    color: #2f2f2f;
+}

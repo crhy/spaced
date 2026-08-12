@@ -215,15 +215,6 @@ button.suggested-action:hover {
     border-color: shade(@theme_selected_bg_color, 0.62);
 }
 
-/* Checked check boxes: a calm light-gray indicator instead of the engine's
- * accent-color fill, so the mark reads clearly in every theme. */
-check:checked {
-    background-color: #c8c8c8;
-    border: 1px solid #9a9a9a;
-    border-radius: 3px;
-    color: #2f2f2f;
-}
-
 notebook > header tab:checked,
 notebook > header tab:backdrop:checked,
 notebook > header tab:checked > label,
