@@ -63,12 +63,13 @@
     color: @panel_fg_color;
 }
 
-/* Spaced-Android: Material teal (#009688) checked indicators with a
- * white mark. */
+/* Preserve the existing Android palette; only checked control states use
+ * the Material teal accent. */
 check:checked,
-radio:checked {
+check:indeterminate,
+radio:checked,
+radio:indeterminate {
     background-color: #009688;
-    border: 1px solid #00766c;
-    border-radius: 3px;
+    border-color: #00766c;
     color: #ffffff;
 }

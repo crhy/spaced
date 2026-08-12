@@ -277,11 +277,19 @@ scale trough {
     color: @panel_fg_color;
 }
 
-/* Spaced-Dark only: checked check boxes render a calm light-gray indicator
- * instead of the engine's accent-color fill. */
-check:checked {
+/* The custom Spaced dark theme uses calm monochrome checked controls. */
+check:checked,
+check:indeterminate,
+radio:checked,
+radio:indeterminate {
+    background-color: #c8c8c8;
+    border-color: #9a9a9a;
+    color: #000000;
+}
+
+radio:checked {
     background-color: #c8c8c8;
     border: 1px solid #9a9a9a;
-    border-radius: 3px;
+    border-radius: 50%;
     color: #000000;
 }

@@ -77,13 +77,18 @@ notebook > header.top > tabs > tab:checked {
     box-shadow: inset 0 -3px #ffffff;
 }
 
-/* Spaced-Win311: period-accurate Windows 3.1 indicators - a plain white
- * square with a black check (no accent fill; 3.1 used only the gray dialog
- * face, white window face, and black text colors for check boxes). */
+/* Windows 3.1 checked controls keep a white face and black mark. */
 check:checked,
-radio:checked {
+check:indeterminate,
+radio:checked,
+radio:indeterminate {
     background-color: #ffffff;
-    border: 1px solid #808080;
-    border-radius: 0;
+    border-color: #808080;
     color: #000000;
+}
+
+/* Check boxes are square; radio buttons retain the shared circular shape. */
+check:checked,
+check:indeterminate {
+    border-radius: 0;
 }

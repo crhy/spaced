@@ -264,11 +264,12 @@ scale trough {
     color: @panel_fg_color;
 }
 
-/* Spaced-Linux-Light: dark-gray checked indicators with a white mark. */
+/* Spaced Linux Light keeps all checked controls strictly monochrome. */
 check:checked,
-radio:checked {
+check:indeterminate,
+radio:checked,
+radio:indeterminate {
     background-color: #4a4a4a;
-    border: 1px solid #333333;
-    border-radius: 3px;
+    border-color: #333333;
     color: #ffffff;
 }

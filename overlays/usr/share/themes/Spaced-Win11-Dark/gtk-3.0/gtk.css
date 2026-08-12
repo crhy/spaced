@@ -87,3 +87,20 @@
     background-color: alpha(#ffffff, 0.08);
     box-shadow: inset 0 -2px @theme_selected_bg_color;
 }
+
+/* Spaced-Win11-Dark: light accent (#60cdff) checked indicators with a
+ * black mark, matching the theme's selection colors. */
+check:checked,
+radio:checked {
+    background-color: #60cdff;
+    border: 1px solid #4da4cc;
+    color: #000000;
+}
+
+check:checked {
+    border-radius: 3px;
+}
+
+radio:checked {
+    border-radius: 50%;
+}

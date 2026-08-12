@@ -62,3 +62,20 @@
     background-color: @panel_bg_color;
     color: @panel_fg_color;
 }
+
+/* Spaced-Win11-Light: accent blue (#005fb8) checked indicators with a
+ * white mark. */
+check:checked,
+radio:checked {
+    background-color: #005fb8;
+    border: 1px solid #004c93;
+    color: #ffffff;
+}
+
+check:checked {
+    border-radius: 3px;
+}
+
+radio:checked {
+    border-radius: 50%;
+}

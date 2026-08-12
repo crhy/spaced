@@ -264,11 +264,19 @@ scale trough {
     color: @panel_fg_color;
 }
 
-/* Spaced-Linux-Dark only: checked check boxes render a calm light-gray
- * indicator with a black check instead of the engine's accent fill. */
-check:checked {
+/* Spaced Linux Dark keeps all checked controls strictly monochrome. */
+check:checked,
+check:indeterminate,
+radio:checked,
+radio:indeterminate {
+    background-color: #c8c8c8;
+    border-color: #9a9a9a;
+    color: #000000;
+}
+
+radio:checked {
     background-color: #c8c8c8;
     border: 1px solid #9a9a9a;
-    border-radius: 3px;
+    border-radius: 50%;
     color: #000000;
 }

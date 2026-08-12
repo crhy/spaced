@@ -79,12 +79,12 @@
     color: @panel_fg_color;
 }
 
-/* Spaced-Geoworks: the classic GEOS dark-cyan teal (#008080) checked
- * indicators with a white mark. */
+/* Classic GEOS dark-cyan checked indicators with a white mark. */
 check:checked,
-radio:checked {
+check:indeterminate,
+radio:checked,
+radio:indeterminate {
     background-color: #008080;
-    border: 1px solid #006060;
-    border-radius: 3px;
+    border-color: #006060;
     color: #ffffff;
 }

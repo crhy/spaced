@@ -250,3 +250,19 @@ window.brisk-menu,
 .brisk-menu .apps-list row:selected label {
     color: #ffffff;
 }
+
+/* Spaced-WinXP: Luna blue (#316ac5) checked indicators with a white mark. */
+check:checked,
+radio:checked {
+    background-color: #316ac5;
+    border: 1px solid #27559e;
+    color: #ffffff;
+}
+
+check:checked {
+    border-radius: 3px;
+}
+
+radio:checked {
+    border-radius: 50%;
+}
