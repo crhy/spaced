@@ -263,3 +263,12 @@ scale trough {
     background-color: @panel_bg_color;
     color: @panel_fg_color;
 }
+
+/* Spaced-Linux-Dark only: checked check boxes render a calm light-gray
+ * indicator with a black check instead of the engine's accent fill. */
+check:checked {
+    background-color: #c8c8c8;
+    border: 1px solid #9a9a9a;
+    border-radius: 3px;
+    color: #000000;
+}
