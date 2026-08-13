@@ -1,8 +1,18 @@
-# Spaced Linux 8.26.4 — MATE Panel Layout
+# Spaced Linux MATE panel layout
 
-## Layout File
+This document describes the panel implementation at commit `f462bdb4b4d3916caf1617159056f2743b016acf`.
 
-Stored at `/usr/share/mate-panel/layouts/spaced-linux.layout` (also in `mate-tweak` and gschema override as `default-layout='spaced-linux'`):
+For the complete theme runtime, see [MATE-theming.md](MATE-theming.md). For panel colors, see [THEME-COLORS.md](THEME-COLORS.md#panel-colors).
+
+## One applet composition
+
+Every selectable Spaced theme uses the same applet composition:
+
+```text
+[Brisk Menu] [Window List] ........ [Volume] [Notification Area] [Clock] [Show Desktop]
+```
+
+The canonical bottom layout contains:
 
 ```ini
 [Toplevel bottom]
@@ -58,68 +68,203 @@ relative-to-edge=end
 locked=true
 ```
 
-## Layout Structure
+All objects are locked. Theme changes do not add, remove, or reorder applets.
 
+## Layout files
+
+Nine layout files serve ten selectable themes:
+
+```text
+spaced-linux.layout
+spaced-macos.layout
+spaced-android.layout
+spaced-win311.layout
+spaced-winxp.layout
+spaced-mint.layout
+spaced-win11-light.layout
+spaced-win11-dark.layout
+spaced-geoworks.layout
 ```
-[BriskMenu] [WindowList] ........ [Volume] [NotificationArea] [Clock] [ShowDesktop]
-    ↓             ↓                  ↓           ↓             ↓         ↓
-  pos 0        pos 20            pos 63,end  pos 60,end    pos 66,end  pos 0,end
+
+Linux Dark and Linux Light both use `spaced-linux.layout`. The files are otherwise intentionally almost identical; macOS and Android start with a top-oriented toplevel, while the others start at the bottom.
+
+The layouts establish a new profile. Normal theme switching does not reload or replace the layout. Instead, `spaced-switch-theme` moves and resizes the existing panel.
+
+## Theme mapping
+
+| Theme | Layout | Runtime edge | Size | Cairo Dock |
+|---|---|---|---|---|
+| Spaced Linux Dark | `spaced-linux` | bottom | 30 | off |
+| Spaced Linux Light | `spaced-linux` | bottom | 30 | off |
+| macOS | `spaced-macos` | top | 30 | on |
+| Windows 3.11 | `spaced-win311` | bottom | 30 | off |
+| Windows XP | `spaced-winxp` | bottom | 30 | off |
+| Linux Mint | `spaced-mint` | bottom | 30 | off |
+| Windows 11 Light | `spaced-win11-light` | bottom | 30 | off |
+| Windows 11 Dark | `spaced-win11-dark` | bottom | 30 | off |
+| GeoWorks | `spaced-geoworks` | bottom | 30 | off |
+| Android | `spaced-android` | top | 30 | on |
+
+`overlays/usr/share/spaced-themes/themes.json` is the runtime source for `panel_layout`, `panel_position`, `panel_size`, optional `panel_color`, and `cairo_dock`.
+
+## Runtime behavior
+
+`spaced-switch-theme` operates on existing toplevel IDs named `bottom` and `top` when those schemas exist. For each one it sets:
+
+```text
+orientation
+size
+background/type
+background/color
+background/opacity
+y
+y-bottom
 ```
 
-All applets are `locked=true`.
+For a top panel:
 
-## One panel for every theme
+```text
+y = 0
+y-bottom = -1
+```
 
-Every one of the nine themed layouts (`spaced-linux`, `spaced-macos`,
-`spaced-android`, `spaced-win311`, `spaced-winxp`, `spaced-mint`,
-`spaced-win11-light`, `spaced-win11-dark`, `spaced-geoworks`) uses the exact
-same applet composition above. The files differ only in the toplevel's
-`orientation` line. Switching themes therefore never adds, removes, or
-rearranges applets — the panel keeps `[BriskMenu] [WindowList] … [Volume]
-[NotificationArea] [Clock] [ShowDesktop]` no matter which theme is selected.
+For a bottom panel:
 
-## Panel position and docks per theme
+```text
+y = -1
+y-bottom = 0
+```
 
-| Theme               | Panel position | cairo-dock |
-|---------------------|----------------|------------|
-| Spaced Linux Dark   | bottom         | off        |
-| Spaced Linux Light  | bottom         | off        |
-| Mac OS X            | **top**        | **on**     |
-| Windows 3.11        | bottom         | off        |
-| Windows XP          | bottom         | off        |
-| Linux Mint          | bottom         | off        |
-| Windows 11 Light    | bottom         | off        |
-| Windows 11 Dark     | bottom         | off        |
-| GeoWorks            | bottom         | off        |
-| Android             | **top**        | **on**     |
+The helper never runs `mate-panel --replace`. Replacing the process during a theme switch can lose the notification-area X selection and break tray applets.
 
-Android and Mac OS X move the single panel to the top edge and enable the
-cairo-dock at the bottom edge; every other theme keeps the panel at the
-bottom with the dock off. `panel_position` and `cairo_dock` in
-`/usr/share/spaced-themes/themes.json` drive this via `spaced-switch-theme`,
-which moves/resizes the existing panel in place and never restarts mate-panel
-(see `docs/FIXES.md`).
+Changing the `default-layout` key does not itself rebuild an existing user's panel. It identifies the layout for new/reset profiles; the helper's orientation and size writes handle normal theme changes.
 
-## Clock Preferences
+## Panel color channels
 
-Set via dconf at `/org/mate/panel/objects/clock/prefs/`:
+Panel color is not controlled in one place.
 
-| Key               | Value        |
-|-------------------|-------------|
-| `format`          | `12-hour`   |
-| `show-date`       | `false`     |
-| `temperature-unit` | `Fahrenheit` |
-| `speed-unit`      | `mph`       |
+### GTK3 widget surface
 
-## Default gschema override
+The active GTK theme paints panel widgets through selectors in `spaced-overrides.css` and the theme's own `gtk.css`, using:
 
-Stored at `/usr/share/glib-2.0/schemas/90_spaced-linux.gschema.override`:
+```text
+@panel_bg_color
+@panel_fg_color
+```
+
+This controls labels, menus, applet plugs, buttons, and related child widgets.
+
+### Explicit MATE toplevel background
+
+Three themes currently set a `panel_color` in `themes.json`:
+
+| Theme | Explicit toplevel background |
+|---|---|
+| Spaced Linux Dark | `#2f2f2f` |
+| Windows 11 Dark | `#17243b` |
+| Android | `#263238` |
+
+For those themes the helper writes:
+
+```text
+type = color
+color = <panel_color>
+opacity = 65535
+```
+
+For other themes it writes `type = none`, allowing GTK CSS to provide the outer appearance.
+
+The toplevel background and GTK widget CSS are independent. Diagnose the outer panel surface separately from applet and button surfaces.
+
+### GTK2 panel colors
+
+Legacy panel-related GTK2 widgets use `panel_bg_color` and `panel_fg_color` from the active theme's `gtk-2.0/gtkrc`.
+
+## Theme-specific panel rules
+
+Several themes intentionally add more than a palette change:
+
+- **Windows 11 Dark** uses flat rounded taskbar buttons, translucent hover/checked surfaces, and a thin active indicator.
+- **Windows XP** uses a saturated blue Luna taskbar gradient and a green Brisk/Start button gradient.
+- **GeoWorks** expands selectors so separate applet plug processes receive the dark-cyan surface.
+- **Spaced Linux Dark and Light** remain visually restrained and use their semantic panel palette.
+
+When changing a panel color, inspect both the semantic palette and any theme-specific selectors near the end of that theme's `gtk.css`.
+
+## Cairo Dock
+
+Cairo Dock is enabled only for macOS and Android.
+
+On first use, `spaced-switch-theme`:
+
+1. copies the upstream `Default-Single` theme into `~/.config/cairo-dock/current_theme`;
+2. replaces its launchers with the Spaced launcher set;
+3. clears the configured module list and uses normal visibility;
+4. starts Cairo Dock with the software backend used by the project.
+
+When a non-dock theme is selected, the helper stops the user's `cairo-dock` process.
+
+The dock is not part of the MATE panel process, and its colors are not guaranteed to match every GTK panel rule.
+
+## Defaults
+
+The GSettings override establishes:
 
 ```ini
 [org.mate.panel]
-default-layout = 'spaced-linux'
+default-layout='spaced-linux'
+
+[org.mate.panel.applet.clock]
+format='12-hour'
+show-date=false
 ```
 
-## DConf System Defaults
+The repository does not currently ship `/etc/dconf/db/local.d/01-spaced` or `02-panel`, and it does not define Fahrenheit or mph panel-clock unit defaults in the Spaced override. Do not cite those as current sources.
 
-Stored at `/etc/dconf/db/local.d/01-spaced` and `02-panel`.
+## Verification
+
+Check the registry:
+
+```bash
+python3 - <<'PY'
+import json
+from pathlib import Path
+
+for theme in json.loads(Path("overlays/usr/share/spaced-themes/themes.json").read_text())["themes"]:
+    print(
+        theme["id"],
+        theme["panel_layout"],
+        theme["panel_position"],
+        theme["panel_size"],
+        theme.get("panel_color", "CSS"),
+        "dock" if theme["cairo_dock"] else "no-dock",
+    )
+PY
+```
+
+Inspect the live panel:
+
+```bash
+gsettings get org.mate.panel default-layout
+
+gsettings get \
+  org.mate.panel.toplevel:/org/mate/panel/toplevels/bottom/ \
+  orientation
+
+gsettings get \
+  org.mate.panel.toplevel:/org/mate/panel/toplevels/bottom/ \
+  size
+
+gsettings get \
+  org.mate.panel.toplevel:/org/mate/panel/toplevels/bottom/background/ \
+  type
+```
+
+After a theme change, verify:
+
+- the panel is on the intended edge;
+- it remains 30 px high unless the registry was deliberately changed;
+- all six applets remain present;
+- the notification area still owns its tray selection;
+- the outer toplevel and child applet surfaces both have the intended colors;
+- macOS and Android start the dock, while other themes stop it.

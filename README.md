@@ -18,6 +18,7 @@
   <a href="https://github.com/crhy/spaced/releases"><strong>Download releases</strong></a> ·
   <a href="https://github.com/crhy/spaced/issues"><strong>Issues</strong></a> ·
   <a href="docs/DESIGN.md"><strong>Design</strong></a> ·
+  <a href="docs/MATE-theming.md"><strong>Themes</strong></a> ·
   <a href="#support-spaced-linux"><strong>Support</strong></a>
 </p>
 
@@ -100,7 +101,7 @@ These are real Spaced Linux desktop sessions—not wallpaper mockups. Click any 
 | **Graphical installation** | Calamares provides a clear installation path for BIOS and UEFI systems. |
 | **Useful defaults** | Networking, audio controls, archives, editing, document viewing, and system utilities are ready immediately. |
 | **Modern applications** | Flatpak and Flathub provide current desktop apps without destabilizing the base system. |
-| **Coordinated themes** | One choice can change the GTK theme, icons, folder colors, wallpaper, panel layout, and optional dock together. |
+| **Coordinated themes** | One choice coordinates GTK, icons, folder colors, wallpaper, panel behavior, and the optional dock. |
 
 ## Why advanced users keep control
 
@@ -230,23 +231,33 @@ The current development line is **8.26.4**. Spaced Linux is an independent commu
 
 ## Contributing
 
-### NVIDIA Recovery Guide
-
-Spaced Linux includes a verified, transactional NVIDIA driver installer with automatic rollback, pre-reboot verification, and post-reboot desktop checks. For installation steps, SSH recovery procedures, DKMS troubleshooting, Secure Boot limitations, and the full error-code reference see:
-
-- [docs/NVIDIA-RECOVERY.md](docs/NVIDIA-RECOVERY.md)
-
-### Boot and Installation Troubleshooting
-
-The live boot chain, its difference from a stock Devuan live system, every historical boot failure, and how to diagnose a live USB that won't boot are documented in:
-
-- [docs/BOOTING.md](docs/BOOTING.md)
-
-## Contributing
-
 Bug reports, documentation improvements, Compiz refinements, theme work, package suggestions, hardware testing, accessibility improvements, and build fixes are welcome.
 
 Open an [issue](https://github.com/crhy/spaced/issues) or submit a pull request describing what changed and how it was tested.
+
+### Theme development
+
+The theme documentation is split by purpose:
+
+- [MATE theme architecture](docs/MATE-theming.md) — component ownership, runtime switching, source-to-installed workflow, testing, and troubleshooting.
+- [Theme and interface colors](docs/THEME-COLORS.md) — GTK2/GTK3 palettes, controls, panels, decorations, icons, wallpapers, terminal, Compiz, Flatpak, and toolkit limits.
+- [MATE panel layout](docs/matepanel.md) — applets, layouts, orientation, panel backgrounds, and Cairo Dock.
+- [Visual design](docs/DESIGN.md) — current design principles for the Spaced identity and OS-inspired themes.
+- [Resolution record](docs/FIXES.md) — current resolutions for recurring historical problems.
+
+Run `make check` before committing theme or documentation changes.
+
+### NVIDIA recovery guide
+
+Spaced Linux includes a verified, transactional NVIDIA driver installer with automatic rollback, pre-reboot verification, and post-reboot desktop checks. For installation steps, SSH recovery procedures, DKMS troubleshooting, Secure Boot limitations, and the full error-code reference, see:
+
+- [docs/NVIDIA-RECOVERY.md](docs/NVIDIA-RECOVERY.md)
+
+### Boot and installation troubleshooting
+
+The live boot chain, its difference from a stock Devuan live system, historical boot failures, and how to diagnose a live USB that will not boot are documented in:
+
+- [docs/BOOTING.md](docs/BOOTING.md)
 
 ## Acknowledgements
 
