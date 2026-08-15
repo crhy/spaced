@@ -286,6 +286,10 @@ assert welcome_app.is_file() and welcome_launcher.is_file() and welcome_autostar
 assert "/run/live/medium" in welcome_wrapper and "welcome-shown" in welcome_wrapper, \
     "first-run application is not limited to one installed-system launch"
 assert "io.github.kolunmi.Bazaar" in flatpak_installer, "Bazaar installer action is missing"
+assert "https://github.com/crhy/spacedbazaar/releases/latest/download/io.github.kolunmi.Bazaar-x86_64.flatpak" in flatpak_installer, \
+    "the Bazaar installer no longer prefers the Spaced release bundle"
+assert "mate-panel --replace" in flatpak_installer, \
+    "installed applications do not refresh the Brisk menu immediately"
 assert "attempt $attempt of 3" in flatpak_installer and "continuing with the remaining applications" in flatpak_installer, \
     "suggested Flatpaks still fail as one all-or-nothing batch"
 assert "--continue-at -" in flatpak_installer, "large Flatpak bundle downloads do not resume"

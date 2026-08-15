@@ -5,6 +5,9 @@ set -euo pipefail
 mode=${1:-}
 list=${SPACED_APP_LIST:-/usr/share/spaced-welcome/FlatpaksToInstallAfterInstall.txt}
 bazaar_id=io.github.kolunmi.Bazaar
+# The Spaced Bazaar release carries the fork's sandboxed-install fix; it is
+# preferred over the upstream Flathub build, which is the offline/fallback.
+spacedbazaar_url=${SPACEDBAZAAR_URL:-https://github.com/crhy/spacedbazaar/releases/latest/download/io.github.kolunmi.Bazaar-x86_64.flatpak}
 
 case "$mode" in
     suggested|bazaar) ;;
@@ -20,17 +23,15 @@ flatpak remote-add --user --if-not-exists flathub \
     https://flathub.org/repo/flathub.flatpakrepo
 
 if [ "$mode" = bazaar ]; then
-    refs=("$bazaar_id")
+    refs=()
+    bundles=("$spacedbazaar_url")
 else
+    refs=()
+    bundles=()
     [ -r "$list" ] || {
         echo "Suggested application list is missing." >&2
         exit 1
     }
-fi
-
-bundles=()
-if [ "$mode" = suggested ]; then
-    refs=()
     while IFS= read -r entry; do
         entry=${entry%%#*}
         entry=${entry//[[:space:]]/}
@@ -43,50 +44,79 @@ if [ "$mode" = suggested ]; then
 fi
 
 failures=()
-for ref in "${refs[@]}"; do
-    installed=false
+
+install_ref() {
+    local ref=$1
     for attempt in 1 2 3; do
         echo "Installing $ref (attempt $attempt of 3)…"
         if flatpak install --user -y flathub "$ref"; then
-            installed=true
-            break
+            return 0
         fi
         [ "$attempt" -eq 3 ] || sleep $((attempt * 2))
     done
+    echo "Could not install $ref; continuing with the remaining applications." >&2
+    return 1
+}
+
+install_bundle() {
+    local url=$1 name=${1##*/} bundle installed=false
+    bundle=$(mktemp "$tmpdir/$name.XXXXXX")
+    for attempt in 1 2 3; do
+        echo "Downloading $name (attempt $attempt of 3)…"
+        # --continue-at resumes an interrupted large bundle so a flaky
+        # connection does not restart a multi-hundred-MB transfer.
+        if curl --fail --location --retry 3 --retry-all-errors \
+            --connect-timeout 15 --continue-at - --output "$bundle" "$url"; then
+            if flatpak install --user -y "$bundle"; then
+                installed=true
+                break
+            fi
+            # The bundle is corrupt after a failed install; drop it so the
+            # next attempt re-downloads cleanly instead of reusing it.
+            rm -f "$bundle"
+        fi
+        [ "$attempt" -eq 3 ] || sleep $((attempt * 3))
+    done
     if [ "$installed" != true ]; then
+        echo "Could not install $name; continuing with the remaining applications." >&2
+        return 1
+    fi
+}
+
+tmpdir=$(mktemp -d)
+trap 'rm -rf "$tmpdir"' EXIT
+
+for ref in "${refs[@]}"; do
+    if ! install_ref "$ref"; then
         failures+=("$ref")
-        echo "Could not install $ref; continuing with the remaining applications." >&2
     fi
 done
 
-if [ "${#bundles[@]}" -gt 0 ]; then
-    tmpdir=$(mktemp -d)
-    trap 'rm -rf "$tmpdir"' EXIT
-    for url in "${bundles[@]}"; do
-        name=${url##*/}
-        bundle="$tmpdir/$name"
-        installed=false
-        for attempt in 1 2 3; do
-            echo "Downloading $name (attempt $attempt of 3)…"
-            # --continue-at resumes an interrupted large bundle so a flaky
-            # connection does not restart a multi-hundred-MB transfer.
-            if curl --fail --location --retry 3 --retry-all-errors \
-                --connect-timeout 15 --continue-at - --output "$bundle" "$url"; then
-                if flatpak install --user -y "$bundle"; then
-                    installed=true
-                    break
-                fi
-                # The bundle is corrupt after a failed install; drop it so the
-                # next attempt re-downloads cleanly instead of reusing it.
-                rm -f "$bundle"
-            fi
-            [ "$attempt" -eq 3 ] || sleep $((attempt * 3))
-        done
-        if [ "$installed" != true ]; then
-            failures+=("$url")
-            echo "Could not install $name; continuing with the remaining applications." >&2
-        fi
-    done
+for url in "${bundles[@]}"; do
+    if ! install_bundle "$url"; then
+        failures+=("$url")
+    fi
+done
+
+if [ "$mode" = bazaar ] && [ "${#failures[@]}" -gt 0 ]; then
+    echo "The Spaced release bundle is unavailable; falling back to Flathub." >&2
+    failures=()
+    if ! install_ref "$bazaar_id"; then
+        failures+=("$bazaar_id")
+    fi
+fi
+
+# Refresh the desktop database, the icon cache, and the panel so newly
+# installed applications appear in the Brisk menu immediately.
+: "${XDG_DATA_HOME:=$HOME/.local/share}"
+update-desktop-database -q "$XDG_DATA_HOME/flatpak/exports/share/applications" 2>/dev/null || true
+if command -v gtk-update-icon-cache >/dev/null 2>&1 \
+    && [ -d "$XDG_DATA_HOME/flatpak/exports/share/icons/hicolor" ]; then
+    gtk-update-icon-cache -f -q "$XDG_DATA_HOME/flatpak/exports/share/icons/hicolor" || true
+fi
+if [ -n "${DISPLAY:-}" ] && pgrep -x mate-panel >/dev/null 2>&1; then
+    mate-panel --replace >/dev/null 2>&1 &
+    disown
 fi
 
 if [ "${#failures[@]}" -gt 0 ]; then
