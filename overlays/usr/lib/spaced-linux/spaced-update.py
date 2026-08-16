@@ -17,7 +17,7 @@ from gi.repository import Gdk, GLib, Gtk, Pango
 GITHUB_API = "https://api.github.com/repos/crhy/spaced/releases/latest"
 # Every Spaced Update release bumps the last two digits of the release
 # version by one (8.26.4.0.1, 8.26.4.0.2, …). Keep VERSION in sync.
-APP_VERSION = "8.26.4.0.1"
+APP_VERSION = "8.26.4.0.2"
 APT_RE = re.compile(
     r"^(\S+?)/\S+\s+(\S+)\s+\S+\s+\[upgradable from:\s+(.+)\]$"
 )
@@ -112,6 +112,22 @@ APP_CSS = b"""
 
 .spaced-page button:disabled {
     border-color: alpha(@theme_fg_color, 0.18);
+}
+
+/* Header actions are icon controls, not raised text buttons. Keep their idle
+   surface quiet and reveal a compact target only on hover or keyboard focus. */
+headerbar button {
+    background-image: none;
+    background-color: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    box-shadow: none;
+}
+
+headerbar button:hover,
+headerbar button:focus {
+    background-color: alpha(@theme_fg_color, 0.08);
+    border-color: alpha(@theme_fg_color, 0.20);
 }
 
 .spaced-progress {
@@ -224,19 +240,57 @@ def enumerate_flatpak():
         )
         if probe.returncode:
             return []
-        return []
 
     listed = run_capture(
         ["flatpak", "list", "--app", "--columns=application,installation,ref"]
     )
-    updates = run_capture(["flatpak", "remote-ls", "--updates", "--columns=ref"])
     names = run_capture(["flatpak", "list", "--app", "--columns=application,name"])
 
-    update_refs = {
-        line.split()[0]
-        for line in updates.splitlines()
-        if line.strip().startswith("app/")
-    }
+    update_refs = {"user": set(), "system": set()}
+    for scope in update_refs:
+        remote_rows = run_capture(
+            ["flatpak", "remotes", f"--{scope}", "--columns=name,options"]
+        )
+        remotes = []
+        for line in remote_rows.splitlines():
+            parts = line.split("\t", 1)
+            if not parts or not parts[0].strip():
+                continue
+            options = parts[1].split(",") if len(parts) == 2 else []
+            if "no-enumerate" not in options and "disabled" not in options:
+                remotes.append(parts[0].strip())
+
+        successful_remotes = 0
+        remote_errors = []
+        for remote in remotes:
+            try:
+                updates = run_capture(
+                    [
+                        "flatpak",
+                        "remote-ls",
+                        "--updates",
+                        f"--{scope}",
+                        remote,
+                        "--columns=ref",
+                    ],
+                    timeout=90,
+                )
+            except RuntimeError as error:
+                remote_errors.append(f"{remote}: {error}")
+                continue
+            successful_remotes += 1
+            for line in updates.splitlines():
+                ref = line.strip().split()[0] if line.strip() else ""
+                if ref.startswith("app/"):
+                    ref = ref[4:]
+                if ref:
+                    update_refs[scope].add(ref)
+
+        if remotes and not successful_remotes:
+            raise RuntimeError(
+                f"Could not query any {scope} Flatpak remote: "
+                + "; ".join(remote_errors)
+            )
     name_map = {}
     for line in names.splitlines():
         parts = line.split("\t", 1)
@@ -249,7 +303,7 @@ def enumerate_flatpak():
         if len(parts) < 3:
             continue
         app_id, scope, ref = parts[:3]
-        if f"app/{ref}" not in update_refs:
+        if scope not in update_refs or ref.removeprefix("app/") not in update_refs[scope]:
             continue
         items.append(
             {
@@ -601,7 +655,7 @@ class App(Gtk.Window):
         about.set_comments("Update APT and Flatpak applications together")
         about.set_website("https://spacedlinux.com")
         about.set_logo_icon_name("system-software-update")
-        about.set_license_type(Gtk.License.GPL_3_0)
+        about.set_license_type(Gtk.License.MIT_X11)
         about.connect("response", lambda d, _r: d.destroy())
         about.show_all()
 

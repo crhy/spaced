@@ -793,7 +793,9 @@ rubberband,
     border-style: solid;
     border-color: shade(@theme_selected_bg_color, 0.9);
     border-radius: 0;
-    background-color: alpha(@theme_selected_bg_color, 0.3);
+    background-image: none;
+    background-color: alpha(@theme_selected_bg_color, 0.18);
+    box-shadow: none;
 }
 
 /***********

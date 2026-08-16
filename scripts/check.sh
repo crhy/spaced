@@ -26,6 +26,7 @@ for required_package in \
     polkitd \
     pkexec \
     chrony \
+    gparted \
     firmware-nvidia-graphics \
     xserver-xorg-video-nouveau \
     wmctrl
@@ -104,9 +105,13 @@ assert "libglib2.0-bin" in packages, "glib-compile-schemas is required by the im
 assert "policykit-1" not in packages, "Devuan Ceres replaces policykit-1 with polkitd and pkexec"
 assert {"polkitd", "pkexec"}.issubset(packages), "Spaced utilities require Devuan Ceres polkitd and pkexec packages"
 assert "dbus-x11" in packages, "SysVinit MATE and GTK portals require the dbus-x11 alternative"
+application_theming = Path("overlays/etc/profile.d/spaced-application-theming.sh").read_text(encoding="utf-8")
+assert "QT_QPA_PLATFORMTHEME=gtk3" in application_theming \
+    and "QT_STYLE_OVERRIDE=Fusion" in application_theming, \
+    "Qt applications do not have a complete cross-toolkit control style (issue #78)"
 assert {"bluez", "bluez-tools"}.issubset(packages), "Bluetooth stack is not included by default (issue #77)"
-assert {"caja-admin", "gigolo", "timeshift"}.issubset(packages), \
-    "administrator, Windows-share, or backup desktop integration is missing"
+assert {"caja-admin", "gigolo", "gparted", "timeshift"}.issubset(packages), \
+    "administrator, partitioning, Windows-share, or backup desktop integration is missing"
 assert {"gnome-keyring", "libcanberra-gtk3-module", "accountsservice"}.issubset(packages), \
     "Flatpak/keyring or LightDM desktop integration is incomplete"
 assert "mate-power-manager" in packages, \
@@ -459,6 +464,10 @@ for catch_all_name in ("Spaced-Dark", "Spaced-Linux-Dark", "Spaced-Linux-Light")
     painted = {line.strip().rstrip(",") for line in catch_all.splitlines()} & layout_containers
     assert not painted, f"{catch_all_name} catch-all still paints layout containers: {sorted(painted)}"
 assert ".caja-desktop-window" in shared_gtk, "GTK CSS does not preserve Caja's wallpaper paint layer"
+widget_gtk = (theme_root / "Spaced-Dark/gtk-3.0/gtk-widgets.css").read_text(encoding="utf-8")
+assert "background-color: alpha(@theme_selected_bg_color, 0.18)" in widget_gtk \
+    and "background-image: none" in widget_gtk, \
+    "GTK drag-selection rubber bands are not translucent (issue #101)"
 assert "#PanelApplet #showdesktop-button" in shared_gtk, \
     "panel applet buttons do not inherit each theme's panel color"
 assert "#PanelPlug" in shared_gtk and "NaTrayApplet" in shared_gtk, \
@@ -545,8 +554,11 @@ menu_on_light = icon_root / "Spaced-Menu-On-Light/scalable/places"
 for menu_directory, color in ((menu_on_dark, "#f3f3f3"), (menu_on_light, "#202020")):
     menu_icon = (menu_directory / "start-here.svg").read_text(encoding="utf-8")
     menu_symbolic = (menu_directory / "start-here-symbolic.svg").read_text(encoding="utf-8")
-    assert color in menu_icon and color in menu_symbolic, "light/dark transparent S menu icons are incomplete"
-    assert "<rect" not in menu_icon and "<rect" not in menu_symbolic, "S menu icon has a square background"
+    assert color in menu_icon and color in menu_symbolic, "light/dark transparent Spaced menu icons are incomplete"
+    assert "<circle" in menu_icon and "<circle" in menu_symbolic, \
+        "Brisk menu icon does not match the round Spaced mark"
+    assert "<rect" not in menu_icon and "<rect" not in menu_symbolic, \
+        "Spaced menu icon has a square background"
 for theme in themes:
     icon_metadata = (icon_root / f"Spaced-Icons-{theme['gtk_theme'].removeprefix('Spaced-')}" / "index.theme")
     menu_variant = "Spaced-Menu-On-Dark" if theme["dark"] else "Spaced-Menu-On-Light"
@@ -639,6 +651,10 @@ assert "spaced-primary-action" in update_app and "spaced-update-list" in update_
     "Spaced Update theme-aware interface is incomplete"
 assert "installed_after_update = read_installed_version()" in update_app and "finish_update" in update_app, \
     "Spaced Update does not refresh the installed OS version after an update"
+assert 'update_refs = {"user": set(), "system": set()}' in update_app \
+    and '"remote-ls",' in update_app \
+    and 'if remotes and not successful_remotes:' in update_app, \
+    "Spaced Update does not isolate Flatpak update discovery by scope and remote"
 assert 'if [ "$MODE" != "all" ]' in update_helper and "No Flatpak applications were selected" in update_helper, \
     "Spaced Update helper does not validate privileged update requests"
 

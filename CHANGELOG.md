@@ -1,10 +1,15 @@
 # Changelog
 
-## 8.26.5 - unreleased
-- Verified the remaining half of issue #61 (Bazaar install failures) end-to-end: Bazaar's bundled Flatpak stack fails every system-installation install with “Path does not exist” after the download completes, while user-installation installs and the host-native CLI both work (upstream [bazaar-org/bazaar#1298](https://github.com/bazaar-org/bazaar/issues/1298), still open).
-- Started the Spaced fork [crhy/spacedbazaar](https://github.com/crhy/spacedbazaar), tracking upstream main (which bundles Flatpak 1.18.1 instead of 0.9.3's 1.17.6), and committed the install-defaults fix: install dialog, shift-click install, and bulk install now preselect the user-installation source, keeping system installations as the fallback and for removals. Verified end-to-end (built, installed, ran), published the initial release [0.9.3-spaced1](https://github.com/crhy/spacedbazaar/releases/tag/0.9.3-spaced1) with the x86_64 Flatpak bundle, and shipped the replacement: `spaced-install-apps bazaar` now installs the Spaced bundle first and falls back to the upstream Flathub build.
-- Branded the Bazaar fork end-to-end: new `SpacedBazaar.svg` icon shipped in the fork's `data/icons` (coming in future releases) and applied to running installs, and `spaced-install-apps` now refreshes the desktop database, the icon cache, and reloads the panel afterwards so installed applications appear in the Brisk menu immediately instead of after a re-login.
-- Completed the fork's install fix: [0.9.3-spaced2](https://github.com/crhy/spacedbazaar/releases/tag/0.9.3-spaced2) enumerates the user-installation Flathub remote from inside the sandbox (before, not-yet-installed apps had no user source, so GUI installs always targeted the system installation and died with “Path does not exist”) and stops the startup update check from stalling on system refs it can never act on. Verified end-to-end: a fresh app installed from the store UI now shows both “stable · this user” and “stable · all users”, picks the user source, deploys into `~/.local/share/flatpak`, and reports `Transaction completed`.
+## 8.26.5 - 2026-08-15
+- Bumped the release to 8.26.5 across package, ISO, bootloader, installer, website, documentation, and VM metadata.
+- Released [SpacedBazaar 0.9.4-spaced1](https://github.com/crhy/spacedbazaar/releases/tag/0.9.4-spaced1), merging Bazaar 0.9.4's screenshot, navigation, focus, zoom, and performance improvements while retaining the sandbox-safe user-installation fix for issue #61. Removed an account-specific `/home/rhy` path, built and reinstalled the GNOME 50 bundle, launched it, and completed a real Flathub install from inside the sandbox.
+- Fixed invisible or incomplete Dolphin check boxes by keeping the GTK-provided Qt palette while using Qt's complete Fusion widget controls (issue #78).
+- Added GParted to the default desktop applications and release validation gate (issue #100).
+- Replaced the thin Brisk menu “S” with a clearer round Spaced mark in light, dark, symbolic, and hicolor variants (issue #55).
+- Made Caja's drag-selection rectangle visibly translucent instead of an opaque dark box, and locked the visual rule into the source gate (issue #101).
+- Synced Spaced Update 8.26.4.0.2 into the native image: sandboxed Flatpak enumeration no longer returns an empty list after a successful host probe, update refs are scoped and normalized, and one broken remote cannot hide healthy updates.
+- Released [Spaced Update 8.26.4.0.2](https://github.com/crhy/spacedupdate/releases/tag/8.26.4.0.2) on the supported GNOME 50 runtime, using its maintained Python/PyGObject stack; the installed Flatpak shrank from about 303 MB to 3.5 MB and gained six deterministic regression tests.
+- Accepted the clean-built 8.26.5 ISO through its portable SHA-256 check, SquashFS/package inspection, and graphical KVM plus VirtualBox BIOS/EFI live boots; every VM reached SSH and a running MATE/Compiz/Caja desktop and produced a nonblank desktop capture.
 
 ## 8.26.4 - 2026-08-10
 - Bumped the release to 8.26.4 across package, ISO, bootloader, installer, website, documentation, and VM metadata.

@@ -26,7 +26,7 @@ Target length: about 75 seconds.
 
 **[1:00 — Return to a clean desktop; show the project website or release page]**
 
-“Spaced Linux 8.26.4 is available now for 64-bit PCs. Download the ISO from spacedlinux.com or GitHub, try it live, and help us build a freer, friendlier Linux desktop.”
+“Spaced Linux 8.26.5 is available now for 64-bit PCs. Download the ISO from spacedlinux.com or GitHub, try it live, and help us build a freer, friendlier Linux desktop.”
 
 **[1:14 — Logo end card]**
 

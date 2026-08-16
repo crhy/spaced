@@ -57,6 +57,7 @@ file_managers:
 applications:
   - eom
   - gdebi-core
+  - gparted
   - pluma
   - engrampa
   - atril
