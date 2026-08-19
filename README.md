@@ -63,7 +63,7 @@ These are real Spaced Linux desktop sessions—not wallpaper mockups. Click any 
   </tr>
   <tr>
     <td width="50%" align="center">
-      <a href="website/assets/screenshots/desktop-bazaar.webp"><img src="website/assets/screenshots/desktop-bazaar.webp" alt="Bazaar application store running on Spaced Linux"></a><br>
+      <a href="website/assets/screenshots/desktop-bazaar.webp"><img src="website/assets/screenshots/desktop-bazaar.webp" alt="SpacedBazaar application store running on Spaced Linux"></a><br>
       <sub><strong>Modern applications</strong> — Flatpak and Flathub provide current software without dependency chaos.</sub>
     </td>
     <td width="50%" align="center">

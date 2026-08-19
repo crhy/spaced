@@ -290,9 +290,10 @@ assert welcome_app.is_file() and welcome_launcher.is_file() and welcome_autostar
     "Spaced Linux first-run application is incomplete"
 assert "/run/live/medium" in welcome_wrapper and "welcome-shown" in welcome_wrapper, \
     "first-run application is not limited to one installed-system launch"
-assert "io.github.kolunmi.Bazaar" in flatpak_installer, "Bazaar installer action is missing"
-assert "https://github.com/crhy/spacedbazaar/releases/latest/download/io.github.kolunmi.Bazaar-x86_64.flatpak" in flatpak_installer, \
-    "the Bazaar installer no longer prefers the Spaced release bundle"
+assert "https://github.com/crhy/spacedbazaar/releases/latest/download/SpacedBazaar-x86_64.flatpak" in flatpak_installer, \
+    "the SpacedBazaar installer does not use the independent release bundle"
+assert "io.github.kolunmi.Bazaar" not in flatpak_installer, \
+    "the SpacedBazaar installer still falls back to broken upstream Bazaar"
 assert "mate-panel --replace" in flatpak_installer, \
     "installed applications do not refresh the Brisk menu immediately"
 assert "attempt $attempt of 3" in flatpak_installer and "continuing with the remaining applications" in flatpak_installer, \
@@ -300,9 +301,13 @@ assert "attempt $attempt of 3" in flatpak_installer and "continuing with the rem
 assert "--continue-at -" in flatpak_installer, "large Flatpak bundle downloads do not resume"
 assert "Some suggested apps could not be installed" in welcome_app.read_text(encoding="utf-8"), \
     "Welcome still exposes raw installer URLs instead of a useful failure message"
-for app_id in ("org.atheme.audacious", "io.github.kolunmi.Bazaar", "com.brave.Browser",
+assert "io.github.crhy.SpacedBazaar" in welcome_app.read_text(encoding="utf-8"), \
+    "Welcome does not launch the independent SpacedBazaar application"
+for app_id in ("org.atheme.audacious", "com.brave.Browser",
                "org.libreoffice.LibreOffice", "org.videolan.VLC"):
     assert app_id in flatpak_list, f"suggested Flatpak is missing: {app_id}"
+assert "io.github.kolunmi.Bazaar" not in flatpak_list, \
+    "suggested apps still install the broken upstream Bazaar Flatpak"
 assert "https://github.com/crhy/Voice2Text-AI/releases/latest/download/Voice2Text-AI.flatpak" in flatpak_list, \
     "Voice2Text does not use GitHub's stable latest-release URL"
 assert "/releases/download/v" not in flatpak_list, "Voice2Text is pinned to a stale release"
@@ -408,7 +413,7 @@ for screenshot in ("MacOS.png", "ModernAItools.png", "Music.png", "Spreadsheet.p
     image = root / "etc/calamares/branding/spaced/slideshow/images" / screenshot
     assert image.is_file(), f"Calamares slideshow screenshot is missing: {screenshot}"
     assert f'source: "images/{screenshot}"' in slideshow, f"Calamares slideshow does not use {screenshot}"
-assert "Open Bazaar after installation to explore the full catalog" in slideshow, \
+assert "Open SpacedBazaar after installation to explore the full catalog" in slideshow, \
     "Calamares slideshow does not explain the application catalog"
 branding = (root / "etc/calamares/branding/spaced/branding.desc").read_text(encoding="utf-8")
 assert branding.count("spaced-logo.png") == 3, \

@@ -4,10 +4,8 @@ set -euo pipefail
 
 mode=${1:-}
 list=${SPACED_APP_LIST:-/usr/share/spaced-welcome/FlatpaksToInstallAfterInstall.txt}
-bazaar_id=io.github.kolunmi.Bazaar
-# The Spaced Bazaar release carries the fork's sandboxed-install fix; it is
-# preferred over the upstream Flathub build, which is the offline/fallback.
-spacedbazaar_url=${SPACEDBAZAAR_URL:-https://github.com/crhy/spacedbazaar/releases/latest/download/io.github.kolunmi.Bazaar-x86_64.flatpak}
+# SpacedBazaar is a separate application from the broken upstream Flatpak.
+spacedbazaar_url=${SPACEDBAZAAR_URL:-https://github.com/crhy/spacedbazaar/releases/latest/download/SpacedBazaar-x86_64.flatpak}
 
 case "$mode" in
     suggested|bazaar) ;;
@@ -97,14 +95,6 @@ for url in "${bundles[@]}"; do
         failures+=("$url")
     fi
 done
-
-if [ "$mode" = bazaar ] && [ "${#failures[@]}" -gt 0 ]; then
-    echo "The Spaced release bundle is unavailable; falling back to Flathub." >&2
-    failures=()
-    if ! install_ref "$bazaar_id"; then
-        failures+=("$bazaar_id")
-    fi
-fi
 
 # Refresh the desktop database, the icon cache, and the panel so newly
 # installed applications appear in the Brisk menu immediately.
