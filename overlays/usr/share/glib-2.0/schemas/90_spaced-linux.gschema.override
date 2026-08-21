@@ -47,6 +47,13 @@ primary-color='#1a1a1a'
 [org.mate.panel]
 default-layout='spaced-linux'
 
+[org.mate.caja.preferences]
+show-hidden-files=true
+
+[org.mate.screensaver]
+idle-activation-enabled=true
+lock-enabled=true
+
 
 [org.mate.terminal.profile:/org/mate/terminal/profiles/default]
 background-color='#000000'

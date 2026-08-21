@@ -1,0 +1,4 @@
+#!/bin/sh
+# Keep the familiar unqualified command available to desktop users even when
+# their interactive PATH omits the administrative sbin directories.
+exec /sbin/reboot "$@"

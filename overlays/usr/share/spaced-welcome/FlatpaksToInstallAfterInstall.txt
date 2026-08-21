@@ -1,7 +1,6 @@
 # One Flatpak application ID or bundle URL per line.
 # LibreOffice supplies both Writer and Calc in one Flatpak.
 org.atheme.audacious
-io.github.kolunmi.Bazaar
 com.brave.Browser
 org.libreoffice.LibreOffice
 org.videolan.VLC

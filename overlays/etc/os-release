@@ -1,9 +1,9 @@
-PRETTY_NAME="Spaced Linux 8.26.5"
+PRETTY_NAME="Spaced Linux 8.26.6"
 NAME="Spaced Linux"
-VERSION_ID="8.26.5"
-VERSION="8.26.5"
-VERSION_CODENAME="8265"
-BUILD_ID="8.26.5"
+VERSION_ID="8.26.6"
+VERSION="8.26.6"
+VERSION_CODENAME="8266"
+BUILD_ID="8.26.6"
 ID=spaced
 ID_LIKE=debian
 HOME_URL="https://github.com/crhy/spaced"

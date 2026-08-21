@@ -26,7 +26,11 @@ for required_package in \
     polkitd \
     pkexec \
     chrony \
+    btop \
     gparted \
+    nvtop \
+    pulseaudio-utils \
+    tzdata \
     firmware-nvidia-graphics \
     xserver-xorg-video-nouveau \
     wmctrl
@@ -94,7 +98,7 @@ duplicates = sorted(package for package, count in Counter(packages).items() if c
 assert not duplicates, f"duplicate packages in config/packages.yaml: {duplicates}"
 forbidden_packages = {
     "cairo-dock", "cairo-dock-plug-ins", "feh", "imagemagick",
-    "firmware-linux", "firmware-linux-nonfree", "nvtop",
+    "firmware-linux", "firmware-linux-nonfree",
     "xorriso", "xserver-xorg-video-qxl", "yad",
 }
 assert not forbidden_packages.intersection(packages), "obsolete runtime/build-helper package returned"
@@ -110,7 +114,7 @@ assert "QT_QPA_PLATFORMTHEME=gtk3" in application_theming \
     and "QT_STYLE_OVERRIDE=Fusion" in application_theming, \
     "Qt applications do not have a complete cross-toolkit control style (issue #78)"
 assert {"bluez", "bluez-tools"}.issubset(packages), "Bluetooth stack is not included by default (issue #77)"
-assert {"caja-admin", "gigolo", "gparted", "timeshift"}.issubset(packages), \
+assert {"btop", "caja-admin", "gigolo", "gparted", "nvtop", "timeshift", "zstd"}.issubset(packages), \
     "administrator, partitioning, Windows-share, or backup desktop integration is missing"
 assert {"gnome-keyring", "libcanberra-gtk3-module", "accountsservice"}.issubset(packages), \
     "Flatpak/keyring or LightDM desktop integration is incomplete"
@@ -119,7 +123,8 @@ assert "mate-power-manager" in packages, \
 defaults_control = (Path("packages/spaced-mate-default-settings/DEBIAN/control")
                     .read_text(encoding="utf-8"))
 for package in ("accountsservice", "caja-admin", "gigolo", "gnome-keyring",
-                "libcanberra-gtk3-module", "timeshift", "wmctrl",
+                "libcanberra-gtk3-module", "pulseaudio-utils", "timeshift",
+                "tzdata", "wmctrl", "x11-xserver-utils",
                 "xdg-desktop-portal-gtk"):
     assert package in defaults_control, \
         f"installed-system desktop updates do not depend on {package}"
@@ -130,6 +135,9 @@ assert "autologin-user=user" in defaults_postinst and "glib-compile-schemas" in 
 local_package_builder = Path("scripts/iso/build-local-packages.sh").read_text(encoding="utf-8")
 assert "stage_desktop_defaults" in local_package_builder and "usr/share/themes" in local_package_builder, \
     "spaced-mate-default-settings remains an empty metadata package"
+assert "spaced-audio-restore.desktop" in local_package_builder \
+    and "spaced-display-repair.desktop" in local_package_builder, \
+    "installed-system update package omits audio or display recovery autostarts"
 assert '-name "${pkg}_*_all.deb"' in local_package_builder and "-delete" in local_package_builder, \
     "local package builds can leave stale release versions in ISO staging"
 
@@ -154,6 +162,8 @@ assert "nouveau.modeset=1" not in live_grub_cfg and "nouveau.modeset=1" not in l
     "forced early nouveau modeset must not return to the default boot path"
 assert "--bootappend-live" in live_build_config and "boot=live components quiet splash" in live_build_config, \
     "default live boot append line regressed"
+assert "dhcpcd-base,ifupdown" in live_build_config, \
+    "debootstrap can configure ifupdown before its non-systemd sysusers provider"
 assert "live-media-timeout=" not in live_build_config + live_grub_cfg, \
     "live-media-timeout suppresses scanning and can force an initramfs failure"
 qemu_common = Path("scripts/vm/qemu/common.sh").read_text(encoding="utf-8")
@@ -168,10 +178,15 @@ assert "qemu-system-x86 qemu-utils" in makefile_text, \
     "make deps omits qemu-img, which the reusable VM scripts require"
 assert "Discarding unsafe live-build bootstrap cache" in makefile_text, \
     "Makefile must reject cached bootstrap trees with unsafe core ownership"
+assert '"$(abspath $(LOCAL_PACKAGE_DIR))"' in makefile_text.split("clean:", 1)[1].split("cache-clean:", 1)[0] \
+    and "$(ROOT_RUN) rm -rf" in makefile_text.split("clean:", 1)[1].split("cache-clean:", 1)[0], \
+    "make clean cannot remove root-owned local package artifacts"
 assert "sha256sum $(ISO_NAME) > $(ISO_NAME).sha256" in makefile_text, \
     "release checksum must use the downloadable ISO basename"
 assert 'chown -R 0:0 "$(abspath $(LB_DIR)/config/includes.chroot)"' in makefile_text, \
     "live-build overlay staging can preserve non-root ownership in /usr"
+assert '$(HOST_RUN) scripts/build-apt-repo.sh "$(abspath $(APT_REPO_DIR))"' in makefile_text, \
+    "APT repository builds do not use the host packaging tools"
 for gpu_source in (qemu_common, makefile_text):
     assert "virtio-gpu-pci" not in gpu_source and "virtio-vga" not in gpu_source, \
         "test VM must use a single GPU; dual virtio VGA leaves the guest on a black screen"
@@ -290,19 +305,28 @@ assert welcome_app.is_file() and welcome_launcher.is_file() and welcome_autostar
     "Spaced Linux first-run application is incomplete"
 assert "/run/live/medium" in welcome_wrapper and "welcome-shown" in welcome_wrapper, \
     "first-run application is not limited to one installed-system launch"
-assert "io.github.kolunmi.Bazaar" in flatpak_installer, "Bazaar installer action is missing"
-assert "https://github.com/crhy/spacedbazaar/releases/latest/download/io.github.kolunmi.Bazaar-x86_64.flatpak" in flatpak_installer, \
-    "the Bazaar installer no longer prefers the Spaced release bundle"
+assert "https://github.com/crhy/spacedbazaar/releases/latest/download/SpacedBazaar-x86_64.flatpak" in flatpak_installer, \
+    "the SpacedBazaar installer does not use the independent release bundle"
+assert 'bundles=("$spacedbazaar_url")' in flatpak_installer, \
+    "suggested apps do not install SpacedBazaar by default"
+assert "io.github.kolunmi.Bazaar" not in flatpak_installer, \
+    "the SpacedBazaar installer still falls back to broken upstream Bazaar"
 assert "mate-panel --replace" in flatpak_installer, \
     "installed applications do not refresh the Brisk menu immediately"
 assert "attempt $attempt of 3" in flatpak_installer and "continuing with the remaining applications" in flatpak_installer, \
     "suggested Flatpaks still fail as one all-or-nothing batch"
 assert "--continue-at -" in flatpak_installer, "large Flatpak bundle downloads do not resume"
+assert "playlist_visible=TRUE" in flatpak_installer and "playlist_y=136" in flatpak_installer, \
+    "Audacious does not receive a one-time attached-playlist default"
 assert "Some suggested apps could not be installed" in welcome_app.read_text(encoding="utf-8"), \
     "Welcome still exposes raw installer URLs instead of a useful failure message"
-for app_id in ("org.atheme.audacious", "io.github.kolunmi.Bazaar", "com.brave.Browser",
+assert "io.github.crhy.SpacedBazaar" in welcome_app.read_text(encoding="utf-8"), \
+    "Welcome does not launch the independent SpacedBazaar application"
+for app_id in ("org.atheme.audacious", "com.brave.Browser",
                "org.libreoffice.LibreOffice", "org.videolan.VLC"):
     assert app_id in flatpak_list, f"suggested Flatpak is missing: {app_id}"
+assert "io.github.kolunmi.Bazaar" not in flatpak_list, \
+    "suggested apps still install the broken upstream Bazaar Flatpak"
 assert "https://github.com/crhy/Voice2Text-AI/releases/latest/download/Voice2Text-AI.flatpak" in flatpak_list, \
     "Voice2Text does not use GitHub's stable latest-release URL"
 assert "/releases/download/v" not in flatpak_list, "Voice2Text is pinned to a stale release"
@@ -408,7 +432,7 @@ for screenshot in ("MacOS.png", "ModernAItools.png", "Music.png", "Spreadsheet.p
     image = root / "etc/calamares/branding/spaced/slideshow/images" / screenshot
     assert image.is_file(), f"Calamares slideshow screenshot is missing: {screenshot}"
     assert f'source: "images/{screenshot}"' in slideshow, f"Calamares slideshow does not use {screenshot}"
-assert "Open Bazaar after installation to explore the full catalog" in slideshow, \
+assert "Open SpacedBazaar after installation to explore the full catalog" in slideshow, \
     "Calamares slideshow does not explain the application catalog"
 branding = (root / "etc/calamares/branding/spaced/branding.desc").read_text(encoding="utf-8")
 assert branding.count("spaced-logo.png") == 3, \
@@ -466,8 +490,11 @@ for catch_all_name in ("Spaced-Dark", "Spaced-Linux-Dark", "Spaced-Linux-Light")
 assert ".caja-desktop-window" in shared_gtk, "GTK CSS does not preserve Caja's wallpaper paint layer"
 widget_gtk = (theme_root / "Spaced-Dark/gtk-3.0/gtk-widgets.css").read_text(encoding="utf-8")
 assert "background-color: alpha(@theme_selected_bg_color, 0.18)" in widget_gtk \
-    and "background-image: none" in widget_gtk, \
+    and "background-image: none" in widget_gtk \
+    and "window.caja-desktop-window rubberband" in widget_gtk, \
     "GTK drag-selection rubber bands are not translucent (issue #101)"
+assert "textview text selection" in shared_gtk and "entry selection" in shared_gtk, \
+    "GTK text selection is not visibly highlighted"
 assert "#PanelApplet #showdesktop-button" in shared_gtk, \
     "panel applet buttons do not inherit each theme's panel color"
 assert "#PanelPlug" in shared_gtk and "NaTrayApplet" in shared_gtk, \
@@ -549,9 +576,11 @@ assert "Hidden=true" in tray_volume_text, "mate-media tray volume icon still aut
 schema_override = (root / "usr/share/glib-2.0/schemas/90_spaced-linux.gschema.override").read_text(encoding="utf-8")
 assert "format='12-hour'" in schema_override and "show-date=false" in schema_override, \
     "clock does not default to 12-hour time without the date"
+assert "[org.mate.caja.preferences]" in schema_override and "show-hidden-files=true" in schema_override, \
+    "Caja does not retain the requested hidden-file default"
 menu_on_dark = icon_root / "Spaced-Menu-On-Dark/scalable/places"
 menu_on_light = icon_root / "Spaced-Menu-On-Light/scalable/places"
-for menu_directory, color in ((menu_on_dark, "#f3f3f3"), (menu_on_light, "#202020")):
+for menu_directory, color in ((menu_on_dark, "#b8bcc2"), (menu_on_light, "#202020")):
     menu_icon = (menu_directory / "start-here.svg").read_text(encoding="utf-8")
     menu_symbolic = (menu_directory / "start-here-symbolic.svg").read_text(encoding="utf-8")
     assert color in menu_icon and color in menu_symbolic, "light/dark transparent Spaced menu icons are incomplete"
@@ -559,6 +588,14 @@ for menu_directory, color in ((menu_on_dark, "#f3f3f3"), (menu_on_light, "#20202
         "Brisk menu icon does not match the round Spaced mark"
     assert "<rect" not in menu_icon and "<rect" not in menu_symbolic, \
         "Spaced menu icon has a square background"
+for surface, color in (("Spaced-Menu-On-Dark", "#b8bcc2"),
+                       ("Spaced-Menu-On-Light", "#202020")):
+    actions = icon_root / surface / "scalable/actions"
+    for icon_name in ("system-shutdown.svg", "system-shutdown-symbolic.svg",
+                      "changes-allow.svg", "changes-allow-symbolic.svg"):
+        icon_text = (actions / icon_name).read_text(encoding="utf-8")
+        assert color in icon_text and 'viewBox="0 0 48 48"' in icon_text, \
+            f"{surface}: {icon_name} is not a compact monochrome icon"
 for theme in themes:
     icon_metadata = (icon_root / f"Spaced-Icons-{theme['gtk_theme'].removeprefix('Spaced-')}" / "index.theme")
     menu_variant = "Spaced-Menu-On-Dark" if theme["dark"] else "Spaced-Menu-On-Light"
@@ -631,12 +668,44 @@ assert "gsettings monitor org.mate.background picture-filename" not in theme_mon
     "wallpaper persistence must reuse the generic event-driven monitor"
 
 first_login_repair = (root / "usr/local/bin/spaced-first-login-repair").read_text(encoding="utf-8")
-assert "first-login-repair-v4" in first_login_repair, "first-login repair marker was not advanced"
+assert "first-login-repair-v5" in first_login_repair, "first-login repair marker was not advanced"
 assert "window-scaling-factor 1" in first_login_repair, \
     "standard-DPI profiles do not get an explicit 100% scaling factor"
+assert "text/x-shellscript" in first_login_repair and "pluma.desktop" in first_login_repair, \
+    "upgraded profiles do not receive the Pluma shell-script association"
+assert "org.mate.caja.preferences show-hidden-files true" in first_login_repair, \
+    "upgraded Caja profiles do not receive the hidden-file persistence migration"
 for object_id in ("brisk-menu", "window-list", "notification-area",
                   "volume-control-applet", "clock", "show-desktop"):
     assert object_id in first_login_repair, f"panel migration does not repair {object_id}"
+
+system_mimeapps = (root / "usr/share/applications/mimeapps.list").read_text(encoding="utf-8")
+skel_mimeapps = (root / "etc/skel/.config/mimeapps.list").read_text(encoding="utf-8")
+for mimeapps in (system_mimeapps, skel_mimeapps):
+    assert "text/plain=pluma.desktop" in mimeapps \
+        and "text/x-shellscript=pluma.desktop" in mimeapps, \
+        "Pluma is not the default editor for text and shell scripts"
+
+display_repair = (root / "usr/local/bin/spaced-display-repair").read_text(encoding="utf-8")
+audio_restore = (root / "usr/local/bin/spaced-audio-restore").read_text(encoding="utf-8")
+assert "ActiveChanged (false," in display_repair and "Broadcast RGB" in display_repair \
+    and "underscan" in display_repair, \
+    "display recovery does not cover screensaver wake and TV underscan"
+assert "pactl subscribe" in audio_restore and "set-sink-mute" in audio_restore \
+    and "set-sink-volume" in audio_restore, \
+    "audio state is not restored and persisted for reappearing sinks"
+finished = yaml.safe_load((root / "etc/calamares/modules/finished.conf").read_text(encoding="utf-8"))
+assert finished["restartNowCommand"] == "/sbin/reboot", \
+    "Calamares uses a PATH-dependent reboot command"
+assert (root / "usr/local/bin/reboot").read_text(encoding="utf-8").startswith("#!/bin/sh"), \
+    "desktop users do not have an unqualified reboot command"
+timezone_helper = (root / "usr/local/sbin/spaced-finalize-timezone").read_text(encoding="utf-8")
+assert "/usr/share/zoneinfo/$timezone" in timezone_helper and "--systohc --utc" in timezone_helper, \
+    "Calamares timezone finalization does not retain the selected zone with a UTC RTC"
+grub_defaults = (root / "etc/default/grub").read_text(encoding="utf-8")
+assert 'GRUB_THEME="/boot/grub/themes/spaced/theme.txt"' in grub_defaults \
+    and (root / "boot/grub/themes/spaced/theme.txt").is_file(), \
+    "the installed system does not use the Spaced GRUB theme"
 
 nvidia_postboot = (root / "usr/lib/spaced-linux/spaced-nvidia-postboot.py").read_text(encoding="utf-8")
 assert 'wm_name.lower() != "compiz"' in nvidia_postboot \

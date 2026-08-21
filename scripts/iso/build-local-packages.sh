@@ -46,6 +46,8 @@ stage_desktop_defaults() {
         etc/profile.d/spaced-xdg-runtime.sh \
         etc/profile.d/spaced-xdg-user-dirs.sh \
         etc/skel \
+        etc/xdg/autostart/spaced-audio-restore.desktop \
+        etc/xdg/autostart/spaced-display-repair.desktop \
         etc/xdg/autostart/spaced-enable-flathub.desktop \
         etc/xdg/autostart/spaced-first-login-repair.desktop \
         etc/xdg/autostart/spaced-nvidia-postboot.desktop \

@@ -148,6 +148,17 @@ spinbutton > entry {
     color: @theme_text_color;
 }
 
+/* GTK's text-selection node is separate from :selected in Pluma, Caja's
+ * rename entry, and several GTK3 dialogs. Keep copied text visibly selected
+ * under every Spaced palette. */
+textview text selection,
+textview selection,
+entry selection,
+label selection {
+    background-color: @theme_selected_bg_color;
+    color: @theme_selected_fg_color;
+}
+
 /* Modern flat buttons: clean 1px outline, calm surface, and an accent that
  * only appears on hover or for the suggested action. The engine's raised
  * 3D borders were the source of every "ugly button" report.

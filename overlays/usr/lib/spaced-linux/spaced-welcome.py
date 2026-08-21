@@ -70,15 +70,15 @@ class WelcomeWindow(Gtk.Window):
         self.suggested = self._choice(
             "system-software-install",
             "Install Suggested Apps",
-            "Audacious · Brave · LibreOffice · VLC · Voice2Text · Bazaar",
+            "SpacedBazaar · Audacious · Brave · LibreOffice · VLC · Voice2Text",
         )
         self.suggested.connect("clicked", self._start_install, "suggested")
         surface.pack_start(self.suggested, True, True, 0)
 
         self.bazaar = self._choice(
             "system-software-update",
-            "Open Bazaar",
-            "Install Bazaar, then browse Flathub",
+            "Open SpacedBazaar",
+            "Install SpacedBazaar, then browse Flathub",
         )
         self.bazaar.set_margin_top(18)
         self.bazaar.connect("clicked", self._start_install, "bazaar")
@@ -144,7 +144,7 @@ class WelcomeWindow(Gtk.Window):
         if mode == "suggested":
             self.status.set_text("Installing the suggested apps from Flathub…")
         else:
-            self.status.set_text("Installing Bazaar from Flathub…")
+            self.status.set_text("Installing SpacedBazaar from GitHub…")
         threading.Thread(target=self._install, args=(mode,), daemon=True).start()
 
     def _install(self, mode):
@@ -169,16 +169,16 @@ class WelcomeWindow(Gtk.Window):
             if output.strip():
                 print(output.rstrip(), file=sys.stderr)
             if mode == "bazaar":
-                message = "Bazaar could not be installed. Check your connection and try again."
+                message = "SpacedBazaar could not be installed. Check your connection and try again."
             else:
                 message = "Some suggested apps could not be installed. Check your connection and try again."
             self.status.set_text(message)
             return False
 
         if mode == "bazaar":
-            self.status.set_text("Bazaar is opening…")
+            self.status.set_text("SpacedBazaar is opening…")
             subprocess.Popen(
-                ["flatpak", "run", "io.github.kolunmi.Bazaar"],
+                ["flatpak", "run", "io.github.crhy.SpacedBazaar"],
                 start_new_session=True,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,

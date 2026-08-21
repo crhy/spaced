@@ -1,0 +1,65 @@
+#!/bin/bash
+# PulseAudio normally restores sink state itself. Keep a small user-level copy
+# as a fallback for hardware and virtual sinks that reappear muted or at 0%.
+set -u
+
+state_dir=${XDG_CONFIG_HOME:-$HOME/.config}/spaced
+state_file=$state_dir/audio-state
+
+wait_for_pulse() {
+    local attempt
+    for attempt in {1..30}; do
+        pactl info >/dev/null 2>&1 && return 0
+        sleep 1
+    done
+    return 1
+}
+
+read_current() {
+    local sink volume mute
+    sink=$(pactl get-default-sink 2>/dev/null || true)
+    [ -n "$sink" ] || return 1
+    volume=$(pactl get-sink-volume "$sink" 2>/dev/null |
+        awk 'match($0, /[0-9]+%/) {print substr($0, RSTART, RLENGTH-1); exit}')
+    mute=$(pactl get-sink-mute "$sink" 2>/dev/null | awk '{print $2; exit}')
+    [[ "$volume" =~ ^[0-9]+$ ]] || return 1
+    case "$mute" in yes|no) ;; *) return 1 ;; esac
+    printf '%s %s\n' "$volume" "$mute"
+}
+
+save_current() {
+    local current temporary
+    current=$(read_current) || return 0
+    mkdir -p "$state_dir"
+    temporary=$state_file.tmp
+    printf '%s\n' "$current" > "$temporary"
+    mv "$temporary" "$state_file"
+}
+
+command -v pactl >/dev/null 2>&1 || exit 0
+wait_for_pulse || exit 0
+
+if read -r saved_volume saved_mute < "$state_file" 2>/dev/null \
+    && [[ "$saved_volume" =~ ^[0-9]+$ ]] \
+    && [[ "$saved_mute" =~ ^(yes|no)$ ]]; then
+    pactl set-sink-volume @DEFAULT_SINK@ "$saved_volume%" >/dev/null 2>&1 || true
+    [ "$saved_mute" = yes ] && mute=1 || mute=0
+    pactl set-sink-mute @DEFAULT_SINK@ "$mute" >/dev/null 2>&1 || true
+else
+    read -r current_volume current_mute < <(read_current) || exit 0
+    # Only correct the broken first-boot state. A healthy device's existing
+    # volume is preserved, and intentional later mute/0% choices are saved.
+    if [ "$current_volume" -eq 0 ]; then
+        pactl set-sink-volume @DEFAULT_SINK@ 50% >/dev/null 2>&1 || true
+    fi
+    if [ "$current_mute" = yes ]; then
+        pactl set-sink-mute @DEFAULT_SINK@ 0 >/dev/null 2>&1 || true
+    fi
+fi
+save_current
+
+pactl subscribe 2>/dev/null | while IFS= read -r event; do
+    case "$event" in
+        *" on sink "*|*" on server "*) save_current ;;
+    esac
+done

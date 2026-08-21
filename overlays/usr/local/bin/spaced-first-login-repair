@@ -1,10 +1,25 @@
 #!/bin/bash
 set -u
-marker="$HOME/.config/spaced/first-login-repair-v4"
+marker="$HOME/.config/spaced/first-login-repair-v5"
 [ -e "$marker" ] && exit 0
 mkdir -p "$(dirname "$marker")"
 # Make GTK-aware applications, including LibreOffice, follow the selected desktop theme.
 export SAL_USE_VCLPLUGIN=gtk3
+# Refresh user-level MIME defaults on upgraded profiles without replacing
+# unrelated choices. Caja then treats shell scripts consistently in Desktop
+# and ordinary subdirectories.
+if command -v xdg-mime >/dev/null 2>&1; then
+  xdg-mime default pluma.desktop text/plain || true
+  xdg-mime default pluma.desktop text/x-shellscript || true
+  xdg-mime default pluma.desktop application/x-shellscript || true
+fi
+# Caja's Ctrl-H view toggle was not retained by existing 8.26.5 profiles.
+# Apply the requested visible-hidden-files state once during this migration;
+# subsequent user changes remain ordinary persistent dconf choices.
+if command -v gsettings >/dev/null 2>&1 \
+    && gsettings list-schemas 2>/dev/null | grep -qx org.mate.caja.preferences; then
+  gsettings set org.mate.caja.preferences show-hidden-files true || true
+fi
 # Repair only missing canonical applets. Package upgrades do not cause MATE to
 # merge a newer layout into an existing dconf profile, which left upgraded
 # systems without the volume applet. Avoid a full panel reset so user-added

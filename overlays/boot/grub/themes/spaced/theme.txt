@@ -1,0 +1,37 @@
+desktop-image: "/usr/share/backgrounds/spaced/SimpleBackb.png"
+desktop-color: "#14151a"
+title-color: "#cfd3d8"
+title-font: "Unifont Regular 18"
+title-text: "Spaced Linux"
+message-font: "Unifont Regular 16"
+terminal-font: "Unifont Regular 16"
+
++ boot_menu {
+    left = 12%
+    top = 54%
+    width = 76%
+    height = 32%
+    item_color = "#a8abb2"
+    item_font = "Unifont Regular 16"
+    selected_item_color = "#ffffff"
+    selected_item_font = "Unifont Regular 16"
+    item_height = 28
+    item_padding = 6
+    item_spacing = 4
+    icon_width = 0
+    icon_height = 0
+}
+
++ progress_bar {
+    id = "__timeout__"
+    left = 20%
+    top = 90%
+    width = 60%
+    height = 14
+    font = "Unifont Regular 14"
+    text_color = "#14151a"
+    fg_color = "#cfd3d8"
+    bg_color = "#4b4e55"
+    border_color = "#858991"
+    text = "@TIMEOUT_NOTIFICATION_LONG@"
+}

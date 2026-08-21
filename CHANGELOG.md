@@ -1,5 +1,22 @@
 # Changelog
 
+## 8.26.6 - 2026-08-20
+- Kept clean Ceres bootstraps systemd-free across the current `ifupdown` transition by excluding the obsolete ifupdown stack; NetworkManager remains the sole configured network manager, and the standalone sysusers/tmpfiles helpers remain explicitly included.
+- Routed APT repository generation through the host toolchain so IDE/Flatpak release sessions can invoke `dpkg-deb` and `apt-ftparchive` reliably.
+- Restored reliable desktop audio state across reboot and hotplug: a user-session fallback remembers the selected sink volume and mute state, corrects only the broken first-boot 0%/muted state, and leaves later intentional choices alone (issues #119, #121, and #125).
+- Added an XRandR recovery helper that reasserts the active mode after login and screensaver unlock, disables driver-side underscan, clears underscan borders, and selects full-range RGB where supported (issues #116–#118).
+- Made both Calamares and interactive terminals use an absolute or `/usr/local/bin`-reachable reboot command, preventing a completed live installation from falling back to the locked `user` session when `/sbin` is absent from `PATH` (issues #113 and #120).
+- Re-applied Calamares's selected IANA timezone to `/etc/localtime`, refreshed `tzdata`, and retained the UTC hardware-clock policy so non-DST zones such as Hawaii cannot inherit a stale live-session offset (issue #104).
+- Installed SpacedBazaar 0.1.2 as part of the suggested-app transaction, retained the working dynamic Voice2Text release URL, and kept the broken upstream Bazaar identity out of every install path (issues #108, #110, and #113).
+- Seeded Audacious's documented skins-window keys once so its playlist starts attached below the player and subsequent user size and position changes remain application-owned (issue #122).
+- Added `btop`, `nvtop`, `zstd`, `pulseaudio-utils`, and `tzdata` explicitly to the image package set (issue #111).
+- Made Pluma the system, fresh-user, and upgraded-user default for plain text and shell scripts, and enabled Caja's persistent show-hidden-files preference (issues #124–#126).
+- Strengthened GTK3 Caja rubber-band and text-selection styling so click-drag areas and copied text remain visibly highlighted across all ten themes (issue #109 and the selected-text report in #113).
+- Refined the Brisk mark to silver on dark surfaces and black on light surfaces, and supplied compact matching power and privilege icons instead of oversized inherited artwork (issues #107 and #112).
+- Enabled a coordinated installed-system GRUB theme using the Spaced background, higher-contrast menu typography, and a restrained timeout bar (issue #127).
+- Updated every versioned website download to the exact 8.26.6 GitHub release asset path, with the release gate retaining cross-file URL and version checks (issue #115).
+- Accepted the clean-built 8.26.6 ISO through its portable SHA-256 check, SquashFS/package audit, and graphical KVM plus VirtualBox BIOS/EFI boots; all three paths reached SSH and a running MATE/Compiz/Caja desktop and produced nonblank captures.
+
 ## 8.26.5 - 2026-08-15
 - Bumped the release to 8.26.5 across package, ISO, bootloader, installer, website, documentation, and VM metadata.
 - Released [SpacedBazaar 0.9.4-spaced1](https://github.com/crhy/spacedbazaar/releases/tag/0.9.4-spaced1), merging Bazaar 0.9.4's screenshot, navigation, focus, zoom, and performance improvements while retaining the sandbox-safe user-installation fix for issue #61. Removed an account-specific `/home/rhy` path, built and reinstalled the GNOME 50 bundle, launched it, and completed a real Flathub install from inside the sandbox.

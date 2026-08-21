@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Spaced Audio Restore
+Comment=Restore the last working output volume and mute state
+Exec=/usr/local/bin/spaced-audio-restore
+OnlyShowIn=MATE;
+NoDisplay=true
+X-MATE-Autostart-Delay=3
