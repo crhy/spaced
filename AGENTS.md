@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Spaced Linux 8.26.5: A Devuan Ceres-based distribution with a MATE desktop, Flatpak-primary application model, and Windows XP-style desktop layout.
+Spaced Linux 8.26.6: A Devuan Ceres-based distribution with a MATE desktop, Flatpak-primary application model, and Windows XP-style desktop layout.
 
 ## Key Architecture
 

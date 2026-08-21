@@ -37,6 +37,7 @@ bluetooth:
   - bluez-tools
 audio:
   - pulseaudio
+  - pulseaudio-utils
   - mate-media
 themes:
   - papirus-icon-theme
@@ -121,6 +122,9 @@ system:
   - x11-xkb-utils
   - wmctrl
   - htop
+  - btop
+  - nvtop
+  - zstd
   - pciutils
   - usbutils
   - openssh-client
@@ -129,6 +133,7 @@ system:
   - plymouth-themes
   - fastfetch
   - chrony
+  - tzdata
   - dkms
   - os-prober
   - polkitd

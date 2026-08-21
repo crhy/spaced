@@ -25,7 +25,10 @@ if [ "$mode" = bazaar ]; then
     bundles=("$spacedbazaar_url")
 else
     refs=()
-    bundles=()
+    # SpacedBazaar is part of the supported default application experience;
+    # keep it out of the text list so the broken upstream Bazaar ID can never
+    # be reintroduced as a fallback.
+    bundles=("$spacedbazaar_url")
     [ -r "$list" ] || {
         echo "Suggested application list is missing." >&2
         exit 1
@@ -81,6 +84,26 @@ install_bundle() {
     fi
 }
 
+seed_audacious_layout() {
+    local config_dir config_file
+    config_dir="$HOME/.var/app/org.atheme.audacious/config/audacious"
+    config_file="$config_dir/config"
+    [ ! -e "$config_file" ] || return 0
+    install -d -m 0700 "$config_dir"
+    # Audacious's Winamp interface otherwise defaults its playlist beside the
+    # player. Seed the upstream-supported skins keys once; Audacious owns and
+    # updates the file after first launch, so later user placement persists.
+    printf '%s\n' \
+        '[skins]' \
+        'player_x=20' \
+        'player_y=20' \
+        'playlist_visible=TRUE' \
+        'playlist_x=20' \
+        'playlist_y=136' \
+        'playlist_width=275' \
+        'playlist_height=232' > "$config_file"
+}
+
 tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT
 
@@ -95,6 +118,10 @@ for url in "${bundles[@]}"; do
         failures+=("$url")
     fi
 done
+
+if flatpak info --user org.atheme.audacious >/dev/null 2>&1; then
+    seed_audacious_layout
+fi
 
 # Refresh the desktop database, the icon cache, and the panel so newly
 # installed applications appear in the Brisk menu immediately.

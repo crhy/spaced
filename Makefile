@@ -42,8 +42,7 @@ check: ## Validate configuration, scripts, themes, and desktop entries
 	$(HOST_RUN) scripts/check.sh
 
 clean: ## Remove generated build data for the current release
-	$(ROOT_RUN) rm -rf "$(abspath $(LB_DIR))"
-	rm -rf "$(abspath $(LOCAL_PACKAGE_DIR))"
+	$(ROOT_RUN) rm -rf "$(abspath $(LB_DIR))" "$(abspath $(LOCAL_PACKAGE_DIR))"
 	rm -f $(ISO_DIR)/$(ISO_NAME) $(ISO_DIR)/$(ISO_NAME).sha256
 
 cache-clean: ## Remove cached live-build packages and bootstrap data
@@ -178,7 +177,7 @@ apt-repo: ## Rebuild the update repository into ./spaced-apt (from crhy/spaced-a
 		rm -rf "$(APT_REPO_DIR)"; \
 		gh repo clone crhy/spaced-apt "$(APT_REPO_DIR)"; \
 	fi
-	scripts/build-apt-repo.sh "$(APT_REPO_DIR)"
+	$(HOST_RUN) scripts/build-apt-repo.sh "$(abspath $(APT_REPO_DIR))"
 
 apt-repo-publish: apt-repo ## Rebuild and publish the update repository to crhy/spaced-apt
 	cd "$(APT_REPO_DIR)" && \

@@ -1,11 +1,18 @@
 [Icon Theme]
 Name=Spaced UI Icons for Light Surfaces
 Comment=Dark scalable Spaced Linux interface marks
-Directories=scalable/places
+Directories=scalable/places,scalable/actions
 
 [scalable/places]
 Size=48
 Context=Places
+Type=Scalable
+MinSize=16
+MaxSize=256
+
+[scalable/actions]
+Size=48
+Context=Actions
 Type=Scalable
 MinSize=16
 MaxSize=256

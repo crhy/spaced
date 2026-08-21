@@ -1,6 +1,6 @@
 [Plymouth Theme]
 Name=Spaced Linux
-Description=Spaced Linux 8.26.5 boot screen
+Description=Spaced Linux 8.26.6 boot screen
 ModuleName=script
 
 [script]

@@ -37,5 +37,4 @@ GRUB_GFXMODE=1920x1080
 
 # Uncomment to get a beep at grub start
 #GRUB_INIT_TUNE="480 440 1"
-#GRUB_THEME="/boot/grub/themes/spaced/theme.txt"
-GRUB_BACKGROUND="/usr/share/backgrounds/spaced/SimpleBackb.png"
+GRUB_THEME="/boot/grub/themes/spaced/theme.txt"

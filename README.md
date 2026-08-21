@@ -4,7 +4,7 @@
   </a>
 </p>
 
-<h1 align="center">Spaced Linux 8.26.5</h1>
+<h1 align="center">Spaced Linux 8.26.6</h1>
 
 <p align="center"><strong>Spaced. Polished. Agile. Compiz. Efficient. Devuan.</strong></p>
 
@@ -28,7 +28,7 @@
   <img alt="Compiz" src="https://img.shields.io/badge/window%20manager-Compiz-5b5bd6">
   <img alt="Init system" src="https://img.shields.io/badge/init-sysvinit-555555">
   <img alt="Architecture" src="https://img.shields.io/badge/architecture-amd64-2563eb">
-  <img alt="Release" src="https://img.shields.io/badge/release-8.26.5-0ea5e9">
+  <img alt="Release" src="https://img.shields.io/badge/release-8.26.6-0ea5e9">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-black">
 </p>
 
@@ -57,7 +57,7 @@ These are real Spaced Linux desktop sessions—not wallpaper mockups. Click any 
       <sub><strong>Compiz-first desktop</strong> — Workspaces, accessibility, motion, and organization are part of the core experience.</sub>
     </td>
     <td width="50%" align="center">
-      <a href="website/assets/screenshots/desktop-welcome.webp?v=8.26.5"><img src="website/assets/screenshots/desktop-welcome.webp?v=8.26.5" alt="Welcome to Spaced Linux first-run application"></a><br>
+      <a href="website/assets/screenshots/desktop-welcome.webp?v=8.26.6"><img src="website/assets/screenshots/desktop-welcome.webp?v=8.26.6" alt="Welcome to Spaced Linux first-run application"></a><br>
       <sub><strong>Friendly first run</strong> — Start installing software or open the browser from one clear welcome screen.</sub>
     </td>
   </tr>
@@ -145,7 +145,7 @@ Download the ISO and its matching checksum from the [Spaced Linux releases page]
 Verify the download on Linux:
 
 ```bash
-sha256sum -c spaced-linux-8.26.5-amd64.iso.sha256
+sha256sum -c spaced-linux-8.26.6-amd64.iso.sha256
 ```
 
 Test release images in a virtual machine or on non-critical hardware before adopting them for daily use.
@@ -227,7 +227,7 @@ Thank you for helping keep an independent, polished, systemd-free desktop availa
 
 ## Project status
 
-The current development line is **8.26.5**. Spaced Linux is an independent community project under active development.
+The current development line is **8.26.6**. Spaced Linux is an independent community project under active development.
 
 ## Contributing
 
