@@ -2,7 +2,12 @@
 Name=Spaced Linux Mint folder icons
 Comment=Spaced Linux Mint folder color over Papirus Dark
 Inherits=Spaced-Menu-On-Dark,Papirus-Dark,hicolor
-Directories=scalable/places
+Directories=48x48/places,scalable/places
+
+[48x48/places]
+Size=48
+Context=Places
+Type=Fixed
 
 [scalable/places]
 Size=64

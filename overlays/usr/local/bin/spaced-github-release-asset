@@ -1,0 +1,49 @@
+#!/bin/bash
+# Print the download URL for exactly one asset on a repository's latest stable
+# GitHub release. Asset names may contain a shell-style glob so versioned names
+# continue to resolve after upstream releases.
+set -euo pipefail
+
+repo=${1:-}
+pattern=${2:-}
+api_root=${SPACED_GITHUB_API_ROOT:-https://api.github.com}
+
+case "$repo" in
+    crhy/*) ;;
+    *) echo "Expected a crhy GitHub repository, got: $repo" >&2; exit 2 ;;
+esac
+[ -n "$pattern" ] || {
+    echo "Usage: $0 crhy/repository 'asset-pattern'" >&2
+    exit 2
+}
+
+release_json=$(mktemp)
+trap 'rm -f "$release_json"' EXIT
+curl --fail --location --silent --show-error --retry 3 --retry-all-errors \
+    --connect-timeout 15 \
+    --header 'Accept: application/vnd.github+json' \
+    --output "$release_json" \
+    "$api_root/repos/$repo/releases/latest"
+
+python3 - "$release_json" "$pattern" <<'PY'
+import fnmatch
+import json
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as source:
+    release = json.load(source)
+
+pattern = sys.argv[2]
+matches = [
+    asset.get("browser_download_url", "")
+    for asset in release.get("assets", [])
+    if fnmatch.fnmatchcase(asset.get("name", ""), pattern)
+]
+matches = [url for url in matches if url]
+if len(matches) != 1:
+    raise SystemExit(
+        f"{release.get('html_url', 'latest release')}: "
+        f"expected one asset matching {pattern!r}, found {len(matches)}"
+    )
+print(matches[0])
+PY

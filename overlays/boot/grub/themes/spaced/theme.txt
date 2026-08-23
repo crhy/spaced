@@ -1,10 +1,20 @@
-desktop-image: "/usr/share/backgrounds/spaced/SimpleBackb.png"
+desktop-image: "SimpleBackb.png"
+desktop-image-scale-method: "stretch"
 desktop-color: "#14151a"
 title-color: "#cfd3d8"
 title-font: "Unifont Regular 18"
 title-text: "Spaced Linux"
 message-font: "Unifont Regular 16"
 terminal-font: "Unifont Regular 16"
+
++ image {
+    id = "spaced-logo"
+    left = 74%
+    top = 56%
+    width = 19%
+    height = 34%
+    file = "spaced-icon-fancy.png"
+}
 
 + boot_menu {
     left = 12%

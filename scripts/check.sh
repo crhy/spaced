@@ -55,6 +55,7 @@ done
 
 python3 - <<'PY'
 import glob
+import hashlib
 import json
 from collections import Counter
 from pathlib import Path
@@ -292,12 +293,16 @@ assert "etc/xdg/QtProject/qtquickcontrols2.conf" in package_builder, \
     "update package omits the Calamares Qt Quick styling"
 assert 'Spaced-Dark ] && continue' not in package_builder, \
     "update package omits the shared GTK engine used by every Spaced theme"
+assert "Spaced-Icons-*" in package_builder and "start-here-symbolic.png" in package_builder, \
+    "active icon-theme caches do not receive the issue-provided Brisk mark"
 
 welcome_app = root / "usr/lib/spaced-linux/spaced-welcome.py"
 welcome_launcher = root / "usr/share/applications/spaced-welcome.desktop"
 welcome_autostart = root / "etc/xdg/autostart/spaced-welcome.desktop"
 welcome_wrapper = (root / "usr/local/bin/spaced-welcome").read_text(encoding="utf-8")
 flatpak_installer = (root / "usr/local/bin/spaced-install-apps").read_text(encoding="utf-8")
+release_resolver_path = root / "usr/local/bin/spaced-github-release-asset"
+release_resolver = release_resolver_path.read_text(encoding="utf-8")
 flatpak_list = (root / "usr/share/spaced-welcome/FlatpaksToInstallAfterInstall.txt").read_text(encoding="utf-8")
 flatpak_wrapper_path = root / "usr/local/bin/flatpak"
 flatpak_wrapper = flatpak_wrapper_path.read_text(encoding="utf-8")
@@ -305,10 +310,14 @@ assert welcome_app.is_file() and welcome_launcher.is_file() and welcome_autostar
     "Spaced Linux first-run application is incomplete"
 assert "/run/live/medium" in welcome_wrapper and "welcome-shown" in welcome_wrapper, \
     "first-run application is not limited to one installed-system launch"
-assert "https://github.com/crhy/spacedbazaar/releases/latest/download/SpacedBazaar-x86_64.flatpak" in flatpak_installer, \
-    "the SpacedBazaar installer does not use the independent release bundle"
-assert 'bundles=("$spacedbazaar_url")' in flatpak_installer, \
+assert "github-release:crhy/spacedbazaar:SpacedBazaar-x86_64.flatpak" in flatpak_installer, \
+    "the SpacedBazaar installer does not resolve the independent latest release bundle"
+assert 'bundles=("$spacedbazaar_spec")' in flatpak_installer, \
     "suggested apps do not install SpacedBazaar by default"
+assert release_resolver_path.stat().st_mode & 0o111, "GitHub release resolver is not executable"
+assert "/repos/$repo/releases/latest" in release_resolver \
+    and "fnmatch.fnmatchcase" in release_resolver, \
+    "GitHub bundles are pinned or selected without checking the latest release assets"
 assert "io.github.kolunmi.Bazaar" not in flatpak_installer, \
     "the SpacedBazaar installer still falls back to broken upstream Bazaar"
 assert "mate-panel --replace" in flatpak_installer, \
@@ -327,9 +336,24 @@ for app_id in ("org.atheme.audacious", "com.brave.Browser",
     assert app_id in flatpak_list, f"suggested Flatpak is missing: {app_id}"
 assert "io.github.kolunmi.Bazaar" not in flatpak_list, \
     "suggested apps still install the broken upstream Bazaar Flatpak"
-assert "https://github.com/crhy/Voice2Text-AI/releases/latest/download/Voice2Text-AI.flatpak" in flatpak_list, \
-    "Voice2Text does not use GitHub's stable latest-release URL"
-assert "/releases/download/v" not in flatpak_list, "Voice2Text is pinned to a stale release"
+for bundle_spec in (
+    "github-release:crhy/Voice2Text-AI:Voice2Text-AI.flatpak",
+    "github-release:crhy/ScumWithCats:ScumWithCats-*.flatpak",
+    "github-release:crhy/brutalchess:BrutalChess-*.flatpak",
+    "github-release:crhy/spacedupdate:SpacedUpdate-*-x86_64.flatpak",
+):
+    assert bundle_spec in flatpak_list, f"latest CRHY bundle is missing: {bundle_spec}"
+assert "/releases/download/v" not in flatpak_list, "a CRHY app is pinned to a stale release"
+bazaar_main = yaml.safe_load((root / "etc/bazaar/bazaar.yaml").read_text(encoding="utf-8"))
+bazaar_content = yaml.safe_load((root / "etc/bazaar/config.yaml").read_text(encoding="utf-8"))
+assert bazaar_main["start-on-curated"] is True \
+    and "/run/host/etc/bazaar/config.yaml" in bazaar_main["curated-config-paths"], \
+    "SpacedBazaar does not load the Spaced Linux catalog"
+bazaar_apps = bazaar_content["rows"][0]["section"]["appids"]["list"]
+assert {"io.github.crhy.SpacedBazaar", "io.github.crhy.voice2textai",
+        "io.github.crhy.ScumWithCats", "io.github.crhy.BrutalChess",
+        "org.spacedlinux.SpacedUpdate"}.issubset(bazaar_apps), \
+    "SpacedBazaar's CRHY catalog is incomplete"
 assert {"python3-gi", "gir1.2-gtk-3.0"}.issubset(packages), \
     "first-run GTK application dependencies are missing"
 assert flatpak_wrapper_path.stat().st_mode & 0o111, "Flatpak HTTPS-bundle wrapper is not executable"
@@ -392,7 +416,9 @@ assert any(instance.get("module") == "shellprocess" and instance.get("id") == "s
 assert calamares_settings.get("hide-back-and-next-during-exec") is False, \
     "Calamares execution-navigation policy is missing"
 cleanup = (root / "etc/calamares/modules/shellprocess@spaced-cleanup.conf").read_text(encoding="utf-8")
-for unsafe_live_setting in ("spaced-live", "50-spaced.conf", "10-spaced.conf", "passwd -l root"):
+for unsafe_live_setting in ("spaced-live", "49-spaced-live-gparted.rules",
+                            "spaced-live-session.desktop", "50-spaced.conf",
+                            "10-spaced.conf", "passwd -l root"):
     assert unsafe_live_setting in cleanup, f"Calamares does not clean up {unsafe_live_setting}"
 calamares_packages = yaml.safe_load((root / "etc/calamares/modules/packages.conf").read_text(encoding="utf-8"))
 removed_after_install = set(calamares_packages["operations"][0]["remove"])
@@ -439,6 +465,13 @@ assert branding.count("spaced-logo.png") == 3, \
     "Calamares internal branding does not use the transparent Spaced logo"
 assert "SpacedIconb" not in branding, \
     "Calamares internal branding still uses the tiled icon with a background"
+fancy_icon = Path("branding/spaced-icon-fancy.png").read_bytes()
+calamares_icon = root / "etc/calamares/branding/spaced/spaced-logo.png"
+assert hashlib.sha256(calamares_icon.read_bytes()).digest() == hashlib.sha256(fancy_icon).digest(), \
+    "Calamares does not use the fancy Spaced icon"
+calamares_stylesheet = (root / "etc/calamares/branding/spaced/stylesheet.qss").read_text(encoding="utf-8")
+assert "QLabel#logoApp" in calamares_stylesheet and "#1b1b1f" in calamares_stylesheet, \
+    "Calamares logo transparency does not reveal the matching sidebar surface"
 assert "Icon=install-spaced-linux" in launcher.read_text(encoding="utf-8"), \
     "Calamares desktop launcher does not use the light download-arrow icon"
 calamares_launcher = (root / "usr/local/bin/install-spaced-linux").read_text(encoding="utf-8")
@@ -448,6 +481,10 @@ assert "pkexec calamares" not in calamares_launcher, "Calamares launcher still u
 assert all(setting in calamares_launcher for setting in (
     "QT_QUICK_BACKEND=software", "QSG_RHI_BACKEND=software", "LIBGL_ALWAYS_SOFTWARE=1")), \
     "Calamares does not force its VirtualBox-safe Qt software rendering path"
+assert "/tmp/calamares-root-" in calamares_launcher \
+    and "umount --recursive" in calamares_launcher \
+    and "swapoff --all" in calamares_launcher, \
+    "failed Calamares target state prevents whole-disk retry"
 calamares_locale = yaml.safe_load((root / "etc/calamares/modules/locale.conf").read_text(encoding="utf-8"))
 assert calamares_locale["region"] == "America" and calamares_locale["zone"] == "Los_Angeles", \
     "Calamares does not initially select Los Angeles"
@@ -588,6 +625,15 @@ for menu_directory, color in ((menu_on_dark, "#b8bcc2"), (menu_on_light, "#20202
         "Brisk menu icon does not match the round Spaced mark"
     assert "<rect" not in menu_icon and "<rect" not in menu_symbolic, \
         "Spaced menu icon has a square background"
+for surface in ("Spaced-Menu-On-Dark", "Spaced-Menu-On-Light"):
+    raster_dir = icon_root / surface / "48x48/places"
+    for raster_name in ("start-here.png", "start-here-symbolic.png"):
+        raster = raster_dir / raster_name
+        assert raster.is_file() and raster.read_bytes().startswith(b"\x89PNG\r\n\x1a\n"), \
+            f"{surface}: {raster_name} does not use the supplied raster Brisk mark"
+    assert (raster_dir / "start-here.png").read_bytes() == \
+        (raster_dir / "start-here-symbolic.png").read_bytes(), \
+        f"{surface}: regular and symbolic Brisk marks differ"
 for surface, color in (("Spaced-Menu-On-Dark", "#b8bcc2"),
                        ("Spaced-Menu-On-Light", "#202020")):
     actions = icon_root / surface / "scalable/actions"
@@ -599,8 +645,12 @@ for surface, color in (("Spaced-Menu-On-Dark", "#b8bcc2"),
 for theme in themes:
     icon_metadata = (icon_root / f"Spaced-Icons-{theme['gtk_theme'].removeprefix('Spaced-')}" / "index.theme")
     menu_variant = "Spaced-Menu-On-Dark" if theme["dark"] else "Spaced-Menu-On-Light"
-    assert icon_metadata.is_file() and f"Inherits={menu_variant},Papirus-Dark,hicolor" in icon_metadata.read_text(encoding="utf-8"), \
+    icon_metadata_text = icon_metadata.read_text(encoding="utf-8")
+    assert icon_metadata.is_file() and f"Inherits={menu_variant},Papirus-Dark,hicolor" in icon_metadata_text, \
         f"{theme['name']}: scalable Papirus icons do not precede low-resolution hicolor fallbacks"
+    assert "Directories=48x48/places," in icon_metadata_text \
+        and "[48x48/places]" in icon_metadata_text, \
+        f"{theme['name']}: the exact Brisk raster mark is missing from the active theme index"
 
 for theme_name, panel_color in (("Spaced-Win11-Dark", "#17243b"),
                                 ("Spaced-Android", "#263238"),
@@ -702,10 +752,39 @@ assert (root / "usr/local/bin/reboot").read_text(encoding="utf-8").startswith("#
 timezone_helper = (root / "usr/local/sbin/spaced-finalize-timezone").read_text(encoding="utf-8")
 assert "/usr/share/zoneinfo/$timezone" in timezone_helper and "--systohc --utc" in timezone_helper, \
     "Calamares timezone finalization does not retain the selected zone with a UTC RTC"
+time_sync = (root / "usr/local/sbin/spaced-sync-time").read_text(encoding="utf-8")
+time_sync_config = yaml.safe_load((root / "etc/calamares/modules/shellprocess@spaced-time-sync.conf").read_text(encoding="utf-8"))
+assert "timeout --signal=TERM --kill-after=2 12" in time_sync \
+    and time_sync_config["timeout"] == 30 and time_sync.rstrip().endswith("exit 0"), \
+    "offline NTP can still block or fail Calamares"
+live_session = (root / "usr/local/bin/spaced-live-session").read_text(encoding="utf-8")
+live_polkit = (root / "etc/polkit-1/rules.d/49-spaced-live-gparted.rules").read_text(encoding="utf-8")
+assert "idle-activation-enabled false" in live_session and "lock-enabled false" in live_session \
+    and "/etc/sudoers.d/spaced-live" in live_session, \
+    "the live installer session can still lock or blank"
+assert 'action.id == "org.gnome.gparted"' in live_polkit \
+    and 'subject.user == "user"' in live_polkit \
+    and "subject.local && subject.active" in live_polkit, \
+    "GParted still requires an undiscoverable live-user password"
 grub_defaults = (root / "etc/default/grub").read_text(encoding="utf-8")
+grub_theme_dir = root / "boot/grub/themes/spaced"
+grub_theme = (grub_theme_dir / "theme.txt").read_text(encoding="utf-8")
 assert 'GRUB_THEME="/boot/grub/themes/spaced/theme.txt"' in grub_defaults \
-    and (root / "boot/grub/themes/spaced/theme.txt").is_file(), \
+    and (grub_theme_dir / "SimpleBackb.png").is_file() \
+    and (grub_theme_dir / "spaced-icon-fancy.png").is_file(), \
     "the installed system does not use the Spaced GRUB theme"
+assert 'desktop-image: "SimpleBackb.png"' in grub_theme \
+    and 'file = "spaced-icon-fancy.png"' in grub_theme \
+    and "/usr/share/backgrounds" not in grub_theme, \
+    "the installed GRUB theme still depends on files outside its boot-readable directory"
+assert (grub_theme_dir / "SimpleBackb.png").read_bytes() == (root / "usr/share/backgrounds/spaced/SimpleBackb.png").read_bytes(), \
+    "GRUB carries a stale or reformatted background"
+assert (grub_theme_dir / "spaced-icon-fancy.png").read_bytes() == fancy_icon, \
+    "GRUB does not carry the fancy Spaced icon"
+apt_source = (root / "etc/apt/sources.list.d/spaced-apt.list").read_text(encoding="utf-8")
+assert "trusted=yes" in apt_source \
+    and "signed-by=/usr/share/keyrings/devuan-archive-keyring.pgp" in apt_source, \
+    "Spaced APT source still triggers APT 3's missing Signed-By notice"
 
 nvidia_postboot = (root / "usr/lib/spaced-linux/spaced-nvidia-postboot.py").read_text(encoding="utf-8")
 assert 'wm_name.lower() != "compiz"' in nvidia_postboot \

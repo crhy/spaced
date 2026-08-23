@@ -39,6 +39,8 @@ stage_desktop_defaults() {
     for path in \
         etc/X11/Xsession.d/05spaced-reset-session-env \
         etc/X11/Xsession.d/25spaced-flatpak-exports \
+        etc/apt/sources.list.d/spaced-apt.list \
+        etc/bazaar \
         etc/fastfetch \
         etc/lightdm/lightdm.conf.d/60-spaced-installed.conf \
         etc/profile.d/spaced-application-theming.sh \
@@ -80,6 +82,31 @@ stage_desktop_defaults() {
 
     for path in "$ROOT"/overlays/usr/share/themes/Spaced-*; do
         (cd "$ROOT/overlays" && cp -a --parents "${path#"$ROOT/overlays/"}" "$stage")
+    done
+
+    # Brisk asks the active icon theme for start-here-symbolic. Put the exact
+    # issue-provided raster mark directly in each selectable theme so its
+    # compiled cache cannot fall through to an old Papirus or Adwaita icon.
+    for icon_theme in "$stage"/usr/share/icons/Spaced-Icons-*; do
+        [ -d "$icon_theme" ] || continue
+        case $(sed -n 's/^Inherits=\(Spaced-Menu-On-[^,]*\).*/\1/p' "$icon_theme/index.theme") in
+            Spaced-Menu-On-Dark) menu_theme=Spaced-Menu-On-Dark ;;
+            Spaced-Menu-On-Light) menu_theme=Spaced-Menu-On-Light ;;
+            *) echo "Cannot determine Brisk icon surface for $icon_theme" >&2; exit 1 ;;
+        esac
+        sed -i 's|^Directories=|Directories=48x48/places,|' "$icon_theme/index.theme"
+        cat >> "$icon_theme/index.theme" <<'ICON_DIRECTORY'
+
+[48x48/places]
+Size=48
+Context=Places
+Type=Fixed
+ICON_DIRECTORY
+        install -d "$icon_theme/48x48/places"
+        install -m 0644 \
+            "$stage/usr/share/icons/$menu_theme/48x48/places/start-here.png" \
+            "$stage/usr/share/icons/$menu_theme/48x48/places/start-here-symbolic.png" \
+            "$icon_theme/48x48/places/"
     done
 
     # Do not let a developer checkout's umask leak group-writable modes into

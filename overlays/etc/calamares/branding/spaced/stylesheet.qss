@@ -13,6 +13,12 @@ QRadioButton {
     color: #e8eaed;
 }
 
+/* The logo's transparent pixels must reveal the sidebar itself, not the
+   generic QFrame surface color. */
+QLabel#logoApp {
+    background-color: #1b1b1f;
+}
+
 QFrame,
 QGroupBox,
 QScrollArea,

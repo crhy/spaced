@@ -4,5 +4,9 @@ org.atheme.audacious
 com.brave.Browser
 org.libreoffice.LibreOffice
 org.videolan.VLC
-# GitHub redirects this stable URL to the newest published release asset.
-https://github.com/crhy/Voice2Text-AI/releases/latest/download/Voice2Text-AI.flatpak
+# GitHub release bundles are resolved from each repository's latest stable
+# release at install time. Globs keep versioned asset filenames current.
+github-release:crhy/Voice2Text-AI:Voice2Text-AI.flatpak
+github-release:crhy/ScumWithCats:ScumWithCats-*.flatpak
+github-release:crhy/brutalchess:BrutalChess-*.flatpak
+github-release:crhy/spacedupdate:SpacedUpdate-*-x86_64.flatpak

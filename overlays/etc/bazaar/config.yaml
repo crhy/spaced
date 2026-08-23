@@ -1,0 +1,16 @@
+rows:
+  - section:
+      title: "Spaced Linux Apps"
+      subtitle:
+        string: |
+          CRHY applications installed by **Spaced Linux Welcome** are collected
+          here. Run the suggested-app installer again at any time to fetch each
+          project's latest stable GitHub release.
+      list-type: rich
+      appids:
+        list:
+          - io.github.crhy.SpacedBazaar
+          - io.github.crhy.voice2textai
+          - io.github.crhy.ScumWithCats
+          - io.github.crhy.BrutalChess
+          - org.spacedlinux.SpacedUpdate
