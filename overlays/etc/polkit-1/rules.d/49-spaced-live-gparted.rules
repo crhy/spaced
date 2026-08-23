@@ -1,0 +1,9 @@
+// The disposable live user has no meaningful administrator password. Allow
+// only the active local live session to start GParted without a password; this
+// file is removed from the installed target by Calamares.
+polkit.addRule(function(action, subject) {
+    if (action.id == "org.gnome.gparted" &&
+        subject.user == "user" && subject.local && subject.active) {
+        return polkit.Result.YES;
+    }
+});

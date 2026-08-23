@@ -1,0 +1,16 @@
+#!/bin/sh
+# Keep the disposable installer session awake and unlocked. Installed users
+# retain the normal MATE screensaver and lock defaults because Calamares
+# removes this autostart and the live sudo marker is absent after installation.
+set -u
+
+[ -e /etc/sudoers.d/spaced-live ] || exit 0
+
+gsettings set org.mate.screensaver idle-activation-enabled false 2>/dev/null || true
+gsettings set org.mate.screensaver lock-enabled false 2>/dev/null || true
+mate-screensaver-command --exit >/dev/null 2>&1 || true
+xset s off 2>/dev/null || true
+xset s noblank 2>/dev/null || true
+xset -dpms 2>/dev/null || true
+
+exit 0

@@ -1,5 +1,16 @@
 # Changelog
 
+## 8.26.7 - 2026-08-22
+- Made live-session time synchronization strictly optional and bounded, so an offline NTP lookup can no longer time out Calamares or leave an incomplete installed system (issues #129 and #134).
+- Disabled screen blanking and locking only in the disposable live session, and granted its active local user passwordless GParted authorization while retaining normal installed-system authentication (issues #128 and #131).
+- Released stale Calamares target mounts before and after each installer run so a failed attempt does not hide the Erase Disk option on retry (issue #130).
+- Replaced the Calamares simple mark with the transparent fancy icon and matched the logo widget surface to the sidebar (issue #132).
+- Made the installed GRUB theme self-contained under `/boot/grub/themes/spaced`, restored its fancy logo, and used theme-relative image paths that work with separate or encrypted root filesystems (issue #133).
+- Put the issue-provided black/silver Brisk mark directly into every selectable icon theme during package staging so the active icon cache cannot resolve an inherited stale icon (issue #107).
+- Added explicit `Signed-By` scope to the intentionally trusted Spaced APT source, removing APT 3's update notice (issue #135).
+- Added Cards with Cats, Brutal Chess, and the alternate Spaced Update Flatpak to Spaced Linux Welcome and its SpacedBazaar-curated CRHY catalog alongside Voice2Text; all GitHub Flatpak bundles, including SpacedBazaar itself, now resolve their asset from each repository's latest stable release instead of pinning a versioned filename (issue #136).
+- Bumped distribution, package, installer, boot, VM, website, and documentation release identifiers to 8.26.7.
+
 ## 8.26.6 - 2026-08-20
 - Kept clean Ceres bootstraps systemd-free across the current `ifupdown` transition by excluding the obsolete ifupdown stack; NetworkManager remains the sole configured network manager, and the standalone sysusers/tmpfiles helpers remain explicitly included.
 - Routed APT repository generation through the host toolchain so IDE/Flatpak release sessions can invoke `dpkg-deb` and `apt-ftparchive` reliably.

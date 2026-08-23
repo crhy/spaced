@@ -1,3 +1,4 @@
 # Spaced Linux apt repository (GitHub Pages).
-# Unsigned for now — trusted=yes is required until a signing key is added.
-deb [trusted=yes] https://crhy.github.io/spaced-apt spaced main
+# The repository is currently explicitly trusted; Signed-By is still declared
+# so APT 3 does not emit a missing repository-key scope notice.
+deb [trusted=yes signed-by=/usr/share/keyrings/devuan-archive-keyring.pgp] https://crhy.github.io/spaced-apt spaced main

@@ -70,7 +70,7 @@ class WelcomeWindow(Gtk.Window):
         self.suggested = self._choice(
             "system-software-install",
             "Install Suggested Apps",
-            "SpacedBazaar · Audacious · Brave · LibreOffice · VLC · Voice2Text",
+            "SpacedBazaar · Voice2Text · Cards with Cats · Brutal Chess · Spaced Update · essentials",
         )
         self.suggested.connect("clicked", self._start_install, "suggested")
         surface.pack_start(self.suggested, True, True, 0)

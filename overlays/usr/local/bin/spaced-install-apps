@@ -5,7 +5,7 @@ set -euo pipefail
 mode=${1:-}
 list=${SPACED_APP_LIST:-/usr/share/spaced-welcome/FlatpaksToInstallAfterInstall.txt}
 # SpacedBazaar is a separate application from the broken upstream Flatpak.
-spacedbazaar_url=${SPACEDBAZAAR_URL:-https://github.com/crhy/spacedbazaar/releases/latest/download/SpacedBazaar-x86_64.flatpak}
+spacedbazaar_spec=${SPACEDBAZAAR_URL:-github-release:crhy/spacedbazaar:SpacedBazaar-x86_64.flatpak}
 
 case "$mode" in
     suggested|bazaar) ;;
@@ -22,13 +22,13 @@ flatpak remote-add --user --if-not-exists flathub \
 
 if [ "$mode" = bazaar ]; then
     refs=()
-    bundles=("$spacedbazaar_url")
+    bundles=("$spacedbazaar_spec")
 else
     refs=()
     # SpacedBazaar is part of the supported default application experience;
     # keep it out of the text list so the broken upstream Bazaar ID can never
     # be reintroduced as a fallback.
-    bundles=("$spacedbazaar_url")
+    bundles=("$spacedbazaar_spec")
     [ -r "$list" ] || {
         echo "Suggested application list is missing." >&2
         exit 1
@@ -38,7 +38,7 @@ else
         entry=${entry//[[:space:]]/}
         [ -n "$entry" ] || continue
         case "$entry" in
-            https://*) bundles+=("$entry") ;;
+            https://*|github-release:*) bundles+=("$entry") ;;
             *) refs+=("$entry") ;;
         esac
     done < "$list"
@@ -60,7 +60,22 @@ install_ref() {
 }
 
 install_bundle() {
-    local url=$1 name=${1##*/} bundle installed=false
+    local spec=$1 url name bundle installed=false
+    case "$spec" in
+        github-release:*)
+            local payload repo pattern
+            payload=${spec#github-release:}
+            repo=${payload%%:*}
+            pattern=${payload#*:}
+            if ! url=$(/usr/local/bin/spaced-github-release-asset "$repo" "$pattern"); then
+                echo "Could not resolve the latest release asset for $repo." >&2
+                return 1
+            fi
+            ;;
+        https://*) url=$spec ;;
+        *) echo "Unsupported Flatpak bundle source: $spec" >&2; return 1 ;;
+    esac
+    name=${url##*/}
     bundle=$(mktemp "$tmpdir/$name.XXXXXX")
     for attempt in 1 2 3; do
         echo "Downloading $name (attempt $attempt of 3)…"
@@ -113,9 +128,9 @@ for ref in "${refs[@]}"; do
     fi
 done
 
-for url in "${bundles[@]}"; do
-    if ! install_bundle "$url"; then
-        failures+=("$url")
+for bundle_spec in "${bundles[@]}"; do
+    if ! install_bundle "$bundle_spec"; then
+        failures+=("$bundle_spec")
     fi
 done
 

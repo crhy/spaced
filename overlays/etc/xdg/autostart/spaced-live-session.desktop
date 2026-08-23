@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Spaced Live Session Setup
+Comment=Keep the live installer session awake and unlocked
+Exec=/usr/local/bin/spaced-live-session
+OnlyShowIn=MATE;
+NoDisplay=true
+X-MATE-Autostart-Phase=Initialization

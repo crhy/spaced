@@ -1,0 +1,3 @@
+curated-config-paths:
+  - /run/host/etc/bazaar/config.yaml
+start-on-curated: true

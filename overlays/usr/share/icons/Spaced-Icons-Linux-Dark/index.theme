@@ -2,7 +2,12 @@
 Name=Spaced Linux Dark folder icons
 Comment=Spaced Linux Dark folder color over Papirus Dark
 Inherits=Spaced-Menu-On-Dark,Papirus-Dark,hicolor
-Directories=scalable/places,scalable/status,scalable/devices,scalable/apps,scalable/mimetypes
+Directories=48x48/places,scalable/places,scalable/status,scalable/devices,scalable/apps,scalable/mimetypes
+
+[48x48/places]
+Size=48
+Context=Places
+Type=Fixed
 
 [scalable/places]
 Size=64

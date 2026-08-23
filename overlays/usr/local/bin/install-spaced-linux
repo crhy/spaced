@@ -2,6 +2,46 @@
 # Launch Calamares safely from the live desktop without Debian-facing branding.
 set -u
 
+if pgrep -f '^/usr/bin/calamares([[:space:]]|$)' >/dev/null 2>&1; then
+    echo "The Spaced Linux installer is already running." >&2
+    exit 1
+fi
+
+# A failed Calamares run can leave its target tree mounted. That makes the
+# whole disk look busy on the next run and removes the Erase Disk option.
+# Release only Calamares-owned temporary mount trees; never touch unrelated
+# live-session or user mounts.
+reset_stale_installer_mounts() {
+    local mount_root
+    local -a stale_roots=()
+
+    mapfile -t stale_roots < <(
+        findmnt -rn -o TARGET 2>/dev/null \
+            | awk 'index($0, "/tmp/calamares-root-") == 1 { print }' \
+            | sort -r -u
+    )
+    [ "${#stale_roots[@]}" -gt 0 ] || return 0
+
+    # Calamares may also have activated a swap partition on the same target.
+    # The live image has no disk-backed swap of its own, so release active swap
+    # before asking the partitioner to re-open the failed target disk.
+    sudo swapoff --all 2>/dev/null || true
+    for mount_root in "${stale_roots[@]}"; do
+        case "$mount_root" in
+            /tmp/calamares-root-*) ;;
+            *) continue ;;
+        esac
+        if ! sudo umount --recursive "$mount_root" 2>/dev/null; then
+            sudo umount --lazy --recursive "$mount_root" 2>/dev/null || {
+                echo "Could not release stale installer mount: $mount_root" >&2
+                return 1
+            }
+        fi
+    done
+}
+
+reset_stale_installer_mounts || exit 1
+
 saved_fstab=0
 if [ -f /etc/fstab ] && [ ! -e /etc/fstab.orig.calamares ]; then
     sudo mv /etc/fstab /etc/fstab.orig.calamares
@@ -10,6 +50,7 @@ fi
 
 cleanup() {
     xhost -si:localuser:root >/dev/null 2>&1 || true
+    reset_stale_installer_mounts || true
     if [ "$saved_fstab" -eq 1 ] && [ -f /etc/fstab.orig.calamares ]; then
         sudo mv /etc/fstab.orig.calamares /etc/fstab
     fi

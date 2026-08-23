@@ -1,8 +1,15 @@
 #!/bin/bash
-set -euo pipefail
+# Time synchronization is useful on the live desktop, but it must never be a
+# prerequisite for installing from an intentionally offline live image. Bound
+# each network client independently and always return success to Calamares.
+set -u
+
 if command -v chronyd >/dev/null 2>&1; then
-  chronyd -q 'pool pool.ntp.org iburst' || true
+  timeout --signal=TERM --kill-after=2 12 \
+    chronyd -q 'pool pool.ntp.org iburst' >/dev/null 2>&1 || true
 elif command -v ntpd >/dev/null 2>&1; then
-  ntpd -gq || true
+  timeout --signal=TERM --kill-after=2 12 \
+    ntpd -gq >/dev/null 2>&1 || true
 fi
 hwclock --systohc --utc 2>/dev/null || true
+exit 0

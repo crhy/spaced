@@ -2,7 +2,12 @@
 Name=Spaced Windows 3.11 folder icons
 Comment=Spaced Windows 3.11 folder color over Papirus Dark
 Inherits=Spaced-Menu-On-Light,Papirus-Dark,hicolor
-Directories=scalable/places
+Directories=48x48/places,scalable/places
+
+[48x48/places]
+Size=48
+Context=Places
+Type=Fixed
 
 [scalable/places]
 Size=64

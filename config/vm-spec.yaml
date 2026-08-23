@@ -6,7 +6,7 @@ disk_format: qcow2
 disk_path: build/images/spaced-linux.qcow2
 
 iso:
-  path: build/iso/spaced-linux-8.26.6-amd64.iso
+  path: build/iso/spaced-linux-8.26.7-amd64.iso
 
 network:
   mode: user

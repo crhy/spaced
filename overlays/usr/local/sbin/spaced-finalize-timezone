@@ -2,23 +2,24 @@
 # Re-apply the Calamares-selected IANA zone after unpacking the target. This
 # prevents a stale live-session /etc/localtime from imposing DST on zones such
 # as Pacific/Honolulu, while retaining a UTC hardware clock.
-set -euo pipefail
+set -u
 
 timezone=$(sed -n '1{s/[[:space:]]//g;p;q}' /etc/timezone 2>/dev/null || true)
 case "$timezone" in
     ''|/*|*..*)
-        echo "Calamares did not write a valid timezone" >&2
-        exit 1
+        echo "Calamares did not write a valid timezone; retaining the unpacked timezone" >&2
+        exit 0
         ;;
 esac
 
 zoneinfo="/usr/share/zoneinfo/$timezone"
 [ -f "$zoneinfo" ] || {
-    echo "Timezone data is missing for $timezone" >&2
-    exit 1
+    echo "Timezone data is missing for $timezone; retaining the unpacked timezone" >&2
+    exit 0
 }
 
-ln -snf "$zoneinfo" /etc/localtime
-printf '%s\n' "$timezone" > /etc/timezone
-DEBIAN_FRONTEND=noninteractive dpkg-reconfigure tzdata >/dev/null
+ln -snf "$zoneinfo" /etc/localtime || true
+printf '%s\n' "$timezone" > /etc/timezone || true
+DEBIAN_FRONTEND=noninteractive dpkg-reconfigure tzdata >/dev/null 2>&1 || true
 hwclock --systohc --utc 2>/dev/null || true
+exit 0
