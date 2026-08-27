@@ -1,1 +1,70 @@
-bg=Image("SpacedBack.png");bg_s=Sprite(bg);bg_s.SetX(Window.GetX()/2-bg.GetWidth()/2);bg_s.SetY(Window.GetY()/2-bg.GetHeight()/2);logo=Image("spaced.png");logo_s=Sprite(logo);logo_s.SetX(Window.GetX()/2-logo.GetWidth()/2);logo_s.SetY(Window.GetY()/2-logo.GetHeight()/2-100);Plymouth.SetBootProgress(0);
+# Spaced Linux boot presentation. Scale the artwork to the actual framebuffer;
+# Window.GetX/Y are display offsets, not dimensions, and using them for centering
+# was the cause of the old top-left fragment.
+background = Image("SpacedBack.png").Scale(Window.GetWidth(), Window.GetHeight());
+background_sprite = Sprite(background);
+background_sprite.SetPosition(Window.GetX(), Window.GetY(), -100);
+
+logo = Image("spaced.png").Scale(240, 240);
+logo_sprite = Sprite(logo);
+logo_x = Window.GetX() + Window.GetWidth() * 0.28 - logo.GetWidth() / 2;
+logo_y = Window.GetY() + Window.GetHeight() / 2 - logo.GetHeight() / 2 - 18;
+logo_sprite.SetPosition(logo_x, logo_y, 10);
+
+title = Image.Text("SPACED LINUX", 0.86, 0.87, 0.90);
+title_sprite = Sprite(title);
+title_sprite.SetPosition(
+    Window.GetX() + Window.GetWidth() * 0.28 - title.GetWidth() / 2,
+    logo_y + logo.GetHeight() + 18,
+    11
+);
+
+# A slow restrained highlight pulse provides motion without a distracting
+# spinner or flashing the entire framebuffer.
+angle = 0;
+fun refresh_callback ()
+{
+    angle += ((2 * 3.14) / 50) * 0.35;
+    opacity = 0.88 + 0.12 * ((Math.Cos(angle) + 1) / 2);
+    logo_sprite.SetOpacity(opacity);
+}
+Plymouth.SetRefreshFunction(refresh_callback);
+
+prompt_sprite = Sprite();
+prompt_sprite.SetPosition(0, 0, 10000);
+
+fun display_normal_callback ()
+{
+    prompt_sprite.SetOpacity(0);
+}
+
+fun display_password_callback (prompt, bullets)
+{
+    text = prompt;
+    for (index = 0; index < bullets; index++)
+        text += " •";
+    prompt_image = Image.Text(text, 0.92, 0.92, 0.94);
+    prompt_sprite.SetImage(prompt_image);
+    prompt_sprite.SetPosition(
+        Window.GetX() + Window.GetWidth() / 2 - prompt_image.GetWidth() / 2,
+        Window.GetY() + Window.GetHeight() * 0.82,
+        10000
+    );
+    prompt_sprite.SetOpacity(1);
+}
+
+fun display_message_callback (message)
+{
+    prompt_image = Image.Text(message, 0.92, 0.92, 0.94);
+    prompt_sprite.SetImage(prompt_image);
+    prompt_sprite.SetPosition(
+        Window.GetX() + Window.GetWidth() / 2 - prompt_image.GetWidth() / 2,
+        Window.GetY() + Window.GetHeight() * 0.82,
+        10000
+    );
+    prompt_sprite.SetOpacity(1);
+}
+
+Plymouth.SetDisplayNormalFunction(display_normal_callback);
+Plymouth.SetDisplayPasswordFunction(display_password_callback);
+Plymouth.SetDisplayMessageFunction(display_message_callback);

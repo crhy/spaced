@@ -152,6 +152,14 @@ live_build_config = Path("live-build/auto/config").read_text(encoding="utf-8")
 assert "--firmware-chroot false" in live_build_config, "broad live-build firmware injection is enabled"
 assert "docs/BOOTING.md" in Path("README.md").read_text(encoding="utf-8"), \
     "boot documentation reference regressed in README.md"
+plymouth_script = Path("live-build/config/includes.chroot/usr/share/plymouth/themes/spaced/spaced.script").read_text(encoding="utf-8")
+assert "Window.GetWidth()" in plymouth_script and "Window.GetHeight()" in plymouth_script \
+    and "Window.GetX()/2" not in plymouth_script and "Window.GetY()/2" not in plymouth_script, \
+    "Plymouth artwork is positioned from display offsets and renders in the top-left corner (issue #137)"
+assert "SetDisplayPasswordFunction" in plymouth_script \
+    and "SetDisplayMessageFunction" in plymouth_script \
+    and "SetRefreshFunction" in plymouth_script, \
+    "Spaced Plymouth lacks encrypted-disk prompts or restrained animation"
 mirror_urls = [line.split(chr(34))[1] for line in live_build_config.splitlines() if "--mirror-" in line or "--parent-mirror-" in line]
 assert len(mirror_urls) == 6 and len(set(mirror_urls)) == 1 and mirror_urls[0].endswith("/merged") and mirror_urls[0] != "http://deb.devuan.org/merged", "build mirrors must use one fixed Devuan /merged endpoint"
 
@@ -192,6 +200,9 @@ assert "live-build_20250814_all.deb" in monthly_workflow \
 # top of QEMU's default VGA exposes two DRM cards to the guest, stalling Xorg
 # and leaving LightDM on a black screen (blinking cursor) in every test VM.
 makefile_text = Path("Makefile").read_text(encoding="utf-8")
+assert "branding/spaced-icon-fancy.png" in makefile_text \
+    and "plymouth/themes/spaced/spaced.png" in makefile_text, \
+    "Plymouth does not stage the fancy Spaced logo"
 assert "qemu-system-x86 qemu-utils" in makefile_text, \
     "make deps omits qemu-img, which the reusable VM scripts require"
 assert "Discarding unsafe live-build bootstrap cache" in makefile_text, \

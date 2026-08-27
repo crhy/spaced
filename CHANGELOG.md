@@ -15,6 +15,7 @@
 - Added a branded Spaced System Info dialog, AppImage compatibility through Ceres's `libfuse2t64` package (which provides `libfuse2`), a guarded first-installed-boot Timeshift restore point named “Fresh install,” and a visible set of useful Brave bookmarks.
 - Added the first Spaced Help website section and a Welcome Compiz quick start covering cube rotation, zoom, screenshots, fire writing, and clearing effects.
 - Added a scheduled and manually runnable monthly clean ISO build with source validation, KVM-or-TCG MATE/Compiz boot testing, and retained ISO, checksum, and desktop-capture evidence as the first phase of the automated test matrix.
+- Rebuilt the Plymouth presentation around the actual framebuffer dimensions, eliminating the top-left artwork fragment; the full-screen Spaced background now uses the fancy logo, a restrained highlight pulse, and visible encrypted-disk prompts.
 - Bumped distribution, package, installer, boot, VM, website, and documentation release identifiers to 8.26.8.
 
 ## 8.26.7 - 2026-08-22
