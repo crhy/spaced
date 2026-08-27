@@ -60,7 +60,7 @@ stage_desktop_defaults() {
         usr/lib/spaced-linux \
         usr/local/bin \
         usr/local/sbin/spaced-first-boot-snapshot \
-        usr/share/applications/mate-about.desktop \
+        usr/local/share/applications/mate-about.desktop \
         usr/share/applications/mimeapps.list \
         usr/share/applications/spaced-nvidia-installer.desktop \
         usr/share/applications/spaced-update.desktop \

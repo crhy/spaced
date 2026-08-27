@@ -136,6 +136,8 @@ defaults_postinst = (Path("packages/spaced-mate-default-settings/DEBIAN/postinst
                      .read_text(encoding="utf-8"))
 assert "autologin-user=user" in defaults_postinst and "glib-compile-schemas" in defaults_postinst, \
     "desktop package does not migrate LightDM or compile updated settings"
+assert "update-desktop-database -q /usr/local/share/applications" in defaults_postinst, \
+    "the higher-priority Spaced application override database is not refreshed"
 local_package_builder = Path("scripts/iso/build-local-packages.sh").read_text(encoding="utf-8")
 assert "stage_desktop_defaults" in local_package_builder and "usr/share/themes" in local_package_builder, \
     "spaced-mate-default-settings remains an empty metadata package"
@@ -143,7 +145,7 @@ assert "spaced-audio-restore.desktop" in local_package_builder \
     and "spaced-display-repair.desktop" in local_package_builder, \
     "installed-system update package omits audio or display recovery autostarts"
 assert "spaced-first-boot-snapshot" in local_package_builder \
-    and "mate-about.desktop" in local_package_builder, \
+    and "usr/local/share/applications/mate-about.desktop" in local_package_builder, \
     "installed-system update package omits snapshot or system-info integration"
 assert '-name "${pkg}_*_all.deb"' in local_package_builder and "-delete" in local_package_builder, \
     "local package builds can leave stale release versions in ISO staging"
@@ -817,7 +819,8 @@ for mimeapps in (system_mimeapps, skel_mimeapps):
 
 system_info_path = root / "usr/local/bin/spaced-system-info"
 system_info = system_info_path.read_text(encoding="utf-8")
-mate_about = (root / "usr/share/applications/mate-about.desktop").read_text(encoding="utf-8")
+mate_about_path = root / "usr/local/share/applications/mate-about.desktop"
+mate_about = mate_about_path.read_text(encoding="utf-8")
 assert system_info_path.stat().st_mode & 0o111 \
     and "PRETTY_NAME" in system_info and "/proc/cpuinfo" in system_info \
     and "/proc/meminfo" in system_info, \
@@ -825,6 +828,8 @@ assert system_info_path.stat().st_mode & 0o111 \
 assert "Name=About Spaced Linux" in mate_about and "Exec=spaced-system-info" in mate_about \
     and "Icon=spaced-linux" in mate_about, \
     "MATE's generic About entry is not replaced with the branded system dialog (issue #150)"
+assert not (root / "usr/share/applications/mate-about.desktop").exists(), \
+    "Spaced System Info collides with mate-desktop instead of using the /usr/local override"
 
 brave_profile = root / "etc/skel/.var/app/com.brave.Browser/config/BraveSoftware/Brave-Browser/Default"
 brave_bookmarks = json.loads((brave_profile / "Bookmarks").read_text(encoding="utf-8"))
