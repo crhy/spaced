@@ -1,6 +1,6 @@
 /* Spaced Linux Calamares theme: a quiet, high-contrast dark surface. */
 QWidget {
-    background-color: #202225;
+    background-color: #1b1b1f;
     color: #e8eaed;
     selection-background-color: #4a4a4a;
     selection-color: #ffffff;
@@ -13,8 +13,9 @@ QRadioButton {
     color: #e8eaed;
 }
 
-/* The logo's transparent pixels must reveal the sidebar itself, not the
-   generic QFrame surface color. */
+/* The entire installer uses the logo field's charcoal. Keeping the root,
+   page stack, and logo label identical makes the transparent square around
+   the round Spaced mark disappear on every Calamares page. */
 QLabel#logoApp {
     background-color: #1b1b1f;
 }
@@ -23,7 +24,7 @@ QFrame,
 QGroupBox,
 QScrollArea,
 QStackedWidget {
-    background-color: #25282c;
+    background-color: #1b1b1f;
     border-color: #3f4046;
 }
 
@@ -142,7 +143,7 @@ QProgressBar::chunk {
 
 QScrollBar:vertical,
 QScrollBar:horizontal {
-    background-color: #202225;
+    background-color: #1b1b1f;
     border: 0;
     margin: 0;
 }

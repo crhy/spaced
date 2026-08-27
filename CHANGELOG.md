@@ -1,14 +1,25 @@
 # Changelog
 
 ## 8.26.9 - 2026-08-27
+- Unified the Calamares installer surface with the charcoal field behind the
+  silver Spaced emblem, eliminating the visible square around the logo.
 - Restored the lean installation boundary: the ISO carries the small native
   Welcome bootstrap and signed remote descriptors, while SpacedBazaar and all
   optional Flatpak runtimes are installed only after Calamares.
-- Updated to Spaced Welcome 0.1.8, which uses the real `stable` branch for all
-  Flathub suggestions, installs the complete CRHY catalog after setup, and
-  aligns the Suggested Applications heading with its rows.
-- Published Spaced Update 0.1.3 through the signed catalog so its Flatpak reads
-  the host release marker correctly and displays the installed OS version.
+- Updated to Spaced Welcome 0.1.9, which uses the real `stable` branch for all
+  Flathub suggestions, installs the complete CRHY catalog after setup, aligns
+  the Suggested Applications heading, and uses the canonical silver Spaced
+  and SpacedBazaar icons.
+- Published Voice2Text AI 0.4.3 with a futuristic brushed-silver microphone
+  and waveform medallion, a supported GNOME 50 runtime, and a real AppStream
+  screenshot.
+- Published Spaced Update 0.1.6 through the signed catalog so its Flatpak reads
+  the host release marker correctly, displays the installed OS version, and
+  uses its dedicated tapered-arrow silver medallion everywhere while dropping
+  unnecessary home-directory and system-policy access.
+- Refreshed the signed SpacedBazaar catalog after the current Welcome, Update,
+  Cards With Cats, and Brutal Chess releases so their exported names, icons,
+  ratings, and screenshots replace stale installed-bundle metadata.
 - Added a hard CI gate rejecting ISO files at or above GitHub's 2 GiB release
   asset limit.
 - Removed the unused Plymouth runtime and installer integration; the default

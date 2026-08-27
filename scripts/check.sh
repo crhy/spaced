@@ -349,7 +349,7 @@ assert not [path for path in embedded_welcome_paths if path.exists()], \
     "the standalone Welcome implementation is still duplicated in the distro overlay"
 meta_control = Path("packages/spaced-meta/DEBIAN/control").read_text(encoding="utf-8")
 assert "spaced-mate-default-settings (= 8.26.9)" in meta_control \
-    and "spaced-welcome (>= 0.1.8)" in meta_control \
+    and "spaced-welcome (>= 0.1.9)" in meta_control \
     and "libfuse2t64" in meta_control, \
     "spaced-meta does not pull in the standalone Welcome package and desktop defaults"
 assert "spaced-welcome.desktop" not in package_builder \
@@ -366,7 +366,7 @@ def artifact_default(name):
     return match.group(1)
 
 assert artifact_default("SPACED_WELCOME_REPOSITORY") == "crhy/spacedwelcome"
-assert artifact_default("SPACED_WELCOME_VERSION") == "0.1.8"
+assert artifact_default("SPACED_WELCOME_VERSION") == "0.1.9"
 assert artifact_default("SPACED_GITHUB_REMOTE_NAME") == "spaced-github"
 assert artifact_default("SPACED_GITHUB_REMOTE_DESCRIPTOR_URL") == \
     "https://crhy.github.io/spacedbazaar/spaced-github.flatpakrepo"
@@ -550,6 +550,8 @@ assert hashlib.sha256(calamares_icon.read_bytes()).digest() == hashlib.sha256(fa
 calamares_stylesheet = (root / "etc/calamares/branding/spaced/stylesheet.qss").read_text(encoding="utf-8")
 assert "QLabel#logoApp" in calamares_stylesheet and "#1b1b1f" in calamares_stylesheet, \
     "Calamares logo transparency does not reveal the matching sidebar surface"
+assert "QWidget {\n    background-color: #1b1b1f;" in calamares_stylesheet, \
+    "Calamares base surface does not match the transparent logo field"
 assert "Icon=install-spaced-linux" in launcher.read_text(encoding="utf-8"), \
     "Calamares desktop launcher does not use the light download-arrow icon"
 calamares_launcher = (root / "usr/local/bin/install-spaced-linux").read_text(encoding="utf-8")

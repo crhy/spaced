@@ -11,7 +11,7 @@ Firmware (BIOS/UEFI)
   -> GRUB (live-build grub-pc / grub-efi, live GRUB menu)
   -> Linux kernel (live-boot initramfs)
   -> live-boot mounts /run/live/medium, unsquashfs the live filesystem
-  -> plymouth splash (default entry only)
+  -> quiet text console with the cursor hidden (default entry only)
   -> sysvinit /etc/rcS.d + /etc/rc.d rc scripts
   -> LightDM autologin as "user"
   -> MATE session, Compiz window manager
@@ -27,7 +27,7 @@ is hand-written and must be kept consistent with `live-build/auto/config`'s
 
 | Entry | Command line | Purpose |
 |---|---|---|
-| Start Spaced Linux | `@APPEND_LIVE@` (`boot=live components quiet splash username=user hostname=spaced`) | Default hardware-agnostic boot; live-boot rescans media for up to 60 seconds |
+| Start Spaced Linux | `@APPEND_LIVE@` (`boot=live components quiet loglevel=3 vt.global_cursor_default=0 username=user hostname=spaced`) | Quiet hardware-agnostic boot with no splash daemon; live-boot rescans media for up to 60 seconds |
 | safe graphics | `boot=live components nosplash nomodeset` + nouveau/`nvidia-drm.modeset=0` | Drives that hang on kernel modeset; text console |
 | verbose boot | `boot=live components noplymouth console=tty0 noquiet loglevel=7` | Full VGA boot log for diagnosis |
 | Verify the boot medium | `@APPEND_VERIFY_CHECKSUMS@` | `live-boot` medium integrity check |
@@ -44,7 +44,7 @@ Stock Devuan (and Debian live-build) ships roughly the same skeleton:
 - Same GRUB theme mechanism (`/boot/grub/config.cfg`, `grub.cfg` menuentries)
 - Same `live-boot`/`live-config` userspace, with `live-config-sysvinit` for the
   init selection
-- plymouth for the splash on the default entry
+- Plymouth for the splash on the default entry
 
 The historical Spaced differences that caused hardware failures were **not**
 present in stock Devuan:
@@ -53,7 +53,9 @@ present in stock Devuan:
 2. A forced early GPU modeset
 3. A forced serial console
 
-Spaced also gives live-boot up to 60 seconds to discover the boot medium. This
+Spaced omits Plymouth because the normal boot is already short, keeping the
+default console quiet and hiding its cursor until LightDM takes over. Spaced
+also gives live-boot up to 60 seconds to discover the boot medium. This
 does not alter a normal boot; it prevents a slow USB controller or flash drive
 from dropping into initramfs before `/run/live/medium` appears.
 
@@ -149,7 +151,7 @@ The fix is to expose exactly one stable card (`-vga std`). The guards in
 ## Troubleshooting a failed boot
 
 Use the **verbose boot** GRUB entry (`noplymouth console=tty0 noquiet
-loglevel=7`) to capture the full boot log instead of a splash.
+loglevel=7`) to expose and capture the full boot log.
 
 Common live-boot errors and their meaning:
 
