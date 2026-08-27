@@ -154,14 +154,14 @@ live_build_config = Path("live-build/auto/config").read_text(encoding="utf-8")
 assert "--firmware-chroot false" in live_build_config, "broad live-build firmware injection is enabled"
 assert "docs/BOOTING.md" in Path("README.md").read_text(encoding="utf-8"), \
     "boot documentation reference regressed in README.md"
-plymouth_script = Path("live-build/config/includes.chroot/usr/share/plymouth/themes/spaced/spaced.script").read_text(encoding="utf-8")
-assert "Window.GetWidth()" in plymouth_script and "Window.GetHeight()" in plymouth_script \
-    and "Window.GetX()/2" not in plymouth_script and "Window.GetY()/2" not in plymouth_script, \
-    "Plymouth artwork is positioned from display offsets and renders in the top-left corner (issue #137)"
-assert "SetDisplayPasswordFunction" in plymouth_script \
-    and "SetDisplayMessageFunction" in plymouth_script \
-    and "SetRefreshFunction" in plymouth_script, \
-    "Spaced Plymouth lacks encrypted-disk prompts or restrained animation"
+package_config = Path("config/packages.yaml").read_text(encoding="utf-8")
+calamares_settings = Path("overlays/etc/calamares/settings.conf").read_text(encoding="utf-8")
+iso_configure_hook = Path("scripts/iso/01-configure.chroot").read_text(encoding="utf-8")
+assert "plymouth" not in package_config and "plymouthcfg" not in calamares_settings \
+    and "plymouth-set-default-theme" not in iso_configure_hook, \
+    "the fast boot path still carries the unused Plymouth stack (issue #156)"
+assert not Path("live-build/config/includes.chroot/usr/share/plymouth").exists(), \
+    "obsolete Plymouth artwork remains in the ISO source tree"
 mirror_urls = [line.split(chr(34))[1] for line in live_build_config.splitlines() if "--mirror-" in line or "--parent-mirror-" in line]
 assert len(mirror_urls) == 6 and len(set(mirror_urls)) == 1 and mirror_urls[0].endswith("/merged") and mirror_urls[0] != "http://deb.devuan.org/merged", "build mirrors must use one fixed Devuan /merged endpoint"
 
@@ -177,7 +177,9 @@ assert "console=ttyS0" not in live_grub_cfg and "ttyS0" not in live_build_config
     "serial console must not be re-added to the live kernel command line"
 assert "nouveau.modeset=1" not in live_grub_cfg and "nouveau.modeset=1" not in live_build_config, \
     "forced early nouveau modeset must not return to the default boot path"
-assert "--bootappend-live" in live_build_config and "boot=live components quiet splash" in live_build_config, \
+assert "--bootappend-live" in live_build_config \
+    and "boot=live components quiet loglevel=3 vt.global_cursor_default=0" in live_build_config \
+    and " splash " not in live_build_config, \
     "default live boot append line regressed"
 assert "dhcpcd-base,ifupdown" in live_build_config, \
     "debootstrap can configure ifupdown before its non-systemd sysusers provider"
@@ -204,9 +206,8 @@ assert "2147483648" in monthly_workflow and "GitHub release assets must be under
 # top of QEMU's default VGA exposes two DRM cards to the guest, stalling Xorg
 # and leaving LightDM on a black screen (blinking cursor) in every test VM.
 makefile_text = Path("Makefile").read_text(encoding="utf-8")
-assert "branding/spaced-icon-fancy.png" in makefile_text \
-    and "plymouth/themes/spaced/spaced.png" in makefile_text, \
-    "Plymouth does not stage the fancy Spaced logo"
+assert "plymouth/themes" not in makefile_text, \
+    "the ISO build still stages the removed Plymouth theme"
 assert "qemu-system-x86 qemu-utils" in makefile_text, \
     "make deps omits qemu-img, which the reusable VM scripts require"
 assert "Discarding unsafe live-build bootstrap cache" in makefile_text, \
@@ -320,25 +321,12 @@ assert "flathub.org" not in build_hook, "image build must not depend on live Fla
 assert "for remote in flathub spaced-github" in build_hook \
     and 'remote-add --system --if-not-exists "$remote" "$descriptor"' in build_hook, \
     "the live image does not register both signed system Flatpak remotes"
-assert "spaced-github io.github.crhy.SpacedBazaar" in build_hook \
-    and "--no-related" in build_hook \
-    and "flatpak info --system io.github.crhy.SpacedBazaar" in build_hook \
-    and "attempt $attempt of 3" in build_hook, \
-    "SpacedBazaar is not verified and installed system-wide before first login"
-assert "spaced-github io.github.crhy.SpacedBazaar" in build_hook \
-    and "flatpak info --show-origin --system io.github.crhy.SpacedBazaar" in build_hook \
-    and '"$bazaar_origin" = spaced-github' in build_hook, \
-    "the preinstalled SpacedBazaar is orphaned from its signed update remote"
-assert "SpacedBazaar.version" in stage_script \
-    and "--columns=application,version" in build_hook \
-    and '"$bazaar_version" = "$bazaar_expected_version"' in build_hook, \
-    "the signed SpacedBazaar installation is not pinned to the verified release version"
-assert "flatpak info --show-ref --system io.github.crhy.SpacedBazaar" in build_hook \
-    and "flatpak --default-arch" in build_hook, \
-    "the installed SpacedBazaar architecture is not verified"
-assert 'rm -f -- "$bazaar_version_file"' in build_hook \
-    and 'SpacedBazaar.flatpak"' not in stage_script, \
-    "the bootstrap SpacedBazaar release data remains duplicated in the finished image"
+assert "flatpak install --system" not in build_hook \
+    and "SpacedBazaar.version" not in stage_script \
+    and "SPACED_BAZAAR" not in stage_script, \
+    "the lean ISO still embeds SpacedBazaar or another optional Flatpak payload"
+assert "only after Calamares has completed" in build_hook, \
+    "the image does not document its post-install application-delivery boundary"
 assert 'old = b"%s (as superuser)"' in build_hook and "data.replace(old, new)" in build_hook, \
     "Flatpak X11 windows retain the false superuser title suffix"
 assert "etc/xdg/QtProject/qtquickcontrols2.conf" in package_builder, \
@@ -360,8 +348,8 @@ embedded_welcome_paths = (
 assert not [path for path in embedded_welcome_paths if path.exists()], \
     "the standalone Welcome implementation is still duplicated in the distro overlay"
 meta_control = Path("packages/spaced-meta/DEBIAN/control").read_text(encoding="utf-8")
-assert "spaced-mate-default-settings (= 8.26.8)" in meta_control \
-    and "spaced-welcome (>= 0.1.6)" in meta_control \
+assert "spaced-mate-default-settings (= 8.26.9)" in meta_control \
+    and "spaced-welcome (>= 0.1.8)" in meta_control \
     and "libfuse2t64" in meta_control, \
     "spaced-meta does not pull in the standalone Welcome package and desktop defaults"
 assert "spaced-welcome.desktop" not in package_builder \
@@ -378,9 +366,7 @@ def artifact_default(name):
     return match.group(1)
 
 assert artifact_default("SPACED_WELCOME_REPOSITORY") == "crhy/spacedwelcome"
-assert artifact_default("SPACED_WELCOME_VERSION") == "0.1.6"
-assert artifact_default("SPACED_BAZAAR_REPOSITORY") == "crhy/spacedbazaar"
-assert artifact_default("SPACED_BAZAAR_VERSION") == "0.1.5"
+assert artifact_default("SPACED_WELCOME_VERSION") == "0.1.8"
 assert artifact_default("SPACED_GITHUB_REMOTE_NAME") == "spaced-github"
 assert artifact_default("SPACED_GITHUB_REMOTE_DESCRIPTOR_URL") == \
     "https://crhy.github.io/spacedbazaar/spaced-github.flatpakrepo"
@@ -388,8 +374,6 @@ assert artifact_default("SPACED_GITHUB_REPO_URL") == \
     "https://crhy.github.io/spacedbazaar/flatpak-repo/"
 for checksum_name in (
     "SPACED_WELCOME_SHA256",
-    "SPACED_BAZAAR_SHA256_AMD64",
-    "SPACED_BAZAAR_SHA256_ARM64",
     "SPACED_GITHUB_REMOTE_SHA256",
 ):
     value = artifact_default(checksum_name)
@@ -398,18 +382,16 @@ for checksum_name in (
 fingerprint = artifact_default("SPACED_GITHUB_GPG_FINGERPRINT")
 assert fingerprint == "UNRELEASED" or re.fullmatch(r"[0-9a-fA-F]{40}", fingerprint), \
     "spaced-github key is neither release-gated nor fingerprint-pinned"
-for override in ("SPACED_WELCOME_DEB", "SPACED_BAZAAR_BUNDLE",
-                 "SPACED_GITHUB_REMOTE_FILE"):
+for override in ("SPACED_WELCOME_DEB", "SPACED_GITHUB_REMOTE_FILE"):
     assert override in artifact_stager, f"verified local override is missing: {override}"
-assert "amd64|x86_64" in artifact_stager and "arm64|aarch64" in artifact_stager \
-    and "SpacedBazaar-${FLATPAK_ARCH}.flatpak" in artifact_stager, \
-    "external artifact staging does not map Debian and Flatpak architectures"
+assert "amd64|x86_64" in artifact_stager and "arm64|aarch64" in artifact_stager, \
+    "external artifact staging does not map supported Debian architectures"
 assert "--retry 3 --retry-all-errors --connect-timeout 15" in artifact_stager \
     and "--proto '=https' --proto-redir '=https'" in artifact_stager, \
     "external artifact downloads are not HTTPS-only and retry-safe"
 assert "dpkg-deb -f" in artifact_stager and "verify_sha256" in artifact_stager \
     and "SPACED_GITHUB_GPG_FINGERPRINT" in artifact_stager, \
-    "external Debian, Flatpak, or remote inputs are not fully verified"
+    "external Debian or remote inputs are not fully verified"
 assert makefile_text.index("scripts/iso/stage-external-artifacts.sh") < \
     makefile_text.index("scripts/iso/build-local-packages.sh", makefile_text.index("prepare:")), \
     "standalone release artifacts are not staged before local packages"

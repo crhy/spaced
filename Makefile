@@ -22,11 +22,6 @@ SPACED_WELCOME_RELEASE_TAG ?=
 SPACED_WELCOME_URL ?=
 SPACED_WELCOME_DEB ?=
 SPACED_WELCOME_SHA256 ?=
-SPACED_BAZAAR_VERSION ?=
-SPACED_BAZAAR_RELEASE_TAG ?=
-SPACED_BAZAAR_URL ?=
-SPACED_BAZAAR_BUNDLE ?=
-SPACED_BAZAAR_SHA256 ?=
 SPACED_GITHUB_REMOTE_DESCRIPTOR_URL ?=
 SPACED_GITHUB_REMOTE_FILE ?=
 SPACED_GITHUB_REMOTE_SHA256 ?=
@@ -107,11 +102,6 @@ prepare: ## Stage authored live-build configuration
 		$(LB_DIR)/config/hooks/live \
 		$(LB_DIR)/config/bootloaders
 	cp -a overlays/. $(LB_DIR)/config/includes.chroot/
-	mkdir -p $(LB_DIR)/config/includes.chroot/usr/share/plymouth/themes
-	cp -a live-build/config/includes.chroot/usr/share/plymouth/themes/spaced \
-		$(LB_DIR)/config/includes.chroot/usr/share/plymouth/themes/
-	cp branding/spaced-icon-fancy.png \
-		$(LB_DIR)/config/includes.chroot/usr/share/plymouth/themes/spaced/spaced.png
 	cp -a live-build/config/bootloaders/. $(LB_DIR)/config/bootloaders/
 	$(HOST_RUN) install -Dm644 /usr/share/grub/unicode.pf2 $(LB_DIR)/config/bootloaders/grub-pc/fonts/unicode.pf2
 	$(HOST_RUN) scripts/iso/package-list.sh > \
@@ -128,11 +118,6 @@ prepare: ## Stage authored live-build configuration
 		SPACED_WELCOME_URL="$(SPACED_WELCOME_URL)" \
 		SPACED_WELCOME_DEB="$(SPACED_WELCOME_DEB)" \
 		SPACED_WELCOME_SHA256="$(SPACED_WELCOME_SHA256)" \
-		SPACED_BAZAAR_VERSION="$(SPACED_BAZAAR_VERSION)" \
-		SPACED_BAZAAR_RELEASE_TAG="$(SPACED_BAZAAR_RELEASE_TAG)" \
-		SPACED_BAZAAR_URL="$(SPACED_BAZAAR_URL)" \
-		SPACED_BAZAAR_BUNDLE="$(SPACED_BAZAAR_BUNDLE)" \
-		SPACED_BAZAAR_SHA256="$(SPACED_BAZAAR_SHA256)" \
 		SPACED_GITHUB_REMOTE_DESCRIPTOR_URL="$(SPACED_GITHUB_REMOTE_DESCRIPTOR_URL)" \
 		SPACED_GITHUB_REMOTE_FILE="$(SPACED_GITHUB_REMOTE_FILE)" \
 		SPACED_GITHUB_REMOTE_SHA256="$(SPACED_GITHUB_REMOTE_SHA256)" \

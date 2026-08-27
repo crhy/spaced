@@ -43,59 +43,9 @@ for remote in flathub spaced-github; do
     /usr/bin/flatpak remote-add --system --if-not-exists "$remote" "$descriptor"
 done
 
-# SpacedBazaar is part of the base desktop rather than a post-login suggestion.
-# Its release artifact was checksum-verified on the build host. Install the
-# matching version from the pinned, GPG-verified central remote so the deployed
-# app retains that trusted update origin.
-bazaar_version_file=/usr/share/spaced-linux/bootstrap/SpacedBazaar.version
-[ -s "$bazaar_version_file" ] || {
-    echo "Missing staged SpacedBazaar version" >&2
-    exit 1
-}
-bazaar_expected_version=$(cat "$bazaar_version_file")
-case $bazaar_expected_version in
-    *[!0-9.]*|'')
-        echo "Invalid staged SpacedBazaar version: $bazaar_expected_version" >&2
-        exit 1
-        ;;
-esac
-bazaar_installed=
-for attempt in 1 2 3; do
-    echo "Installing SpacedBazaar (attempt $attempt of 3)"
-    if /usr/bin/flatpak install --system --noninteractive -y --no-related \
-           spaced-github io.github.crhy.SpacedBazaar &&
-       /usr/bin/flatpak info --system io.github.crhy.SpacedBazaar >/dev/null; then
-        bazaar_installed=1
-        break
-    fi
-    sleep 5
-done
-[ -n "$bazaar_installed" ] || {
-    echo "SpacedBazaar could not be installed into the system Flatpak installation" >&2
-    exit 1
-}
-bazaar_origin=$(/usr/bin/flatpak info --show-origin --system io.github.crhy.SpacedBazaar)
-[ "$bazaar_origin" = spaced-github ] || {
-    echo "SpacedBazaar is not updateable from spaced-github (origin: ${bazaar_origin:-none})" >&2
-    exit 1
-}
-bazaar_version=$(/usr/bin/flatpak list --system --app \
-    --columns=application,version | /usr/bin/awk -F '\t' \
-    '$1 == "io.github.crhy.SpacedBazaar" { print $2; exit }')
-[ "$bazaar_version" = "$bazaar_expected_version" ] || {
-    echo "SpacedBazaar version is '$bazaar_version', expected '$bazaar_expected_version'" >&2
-    exit 1
-}
-bazaar_arch=$(/usr/bin/flatpak --default-arch)
-bazaar_ref=$(/usr/bin/flatpak info --show-ref --system io.github.crhy.SpacedBazaar)
-case $bazaar_ref in
-    app/io.github.crhy.SpacedBazaar/"$bazaar_arch"/*) ;;
-    *)
-        echo "SpacedBazaar bundle ref '$bazaar_ref' does not match host architecture '$bazaar_arch'" >&2
-        exit 1
-        ;;
-esac
-rm -f -- "$bazaar_version_file"
+# Do not install applications or runtimes in the live filesystem. The small
+# native Welcome package installs SpacedBazaar and the optional app catalog for
+# the user only after Calamares has completed.
 
 # Compiz's GTK window decorator, which it links from the MATE window
 # decoration library, trusts _NET_WM_PID as a host PID when decorating a
@@ -205,10 +155,6 @@ for icon_theme in /usr/share/icons/Spaced-Icons-*; do
     [ -d "$icon_theme" ] || continue
     gtk-update-icon-cache -f "$icon_theme" >/dev/null 2>&1 || true
 done
-
-if command -v plymouth-set-default-theme >/dev/null 2>&1; then
-    plymouth-set-default-theme -R spaced
-fi
 
 # Universal NVIDIA-safe live image.
 rm -f /etc/X11/xorg.conf /etc/X11/xorg.conf.d/*nvidia*.conf 2>/dev/null || true

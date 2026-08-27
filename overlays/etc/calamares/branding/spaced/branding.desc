@@ -9,10 +9,10 @@ windowPlacement: center
 strings:
     productName:         Spaced Linux
     shortProductName:    Spaced Linux
-    version:             8.26.8
-    shortVersion:        8.26.8
-    versionedName:       Spaced Linux 8.26.8
-    shortVersionedName:  Spaced Linux 8.26.8
+    version:             8.26.9
+    shortVersion:        8.26.9
+    versionedName:       Spaced Linux 8.26.9
+    shortVersionedName:  Spaced Linux 8.26.9
     bootloaderEntryName: Spaced Linux
     productUrl:          https://github.com/crhy/spaced
     supportUrl:          https://github.com/crhy/spaced/issues

@@ -82,8 +82,6 @@ checksums:
 make prepare \
   SPACED_WELCOME_DEB=/absolute/path/spaced-welcome_0.1.0_all.deb \
   SPACED_WELCOME_SHA256=<sha256> \
-  SPACED_BAZAAR_BUNDLE=/absolute/path/SpacedBazaar-x86_64.flatpak \
-  SPACED_BAZAAR_SHA256=<sha256> \
   SPACED_GITHUB_REMOTE_FILE=/absolute/path/spaced-github.flatpakrepo \
   SPACED_GITHUB_REMOTE_SHA256=<sha256> \
   SPACED_GITHUB_GPG_FINGERPRINT=<40-hex-fingerprint>
@@ -109,7 +107,7 @@ For every CRHY Flatpak release:
 Welcome should install first-party applications by app ID from
 `spaced-github`, not by resolving a mutable GitHub “latest release” bundle.
 Its task-oriented Help & Apps page launches exact `appstream://` locations in
-the preinstalled SpacedBazaar, while Bazaar's curated view surfaces the same
+the post-install SpacedBazaar, while Bazaar's curated view surfaces the same
 Create, Work, and Play recommendations from Flathub.
 SpacedBazaar itself is pinned for ISO reproducibility, then receives subsequent
 versions from its configured Flatpak origin. The standalone Welcome package is

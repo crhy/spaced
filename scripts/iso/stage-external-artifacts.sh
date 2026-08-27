@@ -4,7 +4,6 @@ set -euo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 CONFIG=${SPACED_EXTERNAL_ARTIFACT_CONFIG:-$ROOT/config/external-artifacts.conf}
-IMAGE_ROOT=${SPACED_IMAGE_ROOT:-$ROOT/build/live-build/config/includes.chroot}
 LOCAL_PACKAGE_OUTPUT=${LOCAL_PACKAGE_OUTPUT:-$ROOT/build/local-packages}
 STAGE_OUTPUT=${SPACED_EXTERNAL_STAGE_DIR:-$ROOT/build/external-artifacts}
 CACHE=${SPACED_EXTERNAL_CACHE_DIR:-$ROOT/build/cache/external-artifacts}
@@ -22,13 +21,9 @@ die() {
 case $TARGET_ARCH in
     amd64|x86_64)
         DEB_ARCH=amd64
-        FLATPAK_ARCH=x86_64
-        BAZAAR_CONFIGURED_SHA=$SPACED_BAZAAR_SHA256_AMD64
         ;;
     arm64|aarch64)
         DEB_ARCH=arm64
-        FLATPAK_ARCH=aarch64
-        BAZAAR_CONFIGURED_SHA=$SPACED_BAZAAR_SHA256_ARM64
         ;;
     *)
         die "unsupported target architecture '$TARGET_ARCH' (expected amd64 or arm64)"
@@ -36,10 +31,7 @@ case $TARGET_ARCH in
 esac
 
 WELCOME_FILENAME="spaced-welcome_${SPACED_WELCOME_VERSION}_all.deb"
-BAZAAR_FILENAME="SpacedBazaar-${FLATPAK_ARCH}.flatpak"
 WELCOME_URL=${SPACED_WELCOME_URL:-https://github.com/${SPACED_WELCOME_REPOSITORY}/releases/download/${SPACED_WELCOME_RELEASE_TAG}/${WELCOME_FILENAME}}
-BAZAAR_URL=${SPACED_BAZAAR_URL:-https://github.com/${SPACED_BAZAAR_REPOSITORY}/releases/download/${SPACED_BAZAAR_RELEASE_TAG}/${BAZAAR_FILENAME}}
-BAZAAR_SHA=${SPACED_BAZAAR_SHA256:-$BAZAAR_CONFIGURED_SHA}
 
 for command in awk base64 cp curl dpkg-deb gpg install mktemp mv sha256sum; do
     command -v "$command" >/dev/null 2>&1 || die "required host command is missing: $command"
@@ -51,8 +43,7 @@ cleanup() {
 }
 trap cleanup EXIT HUP INT TERM
 
-mkdir -p "$IMAGE_ROOT/usr/share/spaced-linux/bootstrap" \
-    "$LOCAL_PACKAGE_OUTPUT" "$STAGE_OUTPUT" "$CACHE"
+mkdir -p "$LOCAL_PACKAGE_OUTPUT" "$STAGE_OUTPUT" "$CACHE"
 
 validate_sha256() {
     local label=$1 expected=$2
@@ -131,20 +122,6 @@ find "$LOCAL_PACKAGE_OUTPUT" -maxdepth 1 -type f -name 'spaced-welcome_*.deb' \
 install_atomic "$welcome_source" "$welcome_destination"
 
 materialize \
-    "SpacedBazaar $SPACED_BAZAAR_VERSION ($FLATPAK_ARCH)" \
-    "$BAZAAR_URL" "${SPACED_BAZAAR_BUNDLE:-}" "$BAZAAR_SHA" \
-    "SpacedBazaar-${SPACED_BAZAAR_VERSION}-${FLATPAK_ARCH}-${BAZAAR_SHA,,}.flatpak"
-bazaar_source=$MATERIALIZED
-[[ -s $bazaar_source ]] || die "SpacedBazaar bundle is empty"
-# The checksum-pinned release bundle proves that the independently released
-# version exists and is immutable. Do not deploy it into the image, though:
-# Flatpak gives bundle-created remotes an implementation-selected name and an
-# unsigned release bundle cannot carry the central repository's trust policy.
-# Install from the separately pinned, signed descriptor in the chroot instead.
-printf '%s\n' "$SPACED_BAZAAR_VERSION" > \
-    "$IMAGE_ROOT/usr/share/spaced-linux/bootstrap/SpacedBazaar.version"
-
-materialize \
     "spaced-github Flatpak remote" \
     "$SPACED_GITHUB_REMOTE_DESCRIPTOR_URL" "${SPACED_GITHUB_REMOTE_FILE:-}" \
     "$SPACED_GITHUB_REMOTE_SHA256" \
@@ -172,5 +149,4 @@ actual_fingerprint=$(GNUPGHOME="$work/gnupg" gpg --batch --show-keys --with-colo
 install_atomic "$remote_source" "$STAGE_OUTPUT/spaced-github.flatpakrepo"
 
 printf 'Staged %s\n' "$welcome_destination"
-printf 'Verified SpacedBazaar %s release artifact\n' "$SPACED_BAZAAR_VERSION"
 printf 'Staged signed %s Flatpak remote\n' "$SPACED_GITHUB_REMOTE_NAME"

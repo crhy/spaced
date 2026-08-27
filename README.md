@@ -4,7 +4,7 @@
   </a>
 </p>
 
-<h1 align="center">Spaced Linux 8.26.8</h1>
+<h1 align="center">Spaced Linux 8.26.9</h1>
 
 <p align="center"><strong>Spaced. Polished. Agile. Compiz. Efficient. Devuan.</strong></p>
 
@@ -28,7 +28,7 @@
   <img alt="Compiz" src="https://img.shields.io/badge/window%20manager-Compiz-5b5bd6">
   <img alt="Init system" src="https://img.shields.io/badge/init-sysvinit-555555">
   <img alt="Architecture" src="https://img.shields.io/badge/architecture-amd64-2563eb">
-  <img alt="Release" src="https://img.shields.io/badge/release-8.26.8-0ea5e9">
+  <img alt="Release" src="https://img.shields.io/badge/release-8.26.9-0ea5e9">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-black">
 </p>
 
@@ -57,7 +57,7 @@ These are real Spaced Linux desktop sessions—not wallpaper mockups. Click any 
       <sub><strong>Compiz-first desktop</strong> — Workspaces, accessibility, motion, and organization are part of the core experience.</sub>
     </td>
     <td width="50%" align="center">
-      <a href="website/assets/screenshots/desktop-welcome.webp?v=8.26.8"><img src="website/assets/screenshots/desktop-welcome.webp?v=8.26.8" alt="Welcome to Spaced Linux first-run application"></a><br>
+      <a href="website/assets/screenshots/desktop-welcome.webp?v=8.26.9"><img src="website/assets/screenshots/desktop-welcome.webp?v=8.26.9" alt="Welcome to Spaced Linux first-run application"></a><br>
       <sub><strong>Friendly first run</strong> — Start installing software or open the browser from one clear welcome screen.</sub>
     </td>
   </tr>
@@ -100,7 +100,7 @@ These are real Spaced Linux desktop sessions—not wallpaper mockups. Click any 
 | **Familiar desktop** | A classic desktop workflow avoids the learning curve of unfamiliar shells. |
 | **Graphical installation** | Calamares provides a clear installation path for BIOS and UEFI systems. |
 | **Useful defaults** | Networking, audio controls, archives, editing, document viewing, and system utilities are ready immediately. |
-| **Modern applications** | Preinstalled SpacedBazaar searches Flathub and the signed Spaced Linux catalog without destabilizing the base system. |
+| **Modern applications** | Welcome installs SpacedBazaar and suggested apps after setup, keeping large Flatpak runtimes out of the base image. |
 | **Coordinated themes** | One choice coordinates GTK, icons, folder colors, wallpaper, panel behavior, and the optional dock. |
 
 ## Why advanced users keep control
@@ -137,7 +137,7 @@ Spaced Linux combines a modern system with visual ideas from the best desktop er
 - **Icons:** Spaced overlays based on Papirus
 - **Application delivery:** APT plus Flatpak, Flathub, and the signed `spaced-github` catalog
 - **First run:** standalone [`spaced-welcome`](https://github.com/crhy/spacedwelcome) Debian package
-- **Application catalog:** system-preinstalled [`SpacedBazaar`](https://github.com/crhy/spacedbazaar)
+- **Application catalog:** [`SpacedBazaar`](https://github.com/crhy/spacedbazaar), installed after Calamares through Welcome
 - **Target architecture:** amd64
 
 ## Download Spaced Linux
@@ -147,7 +147,7 @@ Download the ISO and its matching checksum from the [Spaced Linux releases page]
 Verify the download on Linux:
 
 ```bash
-sha256sum -c spaced-linux-8.26.8-amd64.iso.sha256
+sha256sum -c spaced-linux-8.26.9-amd64.iso.sha256
 ```
 
 Test release images in a virtual machine or on non-critical hardware before adopting them for daily use.
@@ -234,7 +234,7 @@ Thank you for helping keep an independent, polished, systemd-free desktop availa
 
 ## Project status
 
-The current development line is **8.26.8**. Spaced Linux is an independent community project under active development.
+The current development line is **8.26.9**. Spaced Linux is an independent community project under active development.
 
 ## Contributing
 
@@ -243,7 +243,7 @@ Bug reports, documentation improvements, Compiz refinements, theme work, package
 Open an [issue](https://github.com/crhy/spaced/issues) or submit a pull request describing what changed and how it was tested.
 
 The [application delivery architecture](docs/APPLICATION-DELIVERY.md) documents
-the standalone Welcome package, preinstalled SpacedBazaar, signed first-party
+the standalone Welcome package, post-install SpacedBazaar, signed first-party
 Flatpak catalog, release pins, and end-to-end tests.
 
 ### Theme development

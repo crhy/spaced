@@ -130,8 +130,6 @@ system:
   - usbutils
   - openssh-client
   - openssh-server
-  - plymouth
-  - plymouth-themes
   - fastfetch
   - chrony
   - tzdata

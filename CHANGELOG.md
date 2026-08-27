@@ -1,5 +1,18 @@
 # Changelog
 
+## 8.26.9 - 2026-08-27
+- Restored the lean installation boundary: the ISO carries the small native
+  Welcome bootstrap and signed remote descriptors, while SpacedBazaar and all
+  optional Flatpak runtimes are installed only after Calamares.
+- Updated to Spaced Welcome 0.1.8, which uses the real `stable` branch for all
+  Flathub suggestions, installs the complete CRHY catalog after setup, and
+  aligns the Suggested Applications heading with its rows.
+- Added a hard CI gate rejecting ISO files at or above GitHub's 2 GiB release
+  asset limit.
+- Removed the unused Plymouth runtime and installer integration; the default
+  fast boot now stays quiet with a hidden cursor until LightDM appears, while
+  the GRUB verbose option remains available for diagnosis.
+
 ## 8.26.8 - 2026-08-27
 - Install the checksum-attested SpacedBazaar release from its pinned, signed
   `spaced-github` remote so the preinstalled app keeps a trusted update origin.
