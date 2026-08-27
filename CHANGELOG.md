@@ -7,6 +7,8 @@
 - Updated to Spaced Welcome 0.1.8, which uses the real `stable` branch for all
   Flathub suggestions, installs the complete CRHY catalog after setup, and
   aligns the Suggested Applications heading with its rows.
+- Published Spaced Update 0.1.3 through the signed catalog so its Flatpak reads
+  the host release marker correctly and displays the installed OS version.
 - Added a hard CI gate rejecting ISO files at or above GitHub's 2 GiB release
   asset limit.
 - Removed the unused Plymouth runtime and installer integration; the default
