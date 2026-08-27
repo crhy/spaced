@@ -327,7 +327,8 @@ assert "spaced-github io.github.crhy.SpacedBazaar" in build_hook \
     and '"$bazaar_origin" = spaced-github' in build_hook, \
     "the preinstalled SpacedBazaar is orphaned from its signed update remote"
 assert "SpacedBazaar.version" in stage_script \
-    and "flatpak info --show-version --system io.github.crhy.SpacedBazaar" in build_hook, \
+    and "--columns=application,version" in build_hook \
+    and '"$bazaar_version" = "$bazaar_expected_version"' in build_hook, \
     "the signed SpacedBazaar installation is not pinned to the verified release version"
 assert "flatpak info --show-ref --system io.github.crhy.SpacedBazaar" in build_hook \
     and "flatpak --default-arch" in build_hook, \

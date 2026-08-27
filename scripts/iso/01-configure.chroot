@@ -79,7 +79,9 @@ bazaar_origin=$(/usr/bin/flatpak info --show-origin --system io.github.crhy.Spac
     echo "SpacedBazaar is not updateable from spaced-github (origin: ${bazaar_origin:-none})" >&2
     exit 1
 }
-bazaar_version=$(/usr/bin/flatpak info --show-version --system io.github.crhy.SpacedBazaar)
+bazaar_version=$(/usr/bin/flatpak list --system --app \
+    --columns=application,version | /usr/bin/awk -F '\t' \
+    '$1 == "io.github.crhy.SpacedBazaar" { print $2; exit }')
 [ "$bazaar_version" = "$bazaar_expected_version" ] || {
     echo "SpacedBazaar version is '$bazaar_version', expected '$bazaar_expected_version'" >&2
     exit 1
