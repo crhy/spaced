@@ -183,6 +183,10 @@ monthly_workflow = Path(".github/workflows/monthly-iso.yml").read_text(encoding=
 assert 'cron: "23 9 1 * *"' in monthly_workflow and "make release" in monthly_workflow \
     and "make iso-smoke-kvm" in monthly_workflow and "upload-artifact@v4" in monthly_workflow, \
     "monthly ISO build, desktop boot, or evidence retention is not automated (issue #148)"
+assert "live-build_20250814_all.deb" in monthly_workflow \
+    and "a4bffb8e6436ffba260f2e1c37be9dd04a4dacf52c38d7bbe454ec826ba52a4b" in monthly_workflow \
+    and "dpkg-query" in monthly_workflow, \
+    "monthly builds do not pin the current compatible live-build toolchain"
 
 # The VM GPU must stay a single stable card. Layering virtio-gpu/virtio-vga on
 # top of QEMU's default VGA exposes two DRM cards to the guest, stalling Xorg

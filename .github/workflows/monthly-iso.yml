@@ -25,6 +25,20 @@ jobs:
       - name: Install build and VM dependencies
         run: make deps
 
+      - name: Install the pinned current live-build toolchain
+        shell: bash
+        run: |
+          package="$RUNNER_TEMP/live-build_20250814_all.deb"
+          curl --fail --location --show-error \
+            --proto '=https' --proto-redir '=https' \
+            --retry 3 --retry-all-errors --connect-timeout 15 \
+            --output "$package" \
+            https://deb.debian.org/debian/pool/main/l/live-build/live-build_20250814_all.deb
+          echo "a4bffb8e6436ffba260f2e1c37be9dd04a4dacf52c38d7bbe454ec826ba52a4b  $package" \
+            | sha256sum --check --strict
+          sudo dpkg --install "$package"
+          test "$(dpkg-query -W -f='${Version}' live-build)" = '1:20250814'
+
       - name: Validate release source
         run: make check
 
