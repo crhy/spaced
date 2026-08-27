@@ -31,11 +31,6 @@ attempts=0
 [ ! -r "$STATE_DIR/attempts" ] || read -r attempts < "$STATE_DIR/attempts"
 case "$attempts" in *[!0-9]*|'') attempts=0 ;; esac
 [ "$attempts" -lt "$MAX_ATTEMPTS" ] || exit 0
-attempts=$((attempts + 1))
-printf '%s\n' "$attempts" > "$STATE_DIR/attempts"
-
-exec >> "$LOG_FILE" 2>&1
-printf '\n[%s] Fresh-install snapshot attempt %s/%s\n' "$(date -u +%FT%TZ)" "$attempts" "$MAX_ATTEMPTS"
 
 if ! command -v timeshift >/dev/null 2>&1; then
     echo "Timeshift is unavailable"
@@ -44,6 +39,14 @@ fi
 
 # Let first-login migrations, package configuration, and network startup settle.
 sleep 120
+
+# Count only attempts that survive the settling delay. A reboot during that
+# delay must not consume one of the three real snapshot attempts.
+attempts=$((attempts + 1))
+printf '%s\n' "$attempts" > "$STATE_DIR/attempts"
+
+exec >> "$LOG_FILE" 2>&1
+printf '\n[%s] Fresh-install snapshot attempt %s/%s\n' "$(date -u +%FT%TZ)" "$attempts" "$MAX_ATTEMPTS"
 
 root_device=$(findmnt -n -o SOURCE / | sed 's/\[.*\]$//')
 if [ -z "$root_device" ] || [ ! -b "$root_device" ]; then
