@@ -29,6 +29,7 @@
             "build": [
                 "curl",
                 "debootstrap",
+                "gnupg",
                 "grub-common",
                 "live-build",
                 "rsync",
@@ -58,9 +59,52 @@
                 "packages/spaced-mate-default-settings",
                 "packages/spaced-meta"
             ],
+            "stagedDependencies": [
+                "spaced-welcome"
+            ],
             "outputDirectory": "build/local-packages"
         },
         "externalArtifacts": [
+            {
+                "name": "spaced-welcome",
+                "architecture": "all",
+                "repository": "crhy/spacedwelcome",
+                "configuration": "config/external-artifacts.conf",
+                "versionVariable": "SPACED_WELCOME_VERSION",
+                "checksumVariable": "SPACED_WELCOME_SHA256",
+                "localOverride": "SPACED_WELCOME_DEB",
+                "stagingScript": "scripts/iso/stage-external-artifacts.sh",
+                "reason": "Standalone first-login application packaged independently from desktop defaults"
+            },
+            {
+                "name": "SpacedBazaar",
+                "architecture": [
+                    "x86_64",
+                    "aarch64"
+                ],
+                "repository": "crhy/spacedbazaar",
+                "configuration": "config/external-artifacts.conf",
+                "versionVariable": "SPACED_BAZAAR_VERSION",
+                "checksumVariables": [
+                    "SPACED_BAZAAR_SHA256_AMD64",
+                    "SPACED_BAZAAR_SHA256_ARM64"
+                ],
+                "localOverride": "SPACED_BAZAAR_BUNDLE",
+                "stagingScript": "scripts/iso/stage-external-artifacts.sh",
+                "reason": "System-wide application catalog installed before the first desktop session"
+            },
+            {
+                "name": "spaced-github",
+                "architecture": "all",
+                "url": "https://crhy.github.io/spacedbazaar/spaced-github.flatpakrepo",
+                "repositoryUrl": "https://crhy.github.io/spacedbazaar/flatpak-repo/",
+                "configuration": "config/external-artifacts.conf",
+                "checksumVariable": "SPACED_GITHUB_REMOTE_SHA256",
+                "gpgFingerprintVariable": "SPACED_GITHUB_GPG_FINGERPRINT",
+                "localOverride": "SPACED_GITHUB_REMOTE_FILE",
+                "stagingScript": "scripts/iso/stage-external-artifacts.sh",
+                "reason": "Signed first-party Flatpak catalog for CRHY applications"
+            },
             {
                 "name": "xkb-data",
                 "version": "2.47-1",

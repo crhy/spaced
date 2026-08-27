@@ -1,0 +1,6 @@
+# Create one Timeshift restore point after the first installed-system boot.
+# Set to 0 before booting to disable this policy.
+ENABLED=1
+
+# Preserve this much free space in addition to the currently used root data.
+MIN_HEADROOM_MIB=1024

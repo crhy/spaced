@@ -6,6 +6,7 @@ SSH_PORT=${SPACED_VM_SSH_PORT:-2222}
 TIMEOUT=${SPACED_ISO_SMOKE_TIMEOUT:-240}
 MONITOR_PORT=${SPACED_QEMU_MONITOR_PORT:-4444}
 VNC_DISPLAY=${SPACED_QEMU_VNC_DISPLAY:-99}
+ACCEL=${SPACED_QEMU_ACCEL:-kvm}
 ROOT_PASSWORD=${SPACED_LIVE_ROOT_PASSWORD:-spaced}
 PROJECT_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)
 ARTIFACT_DIR=${SPACED_QEMU_ARTIFACT_DIR:-$PROJECT_ROOT/build/test-artifacts}
@@ -75,9 +76,15 @@ command -v sshpass >/dev/null || {
     echo "sshpass is required for the graphical live-session check" >&2
     exit 1
 }
-echo "Starting KVM ISO smoke test on SSH port $SSH_PORT"
+case "$ACCEL" in
+    kvm) QEMU_ACCEL_ARGS=(-enable-kvm -cpu host) ;;
+    tcg) QEMU_ACCEL_ARGS=(-accel "tcg,thread=multi" -cpu max) ;;
+    *) echo "Unsupported QEMU accelerator: $ACCEL" >&2; exit 2 ;;
+esac
+
+echo "Starting $ACCEL ISO smoke test on SSH port $SSH_PORT"
 qemu-system-x86_64 \
-    -enable-kvm -cpu host -m 4096 -smp 4 \
+    "${QEMU_ACCEL_ARGS[@]}" -m 4096 -smp 4 \
     -device qemu-xhci,id=xhci \
     -device usb-kbd,bus=xhci.0 \
     -device usb-tablet,bus=xhci.0 \
@@ -93,19 +100,19 @@ for ((elapsed = 0; elapsed < TIMEOUT; elapsed += 5)); do
         # SSH starts before LightDM and MATE have finished painting the desktop.
         sleep 10
         capture_screen
-        echo "KVM smoke test passed: live SSH and MATE became ready after ${elapsed}s"
+        echo "$ACCEL smoke test passed: live SSH and MATE became ready after ${elapsed}s"
         echo "Screenshot: $SCREENSHOT"
         exit 0
     fi
     if [ -s "$PID_FILE" ] && ! kill -0 "$(<"$PID_FILE")" 2>/dev/null; then
-        echo "KVM exited before the live system became ready" >&2
+        echo "$ACCEL VM exited before the live system became ready" >&2
         exit 1
     fi
-    echo "Waiting for the KVM live system (${elapsed}s/${TIMEOUT}s)"
+    echo "Waiting for the $ACCEL live system (${elapsed}s/${TIMEOUT}s)"
     sleep 5
 done
 
 capture_screen
-echo "KVM live SSH and MATE did not become ready within ${TIMEOUT}s" >&2
+echo "$ACCEL live SSH and MATE did not become ready within ${TIMEOUT}s" >&2
 echo "Last screenshot, if available: $SCREENSHOT" >&2
 exit 1

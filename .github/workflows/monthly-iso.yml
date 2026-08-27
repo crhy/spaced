@@ -1,0 +1,59 @@
+name: Monthly ISO build and desktop smoke test
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "23 9 1 * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: monthly-iso-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-and-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 300
+    env:
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - name: Check out the distribution
+        uses: actions/checkout@v4
+
+      - name: Install build and VM dependencies
+        run: make deps
+
+      - name: Validate release source
+        run: make check
+
+      - name: Select available QEMU acceleration
+        shell: bash
+        run: |
+          if [[ -c /dev/kvm ]]; then
+            sudo chmod a+rw /dev/kvm
+            echo "SPACED_QEMU_ACCEL=kvm" >> "$GITHUB_ENV"
+            echo "SPACED_ISO_SMOKE_TIMEOUT=360" >> "$GITHUB_ENV"
+          else
+            echo "SPACED_QEMU_ACCEL=tcg" >> "$GITHUB_ENV"
+            echo "SPACED_ISO_SMOKE_TIMEOUT=900" >> "$GITHUB_ENV"
+          fi
+
+      - name: Clean-build the ISO
+        run: make release
+
+      - name: Boot through SSH into the MATE and Compiz desktop
+        run: make iso-smoke-kvm
+
+      - name: Upload ISO, checksum, and desktop evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spaced-linux-monthly-${{ github.run_number }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            build/iso/*.iso
+            build/iso/*.sha256
+            build/test-artifacts/*

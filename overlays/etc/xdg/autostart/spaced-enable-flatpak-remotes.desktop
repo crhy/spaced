@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Enable Flatpak Sources
+Comment=Register the signed Flathub and Spaced Linux application repositories
+Exec=/usr/local/bin/spaced-enable-flatpak-remotes
+OnlyShowIn=MATE;
+NoDisplay=true
+X-MATE-Autostart-Delay=5

@@ -37,7 +37,8 @@ Verified against commit `f462bdb4b4d3916caf1617159056f2743b016acf`.
 | Dual-GPU test-VM black screen | Test paths use one `-vga std` device and reject layered virtio VGA devices. | VM scripts and `scripts/check.sh` |
 | Rebuild time | The live-build package/bootstrap cache lives under `build/cache/live-build` and survives normal clean builds; `make cache-clean` removes it explicitly. | Makefile |
 | Mirror-sync build failures | Build-time repositories use the configured Devuan merged mirror consistently across phases. | live-build configuration |
-| Flathub build failure | The image build does not depend on live Flathub network access inside the chroot. Login-time and wrapper helpers register usable remotes when networking is available. | image hook, Flatpak helper scripts |
+| Flatpak source drift | Flathub and `spaced-github` use packaged signed descriptors. The first-party descriptor is checksum- and fingerprint-pinned, then registered at system and user scope without disabling GPG verification. | artifact stager, image hook, Flatpak helper scripts |
+| Welcome/Bazaar bootstrap failure | Welcome is a standalone Debian dependency, while a verified SpacedBazaar bundle is installed system-wide before first login and must retain the central update origin. | `spaced-meta`, external-artifact config, image hook |
 | systemd-free Devuan policy | Full systemd and `systemd-sysv` remain forbidden. The build permits only the standalone sysusers/tmpfiles tools required by Debian packages; they do not install systemd as the init system. | `dependency.json`, package manifest, live-build exclusions, `scripts/check.sh` |
 | Installed-system theme updates | The `spaced-mate-default-settings` package stages every `Spaced-*` theme plus icons, helpers, schemas, layouts, and related desktop files. Local same-version builds must be installed explicitly with `dpkg -i`. | `scripts/iso/build-local-packages.sh`, package control/postinst |
 

@@ -17,6 +17,7 @@ fi
 
 for required_package in \
     libglib2.0-bin \
+    libfuse2t64 \
     dbus-x11 \
     elogind \
     libelogind-compat \
@@ -57,6 +58,7 @@ python3 - <<'PY'
 import glob
 import hashlib
 import json
+import re
 from collections import Counter
 from pathlib import Path
 from xml.etree import ElementTree
@@ -117,6 +119,7 @@ assert "QT_QPA_PLATFORMTHEME=gtk3" in application_theming \
 assert {"bluez", "bluez-tools"}.issubset(packages), "Bluetooth stack is not included by default (issue #77)"
 assert {"btop", "caja-admin", "gigolo", "gparted", "nvtop", "timeshift", "zstd"}.issubset(packages), \
     "administrator, partitioning, Windows-share, or backup desktop integration is missing"
+assert "libfuse2t64" in packages, "legacy AppImages cannot start without FUSE 2 compatibility (issue #153)"
 assert {"gnome-keyring", "libcanberra-gtk3-module", "accountsservice"}.issubset(packages), \
     "Flatpak/keyring or LightDM desktop integration is incomplete"
 assert "mate-power-manager" in packages, \
@@ -139,6 +142,9 @@ assert "stage_desktop_defaults" in local_package_builder and "usr/share/themes" 
 assert "spaced-audio-restore.desktop" in local_package_builder \
     and "spaced-display-repair.desktop" in local_package_builder, \
     "installed-system update package omits audio or display recovery autostarts"
+assert "spaced-first-boot-snapshot" in local_package_builder \
+    and "mate-about.desktop" in local_package_builder, \
+    "installed-system update package omits snapshot or system-info integration"
 assert '-name "${pkg}_*_all.deb"' in local_package_builder and "-delete" in local_package_builder, \
     "local package builds can leave stale release versions in ISO staging"
 
@@ -170,6 +176,13 @@ assert "live-media-timeout=" not in live_build_config + live_grub_cfg, \
 qemu_common = Path("scripts/vm/qemu/common.sh").read_text(encoding="utf-8")
 assert "-rtc base=utc" in qemu_common and "-rtc base=localtime" not in qemu_common, \
     "QEMU must expose a UTC hardware clock to the Linux guest"
+qemu_smoke = Path("scripts/vm/qemu/smoke-iso.sh").read_text(encoding="utf-8")
+assert "SPACED_QEMU_ACCEL" in qemu_smoke and "tcg,thread=multi" in qemu_smoke, \
+    "headless ISO smoke testing has no non-KVM fallback"
+monthly_workflow = Path(".github/workflows/monthly-iso.yml").read_text(encoding="utf-8")
+assert 'cron: "23 9 1 * *"' in monthly_workflow and "make release" in monthly_workflow \
+    and "make iso-smoke-kvm" in monthly_workflow and "upload-artifact@v4" in monthly_workflow, \
+    "monthly ISO build, desktop boot, or evidence retention is not automated (issue #148)"
 
 # The VM GPU must stay a single stable card. Layering virtio-gpu/virtio-vga on
 # top of QEMU's default VGA exposes two DRM cards to the guest, stalling Xorg
@@ -188,7 +201,7 @@ assert 'chown -R 0:0 "$(abspath $(LB_DIR)/config/includes.chroot)"' in makefile_
     "live-build overlay staging can preserve non-root ownership in /usr"
 assert '$(HOST_RUN) scripts/build-apt-repo.sh "$(abspath $(APT_REPO_DIR))"' in makefile_text, \
     "APT repository builds do not use the host packaging tools"
-for gpu_source in (qemu_common, makefile_text):
+for gpu_source in (qemu_common, qemu_smoke, makefile_text):
     assert "virtio-gpu-pci" not in gpu_source and "virtio-vga" not in gpu_source, \
         "test VM must use a single GPU; dual virtio VGA leaves the guest on a black screen"
     assert "-vga std" in gpu_source, "test VM must expose exactly one VGA (QEMU standard VGA)"
@@ -284,9 +297,21 @@ assert "Name=Install Spaced Linux" in launcher.read_text(encoding="utf-8")
 build_hook = Path("scripts/iso/01-configure.chroot").read_text(encoding="utf-8")
 package_builder = Path("scripts/iso/build-local-packages.sh").read_text(encoding="utf-8")
 assert "flathub.org" not in build_hook, "image build must not depend on live Flathub access"
-assert "flatpak remote-add --system --if-not-exists flathub" in build_hook \
-    and "/usr/share/flatpak/remotes.d/flathub.flatpakrepo" in build_hook, \
-    "Bazaar's sandboxed backend does not get a real system Flathub remote"
+assert "for remote in flathub spaced-github" in build_hook \
+    and 'remote-add --system --if-not-exists "$remote" "$descriptor"' in build_hook, \
+    "the live image does not register both signed system Flatpak remotes"
+assert 'flatpak install --system --noninteractive -y "$bazaar_bundle"' in build_hook \
+    and "flatpak info --system io.github.crhy.SpacedBazaar" in build_hook \
+    and "attempt $attempt of 3" in build_hook, \
+    "SpacedBazaar is not verified and installed system-wide before first login"
+assert "flatpak info --show-origin --system io.github.crhy.SpacedBazaar" in build_hook \
+    and '"$bazaar_origin" = spaced-github' in build_hook, \
+    "the preinstalled SpacedBazaar bundle is orphaned from its update remote"
+assert "flatpak info --show-ref --system io.github.crhy.SpacedBazaar" in build_hook \
+    and "flatpak --default-arch" in build_hook, \
+    "the installed SpacedBazaar architecture is not verified"
+assert 'rm -f -- "$bazaar_bundle"' in build_hook, \
+    "the bootstrap SpacedBazaar bundle remains duplicated in the finished image"
 assert 'old = b"%s (as superuser)"' in build_hook and "data.replace(old, new)" in build_hook, \
     "Flatpak X11 windows retain the false superuser title suffix"
 assert "etc/xdg/QtProject/qtquickcontrols2.conf" in package_builder, \
@@ -296,54 +321,82 @@ assert 'Spaced-Dark ] && continue' not in package_builder, \
 assert "Spaced-Icons-*" in package_builder and "start-here-symbolic.png" in package_builder, \
     "active icon-theme caches do not receive the issue-provided Brisk mark"
 
-welcome_app = root / "usr/lib/spaced-linux/spaced-welcome.py"
-welcome_launcher = root / "usr/share/applications/spaced-welcome.desktop"
-welcome_autostart = root / "etc/xdg/autostart/spaced-welcome.desktop"
-welcome_wrapper = (root / "usr/local/bin/spaced-welcome").read_text(encoding="utf-8")
-flatpak_installer = (root / "usr/local/bin/spaced-install-apps").read_text(encoding="utf-8")
-release_resolver_path = root / "usr/local/bin/spaced-github-release-asset"
-release_resolver = release_resolver_path.read_text(encoding="utf-8")
-flatpak_list = (root / "usr/share/spaced-welcome/FlatpaksToInstallAfterInstall.txt").read_text(encoding="utf-8")
+embedded_welcome_paths = (
+    root / "usr/lib/spaced-linux/spaced-welcome.py",
+    root / "usr/share/applications/spaced-welcome.desktop",
+    root / "etc/xdg/autostart/spaced-welcome.desktop",
+    root / "usr/local/bin/spaced-welcome",
+    root / "usr/local/bin/spaced-install-apps",
+    root / "usr/local/bin/spaced-github-release-asset",
+    root / "usr/share/spaced-welcome/FlatpaksToInstallAfterInstall.txt",
+)
+assert not [path for path in embedded_welcome_paths if path.exists()], \
+    "the standalone Welcome implementation is still duplicated in the distro overlay"
+meta_control = Path("packages/spaced-meta/DEBIAN/control").read_text(encoding="utf-8")
+assert "spaced-mate-default-settings (= 8.26.8)" in meta_control \
+    and "spaced-welcome (>= 0.1.6)" in meta_control \
+    and "libfuse2t64" in meta_control, \
+    "spaced-meta does not pull in the standalone Welcome package and desktop defaults"
+assert "spaced-welcome.desktop" not in package_builder \
+    and "usr/share/spaced-welcome" not in package_builder, \
+    "spaced-mate-default-settings still stages standalone Welcome-owned paths"
+
+artifact_config = Path("config/external-artifacts.conf").read_text(encoding="utf-8")
+artifact_stager_path = Path("scripts/iso/stage-external-artifacts.sh")
+artifact_stager = artifact_stager_path.read_text(encoding="utf-8")
+
+def artifact_default(name):
+    match = re.search(rf"\$\{{{re.escape(name)}:=([^}}]+)\}}", artifact_config)
+    assert match, f"external artifact configuration is missing {name}"
+    return match.group(1)
+
+assert artifact_default("SPACED_WELCOME_REPOSITORY") == "crhy/spacedwelcome"
+assert artifact_default("SPACED_WELCOME_VERSION") == "0.1.6"
+assert artifact_default("SPACED_BAZAAR_REPOSITORY") == "crhy/spacedbazaar"
+assert artifact_default("SPACED_BAZAAR_VERSION") == "0.1.5"
+assert artifact_default("SPACED_GITHUB_REMOTE_NAME") == "spaced-github"
+assert artifact_default("SPACED_GITHUB_REMOTE_DESCRIPTOR_URL") == \
+    "https://crhy.github.io/spacedbazaar/spaced-github.flatpakrepo"
+assert artifact_default("SPACED_GITHUB_REPO_URL") == \
+    "https://crhy.github.io/spacedbazaar/flatpak-repo/"
+for checksum_name in (
+    "SPACED_WELCOME_SHA256",
+    "SPACED_BAZAAR_SHA256_AMD64",
+    "SPACED_BAZAAR_SHA256_ARM64",
+    "SPACED_GITHUB_REMOTE_SHA256",
+):
+    value = artifact_default(checksum_name)
+    assert value == "UNRELEASED" or re.fullmatch(r"[0-9a-fA-F]{64}", value), \
+        f"{checksum_name} is neither a release gate nor a SHA-256 pin"
+fingerprint = artifact_default("SPACED_GITHUB_GPG_FINGERPRINT")
+assert fingerprint == "UNRELEASED" or re.fullmatch(r"[0-9a-fA-F]{40}", fingerprint), \
+    "spaced-github key is neither release-gated nor fingerprint-pinned"
+for override in ("SPACED_WELCOME_DEB", "SPACED_BAZAAR_BUNDLE",
+                 "SPACED_GITHUB_REMOTE_FILE"):
+    assert override in artifact_stager, f"verified local override is missing: {override}"
+assert "amd64|x86_64" in artifact_stager and "arm64|aarch64" in artifact_stager \
+    and "SpacedBazaar-${FLATPAK_ARCH}.flatpak" in artifact_stager, \
+    "external artifact staging does not map Debian and Flatpak architectures"
+assert "--retry 3 --retry-all-errors --connect-timeout 15" in artifact_stager \
+    and "--proto '=https' --proto-redir '=https'" in artifact_stager, \
+    "external artifact downloads are not HTTPS-only and retry-safe"
+assert "dpkg-deb -f" in artifact_stager and "verify_sha256" in artifact_stager \
+    and "SPACED_GITHUB_GPG_FINGERPRINT" in artifact_stager, \
+    "external Debian, Flatpak, or remote inputs are not fully verified"
+assert makefile_text.index("scripts/iso/stage-external-artifacts.sh") < \
+    makefile_text.index("scripts/iso/build-local-packages.sh", makefile_text.index("prepare:")), \
+    "standalone release artifacts are not staged before local packages"
+assert "SPACED_EXTERNAL_STAGE_DIR" in package_builder \
+    and 'spaced-github.flatpakrepo' in package_builder, \
+    "the verified spaced-github descriptor is not owned by the desktop package"
+apt_repo_builder = Path("scripts/build-apt-repo.sh").read_text(encoding="utf-8")
+assert apt_repo_builder.index("stage-external-artifacts.sh") < \
+    apt_repo_builder.index("build-local-packages.sh") \
+    and 'cp "$package_work/packages"/*.deb' in apt_repo_builder, \
+    "the APT repository omits the verified standalone Welcome dependency"
+
 flatpak_wrapper_path = root / "usr/local/bin/flatpak"
 flatpak_wrapper = flatpak_wrapper_path.read_text(encoding="utf-8")
-assert welcome_app.is_file() and welcome_launcher.is_file() and welcome_autostart.is_file(), \
-    "Spaced Linux first-run application is incomplete"
-assert "/run/live/medium" in welcome_wrapper and "welcome-shown" in welcome_wrapper, \
-    "first-run application is not limited to one installed-system launch"
-assert "github-release:crhy/spacedbazaar:SpacedBazaar-x86_64.flatpak" in flatpak_installer, \
-    "the SpacedBazaar installer does not resolve the independent latest release bundle"
-assert 'bundles=("$spacedbazaar_spec")' in flatpak_installer, \
-    "suggested apps do not install SpacedBazaar by default"
-assert release_resolver_path.stat().st_mode & 0o111, "GitHub release resolver is not executable"
-assert "/repos/$repo/releases/latest" in release_resolver \
-    and "fnmatch.fnmatchcase" in release_resolver, \
-    "GitHub bundles are pinned or selected without checking the latest release assets"
-assert "io.github.kolunmi.Bazaar" not in flatpak_installer, \
-    "the SpacedBazaar installer still falls back to broken upstream Bazaar"
-assert "mate-panel --replace" in flatpak_installer, \
-    "installed applications do not refresh the Brisk menu immediately"
-assert "attempt $attempt of 3" in flatpak_installer and "continuing with the remaining applications" in flatpak_installer, \
-    "suggested Flatpaks still fail as one all-or-nothing batch"
-assert "--continue-at -" in flatpak_installer, "large Flatpak bundle downloads do not resume"
-assert "playlist_visible=TRUE" in flatpak_installer and "playlist_y=136" in flatpak_installer, \
-    "Audacious does not receive a one-time attached-playlist default"
-assert "Some suggested apps could not be installed" in welcome_app.read_text(encoding="utf-8"), \
-    "Welcome still exposes raw installer URLs instead of a useful failure message"
-assert "io.github.crhy.SpacedBazaar" in welcome_app.read_text(encoding="utf-8"), \
-    "Welcome does not launch the independent SpacedBazaar application"
-for app_id in ("org.atheme.audacious", "com.brave.Browser",
-               "org.libreoffice.LibreOffice", "org.videolan.VLC"):
-    assert app_id in flatpak_list, f"suggested Flatpak is missing: {app_id}"
-assert "io.github.kolunmi.Bazaar" not in flatpak_list, \
-    "suggested apps still install the broken upstream Bazaar Flatpak"
-for bundle_spec in (
-    "github-release:crhy/Voice2Text-AI:Voice2Text-AI.flatpak",
-    "github-release:crhy/ScumWithCats:ScumWithCats-*.flatpak",
-    "github-release:crhy/brutalchess:BrutalChess-*.flatpak",
-    "github-release:crhy/spacedupdate:SpacedUpdate-*-x86_64.flatpak",
-):
-    assert bundle_spec in flatpak_list, f"latest CRHY bundle is missing: {bundle_spec}"
-assert "/releases/download/v" not in flatpak_list, "a CRHY app is pinned to a stale release"
 bazaar_main = yaml.safe_load((root / "etc/bazaar/bazaar.yaml").read_text(encoding="utf-8"))
 bazaar_content = yaml.safe_load((root / "etc/bazaar/config.yaml").read_text(encoding="utf-8"))
 assert bazaar_main["start-on-curated"] is True \
@@ -351,9 +404,19 @@ assert bazaar_main["start-on-curated"] is True \
     "SpacedBazaar does not load the Spaced Linux catalog"
 bazaar_apps = bazaar_content["rows"][0]["section"]["appids"]["list"]
 assert {"io.github.crhy.SpacedBazaar", "io.github.crhy.voice2textai",
-        "io.github.crhy.ScumWithCats", "io.github.crhy.BrutalChess",
-        "org.spacedlinux.SpacedUpdate"}.issubset(bazaar_apps), \
+        "io.github.crhy.CardsWithCats", "io.github.crhy.BrutalChess",
+        "org.spacedlinux.SpacedUpdate", "io.github.crhy.SpacedWelcome"}.issubset(bazaar_apps), \
     "SpacedBazaar's CRHY catalog is incomplete"
+suggested_apps = {
+    app_id
+    for row in bazaar_content["rows"][1:]
+    for app_id in row["section"]["appids"]["list"]
+}
+assert {"org.kde.kdenlive", "org.gimp.GIMP", "org.ardour.Ardour",
+        "org.tenacityaudio.Tenacity", "org.DolphinEmu.dolphin-emu",
+        "org.mozilla.thunderbird", "com.obsproject.Studio",
+        "com.vscodium.codium", "com.valvesoftware.Steam"}.issubset(suggested_apps), \
+    "SpacedBazaar's task-oriented suggestions are incomplete"
 assert {"python3-gi", "gir1.2-gtk-3.0"}.issubset(packages), \
     "first-run GTK application dependencies are missing"
 assert flatpak_wrapper_path.stat().st_mode & 0o111, "Flatpak HTTPS-bundle wrapper is not executable"
@@ -361,8 +424,9 @@ assert "https://*.flatpak" in flatpak_wrapper and "--proto-redir '=https'" in fl
     "Flatpak HTTPS-bundle compatibility handling is missing"
 assert 'real_flatpak=${SPACED_FLATPAK_REAL:-/usr/bin/flatpak}' in flatpak_wrapper, \
     "Flatpak compatibility wrapper does not delegate to the packaged binary"
-assert "ensure_flathub" in flatpak_wrapper and "remote-add --user --if-not-exists flathub" in flatpak_wrapper, \
-    "terminal Flatpak installs do not self-register the Flathub remote"
+assert "ensure_remote" in flatpak_wrapper and "flathub|spaced-github" in flatpak_wrapper \
+    and 'remote-add --user --if-not-exists "$name" "$descriptor"' in flatpak_wrapper, \
+    "terminal Flatpak installs do not self-register the signed application remotes"
 system_flathub = (root / "usr/share/flatpak/remotes.d/flathub.flatpakrepo").read_text(encoding="utf-8")
 assert "[Flatpak Repo]" in system_flathub and "Url=https://dl.flathub.org/repo/" in system_flathub \
     and "GPGKey=" in system_flathub, \
@@ -376,9 +440,12 @@ for environment in (flatpak_xsession, flatpak_profile):
         "user Flatpak exports are absent from XDG_DATA_DIRS"
     assert "/var/lib/flatpak/exports/share" in environment, \
         "system Flatpak exports are absent from XDG_DATA_DIRS"
-flathub_helper = (root / "usr/local/bin/spaced-enable-flathub").read_text(encoding="utf-8")
-assert "seq 1 90" in flathub_helper and "sleep 2" in flathub_helper, \
-    "login-time Flathub registration does not survive delayed networking"
+remote_helper_path = root / "usr/local/bin/spaced-enable-flatpak-remotes"
+remote_helper = remote_helper_path.read_text(encoding="utf-8")
+assert remote_helper_path.stat().st_mode & 0o111, "Flatpak remote helper is not executable"
+assert "seq 1 90" in remote_helper and "sleep 2" in remote_helper \
+    and "for name in flathub spaced-github" in remote_helper, \
+    "login-time signed remote registration does not survive delayed networking"
 session_reset = (root / "etc/X11/Xsession.d/05spaced-reset-session-env").read_text(encoding="utf-8")
 assert "AT_SPI_BUS_ADDRESS" in session_reset and "var/lib/lightdm" in session_reset \
     and "xprop -root -remove AT_SPI_BUS" in session_reset, \
@@ -420,6 +487,8 @@ for unsafe_live_setting in ("spaced-live", "49-spaced-live-gparted.rules",
                             "spaced-live-session.desktop", "50-spaced.conf",
                             "10-spaced.conf", "passwd -l root"):
     assert unsafe_live_setting in cleanup, f"Calamares does not clean up {unsafe_live_setting}"
+assert "first-boot-snapshot/pending" in cleanup, \
+    "Calamares does not arm the Fresh install restore point for the installed target"
 calamares_packages = yaml.safe_load((root / "etc/calamares/modules/packages.conf").read_text(encoding="utf-8"))
 removed_after_install = set(calamares_packages["operations"][0]["remove"])
 assert {"calamares", "calamares-settings-debian", "openssh-server", "live-config-sysvinit", "squashfs-tools"}.issubset(removed_after_install), \
@@ -544,11 +613,6 @@ assert ".path-bar button" in shared_gtk and "toolbar button" in shared_gtk, \
     "breadcrumb and toolbar buttons are not flattened onto the window surface"
 assert "border-radius: 4px" in shared_gtk and "button.default" in shared_gtk, \
     "default buttons are not modernized with soft radius and accent outline"
-welcome_app_css = welcome_app.read_text(encoding="utf-8")
-assert "border-radius: 10px" in welcome_app_css and "border: 1px solid #3a3f47" in welcome_app_css, \
-    "first-run Welcome cards are not modernized"
-assert "print(output.rstrip(), file=sys.stderr)" in welcome_app_css, \
-    "Welcome failure details are neither user-friendly nor retained in the session log"
 for glyph in ("object-select-symbolic.svg", "list-remove-symbolic.svg", "media-record-symbolic.svg"):
     glyph_path = icon_root / "hicolor/scalable/actions" / glyph
     assert glyph_path.is_file(), f"checkbox/radio glyph is missing: {glyph} (issue #78)"
@@ -736,6 +800,41 @@ for mimeapps in (system_mimeapps, skel_mimeapps):
         and "text/x-shellscript=pluma.desktop" in mimeapps, \
         "Pluma is not the default editor for text and shell scripts"
 
+system_info_path = root / "usr/local/bin/spaced-system-info"
+system_info = system_info_path.read_text(encoding="utf-8")
+mate_about = (root / "usr/share/applications/mate-about.desktop").read_text(encoding="utf-8")
+assert system_info_path.stat().st_mode & 0o111 \
+    and "PRETTY_NAME" in system_info and "/proc/cpuinfo" in system_info \
+    and "/proc/meminfo" in system_info, \
+    "Spaced System Info does not report the release and basic hardware"
+assert "Name=About Spaced Linux" in mate_about and "Exec=spaced-system-info" in mate_about \
+    and "Icon=spaced-linux" in mate_about, \
+    "MATE's generic About entry is not replaced with the branded system dialog (issue #150)"
+
+brave_profile = root / "etc/skel/.var/app/com.brave.Browser/config/BraveSoftware/Brave-Browser/Default"
+brave_bookmarks = json.loads((brave_profile / "Bookmarks").read_text(encoding="utf-8"))
+brave_preferences = json.loads((brave_profile / "Preferences").read_text(encoding="utf-8"))
+bookmark_bar = brave_bookmarks["roots"]["bookmark_bar"]
+bookmark_checksum = hashlib.md5()
+def checksum_bookmark(node):
+    bookmark_checksum.update(node["id"].encode("utf-8"))
+    bookmark_checksum.update(node["name"].encode("utf-16-le"))
+    bookmark_checksum.update(node["type"].encode("utf-8"))
+    if node["type"] == "url":
+        bookmark_checksum.update(node["url"].encode("utf-8"))
+    else:
+        for child in node["children"]:
+            checksum_bookmark(child)
+for permanent_root in ("bookmark_bar", "other", "synced"):
+    checksum_bookmark(brave_bookmarks["roots"][permanent_root])
+assert brave_bookmarks["checksum"] == bookmark_checksum.hexdigest(), \
+    "Brave bookmarks do not carry a Chromium-compatible integrity checksum"
+assert {"OpenAirShips.com", "SpacedLinux.com", "Devuan", "SpacedBazaar", "SpacedHelp"} == \
+    {bookmark["name"] for bookmark in bookmark_bar["children"]}, \
+    "fresh Brave profiles do not receive the requested bookmark-bar links (issue #145)"
+assert brave_preferences["bookmark_bar"]["show_on_all_tabs"] is True, \
+    "Brave's seeded bookmarks are hidden by default"
+
 display_repair = (root / "usr/local/bin/spaced-display-repair").read_text(encoding="utf-8")
 audio_restore = (root / "usr/local/bin/spaced-audio-restore").read_text(encoding="utf-8")
 assert "ActiveChanged (false," in display_repair and "Broadcast RGB" in display_repair \
@@ -757,6 +856,21 @@ time_sync_config = yaml.safe_load((root / "etc/calamares/modules/shellprocess@sp
 assert "timeout --signal=TERM --kill-after=2 12" in time_sync \
     and time_sync_config["timeout"] == 30 and time_sync.rstrip().endswith("exit 0"), \
     "offline NTP can still block or fail Calamares"
+snapshot_worker_path = root / "usr/local/sbin/spaced-first-boot-snapshot"
+snapshot_worker = snapshot_worker_path.read_text(encoding="utf-8")
+snapshot_init_path = root / "etc/init.d/spaced-first-boot-snapshot"
+snapshot_init = snapshot_init_path.read_text(encoding="utf-8")
+assert snapshot_worker_path.stat().st_mode & 0o111 and snapshot_init_path.stat().st_mode & 0o111, \
+    "first-boot snapshot worker or SysV init script is not executable"
+assert 'comments "Fresh install"' in snapshot_worker and "--snapshot-device" in snapshot_worker \
+    and "--rsync --yes --scripted --quiet" in snapshot_worker \
+    and "/run/live/medium" in snapshot_worker and '"$STATE_DIR/pending"' in snapshot_worker \
+    and "required_kib" in snapshot_worker, \
+    "Fresh install snapshot is not one-shot, installed-only, or space-guarded (issue #149)"
+assert "Default-Start:     2 3 4 5" in snapshot_init \
+    and "start-stop-daemon" in snapshot_init \
+    and "spaced-first-boot-snapshot defaults 98" in live_configure, \
+    "Fresh install snapshot is not registered as a SysV service"
 live_session = (root / "usr/local/bin/spaced-live-session").read_text(encoding="utf-8")
 live_polkit = (root / "etc/polkit-1/rules.d/49-spaced-live-gparted.rules").read_text(encoding="utf-8")
 assert "idle-activation-enabled false" in live_session and "lock-enabled false" in live_session \

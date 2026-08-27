@@ -31,12 +31,55 @@ DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::ForceIPv4=true -o Acquire::Re
 # Compile the defaults supplied by the Spaced Linux overlay.
 glib-compile-schemas /usr/share/glib-2.0/schemas/
 
-# Bazaar's sandboxed libflatpak backend can enumerate only the system
-# installation. Register the bundled, signed Flathub definition without a
-# network request; the per-user login helper remains available for terminal
-# installs that do not need administrator authorization.
-flatpak remote-add --system --if-not-exists flathub \
-    /usr/share/flatpak/remotes.d/flathub.flatpakrepo
+# Make both signed catalogs visible in the live system before SpacedBazaar or
+# Welcome can start. The descriptors were verified on the build host; no
+# unsigned or dynamically selected repository is accepted here.
+for remote in flathub spaced-github; do
+    descriptor="/usr/share/flatpak/remotes.d/$remote.flatpakrepo"
+    [ -s "$descriptor" ] || {
+        echo "Missing signed Flatpak descriptor: $descriptor" >&2
+        exit 1
+    }
+    /usr/bin/flatpak remote-add --system --if-not-exists "$remote" "$descriptor"
+done
+
+# SpacedBazaar is part of the base desktop rather than a post-login suggestion.
+# Install the checksum-verified bundle into the system Flatpak installation so
+# it is already exported in both the live session and the Calamares target.
+bazaar_bundle=/usr/share/spaced-linux/bootstrap/SpacedBazaar.flatpak
+[ -s "$bazaar_bundle" ] || {
+    echo "Missing staged SpacedBazaar bundle" >&2
+    exit 1
+}
+bazaar_installed=
+for attempt in 1 2 3; do
+    echo "Installing SpacedBazaar (attempt $attempt of 3)"
+    if /usr/bin/flatpak install --system --noninteractive -y "$bazaar_bundle" &&
+       /usr/bin/flatpak info --system io.github.crhy.SpacedBazaar >/dev/null; then
+        bazaar_installed=1
+        break
+    fi
+    sleep 5
+done
+[ -n "$bazaar_installed" ] || {
+    echo "SpacedBazaar could not be installed into the system Flatpak installation" >&2
+    exit 1
+}
+bazaar_origin=$(/usr/bin/flatpak info --show-origin --system io.github.crhy.SpacedBazaar)
+[ "$bazaar_origin" = spaced-github ] || {
+    echo "SpacedBazaar bundle is not updateable from spaced-github (origin: ${bazaar_origin:-none})" >&2
+    exit 1
+}
+bazaar_arch=$(/usr/bin/flatpak --default-arch)
+bazaar_ref=$(/usr/bin/flatpak info --show-ref --system io.github.crhy.SpacedBazaar)
+case $bazaar_ref in
+    app/io.github.crhy.SpacedBazaar/"$bazaar_arch"/*) ;;
+    *)
+        echo "SpacedBazaar bundle ref '$bazaar_ref' does not match host architecture '$bazaar_arch'" >&2
+        exit 1
+        ;;
+esac
+rm -f -- "$bazaar_bundle"
 
 # Compiz's GTK window decorator, which it links from the MATE window
 # decoration library, trusts _NET_WM_PID as a host PID when decorating a
@@ -158,6 +201,8 @@ rm -f /etc/modprobe.d/nvidia-installer-disable-nouveau.conf 2>/dev/null || true
 /usr/local/sbin/spaced-sync-time || true
 # Enable chrony on installed/live systems.
 [ ! -e /etc/init.d/chrony ] || update-rc.d chrony defaults
+[ ! -e /etc/init.d/spaced-first-boot-snapshot ] || \
+  update-rc.d spaced-first-boot-snapshot defaults 98
 # Let GRUB discover other installed operating systems.
 if [ -f /etc/default/grub ]; then
   sed -i 's/^#\?GRUB_DISABLE_OS_PROBER=.*/GRUB_DISABLE_OS_PROBER=false/' /etc/default/grub

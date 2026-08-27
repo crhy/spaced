@@ -1,8 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=Enable Flathub
-Comment=Register the Flathub application repository when networking is available
-Exec=/usr/local/bin/spaced-enable-flathub
-OnlyShowIn=MATE;
-NoDisplay=true
-X-MATE-Autostart-Delay=5

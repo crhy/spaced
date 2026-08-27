@@ -25,10 +25,17 @@ refresh_desktop_menus() {
     xdg-desktop-menu forceupdate --mode user >/dev/null 2>&1 || true
 }
 
-ensure_flathub() {
-    "$real_flatpak" remotes --user --columns=name 2>/dev/null | grep -Fxq flathub && return 0
-    "$real_flatpak" remote-add --user --if-not-exists flathub \
-        https://flathub.org/repo/flathub.flatpakrepo
+ensure_remote() {
+    local name=$1
+    local descriptor="/usr/share/flatpak/remotes.d/$name.flatpakrepo"
+
+    "$real_flatpak" remotes --user --columns=name 2>/dev/null |
+        grep -Fxq "$name" && return 0
+    [[ -r $descriptor ]] || {
+        printf 'flatpak: missing signed remote definition: %s\n' "$descriptor" >&2
+        return 1
+    }
+    "$real_flatpak" remote-add --user --if-not-exists "$name" "$descriptor"
 }
 
 run_install() {
@@ -61,14 +68,16 @@ for index in "${!args[@]}"; do
 done
 
 # Spaced Linux uses a per-user Flatpak model. Make the familiar
-# `flatpak install flathub APP_ID` command self-healing if the login-time
-# network retry has not registered Flathub yet.
+# `flatpak install REMOTE APP_ID` command self-healing if the login-time
+# registration has not yet added one of the supported signed remotes.
 if [[ $install_command == true ]]; then
     for argument in "${args[@]}"; do
-        if [[ $argument == flathub ]]; then
-            ensure_flathub
-            break
-        fi
+        case $argument in
+            flathub|spaced-github)
+                ensure_remote "$argument"
+                break
+                ;;
+        esac
     done
 fi
 

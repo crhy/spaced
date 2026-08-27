@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=About Spaced Linux
+Comment=Show operating system and hardware information
+Exec=spaced-system-info
+Icon=spaced-linux
+Terminal=false
+Categories=System;
+OnlyShowIn=MATE;
+StartupNotify=true

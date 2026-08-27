@@ -1,15 +1,15 @@
 Package: spaced-meta
-Version: 8.26.7
+Version: 8.26.8
 Section: metapackages
 Priority: optional
 Architecture: all
 Maintainer: Spaced Linux Team
-Depends: base-files
+Depends: base-files, flatpak, libfuse2t64, spaced-mate-default-settings (= 8.26.8), spaced-welcome (>= 0.1.6)
 Provides: spaced-release
 Breaks: base-files (<< 13)
 Replaces: base-files (<< 13)
 Description: Spaced Linux release version tracking
- Tracks the Spaced Linux release version so that in-place OS updates
- are delivered through the package repository. The installed version is
- written to /etc/os-release, and upgrading this package upgrades the
- reported Spaced Linux version to match the release.
+ Tracks the Spaced Linux release version and independently maintained Welcome
+ package so that in-place OS updates deliver the complete desktop. The
+ installed version is written to /etc/os-release, and upgrading this package
+ upgrades the reported Spaced Linux version to match the release.

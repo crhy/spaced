@@ -4,7 +4,7 @@
   </a>
 </p>
 
-<h1 align="center">Spaced Linux 8.26.7</h1>
+<h1 align="center">Spaced Linux 8.26.8</h1>
 
 <p align="center"><strong>Spaced. Polished. Agile. Compiz. Efficient. Devuan.</strong></p>
 
@@ -28,7 +28,7 @@
   <img alt="Compiz" src="https://img.shields.io/badge/window%20manager-Compiz-5b5bd6">
   <img alt="Init system" src="https://img.shields.io/badge/init-sysvinit-555555">
   <img alt="Architecture" src="https://img.shields.io/badge/architecture-amd64-2563eb">
-  <img alt="Release" src="https://img.shields.io/badge/release-8.26.7-0ea5e9">
+  <img alt="Release" src="https://img.shields.io/badge/release-8.26.8-0ea5e9">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-black">
 </p>
 
@@ -42,7 +42,7 @@
 
 Spaced Linux is a polished desktop distribution built on **Devuan Ceres**, using **sysvinit**, **MATE**, and **Compiz**. It welcomes first-time Linux users without hiding the system from experienced users who want to inspect, customize, automate, and rebuild it.
 
-The desktop begins with a familiar layout: a clear application menu, conventional windows, readable controls, and tools placed where people expect them. Beneath that approachable surface is a lean Devuan base, a deeply configurable Compiz desktop, Flatpak and Flathub integration, a graphical Calamares installer, and a reproducible live-build workflow.
+The desktop begins with a familiar layout: a clear application menu, conventional windows, readable controls, and tools placed where people expect them. Beneath that approachable surface is a lean Devuan base, a deeply configurable Compiz desktop, signed Flatpak repositories, a graphical Calamares installer, and a reproducible live-build workflow.
 
 Compiz is not an optional novelty. It is the window manager and compositor, providing smooth animation, flexible workspace behavior, window rules, accessibility features, and the visual personality that makes Spaced Linux feel alive.
 
@@ -57,14 +57,14 @@ These are real Spaced Linux desktop sessions—not wallpaper mockups. Click any 
       <sub><strong>Compiz-first desktop</strong> — Workspaces, accessibility, motion, and organization are part of the core experience.</sub>
     </td>
     <td width="50%" align="center">
-      <a href="website/assets/screenshots/desktop-welcome.webp?v=8.26.7"><img src="website/assets/screenshots/desktop-welcome.webp?v=8.26.7" alt="Welcome to Spaced Linux first-run application"></a><br>
+      <a href="website/assets/screenshots/desktop-welcome.webp?v=8.26.8"><img src="website/assets/screenshots/desktop-welcome.webp?v=8.26.8" alt="Welcome to Spaced Linux first-run application"></a><br>
       <sub><strong>Friendly first run</strong> — Start installing software or open the browser from one clear welcome screen.</sub>
     </td>
   </tr>
   <tr>
     <td width="50%" align="center">
       <a href="website/assets/screenshots/desktop-bazaar.webp"><img src="website/assets/screenshots/desktop-bazaar.webp" alt="SpacedBazaar application store running on Spaced Linux"></a><br>
-      <sub><strong>Modern applications</strong> — Flatpak and Flathub provide current software without dependency chaos.</sub>
+      <sub><strong>Modern applications</strong> — Flatpak, Flathub, and the signed Spaced Linux catalog provide current software without dependency chaos.</sub>
     </td>
     <td width="50%" align="center">
       <a href="website/assets/screenshots/desktop-theme-cube-dark.webp"><img src="website/assets/screenshots/desktop-theme-cube-dark.webp" alt="Spaced Linux dark coordinated theme displayed across the Compiz workspace cube"></a><br>
@@ -100,7 +100,7 @@ These are real Spaced Linux desktop sessions—not wallpaper mockups. Click any 
 | **Familiar desktop** | A classic desktop workflow avoids the learning curve of unfamiliar shells. |
 | **Graphical installation** | Calamares provides a clear installation path for BIOS and UEFI systems. |
 | **Useful defaults** | Networking, audio controls, archives, editing, document viewing, and system utilities are ready immediately. |
-| **Modern applications** | Flatpak and Flathub provide current desktop apps without destabilizing the base system. |
+| **Modern applications** | Preinstalled SpacedBazaar searches Flathub and the signed Spaced Linux catalog without destabilizing the base system. |
 | **Coordinated themes** | One choice coordinates GTK, icons, folder colors, wallpaper, panel behavior, and the optional dock. |
 
 ## Why advanced users keep control
@@ -135,7 +135,9 @@ Spaced Linux combines a modern system with visual ideas from the best desktop er
 - **Display manager:** LightDM GTK Greeter
 - **Installer:** Calamares
 - **Icons:** Spaced overlays based on Papirus
-- **Application delivery:** APT plus Flatpak/Flathub
+- **Application delivery:** APT plus Flatpak, Flathub, and the signed `spaced-github` catalog
+- **First run:** standalone [`spaced-welcome`](https://github.com/crhy/spacedwelcome) Debian package
+- **Application catalog:** system-preinstalled [`SpacedBazaar`](https://github.com/crhy/spacedbazaar)
 - **Target architecture:** amd64
 
 ## Download Spaced Linux
@@ -145,7 +147,7 @@ Download the ISO and its matching checksum from the [Spaced Linux releases page]
 Verify the download on Linux:
 
 ```bash
-sha256sum -c spaced-linux-8.26.7-amd64.iso.sha256
+sha256sum -c spaced-linux-8.26.8-amd64.iso.sha256
 ```
 
 Test release images in a virtual machine or on non-critical hardware before adopting them for daily use.
@@ -160,6 +162,11 @@ cd spaced
 make deps
 make release
 ```
+
+ISO preparation intentionally stops when a standalone component or signing
+key is still marked `UNRELEASED`. See the
+[application delivery guide](docs/APPLICATION-DELIVERY.md#release-pins-and-local-development)
+for release pins and verified local overrides.
 
 The completed ISO is written beneath:
 
@@ -227,13 +234,17 @@ Thank you for helping keep an independent, polished, systemd-free desktop availa
 
 ## Project status
 
-The current development line is **8.26.7**. Spaced Linux is an independent community project under active development.
+The current development line is **8.26.8**. Spaced Linux is an independent community project under active development.
 
 ## Contributing
 
 Bug reports, documentation improvements, Compiz refinements, theme work, package suggestions, hardware testing, accessibility improvements, and build fixes are welcome.
 
 Open an [issue](https://github.com/crhy/spaced/issues) or submit a pull request describing what changed and how it was tested.
+
+The [application delivery architecture](docs/APPLICATION-DELIVERY.md) documents
+the standalone Welcome package, preinstalled SpacedBazaar, signed first-party
+Flatpak catalog, release pins, and end-to-end tests.
 
 ### Theme development
 

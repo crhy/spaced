@@ -10,7 +10,27 @@ BUILD_DIR := build
 ISO_DIR := $(BUILD_DIR)/iso
 LB_DIR := $(BUILD_DIR)/live-build
 CACHE_DIR := $(BUILD_DIR)/cache/live-build
+EXTERNAL_CACHE_DIR := $(BUILD_DIR)/cache/external-artifacts
 LOCAL_PACKAGE_DIR := $(BUILD_DIR)/local-packages
+EXTERNAL_STAGE_DIR := $(BUILD_DIR)/external-artifacts
+
+# Verified local overrides for independently released components. These are
+# passed explicitly because IDE builds may cross the Flatpak host boundary.
+SPACED_EXTERNAL_ARTIFACT_CONFIG ?=
+SPACED_WELCOME_VERSION ?=
+SPACED_WELCOME_RELEASE_TAG ?=
+SPACED_WELCOME_URL ?=
+SPACED_WELCOME_DEB ?=
+SPACED_WELCOME_SHA256 ?=
+SPACED_BAZAAR_VERSION ?=
+SPACED_BAZAAR_RELEASE_TAG ?=
+SPACED_BAZAAR_URL ?=
+SPACED_BAZAAR_BUNDLE ?=
+SPACED_BAZAAR_SHA256 ?=
+SPACED_GITHUB_REMOTE_DESCRIPTOR_URL ?=
+SPACED_GITHUB_REMOTE_FILE ?=
+SPACED_GITHUB_REMOTE_SHA256 ?=
+SPACED_GITHUB_GPG_FINGERPRINT ?=
 
 # Codex/IDE terminals run inside a Flatpak. On a regular shell this is empty.
 HOST_RUN ?= $(shell command -v flatpak-spawn >/dev/null 2>&1 && printf 'flatpak-spawn --host')
@@ -36,17 +56,18 @@ deps: ## Install host build and test dependencies
 	$(ROOT_RUN) apt-get update
 	$(ROOT_RUN) apt-get install -y \
 		live-build debootstrap xorriso squashfs-tools grub-common \
-		qemu-system-x86 qemu-utils ovmf rsync curl sshpass
+		qemu-system-x86 qemu-utils ovmf rsync curl gnupg sshpass
 
 check: ## Validate configuration, scripts, themes, and desktop entries
 	$(HOST_RUN) scripts/check.sh
 
 clean: ## Remove generated build data for the current release
-	$(ROOT_RUN) rm -rf "$(abspath $(LB_DIR))" "$(abspath $(LOCAL_PACKAGE_DIR))"
+	$(ROOT_RUN) rm -rf "$(abspath $(LB_DIR))" "$(abspath $(LOCAL_PACKAGE_DIR))" \
+		"$(abspath $(EXTERNAL_STAGE_DIR))"
 	rm -f $(ISO_DIR)/$(ISO_NAME) $(ISO_DIR)/$(ISO_NAME).sha256
 
 cache-clean: ## Remove cached live-build packages and bootstrap data
-	$(ROOT_RUN) rm -rf "$(abspath $(CACHE_DIR))"
+	$(ROOT_RUN) rm -rf "$(abspath $(CACHE_DIR))" "$(abspath $(EXTERNAL_CACHE_DIR))"
 
 prepare: ## Stage authored live-build configuration
 	mkdir -p $(BUILD_DIR)/cache
@@ -96,11 +117,30 @@ prepare: ## Stage authored live-build configuration
 	cp scripts/iso/01-configure.chroot \
 		$(LB_DIR)/config/hooks/live/01-configure.chroot
 	chmod +x $(LB_DIR)/config/hooks/live/01-configure.chroot
+	$(HOST_RUN) env \
+		SPACED_TARGET_ARCH="$(ARCH)" \
+		SPACED_IMAGE_ROOT="$(abspath $(LB_DIR)/config/includes.chroot)" \
+		SPACED_EXTERNAL_ARTIFACT_CONFIG="$(SPACED_EXTERNAL_ARTIFACT_CONFIG)" \
+		SPACED_WELCOME_VERSION="$(SPACED_WELCOME_VERSION)" \
+		SPACED_WELCOME_RELEASE_TAG="$(SPACED_WELCOME_RELEASE_TAG)" \
+		SPACED_WELCOME_URL="$(SPACED_WELCOME_URL)" \
+		SPACED_WELCOME_DEB="$(SPACED_WELCOME_DEB)" \
+		SPACED_WELCOME_SHA256="$(SPACED_WELCOME_SHA256)" \
+		SPACED_BAZAAR_VERSION="$(SPACED_BAZAAR_VERSION)" \
+		SPACED_BAZAAR_RELEASE_TAG="$(SPACED_BAZAAR_RELEASE_TAG)" \
+		SPACED_BAZAAR_URL="$(SPACED_BAZAAR_URL)" \
+		SPACED_BAZAAR_BUNDLE="$(SPACED_BAZAAR_BUNDLE)" \
+		SPACED_BAZAAR_SHA256="$(SPACED_BAZAAR_SHA256)" \
+		SPACED_GITHUB_REMOTE_DESCRIPTOR_URL="$(SPACED_GITHUB_REMOTE_DESCRIPTOR_URL)" \
+		SPACED_GITHUB_REMOTE_FILE="$(SPACED_GITHUB_REMOTE_FILE)" \
+		SPACED_GITHUB_REMOTE_SHA256="$(SPACED_GITHUB_REMOTE_SHA256)" \
+		SPACED_GITHUB_GPG_FINGERPRINT="$(SPACED_GITHUB_GPG_FINGERPRINT)" \
+		scripts/iso/stage-external-artifacts.sh
+	$(HOST_RUN) scripts/iso/build-local-packages.sh
 	# live-build copies this tree with ownership preserved. Make every image
 	# path root-owned so security-sensitive package scripts (notably OpenSSH)
 	# do not reject /usr or /usr/bin as an unsafe ownership transition.
 	$(ROOT_RUN) chown -R 0:0 "$(abspath $(LB_DIR)/config/includes.chroot)"
-	$(HOST_RUN) scripts/iso/build-local-packages.sh
 	cp $(LOCAL_PACKAGE_DIR)/*.deb $(LB_DIR)/config/packages.chroot/
 
 lb-config: prepare ## Generate the complete live-build tree

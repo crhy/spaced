@@ -1,0 +1,45 @@
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          spaced-first-boot-snapshot
+# Required-Start:    $local_fs $remote_fs
+# Required-Stop:
+# Should-Start:      $network
+# Default-Start:     2 3 4 5
+# Default-Stop:
+# Short-Description: Create the initial Spaced Linux restore point
+### END INIT INFO
+
+DAEMON=/usr/local/sbin/spaced-first-boot-snapshot
+PIDFILE=/run/spaced-first-boot-snapshot.pid
+
+case "${1:-}" in
+    start)
+        [ -x "$DAEMON" ] || exit 0
+        [ -e /var/lib/spaced-linux/first-boot-snapshot/pending ] || exit 0
+        [ ! -e /var/lib/spaced-linux/first-boot-snapshot/complete ] || exit 0
+        start-stop-daemon --start --quiet --background --make-pidfile \
+            --pidfile "$PIDFILE" --startas "$DAEMON" || true
+        ;;
+    stop)
+        start-stop-daemon --stop --quiet --retry=TERM/30/KILL/5 \
+            --pidfile "$PIDFILE" || true
+        rm -f "$PIDFILE"
+        ;;
+    restart|force-reload)
+        "$0" stop
+        "$0" start
+        ;;
+    status)
+        if [ -e /var/lib/spaced-linux/first-boot-snapshot/complete ]; then
+            echo "Fresh-install snapshot complete"
+            exit 0
+        fi
+        start-stop-daemon --status --pidfile "$PIDFILE"
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart|force-reload|status}" >&2
+        exit 3
+        ;;
+esac
+
+exit 0

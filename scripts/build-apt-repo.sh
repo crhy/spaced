@@ -26,8 +26,22 @@ fi
 mkdir -p "$OUT/dists/$DIST/$COMP/binary-amd64"
 OUT=$(cd "$OUT" && pwd)
 
+package_work=$(mktemp -d)
+cleanup() {
+    rm -rf -- "$package_work"
+}
+trap cleanup EXIT HUP INT TERM
+
+echo "Staging verified standalone release artifacts…"
+SPACED_TARGET_ARCH=amd64 \
+SPACED_IMAGE_ROOT="$package_work/image" \
+SPACED_EXTERNAL_STAGE_DIR="$package_work/external" \
+LOCAL_PACKAGE_OUTPUT="$package_work/packages" \
+    bash "$ROOT/scripts/iso/stage-external-artifacts.sh" >/dev/null
+
 echo "Building local packages…"
-LOCAL_PACKAGE_OUTPUT=/tmp/spaced-apt-build-local \
+SPACED_EXTERNAL_STAGE_DIR="$package_work/external" \
+LOCAL_PACKAGE_OUTPUT="$package_work/packages" \
     bash "$ROOT/scripts/iso/build-local-packages.sh" >/dev/null
 
 # A snapshot repository carries only the current release set, exactly like the
@@ -36,8 +50,7 @@ VERSION="$(cat "$ROOT/VERSION")"
 find "$OUT/dists/$DIST/$COMP/binary-amd64" -maxdepth 1 -type f \
     -name '*.deb' ! -name "*_${VERSION}_all.deb" -delete
 
-cp /tmp/spaced-apt-build-local/*.deb "$OUT/dists/$DIST/$COMP/binary-amd64/"
-rm -rf /tmp/spaced-apt-build-local
+cp "$package_work/packages"/*.deb "$OUT/dists/$DIST/$COMP/binary-amd64/"
 
 cd "$OUT/dists/$DIST/$COMP/binary-amd64"
 

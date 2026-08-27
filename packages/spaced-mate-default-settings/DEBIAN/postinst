@@ -26,4 +26,20 @@ if command -v update-desktop-database >/dev/null 2>&1; then
     update-desktop-database -q /usr/share/applications || true
 fi
 
+if [ -x /etc/init.d/spaced-first-boot-snapshot ]; then
+    update-rc.d spaced-first-boot-snapshot defaults 98 >/dev/null 2>&1 || true
+fi
+
+# Existing installations do not run the live-image hook again. Register any
+# newly packaged signed sources here as well; a later login retries user-scope
+# registration if networking is not ready during an APT upgrade.
+if [ -x /usr/bin/flatpak ]; then
+    for remote in flathub spaced-github; do
+        descriptor="/usr/share/flatpak/remotes.d/$remote.flatpakrepo"
+        [ -s "$descriptor" ] || continue
+        /usr/bin/flatpak remote-add --system --if-not-exists "$remote" \
+            "$descriptor" >/dev/null 2>&1 || true
+    done
+fi
+
 exit 0

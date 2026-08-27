@@ -4,13 +4,49 @@ rows:
       subtitle:
         string: |
           CRHY applications installed by **Spaced Linux Welcome** are collected
-          here. Run the suggested-app installer again at any time to fetch each
-          project's latest stable GitHub release.
+          here. Run the suggested-app installer again at any time to fetch them
+          from the signed Spaced GitHub Flatpak repository.
       list-type: rich
       appids:
         list:
           - io.github.crhy.SpacedBazaar
           - io.github.crhy.voice2textai
-          - io.github.crhy.ScumWithCats
+          - io.github.crhy.CardsWithCats
           - io.github.crhy.BrutalChess
           - org.spacedlinux.SpacedUpdate
+          - io.github.crhy.SpacedWelcome
+  - section:
+      title: "Create"
+      subtitle:
+        string: |
+          Edit video or photos, record music, edit audio, and capture or stream
+          video with recommended applications from Flathub.
+      list-type: rich
+      appids:
+        list:
+          - org.kde.kdenlive
+          - org.gimp.GIMP
+          - org.ardour.Ardour
+          - org.tenacityaudio.Tenacity
+          - com.obsproject.Studio
+  - section:
+      title: "Work and Communicate"
+      subtitle:
+        string: |
+          Read email with Thunderbird or write code with VSCodium.
+      list-type: rich
+      appids:
+        list:
+          - org.mozilla.thunderbird
+          - com.vscodium.codium
+  - section:
+      title: "Play"
+      subtitle:
+        string: |
+          Play legally obtained Wii and GameCube games with Dolphin, or open
+          your PC game library with Steam.
+      list-type: rich
+      appids:
+        list:
+          - org.DolphinEmu.dolphin-emu
+          - com.valvesoftware.Steam

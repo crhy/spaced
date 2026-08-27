@@ -1,0 +1,24 @@
+{
+  "checksum": "b5696a41a45979884170ba7112c7df3b",
+  "roots": {
+    "bookmark_bar": {
+      "children": [
+        {"date_added": "13401120000000000", "date_last_used": "0", "guid": "ae14aa02-70e8-4eb5-9ed1-53ac74ea2d92", "id": "2", "name": "OpenAirShips.com", "type": "url", "url": "https://openairships.com/"},
+        {"date_added": "13401120000000001", "date_last_used": "0", "guid": "09dd44f3-7b08-41df-af53-df47c1b508bf", "id": "3", "name": "SpacedLinux.com", "type": "url", "url": "https://spacedlinux.com/"},
+        {"date_added": "13401120000000002", "date_last_used": "0", "guid": "52902d4d-f86a-43d6-a6dd-a4582a3b75cd", "id": "4", "name": "Devuan", "type": "url", "url": "https://www.devuan.org/"},
+        {"date_added": "13401120000000003", "date_last_used": "0", "guid": "f8b1627a-e0cc-4273-be69-b5c8278d8f89", "id": "5", "name": "SpacedBazaar", "type": "url", "url": "https://github.com/crhy/spacedbazaar"},
+        {"date_added": "13401120000000004", "date_last_used": "0", "guid": "2f78ff19-bf44-4c63-b327-e75a3a382d93", "id": "6", "name": "SpacedHelp", "type": "url", "url": "https://spacedlinux.com/#help"}
+      ],
+      "date_added": "13401120000000000",
+      "date_last_used": "0",
+      "date_modified": "13401120000000004",
+      "guid": "00000000-0000-4000-a000-000000000002",
+      "id": "1",
+      "name": "Bookmarks bar",
+      "type": "folder"
+    },
+    "other": {"children": [], "date_added": "13401120000000000", "date_last_used": "0", "date_modified": "0", "guid": "00000000-0000-4000-a000-000000000003", "id": "7", "name": "Other bookmarks", "type": "folder"},
+    "synced": {"children": [], "date_added": "13401120000000000", "date_last_used": "0", "date_modified": "0", "guid": "00000000-0000-4000-a000-000000000004", "id": "8", "name": "Mobile bookmarks", "type": "folder"}
+  },
+  "version": 1
+}

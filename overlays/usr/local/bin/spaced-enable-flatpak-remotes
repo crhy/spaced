@@ -1,0 +1,41 @@
+#!/bin/bash
+# Register signed application sources for the current user.
+set -u
+
+real_flatpak=/usr/bin/flatpak
+remote_dir=/usr/share/flatpak/remotes.d
+
+[[ -x $real_flatpak ]] || exit 0
+
+remote_present() {
+    "$real_flatpak" remotes --user --columns=name 2>/dev/null |
+        grep -Fxq "$1"
+}
+
+add_missing_remotes() {
+    local missing=0 name
+
+    for name in flathub spaced-github; do
+        if remote_present "$name"; then
+            continue
+        fi
+        missing=1
+        "$real_flatpak" remote-add --user --if-not-exists "$name" \
+            "$remote_dir/$name.flatpakrepo" >/dev/null 2>&1 || true
+    done
+
+    remote_present flathub && remote_present spaced-github && return 0
+    return "$missing"
+}
+
+# NetworkManager may still be connecting when desktop autostart runs. Flatpak
+# can import each bundled signing key locally, while retries cover the initial
+# repository-summary fetch on a new installation.
+for attempt in $(seq 1 90); do
+    add_missing_remotes && exit 0
+    sleep 2
+done
+
+logger -t spaced-enable-flatpak-remotes \
+    "Flathub or spaced-github could not be registered during login"
+exit 1

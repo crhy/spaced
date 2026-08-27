@@ -1,0 +1,124 @@
+#!/usr/bin/python3
+"""Small, distribution-owned replacement for MATE's generic About dialog."""
+
+import html
+import os
+import platform
+from pathlib import Path
+
+import gi
+
+gi.require_version("Gtk", "3.0")
+gi.require_version("Gdk", "3.0")
+gi.require_version("GdkPixbuf", "2.0")
+gi.require_version("Pango", "1.0")
+from gi.repository import Gdk, GdkPixbuf, Gtk, Pango  # noqa: E402
+
+
+def os_release():
+    values = {}
+    try:
+        for line in Path("/etc/os-release").read_text(encoding="utf-8").splitlines():
+            if "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            values[key] = value.strip().strip('"')
+    except OSError:
+        pass
+    return values
+
+
+def cpu_name():
+    try:
+        for line in Path("/proc/cpuinfo").read_text(encoding="utf-8").splitlines():
+            if line.lower().startswith(("model name", "hardware")):
+                return line.split(":", 1)[1].strip()
+    except (OSError, IndexError):
+        pass
+    return platform.processor() or "Unknown"
+
+
+def memory_total():
+    try:
+        for line in Path("/proc/meminfo").read_text(encoding="utf-8").splitlines():
+            if line.startswith("MemTotal:"):
+                gib = int(line.split()[1]) / 1024 / 1024
+                return f"{gib:.1f} GiB"
+    except (OSError, ValueError, IndexError):
+        pass
+    return "Unknown"
+
+
+class SystemInfo(Gtk.Window):
+    def __init__(self):
+        super().__init__(title="About Spaced Linux")
+        self.set_icon_name("spaced-linux")
+        self.set_default_size(580, 470)
+        self.set_resizable(False)
+        self.set_position(Gtk.WindowPosition.CENTER)
+        self.set_border_width(28)
+
+        release = os_release()
+        name = release.get("PRETTY_NAME", "Spaced Linux")
+
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
+        self.add(box)
+
+        logo_path = os.environ.get(
+            "SPACED_SYSTEM_INFO_LOGO", "/usr/share/pixmaps/spaced-logo.png"
+        )
+        pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(logo_path, 112, 112, True)
+        logo = Gtk.Image.new_from_pixbuf(pixbuf)
+        box.pack_start(logo, False, False, 0)
+
+        title = Gtk.Label()
+        title.set_markup(f'<span size="xx-large" weight="bold">{html.escape(name)}</span>')
+        box.pack_start(title, False, False, 0)
+
+        subtitle = Gtk.Label(label="A polished, systemd-free desktop powered by Devuan, MATE, and Compiz.")
+        subtitle.set_line_wrap(True)
+        subtitle.set_justify(Gtk.Justification.CENTER)
+        box.pack_start(subtitle, False, False, 0)
+
+        details = Gtk.Grid(column_spacing=24, row_spacing=9)
+        details.set_halign(Gtk.Align.CENTER)
+        rows = (
+            ("Operating system", name),
+            ("Desktop", os.environ.get("XDG_CURRENT_DESKTOP", "MATE")),
+            ("Kernel", platform.release()),
+            ("Architecture", platform.machine()),
+            ("Processor", cpu_name()),
+            ("Memory", memory_total()),
+        )
+        for row, (label, value) in enumerate(rows):
+            key = Gtk.Label(label=label)
+            key.set_halign(Gtk.Align.END)
+            key.get_style_context().add_class("dim-label")
+            val = Gtk.Label(label=value)
+            val.set_halign(Gtk.Align.START)
+            val.set_selectable(True)
+            val.set_ellipsize(Pango.EllipsizeMode.END)
+            val.set_max_width_chars(48)
+            details.attach(key, 0, row, 1, 1)
+            details.attach(val, 1, row, 1, 1)
+        box.pack_start(details, True, True, 6)
+
+        actions = Gtk.Box(spacing=10)
+        actions.set_halign(Gtk.Align.CENTER)
+        website = Gtk.LinkButton.new_with_label("https://spacedlinux.com/", "SpacedLinux.com")
+        help_link = Gtk.LinkButton.new_with_label("https://spacedlinux.com/#help", "Help & tutorials")
+        close = Gtk.Button.new_with_label("Close")
+        close.get_style_context().add_class("suggested-action")
+        close.connect("clicked", lambda _button: self.close())
+        actions.pack_start(website, False, False, 0)
+        actions.pack_start(help_link, False, False, 0)
+        actions.pack_start(close, False, False, 0)
+        box.pack_end(actions, False, False, 0)
+
+
+if __name__ == "__main__":
+    Gdk.set_program_class("Spaced System Info")
+    window = SystemInfo()
+    window.connect("destroy", Gtk.main_quit)
+    window.show_all()
+    Gtk.main()

@@ -101,6 +101,7 @@ printing:
   - system-config-printer
 system:
   - accountsservice
+  - libfuse2t64
   - libglib2.0-bin
   - sudo
   - libpam-elogind

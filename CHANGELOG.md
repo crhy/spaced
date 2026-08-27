@@ -1,5 +1,22 @@
 # Changelog
 
+## 8.26.8 - 2026-08-27
+- Split Spaced Linux Welcome into the independently released `crhy/spacedwelcome` Debian package, made `spaced-meta` depend on it, and removed the duplicate embedded implementation from `spaced-mate-default-settings`.
+- Made SpacedBazaar 0.1.5 a checksum-pinned, system-wide part of the live and installed desktop before first login, with build-time verification of its app ID and signed update origin.
+- Added the signed `spaced-github` Flatpak remote for first-party CRHY applications at both system and user scope; artifact versions, architecture mappings, checksums, and signing-key fingerprint now live in one release-gated configuration instead of mutable or stale per-app GitHub URLs.
+- Changed standalone Welcome 0.1.6 to install Voice2Text AI, Cards With Cats, Brutal Chess, and Spaced Update by exact application ID from the signed central repository, removing the failing sandbox-to-host OSTree inspection path.
+- Added Spaced Welcome to the CRHY catalog and made repository publication reject any application bundle without matching AppStream metadata and a non-empty exported icon.
+- Prepared importable Voice2Text AI 0.4.2 and searchable Spaced Update 0.1.2 bundles so every released CRHY desktop app can be indexed, displayed with its icon, installed, and updated through SpacedBazaar.
+- Fixed SpacedBazaar's dependency-update workflow token permissions so GitHub Actions can push its update branch and open the generated pull request.
+- Added Welcome version/homepage details and corrected its native desktop icon name.
+- Added an initial task-oriented Help & Apps page to Welcome and matching Create, Work, and Play suggestions in SpacedBazaar; each Welcome choice opens the exact application page in Bazaar.
+- Recolored Brutal Chess 0.2.2's dark board squares from green marble to neutral charcoal-gray marble for a cleaner match with the Spaced desktop.
+- Renamed Scum with Cats to Cards With Cats 0.4.0, including its Flatpak application ID; moved the Scum play pile clear of the human hand, added smoother card motion and visual polish, and documented the game with current Flatpak screenshots.
+- Added a branded Spaced System Info dialog, AppImage compatibility through Ceres's `libfuse2t64` package (which provides `libfuse2`), a guarded first-installed-boot Timeshift restore point named “Fresh install,” and a visible set of useful Brave bookmarks.
+- Added the first Spaced Help website section and a Welcome Compiz quick start covering cube rotation, zoom, screenshots, fire writing, and clearing effects.
+- Added a scheduled and manually runnable monthly clean ISO build with source validation, KVM-or-TCG MATE/Compiz boot testing, and retained ISO, checksum, and desktop-capture evidence as the first phase of the automated test matrix.
+- Bumped distribution, package, installer, boot, VM, website, and documentation release identifiers to 8.26.8.
+
 ## 8.26.7 - 2026-08-22
 - Made live-session time synchronization strictly optional and bounded, so an offline NTP lookup can no longer time out Calamares or leave an incomplete installed system (issues #129 and #134).
 - Disabled screen blanking and locking only in the disposable live session, and granted its active local user passwordless GParted authorization while retaining normal installed-system authentication (issues #128 and #131).
@@ -8,7 +25,6 @@
 - Made the installed GRUB theme self-contained under `/boot/grub/themes/spaced`, restored its fancy logo, and used theme-relative image paths that work with separate or encrypted root filesystems (issue #133).
 - Put the issue-provided black/silver Brisk mark directly into every selectable icon theme during package staging so the active icon cache cannot resolve an inherited stale icon (issue #107).
 - Added explicit `Signed-By` scope to the intentionally trusted Spaced APT source, removing APT 3's update notice (issue #135).
-- Added Cards with Cats, Brutal Chess, and the alternate Spaced Update Flatpak to Spaced Linux Welcome and its SpacedBazaar-curated CRHY catalog alongside Voice2Text; all GitHub Flatpak bundles, including SpacedBazaar itself, now resolve their asset from each repository's latest stable release instead of pinning a versioned filename (issue #136).
 - Bumped distribution, package, installer, boot, VM, website, and documentation release identifiers to 8.26.7.
 
 ## 8.26.6 - 2026-08-20

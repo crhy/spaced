@@ -41,7 +41,9 @@ stage_desktop_defaults() {
         etc/X11/Xsession.d/25spaced-flatpak-exports \
         etc/apt/sources.list.d/spaced-apt.list \
         etc/bazaar \
+        etc/default/spaced-first-boot-snapshot \
         etc/fastfetch \
+        etc/init.d/spaced-first-boot-snapshot \
         etc/lightdm/lightdm.conf.d/60-spaced-installed.conf \
         etc/profile.d/spaced-application-theming.sh \
         etc/profile.d/spaced-flatpak-exports.sh \
@@ -50,18 +52,18 @@ stage_desktop_defaults() {
         etc/skel \
         etc/xdg/autostart/spaced-audio-restore.desktop \
         etc/xdg/autostart/spaced-display-repair.desktop \
-        etc/xdg/autostart/spaced-enable-flathub.desktop \
+        etc/xdg/autostart/spaced-enable-flatpak-remotes.desktop \
         etc/xdg/autostart/spaced-first-login-repair.desktop \
         etc/xdg/autostart/spaced-nvidia-postboot.desktop \
         etc/xdg/autostart/spaced-theme-monitor.desktop \
-        etc/xdg/autostart/spaced-welcome.desktop \
         etc/xdg/QtProject/qtquickcontrols2.conf \
         usr/lib/spaced-linux \
         usr/local/bin \
+        usr/local/sbin/spaced-first-boot-snapshot \
+        usr/share/applications/mate-about.desktop \
         usr/share/applications/mimeapps.list \
         usr/share/applications/spaced-nvidia-installer.desktop \
         usr/share/applications/spaced-update.desktop \
-        usr/share/applications/spaced-welcome.desktop \
         usr/share/applications/spaced-window-manager.desktop \
         usr/share/backgrounds/spaced \
         usr/share/fastfetch/logos/spaced-linux.txt \
@@ -74,8 +76,7 @@ stage_desktop_defaults() {
         usr/share/pixmaps \
         usr/share/polkit-1/actions/com.spacedlinux.nvidia.policy \
         usr/share/polkit-1/actions/com.spacedlinux.update.policy \
-        usr/share/spaced-themes \
-        usr/share/spaced-welcome
+        usr/share/spaced-themes
     do
         (cd "$ROOT/overlays" && cp -a --parents "$path" "$stage")
     done
@@ -83,6 +84,18 @@ stage_desktop_defaults() {
     for path in "$ROOT"/overlays/usr/share/themes/Spaced-*; do
         (cd "$ROOT/overlays" && cp -a --parents "${path#"$ROOT/overlays/"}" "$stage")
     done
+
+    # The signed first-party Flatpak descriptor is fetched and verified before
+    # packaging. Keeping it in the settings package lets installed systems get
+    # the same stable remote definition through normal APT updates.
+    local external_stage=${SPACED_EXTERNAL_STAGE_DIR:-$ROOT/build/external-artifacts}
+    local github_remote="$external_stage/spaced-github.flatpakrepo"
+    if [[ ! -f $github_remote ]]; then
+        echo "Missing verified spaced-github descriptor; run stage-external-artifacts.sh first" >&2
+        exit 1
+    fi
+    install -Dm0644 "$github_remote" \
+        "$stage/usr/share/flatpak/remotes.d/spaced-github.flatpakrepo"
 
     # Brisk asks the active icon theme for start-here-symbolic. Put the exact
     # issue-provided raster mark directly in each selectable theme so its
