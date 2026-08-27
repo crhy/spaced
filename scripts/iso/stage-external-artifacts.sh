@@ -136,8 +136,13 @@ materialize \
     "SpacedBazaar-${SPACED_BAZAAR_VERSION}-${FLATPAK_ARCH}-${BAZAAR_SHA,,}.flatpak"
 bazaar_source=$MATERIALIZED
 [[ -s $bazaar_source ]] || die "SpacedBazaar bundle is empty"
-install_atomic "$bazaar_source" \
-    "$IMAGE_ROOT/usr/share/spaced-linux/bootstrap/SpacedBazaar.flatpak"
+# The checksum-pinned release bundle proves that the independently released
+# version exists and is immutable. Do not deploy it into the image, though:
+# Flatpak gives bundle-created remotes an implementation-selected name and an
+# unsigned release bundle cannot carry the central repository's trust policy.
+# Install from the separately pinned, signed descriptor in the chroot instead.
+printf '%s\n' "$SPACED_BAZAAR_VERSION" > \
+    "$IMAGE_ROOT/usr/share/spaced-linux/bootstrap/SpacedBazaar.version"
 
 materialize \
     "spaced-github Flatpak remote" \
@@ -167,5 +172,5 @@ actual_fingerprint=$(GNUPGHOME="$work/gnupg" gpg --batch --show-keys --with-colo
 install_atomic "$remote_source" "$STAGE_OUTPUT/spaced-github.flatpakrepo"
 
 printf 'Staged %s\n' "$welcome_destination"
-printf 'Staged SpacedBazaar %s for system installation\n' "$SPACED_BAZAAR_VERSION"
+printf 'Verified SpacedBazaar %s release artifact\n' "$SPACED_BAZAAR_VERSION"
 printf 'Staged signed %s Flatpak remote\n' "$SPACED_GITHUB_REMOTE_NAME"

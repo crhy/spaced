@@ -313,22 +313,28 @@ assert "Name=Install Spaced Linux" in launcher.read_text(encoding="utf-8")
 
 build_hook = Path("scripts/iso/01-configure.chroot").read_text(encoding="utf-8")
 package_builder = Path("scripts/iso/build-local-packages.sh").read_text(encoding="utf-8")
+stage_script = Path("scripts/iso/stage-external-artifacts.sh").read_text(encoding="utf-8")
 assert "flathub.org" not in build_hook, "image build must not depend on live Flathub access"
 assert "for remote in flathub spaced-github" in build_hook \
     and 'remote-add --system --if-not-exists "$remote" "$descriptor"' in build_hook, \
     "the live image does not register both signed system Flatpak remotes"
-assert 'flatpak install --system --noninteractive -y "$bazaar_bundle"' in build_hook \
+assert "spaced-github io.github.crhy.SpacedBazaar" in build_hook \
     and "flatpak info --system io.github.crhy.SpacedBazaar" in build_hook \
     and "attempt $attempt of 3" in build_hook, \
     "SpacedBazaar is not verified and installed system-wide before first login"
-assert "flatpak info --show-origin --system io.github.crhy.SpacedBazaar" in build_hook \
+assert "spaced-github io.github.crhy.SpacedBazaar" in build_hook \
+    and "flatpak info --show-origin --system io.github.crhy.SpacedBazaar" in build_hook \
     and '"$bazaar_origin" = spaced-github' in build_hook, \
-    "the preinstalled SpacedBazaar bundle is orphaned from its update remote"
+    "the preinstalled SpacedBazaar is orphaned from its signed update remote"
+assert "SpacedBazaar.version" in stage_script \
+    and "flatpak info --show-version --system io.github.crhy.SpacedBazaar" in build_hook, \
+    "the signed SpacedBazaar installation is not pinned to the verified release version"
 assert "flatpak info --show-ref --system io.github.crhy.SpacedBazaar" in build_hook \
     and "flatpak --default-arch" in build_hook, \
     "the installed SpacedBazaar architecture is not verified"
-assert 'rm -f -- "$bazaar_bundle"' in build_hook, \
-    "the bootstrap SpacedBazaar bundle remains duplicated in the finished image"
+assert 'rm -f -- "$bazaar_version_file"' in build_hook \
+    and 'SpacedBazaar.flatpak"' not in stage_script, \
+    "the bootstrap SpacedBazaar release data remains duplicated in the finished image"
 assert 'old = b"%s (as superuser)"' in build_hook and "data.replace(old, new)" in build_hook, \
     "Flatpak X11 windows retain the false superuser title suffix"
 assert "etc/xdg/QtProject/qtquickcontrols2.conf" in package_builder, \

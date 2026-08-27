@@ -44,17 +44,26 @@ for remote in flathub spaced-github; do
 done
 
 # SpacedBazaar is part of the base desktop rather than a post-login suggestion.
-# Install the checksum-verified bundle into the system Flatpak installation so
-# it is already exported in both the live session and the Calamares target.
-bazaar_bundle=/usr/share/spaced-linux/bootstrap/SpacedBazaar.flatpak
-[ -s "$bazaar_bundle" ] || {
-    echo "Missing staged SpacedBazaar bundle" >&2
+# Its release artifact was checksum-verified on the build host. Install the
+# matching version from the pinned, GPG-verified central remote so the deployed
+# app retains that trusted update origin.
+bazaar_version_file=/usr/share/spaced-linux/bootstrap/SpacedBazaar.version
+[ -s "$bazaar_version_file" ] || {
+    echo "Missing staged SpacedBazaar version" >&2
     exit 1
 }
+bazaar_expected_version=$(cat "$bazaar_version_file")
+case $bazaar_expected_version in
+    *[!0-9.]*|'')
+        echo "Invalid staged SpacedBazaar version: $bazaar_expected_version" >&2
+        exit 1
+        ;;
+esac
 bazaar_installed=
 for attempt in 1 2 3; do
     echo "Installing SpacedBazaar (attempt $attempt of 3)"
-    if /usr/bin/flatpak install --system --noninteractive -y "$bazaar_bundle" &&
+    if /usr/bin/flatpak install --system --noninteractive -y \
+           spaced-github io.github.crhy.SpacedBazaar &&
        /usr/bin/flatpak info --system io.github.crhy.SpacedBazaar >/dev/null; then
         bazaar_installed=1
         break
@@ -67,7 +76,12 @@ done
 }
 bazaar_origin=$(/usr/bin/flatpak info --show-origin --system io.github.crhy.SpacedBazaar)
 [ "$bazaar_origin" = spaced-github ] || {
-    echo "SpacedBazaar bundle is not updateable from spaced-github (origin: ${bazaar_origin:-none})" >&2
+    echo "SpacedBazaar is not updateable from spaced-github (origin: ${bazaar_origin:-none})" >&2
+    exit 1
+}
+bazaar_version=$(/usr/bin/flatpak info --show-version --system io.github.crhy.SpacedBazaar)
+[ "$bazaar_version" = "$bazaar_expected_version" ] || {
+    echo "SpacedBazaar version is '$bazaar_version', expected '$bazaar_expected_version'" >&2
     exit 1
 }
 bazaar_arch=$(/usr/bin/flatpak --default-arch)
@@ -79,7 +93,7 @@ case $bazaar_ref in
         exit 1
         ;;
 esac
-rm -f -- "$bazaar_bundle"
+rm -f -- "$bazaar_version_file"
 
 # Compiz's GTK window decorator, which it links from the MATE window
 # decoration library, trusts _NET_WM_PID as a host PID when decorating a
