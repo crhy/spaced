@@ -55,7 +55,15 @@ jobs:
           fi
 
       - name: Clean-build the ISO
-        run: make release
+        shell: bash
+        run: |
+          make release
+          iso=$(find build/iso -maxdepth 1 -type f -name '*.iso' -print -quit)
+          size=$(stat -c '%s' "$iso")
+          if (( size >= 2147483648 )); then
+            echo "ISO is $size bytes; GitHub release assets must be under 2 GiB" >&2
+            exit 1
+          fi
 
       - name: Boot through SSH into the MATE and Compiz desktop
         run: make iso-smoke-kvm

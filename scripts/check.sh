@@ -197,6 +197,8 @@ assert "live-build_20250814_all.deb" in monthly_workflow \
     and "a4bffb8e6436ffba260f2e1c37be9dd04a4dacf52c38d7bbe454ec826ba52a4b" in monthly_workflow \
     and "dpkg-query" in monthly_workflow, \
     "monthly builds do not pin the current compatible live-build toolchain"
+assert "2147483648" in monthly_workflow and "GitHub release assets must be under 2 GiB" in monthly_workflow, \
+    "monthly builds can publish an ISO that GitHub cannot distribute"
 
 # The VM GPU must stay a single stable card. Layering virtio-gpu/virtio-vga on
 # top of QEMU's default VGA exposes two DRM cards to the guest, stalling Xorg
@@ -319,6 +321,7 @@ assert "for remote in flathub spaced-github" in build_hook \
     and 'remote-add --system --if-not-exists "$remote" "$descriptor"' in build_hook, \
     "the live image does not register both signed system Flatpak remotes"
 assert "spaced-github io.github.crhy.SpacedBazaar" in build_hook \
+    and "--no-related" in build_hook \
     and "flatpak info --system io.github.crhy.SpacedBazaar" in build_hook \
     and "attempt $attempt of 3" in build_hook, \
     "SpacedBazaar is not verified and installed system-wide before first login"

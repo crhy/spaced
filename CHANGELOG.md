@@ -3,6 +3,8 @@
 ## 8.26.8 - 2026-08-27
 - Install the checksum-attested SpacedBazaar release from its pinned, signed
   `spaced-github` remote so the preinstalled app keeps a trusted update origin.
+- Keep the preinstalled Bazaar runtime lean by omitting optional related
+  extensions, and reject ISO artifacts that exceed GitHub's 2 GiB asset limit.
 - Split Spaced Linux Welcome into the independently released `crhy/spacedwelcome` Debian package, made `spaced-meta` depend on it, and removed the duplicate embedded implementation from `spaced-mate-default-settings`.
 - Made SpacedBazaar 0.1.5 a checksum-pinned, system-wide part of the live and installed desktop before first login, with build-time verification of its app ID and signed update origin.
 - Added the signed `spaced-github` Flatpak remote for first-party CRHY applications at both system and user scope; artifact versions, architecture mappings, checksums, and signing-key fingerprint now live in one release-gated configuration instead of mutable or stale per-app GitHub URLs.

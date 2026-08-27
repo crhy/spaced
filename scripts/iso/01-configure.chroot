@@ -62,7 +62,7 @@ esac
 bazaar_installed=
 for attempt in 1 2 3; do
     echo "Installing SpacedBazaar (attempt $attempt of 3)"
-    if /usr/bin/flatpak install --system --noninteractive -y \
+    if /usr/bin/flatpak install --system --noninteractive -y --no-related \
            spaced-github io.github.crhy.SpacedBazaar &&
        /usr/bin/flatpak info --system io.github.crhy.SpacedBazaar >/dev/null; then
         bazaar_installed=1
