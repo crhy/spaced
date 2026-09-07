@@ -71,7 +71,9 @@ apt_run check
 if [[ $MODE == apt-install ]]; then
   TRANSACTION=(--only-upgrade --no-remove install "$@")
 else
-  TRANSACTION=(dist-upgrade)
+  # Earliest Spaced installations did not carry the release metapackage.
+  # Include it explicitly so every current runtime dependency is delivered.
+  TRANSACTION=(dist-upgrade spaced-meta)
 fi
 
 step 15 'Checking the upgrade plan'

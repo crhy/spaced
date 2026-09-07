@@ -144,6 +144,7 @@ try:
             if prop == '_NET_SUPPORTING_WM_CHECK':
                 require('compiz' in details.lower(), 'EWMH window manager is not Compiz')
     code, modes, error = run('xrandr', '--query')
+    require(code == 0, f'Cannot query live display modes: {error}')
     desired = f'{sys.argv[1]}x{sys.argv[2]}' if len(sys.argv) > 2 and sys.argv[1] and sys.argv[2] else ''
     if desired:
         # A requested resolution is an explicit display-mode test in this VM.
@@ -157,7 +158,9 @@ try:
         require(bool(re.search(r' connected[^\n]* ' + re.escape(desired) + r'[+-]', modes)),
                 f'Requested resolution {desired} is not active')
     report['xrandr'] = modes or error
-    report['glxinfo'] = run('glxinfo', '-B')[1]
+    code, renderer, error = run('glxinfo', '-B')
+    report['glxinfo'] = renderer or error
+    require(code == 0 and 'OpenGL renderer string' in renderer, 'Live desktop has no working GLX renderer')
     report['xset'] = run('xset', 'q')[1]
     report['kernel'] = run('uname', '-r')[1]
     report['versions'] = run('dpkg-query', '-W', '-f=${binary:Package} ${Version}\n',
@@ -238,6 +241,14 @@ if [ -n "$XRES" ]; then
 fi
 # Remove evidence from a previous invocation before starting this VM.
 rm -f "$SCREENSHOT" "$RUNTIME" "$RUNTIME.tmp"
+python3 - "$RUNTIME" "$ACCEL" "$FIRMWARE" <<'PY'
+import json
+from pathlib import Path
+import sys
+Path(sys.argv[1]).write_text(json.dumps({'desktop_ready': False,
+    'errors': ['Guest desktop has not passed runtime checks'],
+    'accelerator': sys.argv[2], 'firmware': sys.argv[3]}, indent=2) + '\n')
+PY
 printf '' > "$ARTIFACT_DIR/qemu-guest.log"
 echo "Starting $ACCEL/$FIRMWARE ISO smoke test (${RAM} MiB, $CPUS CPUs) on SSH port $SSH_PORT"
 qemu-system-x86_64 "${QEMU_ACCEL_ARGS[@]}" -m "$RAM" -smp "$CPUS" \
