@@ -1,0 +1,4 @@
+Explanation: Spaced Linux uses sysvinit; rolling upgrades must retain it.
+Package: systemd systemd-sysv systemd-resolved systemd-timesyncd
+Pin: version *
+Pin-Priority: -1

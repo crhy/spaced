@@ -1,0 +1,29 @@
+#!/bin/bash
+# Read-only diagnostics; run in the desktop session to inspect its displays.
+set -u
+export LC_ALL=C
+run() {
+    printf '\n--- %s ---\n' "$*"
+    if command -v "$1" >/dev/null 2>&1; then
+        timeout --kill-after=2 15 "$@" 2>&1 || printf 'Check unavailable (status %s).\n' "$?"
+    else
+        printf '%s is not installed.\n' "$1"
+    fi
+}
+run uname -r
+run lspci -nnk
+run lsusb
+run glxinfo -B
+run xrandr --verbose
+run xset q
+run dpkg-query -W '-f=${binary:Package} ${Version}\n' firmware-amd-graphics firmware-realtek firmware-mediatek libgl1-mesa-dri mesa-vulkan-drivers xserver-xorg-video-amdgpu amdgpu-top
+run mokutil --sb-state
+printf '\n--- AMDGPU TearFree configuration ---\n'
+if [[ -f /etc/X11/xorg.conf.d/20-spaced-amdgpu.conf ]]; then
+    cat /etc/X11/xorg.conf.d/20-spaced-amdgpu.conf
+else
+    echo 'Spaced AMDGPU TearFree default is not installed.'
+fi
+printf '\n--- Recent kernel graphics / firmware errors ---\n'
+dmesg 2>&1 | grep -Ei 'amdgpu|nouveau|nvidia|firmware|failed|error' | tail -80
+printf '\nKernel logs may require administrator access. No system settings were changed.\n'

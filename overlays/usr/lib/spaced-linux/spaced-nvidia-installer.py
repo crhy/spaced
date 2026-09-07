@@ -29,23 +29,24 @@ ERRORS = {
     22: "NVIDIA's official Debian 13 repository could not be enabled.",
     23: "NVIDIA Driver Assistant is unavailable.",
     24: "NVIDIA Driver Assistant does not support this system or GPU.",
-    30: "The NVIDIA package installation failed. Nouveau was restored.",
-    40: "The NVIDIA kernel modules were not built. Nouveau was restored.",
-    41: "The boot image could not be rebuilt. Nouveau was restored.",
-    42: "A configuration rule still blocks an NVIDIA module. Nouveau was restored.",
-    43: "Nouveau could not be disabled safely. The previous configuration was restored.",
-    44: "The rebuilt boot image does not contain every NVIDIA module. Nouveau was restored.",
-    45: "The NVIDIA Xorg or GLX userspace installation is incomplete. Nouveau was restored.",
-    46: "Compiz integration is incomplete. The previous configuration was restored.",
-    47: "The final GRUB graphics configuration is unsafe. The previous configuration was restored.",
+    30: "The NVIDIA package installation failed. Review the recovery result in the log.",
+    40: "The NVIDIA kernel modules were not built. Review the recovery result in the log.",
+    41: "The boot image could not be rebuilt. Review the recovery result in the log.",
+    42: "A configuration rule still blocks an NVIDIA module. Review the recovery result in the log.",
+    43: "Nouveau could not be disabled safely. Review the recovery result in the log.",
+    44: "The rebuilt boot image does not contain every NVIDIA module. Review the recovery result in the log.",
+    45: "The NVIDIA Xorg or GLX userspace installation is incomplete. Review the recovery result in the log.",
+    46: "Compiz integration is incomplete. Review the recovery result in the log.",
+    47: "The final GRUB graphics configuration is unsafe. Review the recovery result in the log.",
     50: "No verified NVIDIA installation is awaiting reboot.",
     51: "No NVIDIA installation transaction is available to roll back.",
+    52: "Graphics recovery is incomplete. Repair the failed steps before rebooting.",
 }
 
 
 class Installer(Gtk.Window):
     def __init__(self) -> None:
-        super().__init__(title="Spaced NVIDIA Driver Installer")
+        super().__init__(title="Spaced Video Drivers")
         self.running = False
         self.last_error: Optional[str] = None
         self.last_error_code: Optional[int] = None
@@ -60,7 +61,7 @@ class Installer(Gtk.Window):
         Gtk.Window.add(self, root)
 
         heading = Gtk.Label()
-        heading.set_markup('<span size="xx-large" weight="bold">Spaced NVIDIA Driver Installer</span>')
+        heading.set_markup('<span size="xx-large" weight="bold">Spaced Video Drivers</span>')
         heading.set_xalign(0)
         root.pack_start(heading, False, False, 0)
 
@@ -76,9 +77,11 @@ class Installer(Gtk.Window):
         root.pack_start(subtitle, False, False, 0)
 
         self.gpu = self.detect_gpu()
+        self.has_nvidia = bool(self.gpu and "nvidia" in self.gpu.lower())
+        self.has_amd = bool(self.gpu and any(name in self.gpu.lower() for name in ("amd", "ati", "[1002:")))
         frame = Gtk.Frame(label="Detected hardware")
         root.pack_start(frame, False, False, 0)
-        gpu_label = Gtk.Label(label=self.gpu or "No NVIDIA graphics card was detected.")
+        gpu_label = Gtk.Label(label=self.gpu or "No graphics device was detected.")
         gpu_label.set_xalign(0)
         gpu_label.set_line_wrap(True)
         gpu_label.set_margin_start(12)
@@ -118,13 +121,21 @@ class Installer(Gtk.Window):
         buttons = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         root.pack_start(buttons, False, False, 0)
 
-        self.install_button = Gtk.Button(label="Check Everything and Install")
+        self.audit_button = Gtk.Button(label="Check Graphics")
+        self.audit_button.connect("clicked", lambda *_: self.start_action("--audit"))
+        buttons.pack_start(self.audit_button, False, False, 0)
+        self.amd_button = Gtk.Button(label="Update AMD Drivers")
+        self.amd_button.connect("clicked", lambda *_: self.start_action("--install-amd"))
+        self.amd_button.set_sensitive(self.has_amd)
+        buttons.pack_start(self.amd_button, False, False, 0)
+        self.install_button = Gtk.Button(label="Install NVIDIA Driver")
         self.install_button.connect("clicked", self.confirm_install)
-        self.install_button.set_sensitive(bool(self.gpu) and not PENDING_FILE.exists())
+        self.install_button.set_sensitive(self.has_nvidia and not PENDING_FILE.exists())
         buttons.pack_start(self.install_button, True, True, 0)
 
-        self.rollback_button = Gtk.Button(label="Restore Nouveau")
+        self.rollback_button = Gtk.Button(label="Restore Graphics")
         self.rollback_button.connect("clicked", self.confirm_rollback)
+        self.rollback_button.set_sensitive(self.has_nvidia)
         buttons.pack_start(self.rollback_button, False, False, 0)
 
         self.copy_button = Gtk.Button(label="Copy Log")
@@ -140,7 +151,7 @@ class Installer(Gtk.Window):
             self.progress.set_text("Verified installation awaiting reboot")
             GLib.idle_add(self.show_reboot_dialog)
         elif not self.gpu:
-            self.progress.set_text("No NVIDIA GPU detected")
+            self.progress.set_text("No graphics device detected")
 
     @staticmethod
     def detect_gpu() -> Optional[str]:
@@ -148,11 +159,12 @@ class Installer(Gtk.Window):
             result = subprocess.run(["lspci", "-nn"], check=False, capture_output=True, text=True, errors="replace")
         except OSError:
             return None
+        devices = []
         for line in result.stdout.splitlines():
             lower = line.lower()
-            if "nvidia" in lower and ("vga compatible controller" in lower or "3d controller" in lower):
-                return line.strip()
-        return None
+            if any(kind in lower for kind in ("vga compatible controller", "3d controller", "display controller")):
+                devices.append(line.strip())
+        return "\n".join(devices) or None
 
     def on_delete(self, *_args) -> bool:
         if not self.running:
@@ -185,8 +197,10 @@ class Installer(Gtk.Window):
 
     def set_busy(self, busy: bool) -> None:
         self.running = busy
-        self.install_button.set_sensitive(not busy and bool(self.gpu) and not PENDING_FILE.exists())
-        self.rollback_button.set_sensitive(not busy)
+        self.install_button.set_sensitive(not busy and self.has_nvidia and not PENDING_FILE.exists())
+        self.rollback_button.set_sensitive(not busy and self.has_nvidia)
+        self.audit_button.set_sensitive(not busy)
+        self.amd_button.set_sensitive(not busy and self.has_amd)
         self.close_button.set_sensitive(not busy)
 
     def confirm_install(self, *_args) -> None:
@@ -214,23 +228,25 @@ class Installer(Gtk.Window):
             modal=True,
             message_type=Gtk.MessageType.WARNING,
             buttons=Gtk.ButtonsType.NONE,
-            text="Restore Nouveau?",
+            text="Restore Graphics?",
         )
         dialog.format_secondary_text("This removes packages installed by the last Spaced NVIDIA transaction, restores the saved graphics configuration, rebuilds the boot image, and then offers to reboot.")
         dialog.add_button("Cancel", Gtk.ResponseType.CANCEL)
-        dialog.add_button("Restore Nouveau", Gtk.ResponseType.OK)
+        dialog.add_button("Restore Graphics", Gtk.ResponseType.OK)
         response = dialog.run()
         dialog.destroy()
         if response == Gtk.ResponseType.OK:
             self.start_action("--rollback")
 
     def start_action(self, mode: str) -> None:
+        if self.running:
+            return
         self.set_busy(True)
         self.last_error = None
         self.last_error_code = None
         self.buffer.set_text("")
         self.progress.set_fraction(0.05)
-        self.progress.set_text("Requesting administrator authentication…")
+        self.progress.set_text("Checking graphics…" if mode == "--audit" else "Requesting administrator authentication…")
         GLib.timeout_add(120, self.pulse)
         threading.Thread(target=self.run_action, args=(mode,), daemon=True).start()
 
@@ -250,13 +266,15 @@ class Installer(Gtk.Window):
                     self.last_error_code = None
                 self.last_error = fields[2]
         elif line.startswith("SPACED_SUCCESS:"):
-            self.append_log("All pre-reboot verification checks passed.")
+            self.append_log("Requested graphics operation completed.")
         else:
             self.append_log(line)
         return False
 
     def run_action(self, mode: str) -> None:
         command = ["pkexec", HELPER, mode, "--desktop-user", self.user]
+        if mode == "--audit":
+            command = [HELPER, mode]
         try:
             process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors="replace", bufsize=1)
             if process.stdout is not None:
@@ -272,12 +290,16 @@ class Installer(Gtk.Window):
         self.set_busy(False)
         self.progress.set_fraction(1.0)
         if code == 0:
-            if mode == "--install":
+            if mode == "--audit":
+                self.progress.set_text("Graphics report ready — use Copy Log to save it")
+            elif mode == "--install-amd":
+                self.progress.set_text("AMD graphics packages updated — reboot to use them")
+            elif mode == "--install":
                 self.progress.set_text("Installation verified — reboot required")
                 self.install_button.set_sensitive(False)
                 self.show_reboot_dialog()
             else:
-                self.progress.set_text("Nouveau restored — reboot required")
+                self.progress.set_text("Saved graphics configuration restored — reboot required")
                 self.show_reboot_dialog(restored=True)
             return False
 
@@ -289,7 +311,7 @@ class Installer(Gtk.Window):
             message = self.last_error
         else:
             message = ERRORS.get(code, f"The installer stopped with status {code}. Review {LOG_FILE}.")
-        self.progress.set_text("Installation did not complete")
+        self.progress.set_text("Graphics recovery is incomplete" if self.last_error_code == 52 or code == 52 else "Graphics operation did not complete")
         self.show_error(message)
         return False
 
@@ -299,7 +321,7 @@ class Installer(Gtk.Window):
             modal=True,
             message_type=Gtk.MessageType.ERROR,
             buttons=Gtk.ButtonsType.CLOSE,
-            text="NVIDIA driver operation did not complete",
+            text="Graphics operation did not complete",
         )
         dialog.format_secondary_text(message + f"\n\nDetailed log: {LOG_FILE}")
         dialog.run()
@@ -314,7 +336,7 @@ class Installer(Gtk.Window):
             text="Reboot required",
         )
         if restored:
-            dialog.format_secondary_text("Nouveau and the previous graphics configuration were restored. Reboot now to activate them.")
+            dialog.format_secondary_text("The saved graphics configuration and package recovery steps completed. Reboot now to activate them.")
         else:
             dialog.format_secondary_text(
                 "The NVIDIA modules, module policy, initramfs, Xorg libraries, GRUB settings, and Compiz launcher all passed verification. After login, Spaced Linux will verify the running NVIDIA desktop."
@@ -355,6 +377,7 @@ class Installer(Gtk.Window):
         clipboard.store()
 
 
-window = Installer()
-window.show_all()
-Gtk.main()
+if __name__ == "__main__":
+    window = Installer()
+    window.show_all()
+    Gtk.main()

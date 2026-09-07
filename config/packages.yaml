@@ -2,6 +2,7 @@ desktop:
   - caja
   - caja-admin
   - gvfs-backends
+  - usbmuxd
   - mate-control-center
   - mate-desktop
   - mate-menus
@@ -41,9 +42,12 @@ audio:
   - mate-media
 themes:
   - papirus-icon-theme
+  - fonts-dejavu-core
 dock:
   - cairo-dock-core
 graphics:
+  - amdgpu-top
+  - xserver-xorg-video-amdgpu
   - mesa-utils
   - xserver-xorg-input-libinput
   - xserver-xorg-video-intel
@@ -129,7 +133,6 @@ system:
   - pciutils
   - usbutils
   - openssh-client
-  - openssh-server
   - fastfetch
   - chrony
   - tzdata
@@ -147,6 +150,7 @@ installer:
   - qml6-module-qtquick-window
   - calamares-settings-debian
 live:
+  - openssh-server
   - live-boot
   - live-config
   - live-config-sysvinit

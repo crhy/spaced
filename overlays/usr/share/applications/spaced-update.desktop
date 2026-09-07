@@ -3,6 +3,6 @@ Type=Application
 Name=Spaced Update
 Comment=Update APT and Flatpak applications together
 Exec=spaced-update
-Icon=system-software-update
+Icon=org.spacedlinux.SpacedUpdate
 Terminal=false
 Categories=System;

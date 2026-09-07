@@ -1,76 +1,117 @@
 #!/bin/bash
-set -euo pipefail
-export DEBIAN_FRONTEND=noninteractive
+# Invoked through pkexec; user Flatpaks must be updated by the calling desktop
+# process, never as root (root has a different per-user installation).
+set -Eeuo pipefail
+export DEBIAN_FRONTEND=noninteractive LC_ALL=C
 step() { printf 'SPACED_STEP:%s:%s\n' "$1" "$2"; }
 log() { printf '%s\n' "$*"; }
+trap 'status=$?; log "Update stopped (status $status). Review the preceding error and retry; completed package transactions are preserved."; exit "$status"' ERR
 
-MODE="${1:-all}"
-
-if [ "$MODE" = "apt-install" ]; then
-  shift
-  if [ "$#" -eq 0 ]; then
-    log 'No APT packages were selected.'
-    exit 2
-  fi
-  for PACKAGE in "$@"; do
-    if [[ ! "$PACKAGE" =~ ^[a-zA-Z0-9][a-zA-Z0-9.+-]*(:[a-zA-Z0-9][a-zA-Z0-9_-]*)?$ ]]; then
-      log "Invalid APT package name: $PACKAGE"
-      exit 2
+MODE=${1:-all}
+if [ "$#" -gt 0 ]; then shift; fi
+case "$MODE" in
+  apt-refresh|all) [ "$#" -eq 0 ] || { log 'Unexpected update arguments.'; exit 2; } ;;
+  apt-install)
+    [ "$#" -gt 0 ] || { log 'No APT packages were selected.'; exit 2; }
+    for PACKAGE in "$@"; do
+      # A trailing +/- is an APT install/remove instruction, not a selection.
+      if [[ ! $PACKAGE =~ ^[a-z0-9][a-z0-9.+-]*[a-z0-9](:[a-z0-9][a-z0-9-]*)?$ ]] ||
+         [[ $(dpkg-query -W -f='${db:Status-Status}' "$PACKAGE") != installed ]]; then
+        log "Invalid or uninstalled APT package: $PACKAGE"; exit 2
+      fi
+    done ;;
+  flatpak-update)
+    SCOPE=${1:-}
+    if [[ $SCOPE != --system && ! $SCOPE =~ ^--installation=[a-zA-Z0-9._-]+$ ]]; then
+      log 'The privileged helper only updates system Flatpak installations.'; exit 2
     fi
-  done
-  step 10 'Refreshing APT package lists'
-  apt-get update
-  step 40 'Installing selected packages'
-  apt-get -y install "$@"
-  step 70 'Removing obsolete packages'
-  apt-get -y autoremove --purge || true
-  step 90 'Repairing boot menu entries'
-  if command -v update-grub >/dev/null 2>&1; then update-grub; fi
-  step 100 'Selected updates complete'
-  exit 0
+    shift
+    [ "$#" -gt 0 ] || { log 'No Flatpak refs were selected.'; exit 2; }
+    for REF in "$@"; do
+      if [[ ! $REF =~ ^(app/|runtime/)?[a-zA-Z0-9._-]+/[a-zA-Z0-9_-]+/[a-zA-Z0-9._-]+$ ]]; then
+        log "Invalid Flatpak ref: $REF"; exit 2
+      fi
+    done ;;
+  *) log "Unknown update mode: $MODE"; exit 2 ;;
+esac
+
+# Serialize privileged operations across windows and the native/Flatpak app.
+# APT also takes its own locks, including against unrelated package managers.
+exec 9>/run/lock/spaced-update.lock
+if ! flock -n 9; then
+  log 'Another Spaced Update transaction is running. Wait for it to finish and retry.'
+  exit 75
 fi
 
-if [ "$MODE" = "flatpak-update" ]; then
-  shift
-  SCOPE="${1:---user}"
-  shift || true
-  if [ "$SCOPE" != "--user" ] && [ "$SCOPE" != "--system" ]; then
-    log "Invalid Flatpak installation scope: $SCOPE"
-    exit 2
-  fi
-  if [ "$#" -eq 0 ]; then
-    log 'No Flatpak applications were selected.'
-    exit 2
-  fi
-  step 30 "Updating selected Flatpak applications ($SCOPE)"
-  flatpak update -y "$SCOPE" "$@"
-  step 100 'Flatpak updates complete'
-  exit 0
-fi
+APT_OPTIONS=(-o DPkg::Lock::Timeout=120 -o Acquire::Retries=3
+             -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30
+             -o APT::Update::Error-Mode=any -o Dpkg::Use-Pty=0
+             -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold)
+apt_run() { apt-get "${APT_OPTIONS[@]}" "$@"; }
 
-if [ "$MODE" != "all" ]; then
-  log "Unknown update mode: $MODE"
-  exit 2
+if [[ $MODE == flatpak-update ]]; then
+  step 30 "Updating selected Flatpak apps and runtimes ($SCOPE)"
+  flatpak update --noninteractive -y "$SCOPE" "$@"
+  step 100 'Selected Flatpak updates complete'
+  exit 0
 fi
 
 step 5 'Refreshing APT package lists'
-apt-get update
-step 25 'Installing APT upgrades'
-apt-get -y dist-upgrade
-step 60 'Removing obsolete APT packages'
-apt-get -y autoremove --purge
-apt-get clean
-step 70 'Updating system Flatpaks'
-if command -v flatpak >/dev/null 2>&1; then
-  flatpak update -y --system || true
+apt_run update
+if [[ $MODE == apt-refresh ]]; then
+  step 100 'Package lists refreshed'
+  exit 0
 fi
-step 82 'Repairing boot menu entries'
-if command -v update-grub >/dev/null 2>&1; then
-  update-grub
+
+# A retry can finish packages left unpacked by an interrupted transaction.
+# Do not guess at dependency repairs or force-remove packages on failure.
+step 10 'Completing pending package configuration'
+dpkg --force-confdef --force-confold --configure --pending
+apt_run check
+if [[ $MODE == apt-install ]]; then
+  TRANSACTION=(--only-upgrade --no-remove install "$@")
+else
+  TRANSACTION=(dist-upgrade)
 fi
-step 90 'Refreshing initramfs'
-if command -v update-initramfs >/dev/null 2>&1; then
-  update-initramfs -u -k all
+
+step 15 'Checking the upgrade plan'
+PLAN=$(apt_run --simulate "${TRANSACTION[@]}")
+log "$PLAN"
+while read -r ACTION PACKAGE _; do
+  PACKAGE=${PACKAGE%%:*}
+  case "$ACTION:$PACKAGE" in
+    Inst:systemd-sysv|Inst:systemd|Inst:runit-init|Inst:openrc)
+      log "Refusing an upgrade that changes the sysvinit system: $PACKAGE"; exit 1 ;;
+    Remv:sysvinit-core|Remv:sysvinit-utils|Remv:initscripts|Remv:spaced-meta|Remv:spaced-mate-default-settings|Remv:mate-session-manager|Remv:mate-panel|Remv:caja|Remv:lightdm|Remv:network-manager|Remv:apt|Remv:dpkg|Remv:flatpak)
+      log "Refusing removal of a core Spaced Linux package: $PACKAGE"; exit 1 ;;
+  esac
+done <<< "$PLAN"
+
+step 20 'Downloading package upgrades'
+apt_run -y --download-only "${TRANSACTION[@]}"
+step 35 'Installing APT upgrades'
+apt_run -y "${TRANSACTION[@]}"
+
+# Maintainer scripts normally handle these, but report a failed final refresh.
+# Keep cached downloads and old kernels for recovery; cleanup is not an update.
+step 65 'Refreshing boot files'
+if command -v update-initramfs >/dev/null 2>&1; then update-initramfs -u -k all; fi
+if command -v update-grub >/dev/null 2>&1; then update-grub; fi
+
+if [[ $MODE == all ]] && command -v flatpak >/dev/null 2>&1; then
+  step 80 'Updating system Flatpak apps and runtimes'
+  flatpak update --noninteractive -y --system
+  INSTALLATIONS=$(flatpak list --all --columns=installation)
+  while read -r INSTALLATION; do
+    case "$INSTALLATION" in ''|user|system|default) continue ;; esac
+    flatpak update --noninteractive -y "--installation=$INSTALLATION"
+  done < <(printf '%s\n' "$INSTALLATIONS" | sort -u)
 fi
-step 100 'System updates complete'
-log 'APT and system Flatpak updates completed.'
+
+HELD=$(apt-mark showhold)
+if [[ -n $HELD ]]; then
+  log 'SPACED_WARNING:Some packages are held by the administrator and were not forced to upgrade:'
+  log "$HELD"
+fi
+step 100 'Requested system updates complete'
+log 'APT updates completed. Per-user Flatpaks are updated by the desktop application.'

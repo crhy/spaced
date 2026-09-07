@@ -1,0 +1,3 @@
+interest-noawait /usr/lib/os-release
+interest-noawait /etc/os-release
+interest-noawait /etc/lsb-release

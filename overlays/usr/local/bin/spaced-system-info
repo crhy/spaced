@@ -12,7 +12,7 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 gi.require_version("GdkPixbuf", "2.0")
 gi.require_version("Pango", "1.0")
-from gi.repository import Gdk, GdkPixbuf, Gtk, Pango  # noqa: E402
+from gi.repository import Gdk, GdkPixbuf, GLib, Gtk, Pango  # noqa: E402
 
 
 def os_release():
@@ -65,10 +65,13 @@ class SystemInfo(Gtk.Window):
         self.add(box)
 
         logo_path = os.environ.get(
-            "SPACED_SYSTEM_INFO_LOGO", "/usr/share/pixmaps/spaced-logo.png"
+            "SPACED_SYSTEM_INFO_LOGO", "/usr/share/pixmaps/spaced-medallion.png"
         )
-        pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(logo_path, 112, 112, True)
-        logo = Gtk.Image.new_from_pixbuf(pixbuf)
+        try:
+            pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(logo_path, 112, 112, True)
+            logo = Gtk.Image.new_from_pixbuf(pixbuf)
+        except GLib.Error:
+            logo = Gtk.Image.new_from_icon_name("spaced-linux", Gtk.IconSize.DIALOG)
         box.pack_start(logo, False, False, 0)
 
         title = Gtk.Label()

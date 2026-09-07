@@ -6,23 +6,16 @@ set -euo pipefail
 #
 # Usage: bash scripts/build-apt-repo.sh [output-dir]
 # Output defaults to ./spaced-apt
-# The repository is unsigned (apt-ftparchive Release without a signature);
-# clients reference it with [trusted=yes].
-#
-# When the output directory is a git checkout, the working tree is reset with
-# git clean so the index, signature-free Release, and package set are always
-# regenerated from the current tree without touching the checkout's history.
+# Metadata is signed by the same pinned Spaced key delivered in the image.
+# Old package files remain available to clients holding an earlier index.
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 OUT="${1:-$ROOT/spaced-apt}"
-DIST="spaced"
+DIST=${SPACED_APT_SUITE:-spaced-testing}
+case "$DIST" in spaced|spaced-testing) ;; *) echo "Unknown Spaced archive suite: $DIST" >&2; exit 2 ;; esac
 COMP="main"
+SIGNING_KEY=${SPACED_APT_SIGNING_KEY:-6C16F77C2DAE19D262CFD9F0CC05F885576EBB05}
 
-if [ -d "$OUT/.git" ]; then
-    git -C "$OUT" clean -fdx -q
-else
-    rm -rf "$OUT"
-fi
 mkdir -p "$OUT/dists/$DIST/$COMP/binary-amd64"
 OUT=$(cd "$OUT" && pwd)
 
@@ -31,6 +24,18 @@ cleanup() {
     rm -rf -- "$package_work"
 }
 trap cleanup EXIT HUP INT TERM
+
+# Refuse a substituted signing identity before touching repository metadata.
+key_fingerprint=$(gpg --batch --show-keys --with-colons \
+    "$ROOT/overlays/usr/share/keyrings/spaced-archive-keyring.gpg" \
+    | awk -F: '$1 == "fpr" {print $10; exit}')
+[[ "$SIGNING_KEY" == "$key_fingerprint" ]] || {
+    echo "Signing key does not match the shipped archive key" >&2; exit 1;
+}
+gpg --batch --list-secret-keys "$SIGNING_KEY" >/dev/null
+metadata=$package_work/metadata
+mkdir -p "$metadata/$COMP/binary-amd64" "$package_work/verify-key"
+chmod 0700 "$package_work/verify-key"
 
 echo "Staging verified standalone release artifacts…"
 SPACED_TARGET_ARCH=amd64 \
@@ -44,24 +49,25 @@ SPACED_EXTERNAL_STAGE_DIR="$package_work/external" \
 LOCAL_PACKAGE_OUTPUT="$package_work/packages" \
     bash "$ROOT/scripts/iso/build-local-packages.sh" >/dev/null
 
-# A snapshot repository carries only the current release set, exactly like the
-# published index; prune every other version beside the fresh build.
-VERSION="$(cat "$ROOT/VERSION")"
-find "$OUT/dists/$DIST/$COMP/binary-amd64" -maxdepth 1 -type f \
-    -name '*.deb' ! -name "*_${VERSION}_all.deb" -delete
-
-cp "$package_work/packages"/*.deb "$OUT/dists/$DIST/$COMP/binary-amd64/"
+for package in "$package_work/packages"/*.deb; do
+    destination="$OUT/dists/$DIST/$COMP/binary-amd64/${package##*/}"
+    if [[ -e "$destination" ]] && ! cmp -s "$package" "$destination"; then
+        echo "Refusing to replace published package bytes: $destination. Bump its version." >&2
+        exit 1
+    fi
+    cp "$package" "$destination"
+done
 
 cd "$OUT/dists/$DIST/$COMP/binary-amd64"
 
 echo "Generating Packages index…"
-apt-ftparchive packages . > Packages
+apt-ftparchive packages . > "$metadata/$COMP/binary-amd64/Packages"
 # Filename must be relative to the repository root (where apt resolves
 # downloads from), not the binary-amd64 directory.
-sed -i "s|^Filename: \./|Filename: dists/$DIST/$COMP/binary-amd64/|" Packages
-gzip -9c Packages > Packages.gz
+sed -i "s|^Filename: \./|Filename: dists/$DIST/$COMP/binary-amd64/|" "$metadata/$COMP/binary-amd64/Packages"
+gzip -n9c "$metadata/$COMP/binary-amd64/Packages" > "$metadata/$COMP/binary-amd64/Packages.gz"
 
-cd "$OUT/dists/$DIST"
+cd "$metadata"
 echo "Generating Release metadata…"
 apt-ftparchive -o APT::FTPArchive::Release::Origin="Spaced Linux" \
                -o APT::FTPArchive::Release::Label="Spaced Linux apt repository" \
@@ -69,6 +75,16 @@ apt-ftparchive -o APT::FTPArchive::Release::Origin="Spaced Linux" \
                -o APT::FTPArchive::Release::Codename="$DIST" \
                -o APT::FTPArchive::Release::Architectures="amd64" \
                -o APT::FTPArchive::Release::Components="$COMP" \
-               release . > Release
+               release . > "$package_work/Release"
+gpg --batch --yes --local-user "$SIGNING_KEY" --digest-algo SHA256 \
+    --clearsign --output "$package_work/InRelease" "$package_work/Release"
+gpg --batch --yes --local-user "$SIGNING_KEY" --digest-algo SHA256 \
+    --armor --detach-sign --output "$package_work/Release.gpg" "$package_work/Release"
+gpg --batch --homedir "$package_work/verify-key" --no-default-keyring \
+    --keyring "$ROOT/overlays/usr/share/keyrings/spaced-archive-keyring.gpg" \
+    --verify "$package_work/InRelease"
+cp "$metadata/$COMP/binary-amd64/Packages" "$metadata/$COMP/binary-amd64/Packages.gz" \
+    "$OUT/dists/$DIST/$COMP/binary-amd64/"
+cp "$package_work/Release" "$package_work/Release.gpg" "$package_work/InRelease" "$OUT/dists/$DIST/"
 
 echo "Repository written to $OUT"

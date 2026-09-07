@@ -28,3 +28,6 @@ dist/
 # Python bytecode
 *.py[cod]
 spaced-apt/
+
+# Independently maintained component worktrees
+/components/

@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=Spaced Display Recovery
-Comment=Restore display state after login and screensaver unlock
+Comment=Repair TV underscan after login and screensaver unlock
 Exec=/usr/local/bin/spaced-display-repair --watch
 OnlyShowIn=MATE;
 NoDisplay=true

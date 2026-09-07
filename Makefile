@@ -51,10 +51,13 @@ deps: ## Install host build and test dependencies
 	$(ROOT_RUN) apt-get update
 	$(ROOT_RUN) apt-get install -y \
 		live-build debootstrap xorriso squashfs-tools grub-common \
-		qemu-system-x86 qemu-utils ovmf rsync curl gnupg sshpass
+		qemu-system-x86 qemu-utils ovmf rsync curl gnupg sshpass \
+		python3-yaml desktop-file-utils apt-utils python3-gi gir1.2-gtk-3.0 xvfb
 
 check: ## Validate configuration, scripts, themes, and desktop entries
 	$(HOST_RUN) scripts/check.sh
+	$(HOST_RUN) env PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests
+	$(HOST_RUN) env PYTHONDONTWRITEBYTECODE=1 xvfb-run -a python3 tests/gtk_desktop.py
 
 clean: ## Remove generated build data for the current release
 	$(ROOT_RUN) rm -rf "$(abspath $(LB_DIR))" "$(abspath $(LOCAL_PACKAGE_DIR))" \
@@ -64,7 +67,12 @@ clean: ## Remove generated build data for the current release
 cache-clean: ## Remove cached live-build packages and bootstrap data
 	$(ROOT_RUN) rm -rf "$(abspath $(CACHE_DIR))" "$(abspath $(EXTERNAL_CACHE_DIR))"
 
-prepare: ## Stage authored live-build configuration
+marco: ## Build the upstream Marco fixes in an isolated Devuan chroot
+	if ! $(HOST_RUN) scripts/iso/stage-marco.sh --check; then
+		$(ROOT_RUN) bash "$(abspath scripts/iso/build-marco-chroot.sh)"
+	fi
+
+prepare: marco ## Stage authored live-build configuration
 	mkdir -p $(BUILD_DIR)/cache
 	if [[ -d "$(LB_DIR)/cache" && ! -L "$(LB_DIR)/cache" && ! -e "$(CACHE_DIR)" ]]; then
 		$(ROOT_RUN) mv "$(abspath $(LB_DIR)/cache)" "$(abspath $(CACHE_DIR))"
@@ -93,7 +101,7 @@ prepare: ## Stage authored live-build configuration
 	cp live-build/auto/config $(LB_DIR)/auto/config
 	chmod +x $(LB_DIR)/auto/config
 	cd $(LB_DIR)
-	$(HOST_RUN) lb config
+	$(HOST_RUN) env SPACED_DEVUAN_KEYRING="$(abspath config/keyrings/devuan-archive-keyring.pgp)" lb config
 	cd ../..
 	mkdir -p \
 		$(LB_DIR)/config/package-lists \
@@ -199,7 +207,7 @@ release: clean lb-build ## Clean-build the current Spaced Linux ISO
 
 APT_REPO_DIR := spaced-apt
 
-apt-repo: ## Rebuild the update repository into ./spaced-apt (from crhy/spaced-apt)
+apt-repo: marco ## Rebuild the update repository into ./spaced-apt (from crhy/spaced-apt)
 	@if [ ! -d "$(APT_REPO_DIR)/.git" ]; then \
 		rm -rf "$(APT_REPO_DIR)"; \
 		gh repo clone crhy/spaced-apt "$(APT_REPO_DIR)"; \

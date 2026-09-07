@@ -1,9 +1,9 @@
 [Desktop Entry]
 Type=Application
 Name=About Spaced Linux
-Comment=Show operating system and hardware information
-Exec=spaced-system-info
-Icon=spaced-linux
+Comment=Open Spaced Welcome help and tutorials
+Exec=spaced-welcome --page help
+Icon=/usr/share/pixmaps/spaced-medallion.png
 Terminal=false
 Categories=System;
 OnlyShowIn=MATE;

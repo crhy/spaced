@@ -1,6 +1,7 @@
 [org.mate.interface]
 gtk-theme='Spaced-Linux-Dark'
 icon-theme='Spaced-Icons-Linux-Dark'
+monospace-font-name='DejaVu Sans Mono 10'
 
 [org.gnome.desktop.interface]
 gtk-theme='Spaced-Linux-Dark'
@@ -56,6 +57,8 @@ lock-enabled=true
 
 
 [org.mate.terminal.profile:/org/mate/terminal/profiles/default]
+font='DejaVu Sans Mono 10'
+use-system-font=true
 background-color='#000000'
 foreground-color='#888888'
 bold-color='#ffffff'

@@ -96,7 +96,7 @@ def collect_checks():
             failures.append("Compiz is not the active window manager.")
 
     for process, label in (("mate-panel", "MATE panel"), ("caja", "Caja desktop")):
-        rc, output, _ = run(["pgrep", "-x", process])
+        rc, output, _ = run(["pgrep", "-u", str(os.getuid()), "-x", process])
         details.append(f"{label}: " + ("running" if rc == 0 and output else "not running"))
         if rc != 0 or not output:
             failures.append(f"{label} is not running.")
@@ -142,7 +142,7 @@ def show_failure(failures, details):
     )
     dialog.format_secondary_text("\n".join(f"• {item}" for item in failures))
     dialog.add_button("Keep System Running", Gtk.ResponseType.CANCEL)
-    dialog.add_button("Restore Nouveau and Reboot", Gtk.ResponseType.OK)
+    dialog.add_button("Restore Graphics and Reboot", Gtk.ResponseType.OK)
     response = dialog.run()
     dialog.destroy()
     log_dir = Path.home() / ".cache" / "spaced-nvidia-installer"

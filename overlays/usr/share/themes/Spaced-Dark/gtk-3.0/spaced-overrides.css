@@ -52,9 +52,9 @@ switch:checked > slider {
 switch:disabled {
     opacity: 0.55;
 }
-.background:not(.caja-desktop-window),
-window:not(.caja-desktop-window),
-window.background:not(.caja-desktop-window),
+.background:not(.caja-desktop-window):not(.rubberband),
+window:not(.caja-desktop-window):not(.rubberband),
+window.background:not(.caja-desktop-window):not(.rubberband),
 dialog,
 headerbar,
 toolbar,
@@ -146,6 +146,12 @@ searchentry,
 spinbutton > entry {
     background-color: @theme_base_color;
     color: @theme_text_color;
+}
+
+/* GtkTextView applies text-node padding inside the editor's scrollable
+ * content. Keep Pluma's first line clear of the top and side edges. */
+textview text {
+    padding: 6px;
 }
 
 /* GTK's text-selection node is separate from :selected in Pluma, Caja's

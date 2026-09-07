@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 OUTPUT="${LOCAL_PACKAGE_OUTPUT:-$ROOT/build/local-packages}"
 VERSION="$(cat "$ROOT/VERSION")"
+export SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH:-$(git -C "$ROOT" log -1 --format=%ct)}
 
 mkdir -p "$OUTPUT"
 
@@ -37,8 +38,12 @@ stage_desktop_defaults() {
     # and are migrated narrowly from postinst where necessary.
     local path
     for path in \
+        boot/grub/themes/spaced \
         etc/X11/Xsession.d/05spaced-reset-session-env \
         etc/X11/Xsession.d/25spaced-flatpak-exports \
+        etc/X11/xorg.conf.d/20-spaced-amdgpu.conf \
+        etc/apt/apt.conf.d \
+        etc/apt/preferences.d \
         etc/apt/sources.list.d/spaced-apt.list \
         etc/bazaar \
         etc/default/spaced-first-boot-snapshot \
@@ -59,7 +64,7 @@ stage_desktop_defaults() {
         etc/xdg/QtProject/qtquickcontrols2.conf \
         usr/lib/spaced-linux \
         usr/local/bin \
-        usr/local/sbin/spaced-first-boot-snapshot \
+        usr/local/sbin \
         usr/local/share/applications/mate-about.desktop \
         usr/share/applications/mimeapps.list \
         usr/share/applications/spaced-nvidia-installer.desktop \
@@ -71,6 +76,7 @@ stage_desktop_defaults() {
         usr/share/glib-2.0/schemas/90_spaced-linux.gschema.override \
         usr/share/glib-2.0/schemas/org.gnome.metacity.gschema.xml \
         usr/share/icons \
+        usr/share/keyrings/spaced-archive-keyring.gpg \
         usr/share/mate-background-properties/spaced-linux.xml \
         usr/share/mate-panel/layouts \
         usr/share/pixmaps \
@@ -80,6 +86,13 @@ stage_desktop_defaults() {
     do
         (cd "$ROOT/overlays" && cp -a --parents "$path" "$stage")
     done
+
+    # These entrypoints are removed by Calamares. An update must not put the
+    # live installer back on an installed system or in a new user's Desktop.
+    rm -f "$stage/usr/local/bin/install-spaced-linux" \
+        "$stage/usr/local/bin/spaced-live-session" \
+        "$stage/etc/skel/Desktop/install-spaced-linux.desktop" \
+        "$stage/usr/share/spaced-themes/cairo-dock/launchers/04-install.desktop"
 
     for path in "$ROOT"/overlays/usr/share/themes/Spaced-*; do
         (cd "$ROOT/overlays" && cp -a --parents "${path#"$ROOT/overlays/"}" "$stage")
@@ -107,6 +120,7 @@ stage_desktop_defaults() {
             Spaced-Menu-On-Light) menu_theme=Spaced-Menu-On-Light ;;
             *) echo "Cannot determine Brisk icon surface for $icon_theme" >&2; exit 1 ;;
         esac
+        if ! grep -q '^\[48x48/places\]$' "$icon_theme/index.theme"; then
         sed -i 's|^Directories=|Directories=48x48/places,|' "$icon_theme/index.theme"
         cat >> "$icon_theme/index.theme" <<'ICON_DIRECTORY'
 
@@ -115,6 +129,7 @@ Size=48
 Context=Places
 Type=Fixed
 ICON_DIRECTORY
+        fi
         install -d "$icon_theme/48x48/places"
         install -m 0644 \
             "$stage/usr/share/icons/$menu_theme/48x48/places/start-here.png" \
@@ -132,5 +147,35 @@ ICON_DIRECTORY
     rm -rf -- "$stage"
 }
 
+stage_meta() {
+    local stage
+    stage=$(mktemp -d)
+    cp -a "$ROOT/packages/spaced-meta/." "$stage/"
+    # The same runtime package groups feed both the ISO and upgrades. A new
+    # driver, firmware, desktop tool or kernel must not be fresh-install-only.
+    python3 - "$ROOT" "$stage/DEBIAN/control" <<'PY'
+import re
+import sys
+from pathlib import Path
+import yaml
+
+root, control = map(Path, sys.argv[1:])
+groups = yaml.safe_load((root / 'config/packages.yaml').read_text())
+runtime = {package for group, packages in groups.items()
+           if group not in {'installer', 'live'} for package in packages}
+runtime.update({'linux-image-amd64', 'linux-headers-amd64', 'sysvinit-core',
+                'devuan-keyring', 'mate-session-manager'})
+text = control.read_text()
+original = re.search(r'^Depends: (.+)$', text, re.M).group(1)
+existing = {item.strip().split()[0] for item in original.split(',')}
+depends = original + ', ' + ', '.join(sorted(runtime - existing))
+control.write_text(re.sub(r'^Depends: .+$', 'Depends: ' + depends, text, flags=re.M))
+PY
+    build spaced-meta "$stage"
+    rm -rf -- "$stage"
+}
+
 stage_desktop_defaults
-build spaced-meta
+stage_meta
+"$ROOT/scripts/iso/stage-amdgpu-top.sh"
+"$ROOT/scripts/iso/stage-marco.sh"
