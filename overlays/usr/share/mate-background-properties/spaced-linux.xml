@@ -2,6 +2,22 @@
 <!DOCTYPE wallpapers SYSTEM "mate-wp-list.dtd">
 <wallpapers>
   <wallpaper deleted="false">
+    <name>Euclid Galaxy Garland</name>
+    <filename>/usr/share/backgrounds/spaced/euclid-galaxy-garland.png</filename>
+    <options>zoom</options>
+    <pcolor>#080b10</pcolor>
+    <scolor>#080b10</scolor>
+    <shade_type>solid</shade_type>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>Euclid IC 342 Stars</name>
+    <filename>/usr/share/backgrounds/spaced/euclid-ic-342.jpg</filename>
+    <options>zoom</options>
+    <pcolor>#0b0908</pcolor>
+    <scolor>#0b0908</scolor>
+    <shade_type>solid</shade_type>
+  </wallpaper>
+  <wallpaper deleted="false">
     <name>Spaced Back</name>
     <filename>/usr/share/backgrounds/spaced/SpacedBack.jpg</filename>
     <options>zoom</options>
