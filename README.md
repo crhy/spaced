@@ -15,6 +15,9 @@
 
 <p align="center">
   <a href="https://spacedlinux.com"><strong>Website</strong></a> ·
+  <a href="https://spacedlinux.com/#help"><strong>Help</strong></a> ·
+  <a href="https://discord.gg/BMW9Y6NB3y"><strong>Discord</strong></a> ·
+  <a href="https://t.me/+pjmFzHo-i9A2ZWY5"><strong>Telegram</strong></a> ·
   <a href="https://github.com/crhy/spaced/releases"><strong>Download releases</strong></a> ·
   <a href="https://github.com/crhy/spaced/issues"><strong>Issues</strong></a> ·
   <a href="docs/DESIGN.md"><strong>Design</strong></a> ·
@@ -237,6 +240,8 @@ Thank you for helping keep an independent, polished, systemd-free desktop availa
 The current development line is **9.26**. Spaced Linux is an independent community project under active development.
 
 ## Contributing
+
+Find desktop instructions in [Spaced Help](https://spacedlinux.com/#help) or open **About Spaced Linux** to reach Welcome's local Help tab. Join the community on [Discord](https://discord.gg/BMW9Y6NB3y) or [Telegram](https://t.me/+pjmFzHo-i9A2ZWY5) for setup questions and testing discussions.
 
 Bug reports, documentation improvements, Compiz refinements, theme work, package suggestions, hardware testing, accessibility improvements, and build fixes are welcome.
 

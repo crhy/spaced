@@ -1,5 +1,5 @@
 {
-  "checksum": "b5696a41a45979884170ba7112c7df3b",
+  "checksum": "35e92191cf49db1f1dcf8d9e0a5a8408",
   "roots": {
     "bookmark_bar": {
       "children": [
@@ -7,11 +7,13 @@
         {"date_added": "13401120000000001", "date_last_used": "0", "guid": "09dd44f3-7b08-41df-af53-df47c1b508bf", "id": "3", "name": "SpacedLinux.com", "type": "url", "url": "https://spacedlinux.com/"},
         {"date_added": "13401120000000002", "date_last_used": "0", "guid": "52902d4d-f86a-43d6-a6dd-a4582a3b75cd", "id": "4", "name": "Devuan", "type": "url", "url": "https://www.devuan.org/"},
         {"date_added": "13401120000000003", "date_last_used": "0", "guid": "f8b1627a-e0cc-4273-be69-b5c8278d8f89", "id": "5", "name": "SpacedBazaar", "type": "url", "url": "https://github.com/crhy/spacedbazaar"},
-        {"date_added": "13401120000000004", "date_last_used": "0", "guid": "2f78ff19-bf44-4c63-b327-e75a3a382d93", "id": "6", "name": "SpacedHelp", "type": "url", "url": "https://spacedlinux.com/#help"}
+        {"date_added": "13401120000000004", "date_last_used": "0", "guid": "2f78ff19-bf44-4c63-b327-e75a3a382d93", "id": "6", "name": "SpacedHelp", "type": "url", "url": "https://spacedlinux.com/#help"},
+        {"date_added": "13433212800000000", "date_last_used": "0", "guid": "22fa4ab6-7c7e-5e93-be44-5648789edcb0", "id": "9", "name": "Discord", "type": "url", "url": "https://discord.gg/BMW9Y6NB3y"},
+        {"date_added": "13433212800000000", "date_last_used": "0", "guid": "81fe21f2-547d-5506-bcff-e4895a85fed1", "id": "10", "name": "Telegram", "type": "url", "url": "https://t.me/+pjmFzHo-i9A2ZWY5"}
       ],
       "date_added": "13401120000000000",
       "date_last_used": "0",
-      "date_modified": "13401120000000004",
+      "date_modified": "13433212800000000",
       "guid": "00000000-0000-4000-a000-000000000002",
       "id": "1",
       "name": "Bookmarks bar",

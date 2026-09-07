@@ -509,6 +509,15 @@ class App(Gtk.Window):
         switcher.set_margin_bottom(4)
         root.pack_start(switcher, False, False, 0)
         root.pack_start(self.tabs, True, True, 0)
+        community = Gtk.Box(spacing=8)
+        community.set_halign(Gtk.Align.CENTER)
+        for label, uri in (
+            ("Online Help", "https://spacedlinux.com/#help"),
+            ("Discord", "https://discord.gg/BMW9Y6NB3y"),
+            ("Telegram", "https://t.me/+pjmFzHo-i9A2ZWY5"),
+        ):
+            community.pack_start(Gtk.LinkButton.new_with_label(uri, label), False, False, 0)
+        root.pack_end(community, False, False, 4)
 
         self.tabs.add_titled(self._build_updates_page(), "updates", "Updates")
         self.os_tab = OsUpdateTab(self)

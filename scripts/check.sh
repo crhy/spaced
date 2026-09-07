@@ -349,7 +349,7 @@ assert not [path for path in embedded_welcome_paths if path.exists()], \
     "the standalone Welcome implementation is still duplicated in the distro overlay"
 meta_control = Path("packages/spaced-meta/DEBIAN/control").read_text(encoding="utf-8")
 assert f"spaced-mate-default-settings (= {version})" in meta_control \
-    and "spaced-welcome (>= 0.1.10)" in meta_control \
+    and "spaced-welcome (>= 0.1.11)" in meta_control \
     and "libfuse2t64" in meta_control, \
     "spaced-meta does not pull in the standalone Welcome package and desktop defaults"
 assert "spaced-welcome.desktop" not in package_builder \
@@ -366,7 +366,7 @@ def artifact_default(name):
     return match.group(1)
 
 assert artifact_default("SPACED_WELCOME_REPOSITORY") == "crhy/spacedwelcome"
-assert artifact_default("SPACED_WELCOME_VERSION") == "0.1.10"
+assert artifact_default("SPACED_WELCOME_VERSION") == "0.1.11"
 assert artifact_default("SPACED_GITHUB_REMOTE_NAME") == "spaced-github"
 assert artifact_default("SPACED_GITHUB_REMOTE_DESCRIPTOR_URL") == \
     "https://crhy.github.io/spacedbazaar/spaced-github.flatpakrepo"
@@ -843,7 +843,7 @@ for permanent_root in ("bookmark_bar", "other", "synced"):
     checksum_bookmark(brave_bookmarks["roots"][permanent_root])
 assert brave_bookmarks["checksum"] == bookmark_checksum.hexdigest(), \
     "Brave bookmarks do not carry a Chromium-compatible integrity checksum"
-assert {"OpenAirShips.com", "SpacedLinux.com", "Devuan", "SpacedBazaar", "SpacedHelp"} == \
+assert {"OpenAirShips.com", "SpacedLinux.com", "Devuan", "SpacedBazaar", "SpacedHelp", "Discord", "Telegram"} == \
     {bookmark["name"] for bookmark in bookmark_bar["children"]}, \
     "fresh Brave profiles do not receive the requested bookmark-bar links (issue #145)"
 assert brave_preferences["bookmark_bar"]["show_on_all_tabs"] is True, \

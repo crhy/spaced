@@ -4,7 +4,7 @@ Section: metapackages
 Priority: optional
 Architecture: all
 Maintainer: Spaced Linux Team
-Depends: base-files, flatpak, libfuse2t64, libmarco-private2 (>= 1.26.2-6+spaced9.26.1), spaced-mate-default-settings (= 9.26), spaced-welcome (>= 0.1.10)
+Depends: base-files, flatpak, libfuse2t64, libmarco-private2 (>= 1.26.2-6+spaced9.26.1), spaced-mate-default-settings (= 9.26), spaced-welcome (>= 0.1.11)
 Provides: spaced-release
 Breaks: base-files (<< 13)
 Replaces: base-files (<< 13)
