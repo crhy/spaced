@@ -55,6 +55,7 @@ deps: ## Install host build and test dependencies
 		python3-yaml desktop-file-utils apt-utils python3-gi gir1.2-gtk-3.0 xvfb
 
 check: ## Validate configuration, scripts, themes, and desktop entries
+	$(HOST_RUN) scripts/tests/test-testing-upgrade.sh
 	$(HOST_RUN) scripts/check.sh
 	$(HOST_RUN) env PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests
 	$(HOST_RUN) env PYTHONDONTWRITEBYTECODE=1 xvfb-run -a python3 tests/gtk_desktop.py

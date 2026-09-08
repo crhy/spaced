@@ -112,6 +112,7 @@ system:
   - ca-certificates
   - locales
   - console-setup
+  - util-linux
   - util-linux-extra
   - grub-pc-bin
   - grub-efi-amd64-bin

@@ -516,6 +516,7 @@ assert {"locales", "console-setup"}.issubset(packages), \
 assert {"util-linux-extra", "grub-pc-bin", "grub-efi-amd64-bin", "efibootmgr", "dosfstools"}.issubset(packages), \
     "Calamares offline BIOS/UEFI install dependencies are incomplete"
 assert "os-prober" in packages, "GRUB cannot detect other operating systems without os-prober"
+assert "util-linux" in packages, "the testing-channel bootstrap must find runuser from util-linux"
 default_grub = (root / "etc/default/grub").read_text(encoding="utf-8")
 assert "GRUB_DISABLE_OS_PROBER=false" in default_grub and "#GRUB_DISABLE_OS_PROBER=false" not in default_grub, \
     "GRUB os-prober is still disabled, so other OSes never appear in the boot menu (issue #11)"
@@ -932,6 +933,8 @@ assert 'scope in ("user", "system")' in update_app \
 assert 'apt-refresh' in update_helper and 'flock -n' in update_helper \
     and 'APT::Update::Error-Mode=any' in update_helper, \
     "Spaced Update must serialize transactions and reject incomplete APT indexes"
+assert not list(Path("overlays").rglob("spaced-upgrade-testing.sh")), \
+    "the testing-channel bootstrap is a host script and must not stage into the ISO"
 
 fastfetch_logo = (root / "usr/share/fastfetch/logos/spaced-linux.txt").read_text(encoding="utf-8")
 assert "~**+<{{{{{{{{)+~~" in fastfetch_logo, "fastfetch logo is not the current Spaced ASCII art"

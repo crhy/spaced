@@ -69,7 +69,8 @@ APT_OPTIONS=(-o APT::Update::Error-Mode=any -o Acquire::Retries=3
     -o DPkg::Lock::Timeout=120 -o Dpkg::Use-Pty=0
     -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold)
 apt-get "${APT_OPTIONS[@]}" update
-candidate=$(apt-cache policy spaced-meta | awk '/Candidate:/ {print $2; exit}')
+# sed keeps this parseable without awk; the boot test rootfs does not bind /etc.
+candidate=$(apt-cache policy spaced-meta | sed -n 's/^ *Candidate: *//p' | head -n 1)
 dpkg --compare-versions "$candidate" ge 9.26 || {
     echo "Testing repository did not offer Spaced9.26 or newer: $candidate" >&2; exit 1;
 }
