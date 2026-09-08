@@ -19,6 +19,11 @@ WRITTEN_PATHS = (
     "etc/dconf/db/local.d/00-spaced-compiz",
 )
 FIXED_PATHS = (*WRITTEN_PATHS, "etc/modprobe.d/spaced-live-nvidia.conf", "etc/X11/xorg.conf")
+FIXED_PATHS += (
+    "etc/apt/sources.list.d/cuda-debian12-x86_64.list",
+    "etc/apt/sources.list.d/cuda-debian13-x86_64.list",
+    "usr/share/keyrings/cuda-archive-keyring.gpg",
+)
 
 
 def snapshot(path):

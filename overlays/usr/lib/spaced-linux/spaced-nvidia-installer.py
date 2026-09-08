@@ -10,6 +10,7 @@ import gi
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 from gi.repository import Gdk, GLib, Gtk
+from spaced_nvidia_state import awaiting_reboot, installation_verified
 
 HELPER = "/usr/lib/spaced-linux/spaced-nvidia-helper"
 LOG_FILE = "/var/log/spaced-nvidia-installer.log"
@@ -26,7 +27,7 @@ ERRORS = {
     16: "Package information could not be downloaded.",
     20: "The exact header package for the running kernel is unavailable.",
     21: "A required Devuan package is unavailable or could not be installed.",
-    22: "NVIDIA's official Debian 13 repository could not be enabled.",
+    22: "NVIDIA's official Debian repository could not be enabled.",
     23: "NVIDIA Driver Assistant is unavailable.",
     24: "NVIDIA Driver Assistant does not support this system or GPU.",
     30: "The NVIDIA package installation failed. Review the recovery result in the log.",
@@ -77,7 +78,7 @@ class Installer(Gtk.Window):
         root.pack_start(subtitle, False, False, 0)
 
         self.gpu = self.detect_gpu()
-        self.has_nvidia = bool(self.gpu and "nvidia" in self.gpu.lower())
+        self.has_nvidia = bool(self.gpu and any(name in self.gpu.lower() for name in ("nvidia", "[10de:")))
         self.has_amd = bool(self.gpu and any(name in self.gpu.lower() for name in ("amd", "ati", "[1002:")))
         frame = Gtk.Frame(label="Detected hardware")
         root.pack_start(frame, False, False, 0)
@@ -130,7 +131,7 @@ class Installer(Gtk.Window):
         buttons.pack_start(self.amd_button, False, False, 0)
         self.install_button = Gtk.Button(label="Install NVIDIA Driver")
         self.install_button.connect("clicked", self.confirm_install)
-        self.install_button.set_sensitive(self.has_nvidia and not PENDING_FILE.exists())
+        self.install_button.set_sensitive(self.has_nvidia and (not PENDING_FILE.exists() or installation_verified(PENDING_FILE)))
         buttons.pack_start(self.install_button, True, True, 0)
 
         self.rollback_button = Gtk.Button(label="Restore Graphics")
@@ -146,10 +147,22 @@ class Installer(Gtk.Window):
         self.close_button.connect("clicked", lambda *_: self.close())
         buttons.pack_start(self.close_button, False, False, 0)
 
-        if PENDING_FILE.exists():
+        support = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        for label, url in (("Online Help", "https://spacedlinux.com/help.html"),
+                           ("Discord", "https://discord.gg/BMW9Y6NB3y"),
+                           ("Telegram", "https://t.me/+pjmFzHo-i9A2ZWY5")):
+            support.pack_start(Gtk.LinkButton.new_with_label(url, label), False, False, 0)
+        root.pack_start(support, False, False, 0)
+
+        if PENDING_FILE.exists() and awaiting_reboot(PENDING_FILE):
             self.progress.set_fraction(1.0)
             self.progress.set_text("Verified installation awaiting reboot")
             GLib.idle_add(self.show_reboot_dialog)
+        elif installation_verified(PENDING_FILE):
+            self.progress.set_fraction(1.0)
+            self.progress.set_text("NVIDIA driver verified after reboot")
+        elif PENDING_FILE.exists():
+            self.progress.set_text("NVIDIA startup verification is pending — review the startup report")
         elif not self.gpu:
             self.progress.set_text("No graphics device detected")
 
@@ -197,7 +210,7 @@ class Installer(Gtk.Window):
 
     def set_busy(self, busy: bool) -> None:
         self.running = busy
-        self.install_button.set_sensitive(not busy and self.has_nvidia and not PENDING_FILE.exists())
+        self.install_button.set_sensitive(not busy and self.has_nvidia and (not PENDING_FILE.exists() or installation_verified(PENDING_FILE)))
         self.rollback_button.set_sensitive(not busy and self.has_nvidia)
         self.audit_button.set_sensitive(not busy)
         self.amd_button.set_sensitive(not busy and self.has_amd)

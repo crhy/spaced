@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-import hashlib
 import os
 import pwd
 import subprocess
@@ -10,8 +9,8 @@ import gi
 
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk
+from spaced_nvidia_state import PENDING, ack_path, awaiting_reboot, marker_id
 
-PENDING = Path("/var/lib/spaced-nvidia-installer/reboot-required")
 HELPER = "/usr/lib/spaced-linux/spaced-nvidia-helper"
 
 
@@ -24,21 +23,40 @@ def run(command, timeout=15):
             text=True,
             errors="replace",
             timeout=timeout,
+            env={**os.environ, "LC_ALL": "C"},
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
         return 125, "", str(exc)
     return result.returncode, result.stdout.strip(), result.stderr.strip()
 
 
-def marker_id():
-    data = PENDING.read_bytes()
-    return hashlib.sha256(data).hexdigest()[:20]
+def check_opengl():
+    details, failures = [], []
+    rc, output, error = run(["glxinfo", "-B"])
+    details.append("Desktop OpenGL:\n" + (output or error or "No output"))
+    lowered = output.lower()
+    if rc != 0 or "opengl renderer string:" not in lowered:
+        failures.append("Desktop OpenGL renderer information could not be read.")
+    if any(token in lowered for token in ("llvmpipe", "softpipe", "software rasterizer")):
+        failures.append("Desktop OpenGL is using software rendering.")
+    if "direct rendering: yes" not in lowered:
+        failures.append("Desktop OpenGL direct rendering is unavailable.")
+    if "opengl vendor string: nvidia corporation" in lowered:
+        return failures, details
 
-
-def ack_path():
-    directory = Path.home() / ".cache" / "spaced-nvidia-installer"
-    directory.mkdir(parents=True, exist_ok=True)
-    return directory / f"verified-{marker_id()}"
+    # Hybrid laptops normally keep the Intel/AMD GPU as the desktop renderer.
+    # NVIDIA's documented PRIME variables verify the discrete GPU separately.
+    rc, output, error = run([
+        "env", "__NV_PRIME_RENDER_OFFLOAD=1", "__GLX_VENDOR_LIBRARY_NAME=nvidia",
+        "glxinfo", "-B",
+    ])
+    details.append("NVIDIA PRIME OpenGL:\n" + (output or error or "No output"))
+    lowered = output.lower()
+    if (rc != 0 or "opengl vendor string: nvidia corporation" not in lowered
+            or "direct rendering: yes" not in lowered
+            or any(token in lowered for token in ("llvmpipe", "softpipe", "software rasterizer"))):
+        failures.append("NVIDIA OpenGL could not be verified through PRIME render offload.")
+    return failures, details
 
 
 def collect_checks():
@@ -66,15 +84,9 @@ def collect_checks():
     if any(line.startswith("nouveau ") for line in output.splitlines()):
         failures.append("Nouveau is still loaded after the NVIDIA reboot.")
 
-    rc, output, error = run(["glxinfo", "-B"])
-    details.append("OpenGL:\n" + (output or error or "No output"))
-    lowered = output.lower()
-    if rc != 0:
-        failures.append("OpenGL renderer information could not be read.")
-    if "opengl vendor string: nvidia corporation" not in lowered:
-        failures.append("OpenGL is not using the NVIDIA userspace driver.")
-    if any(token in lowered for token in ("zink", "nvk", "llvmpipe", "softpipe")):
-        failures.append("OpenGL is still using NVK/Zink or software rendering.")
+    gl_failures, gl_details = check_opengl()
+    failures.extend(gl_failures)
+    details.extend(gl_details)
 
     rc, output, error = run(["wmctrl", "-m"])
     details.append("Window manager:\n" + (output or error or "No output"))
@@ -131,7 +143,9 @@ def show_success(details):
     )
     dialog.run()
     dialog.destroy()
-    ack_path().write_text(details + "\n", encoding="utf-8")
+    acknowledgement = ack_path(PENDING)
+    acknowledgement.parent.mkdir(parents=True, exist_ok=True)
+    acknowledgement.write_text(details + "\n", encoding="utf-8")
 
 
 def show_failure(failures, details):
@@ -147,7 +161,7 @@ def show_failure(failures, details):
     dialog.destroy()
     log_dir = Path.home() / ".cache" / "spaced-nvidia-installer"
     log_dir.mkdir(parents=True, exist_ok=True)
-    (log_dir / f"failed-{marker_id()}.log").write_text(details + "\n", encoding="utf-8")
+    (log_dir / f"failed-{marker_id(PENDING)}.log").write_text(details + "\n", encoding="utf-8")
     if response == Gtk.ResponseType.OK:
         user = pwd.getpwuid(os.getuid()).pw_name
         subprocess.Popen([
@@ -163,7 +177,7 @@ def show_failure(failures, details):
 def main():
     if not PENDING.is_file():
         return
-    if ack_path().exists():
+    if ack_path(PENDING).exists() or awaiting_reboot(PENDING):
         return
     failures, details = wait_for_session()
     if failures:

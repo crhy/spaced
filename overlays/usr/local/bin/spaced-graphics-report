@@ -11,13 +11,21 @@ run() {
     fi
 }
 run uname -r
+run cat /proc/cmdline
 run lspci -nnk
 run lsusb
+run lsmod
 run glxinfo -B
+run xrandr --listproviders
 run xrandr --verbose
 run xset q
 run dpkg-query -W '-f=${binary:Package} ${Version}\n' firmware-amd-graphics firmware-realtek firmware-mediatek libgl1-mesa-dri mesa-vulkan-drivers xserver-xorg-video-amdgpu amdgpu-top
 run mokutil --sb-state
+if command -v nvidia-smi >/dev/null 2>&1; then
+    run nvidia-smi --query-gpu=pci.bus_id,name,driver_version --format=csv
+    run env __NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia glxinfo -B
+    run dkms status
+fi
 printf '\n--- AMDGPU TearFree configuration ---\n'
 if [[ -f /etc/X11/xorg.conf.d/20-spaced-amdgpu.conf ]]; then
     cat /etc/X11/xorg.conf.d/20-spaced-amdgpu.conf

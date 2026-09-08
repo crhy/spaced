@@ -77,6 +77,16 @@ class ConfigurationRecoveryTests(unittest.TestCase):
             config.restore(self.root, self.manifest)
         self.assertEqual(grub.read_text(), "original\n")
 
+    def test_cuda_repository_and_public_key_are_restored(self):
+        key = self.write("usr/share/keyrings/cuda-archive-keyring.gpg", "existing key\n")
+        config.backup(self.root, self.manifest)
+        key.write_text("installer key\n")
+        source = self.write("etc/apt/sources.list.d/cuda-debian13-x86_64.list", "new source\n")
+        config.capture(self.root, self.manifest)
+        self.assertTrue(config.restore(self.root, self.manifest))
+        self.assertEqual(key.read_text(), "existing key\n")
+        self.assertFalse(source.exists())
+
 
 class DriverHelperTests(unittest.TestCase):
     def run_helper(self, action, failure=""):
@@ -86,6 +96,7 @@ class DriverHelperTests(unittest.TestCase):
             run.mkdir()
             (run / "packages-before.txt").write_text("base-package\n")
             (run / "driver-versions-before.txt").write_text("")
+            (run / "new-nvidia-packages.txt").write_text("nvidia-new\n")
             pending = root / "pending"
             pending.touch()
             helper = root / "helper"
@@ -168,6 +179,60 @@ modprobe() {
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("REBOOT_CALLED", result.stdout)
 
+    def test_upstream_debian_alias_selects_one_guarded_package(self):
+        result, _ = self.run_helper(r'''
+DEBIAN_VERSION=13
+nvidia-driver-assistant() {
+    if [ "$1" = --list-supported-distros ]; then
+        printf 'The following are the currently accepted distribution aliases:\n  debian\n  ubuntu\n'
+    else
+        printf '  sudo apt-get install -Vy nvidia-open\n'
+    fi
+}
+python3() {
+    if [ "$2" = recommendation ]; then printf 'nvidia-open\n'; fi
+}
+require_candidate() { :; }
+select_driver_package
+printf 'SELECTED:%s\n' "$DRIVER_PACKAGE"
+''')
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("SELECTED:nvidia-open", result.stdout)
+        self.assertIn("--simulate --no-remove install -y nvidia-open", result.stdout)
+
+    def test_driver_apt_failure_stops_before_dkms(self):
+        result, _ = self.run_helper(r'''
+DRIVER_PACKAGE=nvidia-open
+dkms() { echo DKMS_SHOULD_NOT_RUN; }
+install_driver_packages
+''', "apt-get")
+        self.assertEqual(result.returncode, 30, result.stdout + result.stderr)
+        self.assertNotIn("DKMS_SHOULD_NOT_RUN", result.stdout)
+        self.assertIn("--no-remove install -y nvidia-open", result.stdout)
+
+    def test_manual_recovery_keeps_completed_package_record(self):
+        result, _ = self.run_helper(r'''
+record_new_nvidia_packages() { echo MUST_NOT_RESCAN_LATER_INSTALLS; return 99; }
+rollback_transaction 30
+''')
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertNotIn("MUST_NOT_RESCAN_LATER_INSTALLS", result.stdout)
+
+    def test_recovery_rejects_removal_of_later_dependent_app(self):
+        result, _ = self.run_helper(r'''
+apt-get() {
+    if [[ " $* " = *" --simulate "* ]]; then
+        printf 'Remv nvidia-new [1.0]\nRemv unrelated-cuda-app [2.0]\n'
+    else
+        echo REAL_PURGE_MUST_NOT_RUN
+    fi
+}
+remove_recorded_nvidia_packages nvidia-new
+''')
+        self.assertEqual(result.returncode, 52, result.stdout + result.stderr)
+        self.assertIn("unrelated-cuda-app", result.stdout)
+        self.assertNotIn("REAL_PURGE_MUST_NOT_RUN", result.stdout)
+
 
 class DriverGuiTests(unittest.TestCase):
     @classmethod
@@ -177,7 +242,7 @@ class DriverGuiTests(unittest.TestCase):
         gi = types.SimpleNamespace(require_version=lambda *_: None)
         repository = types.SimpleNamespace(Gtk=types.SimpleNamespace(Window=object),
                                           GLib=MagicMock(), Gdk=MagicMock())
-        with patch.dict(sys.modules, {"gi": gi, "gi.repository": repository}):
+        with patch.object(sys, "path", [str(LIB), *sys.path]), patch.dict(sys.modules, {"gi": gi, "gi.repository": repository}):
             spec.loader.exec_module(cls.gui)
 
     def test_partial_recovery_does_not_offer_reboot(self):
