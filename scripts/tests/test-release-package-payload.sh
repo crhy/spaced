@@ -31,11 +31,15 @@ for path in ('usr/local/bin/install-spaced-linux', 'usr/local/bin/spaced-live-se
     assert not (payload / path).exists(), f'Live-only entrypoint delivered by upgrade: {path}'
 for path in ('usr/lib/spaced-linux/spaced-update.py', 'usr/lib/spaced-linux/spaced-update-helper',
              'usr/share/keyrings/spaced-archive-keyring.gpg', 'etc/apt/sources.list.d/spaced-apt.list',
+             'etc/lightdm/lightdm.conf.d/60-spaced-installed.conf',
              'etc/X11/xorg.conf.d/20-spaced-amdgpu.conf', 'usr/local/bin/spaced-graphics-report',
              'usr/local/sbin/spaced-sync-time', 'usr/local/sbin/spaced-finalize-timezone'):
     assert (payload / path).read_bytes() == (root / 'overlays' / path).read_bytes(), f'Missing/stale overlay: {path}'
 for path in ('postinst', 'triggers'):
     assert (work / 'meta' / path).read_bytes() == (root / 'packages/spaced-meta/DEBIAN' / path).read_bytes(), f'Stale release maintainer script: {path}'
+lightdm = (payload / 'etc/lightdm/lightdm.conf.d/60-spaced-installed.conf').read_text()
+assert re.search(r'\[LightDM\](?:(?!\[).)*minimum-vt=1', lightdm, re.S), 'Upgrade omitted boot VT fix'
+assert not re.search(r'^autologin-user=.+', lightdm, re.M), 'Installed defaults must not enable a test/live account'
 source = (payload / 'etc/apt/sources.list.d/spaced-apt.list').read_text()
 assert 'trusted=yes' not in source
 assert 'signed-by=/usr/share/keyrings/spaced-archive-keyring.gpg' in source

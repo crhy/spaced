@@ -54,14 +54,19 @@ apt-get update
 apt-cache policy spaced-meta spaced-mate-default-settings spaced-welcome \
     linux-image-amd64 linux-headers-amd64 libmarco-private2 amdgpu-top
 candidate=$(apt-cache policy spaced-meta | awk '/Candidate:/ {print $2; exit}')
-[[ "$candidate" == "$(cat "$ROOT/VERSION")" ]] || { echo "Wrong release candidate: $candidate" >&2; exit 1; }
+[[ "$candidate" == "$(sed -n 's/^Version: //p' "$ROOT/packages/spaced-meta/DEBIAN/control")" ]] || { echo "Wrong release candidate: $candidate" >&2; exit 1; }
 for status in "$@"; do
     cp "$status" "$workspace/status"
     printf '\nResolving full rolling upgrade from %s\n' "$status"
+    installed=$(dpkg-query --admindir="$workspace" -W -f='${db:Status-Status} ${Version}' spaced-meta 2>/dev/null || true)
     # Supplying the release metapackage also covers earliest installations
     # which did not carry it. Checking only "install spaced-meta" misses the
     # other upgrades and rolling dependency transitions on an old system.
     apt-get --simulate dist-upgrade spaced-meta | tee "$workspace/plan"
+    if [[ "$installed" != "installed $candidate" ]] && ! grep -Eq '^Inst spaced-meta(:[^ ]+)? ' "$workspace/plan"; then
+        echo "Upgrade plan did not install the target metapackage from: ${installed:-absent}." >&2
+        exit 1
+    fi
     if grep -Eq '^(Remv (sysvinit-core|sysvinit-utils|initscripts|spaced-meta|spaced-mate-default-settings|mate-session-manager|mate-panel|caja|compiz|lightdm|network-manager|apt|dpkg|flatpak)(:[^ ]+)? |Inst (systemd|systemd-sysv|runit-init|openrc)(:[^ ]+)? )' "$workspace/plan"; then
         echo 'Upgrade plan removes the supported desktop or changes init systems.' >&2
         exit 1

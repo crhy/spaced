@@ -14,6 +14,7 @@ YRES=${SPACED_QEMU_YRES:-}
 ROOT_PASSWORD=${SPACED_LIVE_ROOT_PASSWORD:-spaced}
 PROJECT_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)
 ARTIFACT_DIR=${SPACED_QEMU_ARTIFACT_DIR:-$PROJECT_ROOT/build/test-artifacts}
+EXPECTED_VERSION=${SPACED_EXPECTED_VERSION:-$(cat "$PROJECT_ROOT/VERSION")}
 
 if [ -z "$ISO" ] || [ ! -f "$ISO" ]; then
     echo "ISO not found: ${ISO:-<not provided>}" >&2
@@ -26,9 +27,10 @@ if [ -n "$XRES$YRES" ] && ! { [[ "$XRES" =~ ^[1-9][0-9]*$ ]] && [[ "$YRES" =~ ^[
     echo 'Set both SPACED_QEMU_XRES and SPACED_QEMU_YRES to positive pixels.' >&2
     exit 2
 fi
-for tool in qemu-system-x86_64 sshpass ssh python3; do
+for tool in qemu-system-x86_64 sshpass ssh python3 sha256sum; do
     command -v "$tool" >/dev/null || { echo "$tool is required for the ISO smoke test" >&2; exit 1; }
 done
+ISO_SHA256=$(sha256sum "$ISO" | cut -d' ' -f1)
 mkdir -p "$ARTIFACT_DIR"
 ARTIFACT_DIR=$(cd "$ARTIFACT_DIR" && pwd)
 SCREENSHOT="$ARTIFACT_DIR/qemu-live.ppm"
@@ -89,11 +91,12 @@ ssh_is_ready() {
 
 desktop_is_ready() {
     # Query the real live user's X session rather than assuming :0/.Xauthority.
-    local status=0
+    local status=0 probe_command
+    printf -v probe_command 'python3 - %q %q %q' "$XRES" "$YRES" "$EXPECTED_VERSION"
     SSHPASS="$ROOT_PASSWORD" sshpass -e ssh -p "$SSH_PORT" \
         -o ConnectTimeout=3 -o StrictHostKeyChecking=no \
         -o UserKnownHostsFile="$RUN_DIR/known_hosts" root@127.0.0.1 \
-        python3 - "$XRES" "$YRES" > "$RUNTIME.tmp" 2>> "$ARTIFACT_DIR/qemu-guest.log" <<'PY' || status=$?
+        "$probe_command" > "$RUNTIME.tmp" 2>> "$ARTIFACT_DIR/qemu-guest.log" <<'PY' || status=$?
 import json
 import os
 from pathlib import Path
@@ -132,6 +135,10 @@ try:
     report['dpkg_audit'] = audit or error
     require(code == 0 and not audit, 'dpkg reports incomplete packages')
     report['os_release'] = Path('/etc/os-release').read_text()
+    identity = dict(line.split('=', 1) for line in report['os_release'].splitlines() if '=' in line)
+    require(identity.get('ID', '').strip(chr(34)) == 'spaced', 'Live image is not Spaced Linux')
+    require(identity.get('VERSION_ID', '').strip(chr(34)) == sys.argv[3],
+            f'Live image version does not match expected {sys.argv[3]}')
     for prop in ('_NET_SUPPORTING_WM_CHECK', '_COMPIZ_SUPPORTING_DM_CHECK'):
         code, value, error = run('xprop', '-root', prop)
         report['checks'][prop] = value or error
@@ -179,7 +186,7 @@ PY
 }
 
 validate_screen() {
-    python3 - "$SCREENSHOT" "$RUNTIME" "$ACCEL" "$FIRMWARE" "$RAM" "$CPUS" "$XRES" "$YRES" <<'PY'
+    python3 - "$SCREENSHOT" "$RUNTIME" "$ACCEL" "$FIRMWARE" "$RAM" "$CPUS" "$XRES" "$YRES" "$ISO" "$ISO_SHA256" "$EXPECTED_VERSION" <<'PY'
 import json
 from pathlib import Path
 import re
@@ -196,6 +203,7 @@ if sys.argv[7] and (w, h) != (int(sys.argv[7]), int(sys.argv[8])):
     raise SystemExit(f'Screenshot is {w}x{h}, not the requested display size')
 path = Path(sys.argv[2])
 report = json.loads(path.read_text())
+report['iso'] = {'path': sys.argv[9], 'sha256': sys.argv[10], 'expected_version': sys.argv[11]}
 report['smoke'] = {'accelerator': sys.argv[3], 'firmware': sys.argv[4],
                    'ram_mib': int(sys.argv[5]), 'cpus': int(sys.argv[6]),
                    'screenshot': {'path': sys.argv[1], 'width': w, 'height': h, 'nonblank': True}}
