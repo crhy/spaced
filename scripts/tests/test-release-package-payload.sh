@@ -7,7 +7,7 @@ SUITE=${SPACED_APT_SUITE:-spaced-testing}
 [[ "$SUITE" =~ ^[a-z0-9][a-z0-9-]*$ ]] || exit 2
 WORK=$(mktemp -d)
 trap 'rm -rf -- "$WORK"' EXIT
-VERSION=$(cat "$ROOT/VERSION")
+VERSION=$(sed -n 's/^Version: //p' "$ROOT/packages/spaced-meta/DEBIAN/control")
 PACKAGES="$REPO/dists/$SUITE/main/binary-amd64"
 dpkg-deb -e "$PACKAGES/spaced-meta_${VERSION}_all.deb" "$WORK/meta"
 dpkg-deb -x "$PACKAGES/spaced-mate-default-settings_${VERSION}_all.deb" "$WORK/settings"

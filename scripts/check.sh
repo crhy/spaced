@@ -348,7 +348,10 @@ embedded_welcome_paths = (
 assert not [path for path in embedded_welcome_paths if path.exists()], \
     "the standalone Welcome implementation is still duplicated in the distro overlay"
 meta_control = Path("packages/spaced-meta/DEBIAN/control").read_text(encoding="utf-8")
-assert f"spaced-mate-default-settings (= {version})" in meta_control \
+package_version = re.search(r"^Version: (.+)$", meta_control, re.M).group(1)
+assert package_version.split("-", 1)[0] == version, "Native package version does not match OS release"
+assert f"Version: {package_version}\n" in defaults_control
+assert f"spaced-mate-default-settings (= {package_version})" in meta_control \
     and "spaced-welcome (>= 0.1.11)" in meta_control \
     and "libfuse2t64" in meta_control, \
     "spaced-meta does not pull in the standalone Welcome package and desktop defaults"

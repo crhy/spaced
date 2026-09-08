@@ -3,11 +3,14 @@ set -e
 
 case "${1:-}" in configure|triggered) ;; *) exit 0 ;; esac
 
-VERSION="$(dpkg-query -W -f='${Version}' spaced-meta 2>/dev/null || true)"
-if [ -z "$VERSION" ]; then
+PACKAGE_VERSION="$(dpkg-query -W -f='${Version}' spaced-meta 2>/dev/null || true)"
+if [ -z "$PACKAGE_VERSION" ]; then
     echo "Cannot determine the installed Spaced release version" >&2
     exit 1
 fi
+# Debian package revisions deliver fixes without changing the OS release name.
+VERSION=${PACKAGE_VERSION#*:}
+VERSION=${VERSION%-*}
 CODENAME="$(printf '%s' "$VERSION" | tr -d '.')"
 
 identity=$(mktemp)
@@ -18,7 +21,7 @@ NAME="Spaced Linux"
 VERSION_ID="$VERSION"
 VERSION="$VERSION"
 VERSION_CODENAME="$CODENAME"
-BUILD_ID="$VERSION"
+BUILD_ID="$PACKAGE_VERSION"
 ID=spaced
 ID_LIKE=debian
 HOME_URL="https://github.com/crhy/spaced"

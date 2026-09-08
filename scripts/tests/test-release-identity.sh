@@ -6,7 +6,7 @@ set -euo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 WORK=$(mktemp -d)
 trap 'rm -rf -- "$WORK"' EXIT
-VERSION=$(cat "$ROOT/VERSION")
+VERSION=$(sed -n 's/^Version: //p' "$ROOT/packages/spaced-meta/DEBIAN/control")
 mkdir -p "$WORK/root"/{etc,var/lib/dpkg/info,var/lib/dpkg/updates,var/lib/dpkg/triggers,var/log,usr/lib,usr/share,packages}
 : > "$WORK/root/var/lib/dpkg/status"
 printf 'root:x:0:0:root:/root:/bin/sh\n' > "$WORK/root/etc/passwd"
@@ -53,6 +53,7 @@ cat > "$WORK/root/packages/test.sh" <<'INNER'
 #!/bin/bash
 set -euo pipefail
 version=$1
+os_version=${version%-*}
 check_identity() {
     for marker in /etc/os-release /usr/lib/os-release; do
         grep -qx "VERSION_ID=\"$1\"" "$marker"
@@ -65,14 +66,17 @@ check_identity() {
 dpkg --install /packages/base-files_13_all.deb /packages/spaced-meta_8.26.4_all.deb
 check_identity 8.26.4
 dpkg --install "/packages/spaced-meta_${version}_all.deb"
-check_identity "$version"
+check_identity "$os_version"
+grep -qx "BUILD_ID=\"$version\"" /etc/os-release
 # A later upstream unpack must invoke the production interest-noawait trigger.
 dpkg --install /packages/base-files_14_all.deb
-check_identity "$version"
+check_identity "$os_version"
+grep -qx "BUILD_ID=\"$version\"" /etc/os-release
 # Direct trigger replay must be idempotent and leave no pending package state.
 dpkg-trigger --no-await --by-package=base-files /usr/lib/os-release
 dpkg --triggers-only --pending
-check_identity "$version"
+check_identity "$os_version"
+grep -qx "BUILD_ID=\"$version\"" /etc/os-release
 [[ -z $(dpkg --audit) ]]
 echo "Real dpkg identity upgrade and base-files trigger tests passed ($version)."
 INNER

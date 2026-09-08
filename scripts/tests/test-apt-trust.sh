@@ -8,6 +8,7 @@ SUITE=${SPACED_APT_SUITE:-spaced-testing}
 [[ "$SUITE" =~ ^[a-z0-9][a-z0-9-]*$ ]] || exit 2
 WORK=$(mktemp -d)
 trap 'rm -rf -- "$WORK"' EXIT
+VERSION=$(sed -n 's/^Version: //p' "$ROOT/packages/spaced-meta/DEBIAN/control")
 KEY="$ROOT/overlays/usr/share/keyrings/spaced-archive-keyring.gpg"
 [[ -s "$REPO/dists/$SUITE/InRelease" ]]
 
@@ -58,7 +59,7 @@ expect_rejection() {
 new_probe valid
 apt-get update > "$PROBE/update.log" 2>&1
 (cd "$PROBE/downloads" && apt-get download spaced-meta > "$PROBE/download.log" 2>&1)
-[[ -s "$PROBE/downloads/spaced-meta_$(cat "$ROOT/VERSION")_all.deb" ]]
+[[ -s "$PROBE/downloads/spaced-meta_${VERSION}_all.deb" ]]
 echo 'PASS: valid signed metadata and package accepted'
 
 new_probe wrong-key "$ROOT/config/keyrings/devuan-archive-keyring.pgp"
@@ -75,7 +76,7 @@ expect_rejection 'altered package index' apt-get update
 
 new_probe altered-package
 apt-get update > "$PROBE/update.log" 2>&1
-printf 'corrupt' >> "$PROBE/repo/dists/$SUITE/main/binary-amd64/spaced-meta_$(cat "$ROOT/VERSION")_all.deb"
+printf 'corrupt' >> "$PROBE/repo/dists/$SUITE/main/binary-amd64/spaced-meta_${VERSION}_all.deb"
 cd "$PROBE/downloads"
 expect_rejection 'altered package payload' apt-get download spaced-meta
 
