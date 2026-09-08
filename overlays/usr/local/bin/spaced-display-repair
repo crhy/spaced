@@ -1,40 +1,32 @@
 #!/bin/bash
-# Reassert the active XRandR state after login and screensaver unlock. This
-# clears stale virtual-GPU scanout state and disables driver-side TV underscan
-# without changing the user's chosen resolution.
+# Disable driver-side TV underscan after login/unlock.
+# MATE's settings daemon alone owns modes, refresh rates, positions, rotation,
+# transforms and panning. Replaying a snapshot here races Monitor Preferences
+# and can undo a newly saved multi-monitor or 4K configuration.
 set -u
 
 repair_outputs() {
-    local output mode rate properties
-    xset dpms force on >/dev/null 2>&1 || true
-    while read -r output mode rate; do
-        [ -n "$output" ] || continue
-        properties=$(xrandr --prop 2>/dev/null | awk -v wanted="$output" '
-            $1 == wanted && $2 == "connected" {inside=1; next}
-            /^[^[:space:]]/ {inside=0}
-            inside {print}
-        ')
-        if grep -q '^[[:space:]]*underscan:' <<<"$properties"; then
-            xrandr --output "$output" --set underscan off >/dev/null 2>&1 || true
-        fi
-        if grep -q '^[[:space:]]*underscan hborder:' <<<"$properties"; then
-            xrandr --output "$output" --set 'underscan hborder' 0 >/dev/null 2>&1 || true
-        fi
-        if grep -q '^[[:space:]]*underscan vborder:' <<<"$properties"; then
-            xrandr --output "$output" --set 'underscan vborder' 0 >/dev/null 2>&1 || true
-        fi
-        if grep -q '^[[:space:]]*Broadcast RGB:' <<<"$properties"; then
-            xrandr --output "$output" --set 'Broadcast RGB' Full >/dev/null 2>&1 || true
-        fi
-        rate=${rate//[^0-9.]/}
-        if [ -n "$rate" ]; then
-            xrandr --output "$output" --mode "$mode" --rate "$rate" >/dev/null 2>&1 || true
-        else
-            xrandr --output "$output" --mode "$mode" >/dev/null 2>&1 || true
-        fi
-    done < <(xrandr --query 2>/dev/null | awk '
-        $2 == "connected" {output=$1; next}
-        output != "" && /\*/ {print output, $1, $2; output=""}
+    local output property value
+    # `xset dpms force on` calls DPMSEnable, overriding Power Management's
+    # Never/disabled choice. Input already wakes X; leave power policy to MATE.
+    while IFS='|' read -r output property value; do
+        xrandr --output "$output" --set "$property" "$value" >/dev/null 2>&1 || true
+    done < <(xrandr --prop 2>/dev/null | awk '
+        /^[^[:space:]]/ {
+            output=""
+            if ($2 == "connected")
+                for (i=3; i<=NF; i++)
+                    if ($i ~ /^[0-9]+x[0-9]+[+-][0-9]+[+-][0-9]+$/)
+                        output=$1
+            next
+        }
+        output != "" && $1 == "underscan:" && $2 == "on" {
+            print output "|underscan|off"
+        }
+        output != "" && $1 == "underscan" && $2 ~ /^[hv]border:$/ && $3 + 0 != 0 {
+            sub(/:$/, "", $2)
+            print output "|underscan " $2 "|0"
+        }
     ')
 }
 

@@ -4,7 +4,7 @@
   </a>
 </p>
 
-<h1 align="center">Spaced Linux 8.26.9</h1>
+<h1 align="center">Spaced Linux 9.26</h1>
 
 <p align="center"><strong>Spaced. Polished. Agile. Compiz. Efficient. Devuan.</strong></p>
 
@@ -15,6 +15,9 @@
 
 <p align="center">
   <a href="https://spacedlinux.com"><strong>Website</strong></a> ·
+  <a href="https://spacedlinux.com/help.html"><strong>Help</strong></a> ·
+  <a href="https://discord.gg/BMW9Y6NB3y"><strong>Discord</strong></a> ·
+  <a href="https://t.me/+pjmFzHo-i9A2ZWY5"><strong>Telegram</strong></a> ·
   <a href="https://github.com/crhy/spaced/releases"><strong>Download releases</strong></a> ·
   <a href="https://github.com/crhy/spaced/issues"><strong>Issues</strong></a> ·
   <a href="docs/DESIGN.md"><strong>Design</strong></a> ·
@@ -23,12 +26,17 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/crhy/spaced/releases/tag/v9.26"><strong>Download Spaced Linux 9.26</strong></a> ·
+  <a href="docs/9.26-ISSUE-STATUS.md"><strong>9.26 release status</strong></a>
+</p>
+
+<p align="center">
   <img alt="Devuan Ceres" src="https://img.shields.io/badge/base-Devuan%20Ceres-4b5563">
   <img alt="MATE desktop" src="https://img.shields.io/badge/desktop-MATE-8bc34a">
   <img alt="Compiz" src="https://img.shields.io/badge/window%20manager-Compiz-5b5bd6">
   <img alt="Init system" src="https://img.shields.io/badge/init-sysvinit-555555">
   <img alt="Architecture" src="https://img.shields.io/badge/architecture-amd64-2563eb">
-  <img alt="Release" src="https://img.shields.io/badge/release-8.26.9-0ea5e9">
+  <img alt="Release" src="https://img.shields.io/badge/release-9.26-0ea5e9">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-black">
 </p>
 
@@ -57,7 +65,7 @@ These are real Spaced Linux desktop sessions—not wallpaper mockups. Click any 
       <sub><strong>Compiz-first desktop</strong> — Workspaces, accessibility, motion, and organization are part of the core experience.</sub>
     </td>
     <td width="50%" align="center">
-      <a href="website/assets/screenshots/desktop-welcome.webp?v=8.26.9"><img src="website/assets/screenshots/desktop-welcome.webp?v=8.26.9" alt="Welcome to Spaced Linux first-run application"></a><br>
+      <a href="website/assets/screenshots/desktop-welcome.webp?v=9.26"><img src="website/assets/screenshots/desktop-welcome.webp?v=9.26" alt="Welcome to Spaced Linux first-run application"></a><br>
       <sub><strong>Friendly first run</strong> — Start installing software or open the browser from one clear welcome screen.</sub>
     </td>
   </tr>
@@ -142,12 +150,14 @@ Spaced Linux combines a modern system with visual ideas from the best desktop er
 
 ## Download Spaced Linux
 
-Download the ISO and its matching checksum from the [Spaced Linux releases page](https://github.com/crhy/spaced/releases).
+The current production release is **Spaced Linux 9.26**. Download the ISO and matching checksum from the [Spaced Linux releases page](https://github.com/crhy/spaced/releases/tag/v9.26). See the [9.26 issue audit](docs/9.26-ISSUE-STATUS.md) for release validation details.
+
+Download the ISO and its matching checksum from the same release.
 
 Verify the download on Linux:
 
 ```bash
-sha256sum -c spaced-linux-8.26.9-amd64.iso.sha256
+sha256sum -c spaced-linux-9.26-amd64.iso.sha256
 ```
 
 Test release images in a virtual machine or on non-critical hardware before adopting them for daily use.
@@ -234,9 +244,11 @@ Thank you for helping keep an independent, polished, systemd-free desktop availa
 
 ## Project status
 
-The current development line is **8.26.9**. Spaced Linux is an independent community project under active development.
+The current development line is **9.26**. Spaced Linux is an independent community project under active development.
 
 ## Contributing
+
+Find desktop instructions in [Spaced Help](https://spacedlinux.com/#help) or open **About Spaced Linux** to reach Welcome's local Help tab. Join the community on [Discord](https://discord.gg/BMW9Y6NB3y) or [Telegram](https://t.me/+pjmFzHo-i9A2ZWY5) for setup questions and testing discussions.
 
 Bug reports, documentation improvements, Compiz refinements, theme work, package suggestions, hardware testing, accessibility improvements, and build fixes are welcome.
 

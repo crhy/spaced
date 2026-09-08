@@ -1,12 +1,12 @@
-# Spaced Linux 8.26.9 ISO Configuration
-iso_name: spaced-linux-8.26.9
-version: "8.26.9"
+# Spaced Linux 9.26 ISO Configuration
+iso_name: spaced-linux-9.26
+version: "9.26"
 arch: amd64
 
 # Package sources
 apt:
   mirror: "http://deb.devuan.org/merged"
-  components: [main, contrib, non-free]
+  components: [main, contrib, non-free, non-free-firmware]
   suite: ceres
 
 # Distribution

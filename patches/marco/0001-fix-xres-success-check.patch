@@ -1,0 +1,31 @@
+From e46f0d4e26e7dd664e6f40cd2eb634f681a37394 Mon Sep 17 00:00:00 2001
+From: Colomban Wendling <cwendling@hypra.fr>
+Date: Tue, 7 Jan 2025 15:50:31 +0100
+Subject: [PATCH] window-props: Fix check for XResQueryClientIds() success
+
+X's Success return value is 0, not a boolean, so the check was
+effectively inverted.
+---
+ src/core/window-props.c | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/core/window-props.c b/src/core/window-props.c
+index e1275817b..f98235be6 100644
+--- a/src/core/window-props.c
++++ b/src/core/window-props.c
+@@ -311,12 +311,12 @@ get_local_pid (MetaWindow *window)
+   spec.client = window->xwindow;
+   spec.mask = XRES_CLIENT_ID_PID_MASK;
+ 
+-  if (!XResQueryClientIds (window->display->xdisplay,
++  if (XResQueryClientIds (window->display->xdisplay,
+                           1,
+                           &spec,
+                           &num_ids,
+-                          &client_ids))
+-      return pid;
++                          &client_ids) != Success)
++    return pid;
+ 
+   for (i = 0; i < num_ids; i++)
+     {

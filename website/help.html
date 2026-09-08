@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Help &amp; community — Spaced Linux</title>
+  <meta name="description" content="Spaced Linux desktop shortcuts, software updates, troubleshooting, and community help on Discord and Telegram.">
+  <meta name="theme-color" content="#080a0f">
+  <link rel="canonical" href="https://spacedlinux.com/help.html">
+  <link rel="icon" type="image/png" href="/assets/spaced-icon-fancy.png">
+  <link rel="stylesheet" href="/styles.css">
+  <script defer src="/script.js"></script>
+</head>
+<body>
+<header class="header">
+  <a class="brand" href="/" aria-label="Spaced Linux home"><img src="/assets/spaced-icon-fancy.png" alt=""><span>SPACED <b>LINUX</b></span></a>
+  <button class="menu" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
+  <nav id="site-nav">
+    <a href="/">Home</a>
+    <a href="/themes.html">Themes</a>
+    <a href="/help.html" aria-current="page">Help</a>
+    <a href="#community">Community</a>
+    <a class="download" href="https://github.com/crhy/spaced/releases">Releases</a>
+  </nav>
+</header>
+<main>
+<section class="section" id="start">
+  <div class="heading"><p class="kicker">SPACED HELP</p><h1>Get comfortable.<br>Find your community.</h1><p>Open <strong>About Spaced Linux</strong> from the menu for Welcome's local Help tab. Use this page for desktop instructions, update guidance, and help from other Spaced users.</p></div>
+  <p><strong>Version note:</strong> this guide describes Spaced Linux 9.26. Check the <a href="https://github.com/crhy/spaced/releases">release notes</a> for the version you installed; older releases can have different shortcuts and driver tools.</p>
+  <div class="actions"><a class="button primary" href="https://discord.gg/BMW9Y6NB3y">Join Discord</a><a class="button" href="https://t.me/+pjmFzHo-i9A2ZWY5">Join Telegram</a><a class="button" href="https://github.com/crhy/spaced/issues">Report an issue</a></div>
+</section>
+
+<section class="section" id="testing">
+  <div class="heading"><p class="kicker">SPACED LINUX 9.26</p><h2>The current production release.</h2><p>Spaced Linux 9.26 is the current production release. Download the ISO and matching checksum from the <a href="https://github.com/crhy/spaced/releases/tag/v9.26">Spaced Linux 9.26 release page</a>.</p></div>
+  <div class="grid">
+    <article><h3>What is changing</h3><p>Work focuses on complete system and application updates, display settings, graphics-driver recovery, desktop stability, and clearer help. Larger new applications and partitioning features are tracked separately.</p></article>
+    <article><h3>What still needs testing</h3><p>Physical NVIDIA and AMD GPUs, 4K displays, five-monitor arrangements, Wi-Fi cold starts, and suspend/resume need results from the affected hardware. A VM boot cannot confirm those fixes.</p></article>
+    <article><h3>Choose when to test</h3><p>Testing releases use a separate, signed update channel. Follow the instructions included with the testing release when it is published; switching to testing is an explicit choice. Use a spare disk or VM and keep a backup you have checked.</p></article>
+  </div>
+  <p>Download the ISO and its matching <code>.sha256</code> file from the same release. In the download folder, run <code>sha256sum -c spaced-linux-9.26-amd64.iso.sha256</code>. Continue only when the result is <strong>OK</strong>.</p>
+</section>
+
+<section class="section" id="desktop">
+  <div class="heading"><p class="kicker">DESKTOP QUICK START</p><h2>Move, zoom, and capture.</h2><p>Super is usually the key with the Windows logo. Custom shortcuts you have chosen may differ from these defaults.</p></div>
+  <div class="grid">
+    <article><h3>Move between workspaces</h3><p>Hold <strong>Ctrl+Alt</strong> and drag with the left mouse button to rotate the Compiz desktop cube.</p></article>
+    <article><h3>Zoom the desktop</h3><p>Hold <strong>Shift+Super</strong> and use the mouse wheel, or press <strong>Shift+Super+Up/Down</strong>.</p></article>
+    <article><h3>Capture an area in 9.26</h3><p>Press <strong>Shift+Print</strong>, then select an area for MATE Screenshot. <strong>Ctrl+Shift+left-drag</strong> is the Compiz capture alternative. Super+left-drag can conflict with the menu in older releases.</p></article>
+    <article><h3>Open a terminal</h3><p>Press <strong>Ctrl+Alt+T</strong>. The menu also has MATE Terminal and the system tools you use most often.</p></article>
+    <article><h3>Change the look</h3><p>Use Appearance Preferences to choose a <a href="/themes.html">Spaced theme</a>. You can also choose your own wallpaper and icons.</p></article>
+    <article><h3>Find an application</h3><p>Welcome's Help &amp; Apps tab suggests applications by task. Each suggestion opens its page in SpacedBazaar.</p></article>
+  </div>
+</section>
+
+<section class="section" id="updates">
+  <div class="heading"><p class="kicker">KEEP YOUR SYSTEM CURRENT</p><h2>Applications and operating-system updates.</h2></div>
+  <div class="grid">
+    <article><h3>Install applications</h3><p>Open <strong>SpacedBazaar</strong> to browse and install Flatpak applications. Welcome can install Bazaar and a selection of useful apps after setup.</p></article>
+    <article><h3>Update Spaced Linux</h3><p>Open <strong>SpacedUpdate</strong>, refresh the list, and apply the available updates. A complete update includes native system packages and Flatpak apps and runtimes. Let the operation finish and read any error before retrying.</p></article>
+    <article><h3>Restart when needed</h3><p>A new kernel or graphics driver needs a reboot to become active. Save your work first. If an update reports a failure, keep its log and include it with your support request.</p></article>
+  </div>
+  <p>Keep a separate backup of personal files before testing a release or changing drivers. Check that your Timeshift snapshots exist and can be restored; a system snapshot is not a backup of your documents.</p>
+</section>
+
+<section class="section" id="graphics">
+  <div class="heading"><p class="kicker">GRAPHICS AND DISPLAYS</p><h2>Start with the detected hardware.</h2><p>In 9.26, open <strong>Spaced Video Drivers</strong> from the menu. Record your current GPU and display setup before a driver change, then keep the result and any error log.</p></div>
+  <div class="grid">
+    <article><h3>NVIDIA</h3><p>Let Spaced Video Drivers check which packaged driver supports the exact GPU. Names such as “GT 730” cover different hardware variants. If the tool reports no supported package, keep the working driver and share the diagnostic report before attempting a replacement.</p></article>
+    <article><h3>AMD</h3><p>9.26 includes the AMDGPU TearFree setting reported to fix RX 7600 scrolling artifacts in <a href="https://github.com/crhy/spaced/issues/177">issue #177</a>. It applies to AMDGPU devices. Use the driver tool to check updates, reboot when requested, and test scrolling, video, games, and resume on your display.</p></article>
+    <article><h3>Multiple monitors and 4K</h3><p>Use <strong>Monitor Preferences</strong> to set resolution and arrange displays to match your desk. Check one display at a time, then the complete layout. If a mode is absent or the arrangement will not save, include monitor connections and <code>spaced-graphics-report</code> output with the report.</p></article>
+  </div>
+  <p>If a driver change fails, keep the recovery result and log. Reboot after the tool confirms a completed change or successful recovery. An incomplete recovery needs attention before another driver change.</p>
+</section>
+
+<section class="section" id="files">
+  <div class="heading"><p class="kicker">FILES AND EVERYDAY TASKS</p><h2>Connect and get things done.</h2><p>These starting points are also available in Welcome's local help. Device permissions, phone software, and network policies can affect the result.</p></div>
+  <div class="grid">
+    <article><h3>Android and iPhone</h3><p>Connect with a data-capable USB cable and unlock the phone. On Android, choose <strong>File transfer</strong> in the USB notification. On iPhone, approve <strong>Trust</strong> if prompted. Look for the device in Caja's sidebar; if it is missing, include the phone model and what appeared on both screens in your support request.</p></article>
+    <article><h3>Windows network shares</h3><p>In Caja, press <strong>Ctrl+L</strong> and enter <code>smb://server/share</code>, replacing the server and share names with yours. Supply the account allowed to access that share. Gigolo can keep connection bookmarks. Browsing a share does not enable sharing files from your Spaced computer.</p></article>
+    <article><h3>Choose an application</h3><p>Open Welcome's <strong>Help &amp; Apps</strong> tab for task-based suggestions, or search SpacedBazaar. Typical starting points include Kdenlive for video editing, GIMP for images, Tenacity for audio editing, Ardour for recording, and LibreOffice for documents. Check each app's requirements before installing.</p></article>
+  </div>
+</section>
+
+<section class="section" id="troubleshooting">
+  <div class="heading"><p class="kicker">HELP US REPRODUCE IT</p><h2>Useful details make fixes easier.</h2><p>Include your Spaced version, whether you are using the live USB or an installed system, and the steps that trigger the problem. Tell us what you expected and what happened instead.</p></div>
+  <div class="grid">
+    <article><h3>Displays and graphics</h3><p>Include the GPU model, driver, monitor connections, resolution, and refresh rate. In 9.26, run <code>spaced-graphics-report</code> in a terminal to collect display and driver details. Review the output before sharing it.</p></article>
+    <article><h3>Virtual machines</h3><p>Include the VM application and version, BIOS or UEFI firmware, assigned RAM and CPUs, display adapter, and whether hardware acceleration is enabled.</p></article>
+    <article><h3>Updates and applications</h3><p>Include the failing application or package name and the error message. Describe whether it came from SpacedUpdate, SpacedBazaar, or a terminal command.</p></article>
+  </div>
+</section>
+
+<section class="section" id="community">
+  <div class="heading"><p class="kicker">TALK WITH SPACED USERS</p><h2>Questions, testing, and ideas.</h2><p>Join Discord or Telegram for community discussion. Use GitHub issues for reproducible bugs so reports, logs, and fixes stay together.</p></div>
+  <div class="actions"><a class="button primary" href="https://discord.gg/BMW9Y6NB3y">Discord community</a><a class="button" href="https://t.me/+pjmFzHo-i9A2ZWY5">Telegram community</a><a class="button" href="https://github.com/crhy/spaced/issues">GitHub issues</a></div>
+</section>
+</main>
+<footer>
+  <div class="brand"><img src="/assets/spaced-icon-fancy.png" alt=""><span>SPACED <b>LINUX</b></span></div>
+  <p>Spaced. Polished. Agile. Compiz. Efficient. Devuan.</p>
+  <div><a href="/">Home</a> · <a href="/themes.html">Themes</a> · <a href="/help.html">Help</a> · <a href="https://github.com/crhy/spaced/releases">Releases</a> · <a href="https://discord.gg/BMW9Y6NB3y">Discord</a> · <a href="https://t.me/+pjmFzHo-i9A2ZWY5">Telegram</a> · <a href="https://github.com/crhy/spaced/issues">Issues</a></div>
+</footer>
+</body>
+</html>

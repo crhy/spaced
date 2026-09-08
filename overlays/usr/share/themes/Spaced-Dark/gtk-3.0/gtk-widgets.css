@@ -784,6 +784,9 @@ GtkIconView.view.cell:selected:focus {
 
 .content-view rubberband,
 .content-view.view.rubberband,
+window.background.rubberband,
+.view.rubberband,
+.view .rubberband,
 window.caja-desktop-window rubberband,
 .caja-desktop-window rubberband,
 .caja-desktop-window .rubberband,

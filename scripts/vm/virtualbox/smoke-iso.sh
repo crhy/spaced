@@ -8,6 +8,9 @@ FIRMWARE=${SPACED_VBOX_FIRMWARE:-bios}
 ROOT_PASSWORD=${SPACED_LIVE_ROOT_PASSWORD:-spaced}
 PROJECT_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)
 ARTIFACT_DIR=${SPACED_VBOX_ARTIFACT_DIR:-$PROJECT_ROOT/build/test-artifacts}
+EXPECTED_VERSION=${SPACED_EXPECTED_VERSION:-$(cat "$PROJECT_ROOT/VERSION")}
+RAM=${SPACED_VBOX_RAM:-2048}
+CPUS=${SPACED_VBOX_CPUS:-2}
 
 if [ -z "$ISO" ] || [ ! -f "$ISO" ]; then
     echo "ISO not found: ${ISO:-<not provided>}" >&2
@@ -18,9 +21,19 @@ if [ "$FIRMWARE" != bios ] && [ "$FIRMWARE" != efi ]; then
     exit 1
 fi
 
+for value in "$SSH_PORT" "$TIMEOUT" "$RAM" "$CPUS"; do
+    [[ "$value" =~ ^[0-9]+$ ]] || { echo "Invalid numeric VM setting: $value" >&2; exit 2; }
+done
+for tool in VBoxManage sshpass ssh python3 sha256sum; do
+    command -v "$tool" >/dev/null || { echo "$tool is required" >&2; exit 1; }
+done
+ISO_SHA256=$(sha256sum "$ISO" | cut -d' ' -f1)
+mkdir -p "$ARTIFACT_DIR"
+ARTIFACT_DIR=$(cd "$ARTIFACT_DIR" && pwd)
 RUN_DIR=$(mktemp -d "${TMPDIR:-/tmp}/spaced-vbox-smoke.XXXXXX")
 VM_NAME="spaced-iso-smoke-$FIRMWARE-$$"
 SCREENSHOT=$ARTIFACT_DIR/virtualbox-$FIRMWARE-live.png
+RUNTIME=$ARTIFACT_DIR/virtualbox-$FIRMWARE-runtime.json
 REGISTERED=false
 
 cleanup() {
@@ -34,7 +47,9 @@ cleanup() {
         rm -r -- "$RUN_DIR"
     fi
 }
-trap cleanup EXIT INT TERM
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 ssh_is_ready() {
     local banner=
@@ -48,14 +63,15 @@ ssh_is_ready() {
 }
 
 desktop_is_ready() {
-    sshpass -p "$ROOT_PASSWORD" ssh \
-        -p "$SSH_PORT" \
-        -o ConnectTimeout=2 \
-        -o StrictHostKeyChecking=no \
-        -o UserKnownHostsFile=/dev/null \
-        root@127.0.0.1 \
-        'pgrep -x mate-session >/dev/null && pgrep -x mate-panel >/dev/null && pgrep -x caja >/dev/null && pgrep -x compiz >/dev/null' \
-        >/dev/null 2>&1
+    local status=0 probe_command
+    printf -v probe_command 'python3 - %q %q %q' '' '' "$EXPECTED_VERSION"
+    SSHPASS="$ROOT_PASSWORD" sshpass -e ssh -p "$SSH_PORT" \
+        -o ConnectTimeout=3 -o StrictHostKeyChecking=no \
+        -o UserKnownHostsFile="$RUN_DIR/known_hosts" root@127.0.0.1 \
+        "$probe_command" > "$RUNTIME.tmp" 2>> "$ARTIFACT_DIR/virtualbox-$FIRMWARE-guest.log" \
+        < "$PROJECT_ROOT/scripts/vm/live-desktop-probe.py" || status=$?
+    if [ -s "$RUNTIME.tmp" ]; then mv "$RUNTIME.tmp" "$RUNTIME"; fi
+    return "$status"
 }
 
 capture_desktop() {
@@ -73,7 +89,9 @@ capture_desktop() {
     return 1
 }
 
-mkdir -p "$ARTIFACT_DIR"
+rm -f "$SCREENSHOT" "$RUNTIME" "$RUNTIME.tmp"
+printf '{ "desktop_ready": false, "errors": ["Guest desktop has not passed runtime checks"] }\n' > "$RUNTIME"
+printf '' > "$ARTIFACT_DIR/virtualbox-$FIRMWARE-guest.log"
 command -v sshpass >/dev/null || {
     echo "sshpass is required for the graphical live-session check" >&2
     exit 1
@@ -90,7 +108,7 @@ REGISTERED=true
 # Linux 7.1 rejects VirtualBox's VMSVGA vmwgfx device as an unsupported
 # hypervisor. VBoxSVGA keeps the live desktop usable without 3D support.
 VBoxManage modifyvm "$VM_NAME" \
-    --memory 4096 --cpus 4 --vram 128 \
+    --memory "$RAM" --cpus "$CPUS" --vram 128 \
     --graphicscontroller vboxsvga --accelerate-3d off \
     --firmware "$FIRMWARE" --boot1 dvd --boot2 none --boot3 none --boot4 none \
     --rtc-use-utc on --audio-enabled off \
@@ -108,6 +126,22 @@ for ((elapsed = 0; elapsed < TIMEOUT; elapsed += 5)); do
             echo "VirtualBox $FIRMWARE produced only blank desktop captures" >&2
             exit 1
         fi
+        python3 - "$RUNTIME" "$ISO" "$ISO_SHA256" "$EXPECTED_VERSION" "$FIRMWARE" "$RAM" "$CPUS" "$SCREENSHOT" <<'PYREPORT'
+import json
+from pathlib import Path
+import struct
+import sys
+path = Path(sys.argv[1])
+report = json.loads(path.read_text())
+raw = Path(sys.argv[8]).read_bytes()
+if raw[:8] != b'\x89PNG\r\n\x1a\n':
+    raise SystemExit('VirtualBox capture is not a PNG')
+w, h = struct.unpack('>II', raw[16:24])
+report['iso'] = {'path': sys.argv[2], 'sha256': sys.argv[3], 'expected_version': sys.argv[4]}
+report['smoke'] = {'hypervisor': 'virtualbox', 'firmware': sys.argv[5], 'ram_mib': int(sys.argv[6]),
+                   'cpus': int(sys.argv[7]), 'screenshot': {'path': sys.argv[8], 'width': w, 'height': h}}
+path.write_text(json.dumps(report, indent=2) + '\n')
+PYREPORT
         echo "VirtualBox $FIRMWARE smoke test passed: live SSH and MATE became ready after ${elapsed}s"
         echo "Screenshot: $SCREENSHOT"
         exit 0

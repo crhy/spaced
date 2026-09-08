@@ -1,129 +1,100 @@
-NVIDIA Installation, Rollback, and Recovery Guide
-===================================================
+# Spaced Video Drivers: installation and recovery
 
-## Quick Start
+Open **Spaced Video Drivers** from the menu or run `spaced-nvidia-installer`.
+Use **Check Graphics** to collect a read-only report before changing drivers.
+It includes PCI IDs, connected displays, desktop and NVIDIA PRIME renderers,
+kernel boot arguments, and AMD TearFree configuration. **Copy Log** copies the report.
 
-1. Open **Spaced NVIDIA Driver Installer** from the Applications menu or run:
-       spaced-nvidia-installer
-2. Click "Check Everything and Install" — prerequisites are verified before Nouveau is disabled.
-3. When installation and verification succeed, reboot your computer.
-4. After login, a second verification checks the running NVIDIA desktop (kernel driver, OpenGL, Compiz).
+Choose **Install NVIDIA Driver** on supported NVIDIA hardware, or **Update AMD
+Drivers** on AMD hardware. Finish all updates in Spaced Update and reboot into
+the updated kernel first. The NVIDIA installer requires matching kernel headers
+and rejects Secure Boot until it is disabled in firmware. Spaced does not manage
+MOK enrollment automatically.
 
-If everything passes you're done. Sections below cover troubleshooting.
+The NVIDIA path checks free space, verifies NVIDIA's downloaded repository
+keyring package against its SHA-256, refreshes authenticated APT metadata,
+and checks every NVIDIA display PCI ID against the support database supplied
+by the signed `nvidia-driver-assistant` package. It accepts one validated
+package recommendation and installs it with APT's removal prohibition.
+Package conflicts stop the operation for review. There is no forced driver branch.
 
-## How Installation Works
+NVIDIA's upstream assistant selects a module flavor but can recommend the latest
+package even for a legacy GPU. Spaced checks `legacybranch` separately: GT 730
+Fermi variants require 390.xx; Kepler variants require 470.xx. These are not
+compatible with the current repository driver. Such cards keep their existing
+driver; unknown PCI IDs also stop safely. A modern card's successful check does
+not override a second incompatible GPU. A 4K or five-monitor limit still requires
+the actual connector, EDID, cable and PCI variant to diagnose.
 
-The installer follows this verified transaction pipeline:
+Before offering reboot, the installer checks DKMS modules for the running
+kernel, modprobe policy, initramfs, Xorg libraries, GRUB and the maintained
+Compiz launcher. A failed transaction attempts recovery and reports any step
+that did not complete. Do not assume recovery succeeded from the original
+error code: **error 52 means recovery remains incomplete**, and no automatic
+reboot is offered.
 
- 1. Detect GPU via `lspci`
- 2. Confirm amd64 architecture and free disk space (&gt;= 2 GB root, &gt;= 200 MB /boot)
- 3. Download and install exact kernel headers (`linux-headers-$KERNEL`)
- 4. Enable NVIDIA's official Debian repository via cuda-keyring
- 5. Use `nvidia-driver-assistant` to select the recommended driver (branch 610)
- 6. Build DKMS modules, verify module policy, rebuild initramfs
- 7. Disable Nouveau blacklist in modprobe.d, write nvidia_drm modeset=1 GRUB args
- 8. Install renderer-aware Compiz launcher
- 9. Full pre-reboot verification — if any check fails, automatic rollback to Nouveau
+After reboot, startup checks verify NVIDIA PCI binding, `nvidia-smi`, loaded
+modules, hardware OpenGL, Compiz, MATE panel and Caja. Hybrid Intel/AMD systems
+may correctly render the desktop on the integrated GPU; a separate NVIDIA
+PRIME test verifies the discrete GPU. Verification is tied to the individual
+installation, so a successful reboot does not cause repeated reboot prompts.
 
-Nouveau is **not** disabled until steps 5-8 all succeed.
+If the screen is black, try a text console with **Ctrl+Alt+F2**. SSH is another
+option only if you previously enabled and secured an SSH server; it is not
+installed by default on the installed OS. From the console, inspect:
 
-## Recovery via SSH (Black Screen or No Display)
+```sh
+sudo tail -100 /var/log/spaced-nvidia-installer.log
+lspci -nnk -d 10de:
+sudo dkms status
+```
 
-If the system boots but shows no graphical output:
+To recover the last transaction, choose **Restore Graphics** in the application,
+or run this from the console:
 
-1. Access via SSH (openssh-server is pre-installed).
-2. Check what went wrong — logs are at:
-       /var/log/spaced-nvidia-installer.log          # GUI installer log
-       /var/lib/spaced-nvidia-installer/runs/        # Per-run backup + install.log
-3. Inspect running drivers:
-       lspci -nnk -d 10de:            # PCI binding
-       lsmod | grep nvidia             # kernel module status
-4. If Nouveau is needed, restore it manually:
-       pkexec /usr/lib/spaced-linux/spaced-nvidia-helper --rollback
-   Or run the same from the GUI app's "Restore Nouveau" button when desktop works.
+```sh
+sudo /usr/lib/spaced-linux/spaced-nvidia-helper --rollback
+```
 
-## Manual NVIDIA Removal
+The helper records its work under `/var/lib/spaced-nvidia-installer/runs/`.
+Each run contains `configuration.json`, the installed package list and previous
+NVIDIA package versions. Recovery attempts to restore those exact versions,
+removes newly added driver packages, and restores only files changed by that
+transaction. Later administrator edits and unrelated files remain intact.
+The CUDA repository source and public key are included in that backup. Missing
+old packages, missing backups, or boot-image failures require attention before
+reboot; blanket package purges and extracting an old full-system config archive
+are not recovery steps for this release.
 
-If the helper script is unavailable:
-
-  sudo apt purge 'nvidia-*' 'libnvidia-*' 'xserver-xorg-video-nvidia' \
-      firmware-nvidia-gsp glx-alternative-nvidia nvidia-alternative \
-      libglx-nvidia libegl-nvidia libgl1-nvidia
-  sudo apt install --reinstall xserver-xorg-video-nouveau libgl1-mesa-dri libglx-mesa0
-
-## Restore Old Graphics Configuration
-
-The installer saves a full backup before making changes:
-
-   /var/lib/spaced-nvidia-installer/runs/YYYYMMDD-HHMMSS/backup/config.tar     # config files
-                                                         /packages-before.txt    # installed packages list
-                                                         /new-nvidia-packages.txt # NVIDIA deb packages added
-
-Restore manually if needed:
-
-  RUN_DIR=/var/lib/spaced-nvidia-installer/runs/<latest-run>
-  sudo tar -C / -xpf "$RUN_DIR/backup/config.tar"
-
-## DKMS Failure Recovery
-
-If kernel modules failed to build for your running kernel:
-
-1. Verify headers match the running kernel:
-       uname -r                    # e.g. 6.12.9-amd64
-       dpkg -l | grep linux-headers
-   Headers **must** match exactly (`linux-headers-6.12.9-amd64`).
-
-2. Check DKMS log for errors:
-       ls /var/lib/dkms/nvidia/*/build/make.log
-       cat /var/lib/spaced-nvidia-installer/runs/.../install.log   # last 30 lines may reveal the issue
-
-3. If a kernel update broke things, uninstall old NVIDIA modules and get matching headers:
-       sudo apt install "linux-headers-$(uname -r)"
-       sudo dkms autoinstall -k $(uname -r)
-       sudo depmod -a "$(uname -r)"
-       sudo mkinitramfs -o /boot/initrd.img-"$(uname -r)"
-
-## Secure Boot Limitations
-
-NVIDIA DKMS modules **cannot** be signed automatically under Secure Boot. The installer checks `mokutil --sb-state` before starting and will refuse to run if Secure Boot is enabled (error code 10).
-
-To proceed: disable Secure Boot in your UEFI/BIOS firmware settings, reboot Spaced Linux normally, then rerun the installer.
-
-## Error Code Reference
+For DKMS build failures, inspect `/var/lib/dkms/` for the NVIDIA build's
+`make.log`, compare `uname -r` with installed `linux-headers` packages, and
+include the log in a support request. Kernel compatibility needs an actual
+successful module build; a package download alone does not establish it.
 
 | Code | Meaning |
-|------|---------|
-| 10   | Secure Boot is enabled — must be disabled before installing GPU drivers |
-| 11   | Only amd64 hardware is currently supported by this installer |
-| 12   | No NVIDIA graphics card detected via lspci (check with `lspci -nn \| grep nvidia`) |
-| 13   | Cannot identify the desktop user account that will use GPU acceleration |
-| 14-15| Insufficient free disk space — need 2 GB root, 200 MB /boot |
-| 16   | Package manager could not refresh indexes — check network connection |
-| 20   | Exact kernel headers for your running kernel are missing from the APT repository |
-| 21-24| Required Devuan or NVIDIA package is unavailable or installation failed |
-| 30   | Driver installation failed; Nouveau was automatically restored as rollback |
-| 40   | DKMS did not produce expected modules for this kernel; check `/var/lib/dkms/nvidia/*/build/make.log` |
-| 41   | Boot image (initramfs) could not be rebuilt or inspected — driver state is unknown, Nouveau restored |
-| 42-47| Module policy, initramfs content, Xorg/GLX libraries, Compiz launcher, or GRUB configuration failed a specific verification check; Nouveau restored automatically when possible |
-| 50   | Attempted reboot without a prior verified installation — nothing to activate on next boot |
-| 51   | No NVIDIA transaction is available to roll back — no saved state found in `/var/lib/spaced-nvidia-installer/` |
+| --- | --- |
+| 10 | Secure Boot enabled; disable it before using this installer |
+| 11–15 | Unsupported architecture, absent GPU/user, or insufficient disk space |
+| 16–17 | Repository refresh failed or another graphics transaction is running |
+| 20–23 | Headers, prerequisites, verified repository keyring, or assistant unavailable |
+| 24 | Unsupported/unknown GPU or invalid package recommendation |
+| 30 | Driver APT transaction failed; review the separate recovery result |
+| 40–47 | Module, initramfs, Xorg, Compiz or GRUB verification failed |
+| 50–51 | No verified reboot state or saved recovery transaction |
+| 52 | Recovery incomplete; repair the reported failures before reboot |
 
-## Supported Hardware Policy
+Postboot details are saved in `~/.cache/spaced-nvidia-installer/verified-*`
+or `failed-*.log`. Hardware reports should include the OS version, complete
+PCI IDs, connection types and these logs.
 
-The installer runs `nvidia-driver-assistant --distro Debian:<version> --branch 610` against the running kernel. The recommended driver branch targets NVIDIA GeForce GTX and newer GPUs (GTX, RTX series). Drivers that cannot be selected for your GPU model will trigger error code 24 — attempt with the default branch or consult the [NVIDIA Linux Driver Support](https://www.nvidia.com/Download/index.aspx) page.
+AMD issue [#177](https://github.com/crhy/spaced/issues/177) is addressed by
+`/etc/X11/xorg.conf.d/20-spaced-amdgpu.conf`: an AMDGPU-only `OutputClass`
+enables `TearFree`. It carries the reporter's option while preserving automatic
+GPU and monitor discovery. The native update package delivers the same file
+to older installations. Reboot or log out and back in to apply it, then inspect
+`xrandr --verbose` for the connected outputs' TearFree state. RX 7600 scrolling,
+gaming and resume still require physical-hardware validation.
 
-## Post-Reboot Verification
-
-After rebooting into an NVIDIA installation, Spaced Linux automatically runs:
-- PCI driver binding check via `lspci -nnk`
-- `nvidia-smi` communication test
-- `lsmod` module presence (nvidia loaded, nouveau unloaded)
-- OpenGL renderer string verification (`glxinfo -B` must show NVIDIA)
-- Compiz active window manager confirmation
-- MATE panel and Caja process check
-
-Verification logs are stored at:
-   ~/.cache/spaced-nvidia-installer/         # verified-* / failed-*.log files
-
-If verification fails, the system offers to restore Nouveau and reboot.
-Detailed failure information is saved under `~/.cache/spaced-nvidia-installer/failed-<id>.log`.
+[Online help](https://spacedlinux.com/help.html) ·
+[Discord](https://discord.gg/BMW9Y6NB3y) ·
+[Telegram](https://t.me/+pjmFzHo-i9A2ZWY5)

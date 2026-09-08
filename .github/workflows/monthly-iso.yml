@@ -39,6 +39,12 @@ jobs:
           sudo dpkg --install "$package"
           test "$(dpkg-query -W -f='${Version}' live-build)" = '1:20250814'
 
+      - name: Enable isolated user namespaces on this disposable runner
+        run: |
+          if sysctl kernel.apparmor_restrict_unprivileged_userns >/dev/null 2>&1; then
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          fi
+
       - name: Validate release source
         run: make check
 
@@ -67,6 +73,12 @@ jobs:
 
       - name: Boot through SSH into the MATE and Compiz desktop
         run: make iso-smoke-kvm
+
+      - name: Validate UEFI boot and desktop
+        run: make iso-smoke-kvm-efi
+
+      - name: Validate a 4K virtual desktop
+        run: make iso-smoke-kvm-4k
 
       - name: Upload ISO, checksum, and desktop evidence
         if: always()

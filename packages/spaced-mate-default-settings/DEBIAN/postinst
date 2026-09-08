@@ -1,6 +1,8 @@
 #!/bin/sh
 set -e
 
+[ "${1:-}" = configure ] || exit 0
+
 # 7.26.x installed the live account's autologin in LightDM's package-owned
 # base file. Remove only those exact stale lines; the installed-system drop-in
 # supplied by this package keeps the user chooser visible.

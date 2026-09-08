@@ -5,12 +5,14 @@
 set -u
 
 can_compiz() {
+    local glx
     # Need an X display and a working GLX direct-rendering context.
     [ -n "${DISPLAY:-}" ] || return 1
     command -v glxinfo >/dev/null 2>&1 || return 1
-    glxinfo 2>/dev/null | grep -q "direct rendering: Yes" || return 1
+    glx=$(timeout 15 glxinfo -B 2>/dev/null) || return 1
+    grep -q "direct rendering: Yes" <<<"$glx" || return 1
     # Compiz also needs the GLX extension advertised by the server.
-    glxinfo 2>/dev/null | grep -qi "OpenGL renderer string" || return 1
+    grep -qi "OpenGL renderer string" <<<"$glx" || return 1
     return 0
 }
 
@@ -20,9 +22,23 @@ if ! command -v compiz >/dev/null 2>&1 || ! can_compiz; then
 fi
 
 logger -t spaced-window-manager "Starting Compiz"
+child=''
+cleanup() {
+    if [ -n "$child" ]; then
+        kill "$child" 2>/dev/null || true
+        wait "$child" 2>/dev/null || true
+    fi
+}
+trap 'exit 0' HUP INT TERM
+trap cleanup EXIT
+delay=1
 while :; do
-    compiz ccp --replace
+    started=$SECONDS
+    compiz ccp --replace &
+    child=$!
+    wait "$child"
     status=$?
+    child=''
     if [ "$status" -eq 0 ]; then
         logger -t spaced-window-manager "Compiz exited normally with the desktop session"
         exit 0
@@ -37,6 +53,12 @@ while :; do
 
     # Compiz is the only window manager. Restart it so the session never runs
     # with no window manager; taskman session manager reports the restart.
-    logger -t spaced-window-manager "Compiz crashed with status $status; restarting"
-    sleep 1
+    (( SECONDS - started >= 60 )) && delay=1
+    logger -t spaced-window-manager "Compiz crashed with status $status; restarting in ${delay}s"
+    sleep "$delay" &
+    child=$!
+    wait "$child"
+    child=''
+    (( delay < 30 )) && delay=$((delay * 2))
+    (( delay > 30 )) && delay=30
 done

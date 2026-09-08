@@ -31,7 +31,7 @@ build_common_args() {
         -device qemu-xhci,id=xhci
         -device usb-kbd,bus=xhci.0
         -device usb-tablet,bus=xhci.0
-        -nic "user,model=virtio-net-pci,hostfwd=tcp::$VM_SSH_PORT-:22"
+        -nic "user,model=virtio-net-pci,hostfwd=tcp:127.0.0.1:$VM_SSH_PORT-:22"
         # Linux expects the hardware clock in UTC. Using local time leaves the
         # guest several hours behind and breaks signed repository metadata.
         -rtc base=utc

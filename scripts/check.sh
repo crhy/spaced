@@ -84,8 +84,6 @@ assert f"DISTRIB_CODENAME={release_code}" in lsb_release, \
     "lsb-release codename does not match VERSION"
 for path in (
     "README.md",
-    "website/index.html",
-    "website/themes.html",
     "live-build/auto/config",
     "overlays/etc/calamares/branding/spaced/branding.desc",
     "overlays/etc/calamares/branding/spaced/slideshow/Show.qml",
@@ -94,6 +92,15 @@ for path in (
 ):
     assert f"Spaced Linux {version}" in Path(path).read_text(encoding="utf-8"), \
         f"{path} does not identify the current release"
+
+# The website can announce a testing line while linking the last published
+# image. Do not require an unpublished ISO URL merely to match VERSION.
+assert version in Path("website/index.html").read_text(encoding="utf-8"), \
+    "website/index.html does not identify the current development line"
+for path in ("website/index.html", "website/themes.html", "website/help.html"):
+    website_page = Path(path).read_text(encoding="utf-8")
+    assert "https://github.com/crhy/spaced/releases" in website_page, \
+        f"{path} does not link to published releases"
 
 package_groups = loaded_yaml["config/packages.yaml"]
 packages = [package for group in package_groups.values() for package in group]
@@ -327,8 +334,8 @@ assert "flatpak install --system" not in build_hook \
     "the lean ISO still embeds SpacedBazaar or another optional Flatpak payload"
 assert "only after Calamares has completed" in build_hook, \
     "the image does not document its post-install application-delivery boundary"
-assert 'old = b"%s (as superuser)"' in build_hook and "data.replace(old, new)" in build_hook, \
-    "Flatpak X11 windows retain the false superuser title suffix"
+assert "data.replace(old, new)" not in build_hook and "patch_immediate" not in build_hook, \
+    "upstream binaries must be fixed with versioned source packages, never opaque byte edits"
 assert "etc/xdg/QtProject/qtquickcontrols2.conf" in package_builder, \
     "update package omits the Calamares Qt Quick styling"
 assert 'Spaced-Dark ] && continue' not in package_builder, \
@@ -348,8 +355,11 @@ embedded_welcome_paths = (
 assert not [path for path in embedded_welcome_paths if path.exists()], \
     "the standalone Welcome implementation is still duplicated in the distro overlay"
 meta_control = Path("packages/spaced-meta/DEBIAN/control").read_text(encoding="utf-8")
-assert "spaced-mate-default-settings (= 8.26.9)" in meta_control \
-    and "spaced-welcome (>= 0.1.9)" in meta_control \
+package_version = re.search(r"^Version: (.+)$", meta_control, re.M).group(1)
+assert package_version.split("-", 1)[0] == version, "Native package version does not match OS release"
+assert f"Version: {package_version}\n" in defaults_control
+assert f"spaced-mate-default-settings (= {package_version})" in meta_control \
+    and "spaced-welcome (>= 0.1.12)" in meta_control \
     and "libfuse2t64" in meta_control, \
     "spaced-meta does not pull in the standalone Welcome package and desktop defaults"
 assert "spaced-welcome.desktop" not in package_builder \
@@ -366,7 +376,7 @@ def artifact_default(name):
     return match.group(1)
 
 assert artifact_default("SPACED_WELCOME_REPOSITORY") == "crhy/spacedwelcome"
-assert artifact_default("SPACED_WELCOME_VERSION") == "0.1.9"
+assert artifact_default("SPACED_WELCOME_VERSION") == "0.1.12"
 assert artifact_default("SPACED_GITHUB_REMOTE_NAME") == "spaced-github"
 assert artifact_default("SPACED_GITHUB_REMOTE_DESCRIPTOR_URL") == \
     "https://crhy.github.io/spacedbazaar/spaced-github.flatpakrepo"
@@ -401,7 +411,7 @@ assert "SPACED_EXTERNAL_STAGE_DIR" in package_builder \
 apt_repo_builder = Path("scripts/build-apt-repo.sh").read_text(encoding="utf-8")
 assert apt_repo_builder.index("stage-external-artifacts.sh") < \
     apt_repo_builder.index("build-local-packages.sh") \
-    and 'cp "$package_work/packages"/*.deb' in apt_repo_builder, \
+    and 'for package in "$package_work/packages"/*.deb' in apt_repo_builder, \
     "the APT repository omits the verified standalone Welcome dependency"
 
 flatpak_wrapper_path = root / "usr/local/bin/flatpak"
@@ -516,6 +526,7 @@ assert {"locales", "console-setup"}.issubset(packages), \
 assert {"util-linux-extra", "grub-pc-bin", "grub-efi-amd64-bin", "efibootmgr", "dosfstools"}.issubset(packages), \
     "Calamares offline BIOS/UEFI install dependencies are incomplete"
 assert "os-prober" in packages, "GRUB cannot detect other operating systems without os-prober"
+assert "util-linux" in packages, "the testing-channel bootstrap must find runuser from util-linux"
 default_grub = (root / "etc/default/grub").read_text(encoding="utf-8")
 assert "GRUB_DISABLE_OS_PROBER=false" in default_grub and "#GRUB_DISABLE_OS_PROBER=false" not in default_grub, \
     "GRUB os-prober is still disabled, so other OSes never appear in the boot menu (issue #11)"
@@ -819,9 +830,9 @@ assert system_info_path.stat().st_mode & 0o111 \
     and "PRETTY_NAME" in system_info and "/proc/cpuinfo" in system_info \
     and "/proc/meminfo" in system_info, \
     "Spaced System Info does not report the release and basic hardware"
-assert "Name=About Spaced Linux" in mate_about and "Exec=spaced-system-info" in mate_about \
-    and "Icon=spaced-linux" in mate_about, \
-    "MATE's generic About entry is not replaced with the branded system dialog (issue #150)"
+assert "Name=About Spaced Linux" in mate_about and "Exec=spaced-welcome --page help" in mate_about \
+    and "Icon=/usr/share/pixmaps/spaced-medallion.png" in mate_about, \
+    "About Spaced Linux does not open local help with the medallion (issues #160/#161)"
 assert not (root / "usr/share/applications/mate-about.desktop").exists(), \
     "Spaced System Info collides with mate-desktop instead of using the /usr/local override"
 
@@ -843,7 +854,7 @@ for permanent_root in ("bookmark_bar", "other", "synced"):
     checksum_bookmark(brave_bookmarks["roots"][permanent_root])
 assert brave_bookmarks["checksum"] == bookmark_checksum.hexdigest(), \
     "Brave bookmarks do not carry a Chromium-compatible integrity checksum"
-assert {"OpenAirShips.com", "SpacedLinux.com", "Devuan", "SpacedBazaar", "SpacedHelp"} == \
+assert {"OpenAirShips.com", "SpacedLinux.com", "Devuan", "SpacedBazaar", "SpacedHelp", "Discord", "Telegram"} == \
     {bookmark["name"] for bookmark in bookmark_bar["children"]}, \
     "fresh Brave profiles do not receive the requested bookmark-bar links (issue #145)"
 assert brave_preferences["bookmark_bar"]["show_on_all_tabs"] is True, \
@@ -851,8 +862,7 @@ assert brave_preferences["bookmark_bar"]["show_on_all_tabs"] is True, \
 
 display_repair = (root / "usr/local/bin/spaced-display-repair").read_text(encoding="utf-8")
 audio_restore = (root / "usr/local/bin/spaced-audio-restore").read_text(encoding="utf-8")
-assert "ActiveChanged (false," in display_repair and "Broadcast RGB" in display_repair \
-    and "underscan" in display_repair, \
+assert "ActiveChanged (false," in display_repair and not re.search(r"^\s*xset\s+dpms\s+force\s+on", display_repair, re.M), \
     "display recovery does not cover screensaver wake and TV underscan"
 assert "pactl subscribe" in audio_restore and "set-sink-mute" in audio_restore \
     and "set-sink-volume" in audio_restore, \
@@ -910,9 +920,9 @@ assert (grub_theme_dir / "SimpleBackb.png").read_bytes() == (root / "usr/share/b
 assert (grub_theme_dir / "spaced-icon-fancy.png").read_bytes() == fancy_icon, \
     "GRUB does not carry the fancy Spaced icon"
 apt_source = (root / "etc/apt/sources.list.d/spaced-apt.list").read_text(encoding="utf-8")
-assert "trusted=yes" in apt_source \
-    and "signed-by=/usr/share/keyrings/devuan-archive-keyring.pgp" in apt_source, \
-    "Spaced APT source still triggers APT 3's missing Signed-By notice"
+assert "trusted=yes" not in apt_source \
+    and "signed-by=/usr/share/keyrings/spaced-archive-keyring.gpg" in apt_source, \
+    "Spaced APT must authenticate its own signed archive"
 
 nvidia_postboot = (root / "usr/lib/spaced-linux/spaced-nvidia-postboot.py").read_text(encoding="utf-8")
 assert 'wm_name.lower() != "compiz"' in nvidia_postboot \
@@ -927,12 +937,14 @@ assert "spaced-primary-action" in update_app and "spaced-update-list" in update_
     "Spaced Update theme-aware interface is incomplete"
 assert "installed_after_update = read_installed_version()" in update_app and "finish_update" in update_app, \
     "Spaced Update does not refresh the installed OS version after an update"
-assert 'update_refs = {"user": set(), "system": set()}' in update_app \
-    and '"remote-ls",' in update_app \
-    and 'if remotes and not successful_remotes:' in update_app, \
-    "Spaced Update does not isolate Flatpak update discovery by scope and remote"
-assert 'if [ "$MODE" != "all" ]' in update_helper and "No Flatpak applications were selected" in update_helper, \
-    "Spaced Update helper does not validate privileged update requests"
+assert 'scope in ("user", "system")' in update_app \
+    and '"runtime/' in update_app and 'flatpak-update' in update_helper, \
+    "Spaced Update must handle both Flatpak scopes, applications, and runtimes"
+assert 'apt-refresh' in update_helper and 'flock -n' in update_helper \
+    and 'APT::Update::Error-Mode=any' in update_helper, \
+    "Spaced Update must serialize transactions and reject incomplete APT indexes"
+assert not list(Path("overlays").rglob("spaced-upgrade-testing.sh")), \
+    "the testing-channel bootstrap is a host script and must not stage into the ISO"
 
 fastfetch_logo = (root / "usr/share/fastfetch/logos/spaced-linux.txt").read_text(encoding="utf-8")
 assert "~**+<{{{{{{{{)+~~" in fastfetch_logo, "fastfetch logo is not the current Spaced ASCII art"

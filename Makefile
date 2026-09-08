@@ -41,7 +41,7 @@ VM_RUN := $(HOST_RUN) env SPACED_VM_SSH_PORT=$(VM_SSH_PORT) SPACED_VM_XRES=$(VM_
 ISO_SMOKE_RUN := $(HOST_RUN) env SPACED_ISO_SMOKE_TIMEOUT=$(ISO_SMOKE_TIMEOUT)
 VBOX_RUN := $(ISO_SMOKE_RUN) SPACED_VBOX_SSH_PORT=$(VBOX_SSH_PORT)
 
-.PHONY: help check deps clean cache-clean prepare lb-config lb-build iso-build iso-test iso-smoke iso-smoke-kvm iso-smoke-virtualbox iso-smoke-virtualbox-efi iso-test-safe iso-test-safe-1024 iso-test-safe-1080 vm-create vm-install vm-start vm-stop release apt-repo apt-repo-publish
+.PHONY: help check deps clean cache-clean marco prepare lb-config lb-build iso-build iso-test iso-smoke iso-smoke-kvm iso-smoke-kvm-efi iso-smoke-kvm-4k iso-smoke-virtualbox iso-smoke-virtualbox-efi iso-test-safe iso-test-safe-1024 iso-test-safe-1080 vm-create vm-install vm-start vm-stop release apt-repo apt-repo-publish
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -51,10 +51,14 @@ deps: ## Install host build and test dependencies
 	$(ROOT_RUN) apt-get update
 	$(ROOT_RUN) apt-get install -y \
 		live-build debootstrap xorriso squashfs-tools grub-common \
-		qemu-system-x86 qemu-utils ovmf rsync curl gnupg sshpass
+		qemu-system-x86 qemu-utils ovmf rsync curl gnupg sshpass \
+		python3-yaml desktop-file-utils apt-utils python3-gi gir1.2-gtk-3.0 xvfb bubblewrap
 
 check: ## Validate configuration, scripts, themes, and desktop entries
+	$(HOST_RUN) scripts/tests/test-testing-upgrade.sh
 	$(HOST_RUN) scripts/check.sh
+	$(HOST_RUN) env PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests
+	$(HOST_RUN) env PYTHONDONTWRITEBYTECODE=1 xvfb-run -a python3 tests/gtk_desktop.py
 
 clean: ## Remove generated build data for the current release
 	$(ROOT_RUN) rm -rf "$(abspath $(LB_DIR))" "$(abspath $(LOCAL_PACKAGE_DIR))" \
@@ -64,7 +68,12 @@ clean: ## Remove generated build data for the current release
 cache-clean: ## Remove cached live-build packages and bootstrap data
 	$(ROOT_RUN) rm -rf "$(abspath $(CACHE_DIR))" "$(abspath $(EXTERNAL_CACHE_DIR))"
 
-prepare: ## Stage authored live-build configuration
+marco: ## Build the upstream Marco fixes in an isolated Devuan chroot
+	if ! $(HOST_RUN) scripts/iso/stage-marco.sh --check; then
+		$(ROOT_RUN) bash "$(abspath scripts/iso/build-marco-chroot.sh)"
+	fi
+
+prepare: marco ## Stage authored live-build configuration
 	mkdir -p $(BUILD_DIR)/cache
 	if [[ -d "$(LB_DIR)/cache" && ! -L "$(LB_DIR)/cache" && ! -e "$(CACHE_DIR)" ]]; then
 		$(ROOT_RUN) mv "$(abspath $(LB_DIR)/cache)" "$(abspath $(CACHE_DIR))"
@@ -93,7 +102,7 @@ prepare: ## Stage authored live-build configuration
 	cp live-build/auto/config $(LB_DIR)/auto/config
 	chmod +x $(LB_DIR)/auto/config
 	cd $(LB_DIR)
-	$(HOST_RUN) lb config
+	$(HOST_RUN) env SPACED_DEVUAN_KEYRING="$(abspath config/keyrings/devuan-archive-keyring.pgp)" lb config
 	cd ../..
 	mkdir -p \
 		$(LB_DIR)/config/package-lists \
@@ -148,11 +157,19 @@ iso-test: ## Boot the current release ISO in KVM
 	test -f $(ISO_DIR)/$(ISO_NAME) || { echo "Missing $(ISO_DIR)/$(ISO_NAME)"; exit 1; }
 	$(VM_RUN) scripts/vm/qemu/test-iso.sh $(abspath $(ISO_DIR)/$(ISO_NAME))
 
-iso-smoke: iso-smoke-kvm iso-smoke-virtualbox iso-smoke-virtualbox-efi ## Smoke-test the ISO in KVM and VirtualBox BIOS/EFI
+iso-smoke: iso-smoke-kvm iso-smoke-kvm-efi iso-smoke-virtualbox iso-smoke-virtualbox-efi ## Smoke-test the ISO in KVM and VirtualBox BIOS/EFI
 
 iso-smoke-kvm: ## Headlessly boot the ISO in KVM and wait for live SSH
 	test -f $(ISO_DIR)/$(ISO_NAME) || { echo "Missing $(ISO_DIR)/$(ISO_NAME)"; exit 1; }
-	$(ISO_SMOKE_RUN) SPACED_VM_SSH_PORT=$(VM_SSH_PORT) scripts/vm/qemu/smoke-iso.sh $(abspath $(ISO_DIR)/$(ISO_NAME))
+	$(ISO_SMOKE_RUN) SPACED_VM_SSH_PORT=$(VM_SSH_PORT) SPACED_QEMU_ARTIFACT_DIR="$(abspath $(BUILD_DIR)/test-artifacts/qemu-bios)" scripts/vm/qemu/smoke-iso.sh $(abspath $(ISO_DIR)/$(ISO_NAME))
+
+iso-smoke-kvm-efi: ## Boot and validate the UEFI live desktop in QEMU
+	test -f $(ISO_DIR)/$(ISO_NAME)
+	$(ISO_SMOKE_RUN) SPACED_VM_SSH_PORT=$(VM_SSH_PORT) SPACED_QEMU_FIRMWARE=uefi SPACED_QEMU_ARTIFACT_DIR="$(abspath $(BUILD_DIR)/test-artifacts/qemu-uefi)" scripts/vm/qemu/smoke-iso.sh $(abspath $(ISO_DIR)/$(ISO_NAME))
+
+iso-smoke-kvm-4k: ## Exercise a 3840x2160 virtual display (not physical GPU certification)
+	test -f $(ISO_DIR)/$(ISO_NAME)
+	$(ISO_SMOKE_RUN) SPACED_VM_SSH_PORT=$(VM_SSH_PORT) SPACED_QEMU_XRES=3840 SPACED_QEMU_YRES=2160 SPACED_QEMU_ARTIFACT_DIR="$(abspath $(BUILD_DIR)/test-artifacts/qemu-4k)" scripts/vm/qemu/smoke-iso.sh $(abspath $(ISO_DIR)/$(ISO_NAME))
 
 iso-smoke-virtualbox: ## Headlessly boot the ISO in VirtualBox BIOS mode
 	test -f $(ISO_DIR)/$(ISO_NAME) || { echo "Missing $(ISO_DIR)/$(ISO_NAME)"; exit 1; }
@@ -195,11 +212,12 @@ vm-start: ## Boot the installed KVM test disk
 vm-stop: ## Stop a headless KVM test instance
 	$(VM_RUN) scripts/vm/qemu/stop.sh
 
-release: clean lb-build ## Clean-build the current Spaced Linux ISO
+release: clean ## Clean-build the current Spaced Linux ISO
+	$(MAKE) lb-build
 
 APT_REPO_DIR := spaced-apt
 
-apt-repo: ## Rebuild the update repository into ./spaced-apt (from crhy/spaced-apt)
+apt-repo: marco ## Rebuild the update repository into ./spaced-apt (from crhy/spaced-apt)
 	@if [ ! -d "$(APT_REPO_DIR)/.git" ]; then \
 		rm -rf "$(APT_REPO_DIR)"; \
 		gh repo clone crhy/spaced-apt "$(APT_REPO_DIR)"; \

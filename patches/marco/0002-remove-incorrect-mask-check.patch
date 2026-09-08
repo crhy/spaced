@@ -1,0 +1,32 @@
+From 4c491c6be8a140469491a42cdc9f293743762532 Mon Sep 17 00:00:00 2001
+From: Colomban Wendling <cwendling@hypra.fr>
+Date: Tue, 7 Jan 2025 15:51:31 +0100
+Subject: [PATCH] window-props: remove incorrect mask check
+
+Based off Metacity 's commit 7c1cc3ca1d8131499b9cf2ef50b295602ffd6112 [1].
+
+[1] https://gitlab.gnome.org/GNOME/metacity/-/commit/7c1cc3ca1d8131499b9cf2ef50b295602ffd6112
+---
+ src/core/window-props.c | 9 ++++-----
+ 1 file changed, 4 insertions(+), 5 deletions(-)
+
+diff --git a/src/core/window-props.c b/src/core/window-props.c
+index f98235be..d106152d 100644
+--- a/src/core/window-props.c
++++ b/src/core/window-props.c
+@@ -320,11 +320,10 @@ get_local_pid (MetaWindow *window)
+ 
+   for (i = 0; i < num_ids; i++)
+     {
+-      if (client_ids[i].spec.mask == XRES_CLIENT_ID_PID_MASK)
+-        {
+-          pid = XResGetClientPid (&client_ids[i]);
+-          break;
+-        }
++      pid = XResGetClientPid (&client_ids[i]);
++
++      if (pid != -1)
++        break;
+     }
+ 
+   XResClientIdsDestroy (num_ids, client_ids);

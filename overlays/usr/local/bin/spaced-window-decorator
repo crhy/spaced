@@ -1,0 +1,43 @@
+#!/bin/bash
+# Compiz's decoration plug-in launches this per display. Restart a crashed
+# decorator without replacing Compiz, losing windows, or restarting the panel.
+set -u
+
+[ -n "${DISPLAY:-}" ] || exit 0
+command -v gtk-window-decorator >/dev/null 2>&1 || exit 1
+state_dir=${XDG_RUNTIME_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/spaced}
+mkdir -p "$state_dir" || exit 1
+display_key=${DISPLAY//[^a-zA-Z0-9_.-]/_}
+exec 9>"$state_dir/spaced-window-decorator-$display_key.lock" || exit 1
+flock -n 9 || exit 0
+
+child=''
+cleanup() {
+    if [ -n "$child" ]; then
+        kill "$child" 2>/dev/null || true
+        wait "$child" 2>/dev/null || true
+    fi
+}
+trap 'exit 0' HUP INT TERM
+trap cleanup EXIT
+delay=1
+while :; do
+    started=$SECONDS
+    gtk-window-decorator --replace 9>&- &
+    child=$!
+    wait "$child"
+    status=$?
+    child=''
+    # A clean exit means logout or an explicit replacement by another
+    # decorator. Respect it instead of fighting the replacement.
+    [ "$status" -eq 0 ] && exit 0
+    xprop -root >/dev/null 2>&1 || exit "$status"
+    (( SECONDS - started >= 60 )) && delay=1
+    logger -t spaced-window-decorator "Decorator exited with status $status; retrying in ${delay}s"
+    sleep "$delay" 9>&- &
+    child=$!
+    wait "$child"
+    child=''
+    (( delay < 30 )) && delay=$((delay * 2))
+    (( delay > 30 )) && delay=30
+done

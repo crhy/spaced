@@ -3,17 +3,20 @@ set -Eeuo pipefail
 
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export DEBIAN_FRONTEND=noninteractive
+export LC_ALL=C
 
 STATE_DIR=/var/lib/spaced-nvidia-installer
 RUNS_DIR="$STATE_DIR/runs"
 CURRENT_RUN_FILE="$STATE_DIR/current-run"
 PENDING_FILE="$STATE_DIR/reboot-required"
+RECOVERED_FILE="$STATE_DIR/recovery-reboot-required"
 LOG_FILE=/var/log/spaced-nvidia-installer.log
-DRIVER_BRANCH=610
 KERNEL="$(uname -r)"
 ARCH="$(dpkg --print-architecture)"
 DEBIAN_VERSION=""
 CUDA_KEYRING_URL=""
+CUDA_KEYRING_SHA256=""
+DRIVER_PACKAGE=""
 MODE=""
 DESKTOP_USER=""
 REBOOT_AFTER=0
@@ -40,7 +43,7 @@ fatal() {
         trap - ERR
         rollback_transaction "$code" || true
     fi
-    return "$code"
+    exit "$code"
 }
 
 cleanup() {
@@ -56,13 +59,13 @@ unexpected_failure() {
     if [ "$TRANSACTION_ACTIVE" -eq 1 ]; then
         rollback_transaction "$code" || true
     fi
-    return 30
+    exit 30
 }
 
 parse_args() {
     while [ "$#" -gt 0 ]; do
         case "$1" in
-            --audit|--install|--reboot|--rollback)
+            --audit|--install|--install-amd|--reboot|--rollback)
                 MODE="$1"
                 ;;
             --desktop-user)
@@ -109,7 +112,7 @@ run_as_desktop_user() {
 }
 
 detect_nvidia_gpu() {
-    lspci -nn 2>/dev/null | awk 'BEGIN{IGNORECASE=1} /(VGA compatible controller|3D controller)/ && /NVIDIA/ {print; exit}'
+    lspci -nn 2>/dev/null | awk 'tolower($0) ~ /(vga compatible controller|3d controller|display controller)/ && tolower($0) ~ /(nvidia|\[10de:)/ {print; exit}'
 }
 
 apt_candidate() {
@@ -147,6 +150,11 @@ detect_debian_release() {
             ;;
     esac
     CUDA_KEYRING_URL="https://developer.download.nvidia.com/compute/cuda/repos/debian${DEBIAN_VERSION}/x86_64/cuda-keyring_1.1-1_all.deb"
+    case "$DEBIAN_VERSION" in
+        12) CUDA_KEYRING_SHA256=e7f219eab6fe4819cdb5c15b98233dc3420302d9c00883219cd3d896857cf48d ;;
+        13) CUDA_KEYRING_SHA256=d0d4ef986a44400f9db33c600ef33a985175e7cc63d805a10e1839c7a1e78f5f ;;
+        *) fatal 24 "Upgrade Spaced Linux before using this installer; NVIDIA's supported Debian repository versions are 12 and 13." ;;
+    esac
     printf 'Detected Debian compatibility version: %s\n' "$DEBIAN_VERSION"
 }
 
@@ -173,96 +181,143 @@ installed_packages() {
     dpkg-query -W -f='${db:Status-Abbrev}\t${binary:Package}\n' 2>/dev/null | awk '$1 ~ /^ii/ {print $2}' | sort -u
 }
 
+installed_driver_versions() {
+    dpkg-query -W -f='${db:Status-Abbrev}\t${binary:Package}\t${Version}\n' 2>/dev/null |
+        awk '$1 ~ /^ii/ && $2 ~ /^(cuda-|nvidia-|libnvidia-|libcuda|libnvcuvid|xserver-xorg-video-nvidia|firmware-nvidia-gsp|glx-alternative-nvidia|libglx-nvidia|libegl-nvidia|libgl1-nvidia)/ {print $2 "=" $3}' | sort -u
+}
+
 new_run() {
     local run_id
     run_id="$(date +%Y%m%d-%H%M%S)"
-    RUN_DIR="$RUNS_DIR/$run_id"
-    mkdir -p "$RUN_DIR"
-    printf '%s\n' "$RUN_DIR" > "$CURRENT_RUN_FILE"
-    chmod 0644 "$CURRENT_RUN_FILE"
+    RUN_DIR="$(mktemp -d "$RUNS_DIR/$run_id-XXXXXXXX")"
 }
 
 backup_configuration() {
     status "Backing up current graphics configuration"
-    mkdir -p "$RUN_DIR/backup"
-    local paths=()
-    for path in \
-        etc/modprobe.d \
-        etc/default/grub \
-        etc/initramfs-tools/modules \
-        etc/X11/xorg.conf \
-        etc/X11/xorg.conf.d \
-        etc/dconf/db/local.d/00-spaced-compiz \
-        usr/local/bin/spaced-window-manager \
-        usr/bin/spaced-window-manager; do
-        [ -e "/$path" ] || [ -L "/$path" ] || continue
-        paths+=("$path")
-    done
-    if [ "${#paths[@]}" -gt 0 ]; then
-        tar -C / -cpf "$RUN_DIR/backup/config.tar" "${paths[@]}"
-    else
-        tar -C / -cpf "$RUN_DIR/backup/config.tar" --files-from /dev/null
-    fi
-    printf '%s\n' "${paths[@]}" > "$RUN_DIR/backup/existing-paths.txt"
+    python3 /usr/lib/spaced-linux/spaced-nvidia-config.py backup "$RUN_DIR/configuration.json"
     installed_packages > "$RUN_DIR/packages-before.txt"
+    installed_driver_versions > "$RUN_DIR/driver-versions-before.txt"
+    printf '%s\n' "$RUN_DIR" > "$CURRENT_RUN_FILE"
+    chmod 0644 "$CURRENT_RUN_FILE"
+}
+
+record_configuration_changes() {
+    python3 /usr/lib/spaced-linux/spaced-nvidia-config.py capture "$RUN_DIR/configuration.json"
 }
 
 restore_configuration() {
-    [ -n "$RUN_DIR" ] || return 1
-    [ -f "$RUN_DIR/backup/config.tar" ] || return 1
-    rm -rf \
-        /etc/modprobe.d \
-        /etc/default/grub \
-        /etc/initramfs-tools/modules \
-        /etc/X11/xorg.conf \
-        /etc/X11/xorg.conf.d \
-        /etc/dconf/db/local.d/00-spaced-compiz \
-        /usr/local/bin/spaced-window-manager \
-        /usr/bin/spaced-window-manager
-    tar -C / -xpf "$RUN_DIR/backup/config.tar"
-    mkdir -p /etc/modprobe.d /etc/X11/xorg.conf.d /etc/initramfs-tools
-    [ -e /etc/initramfs-tools/modules ] || touch /etc/initramfs-tools/modules
+    [ -n "$RUN_DIR" ] && [ -f "$RUN_DIR/configuration.json" ] || {
+        warning "This transaction has no safe per-file configuration backup; manual recovery is required."
+        return 52
+    }
+    python3 /usr/lib/spaced-linux/spaced-nvidia-config.py restore "$RUN_DIR/configuration.json"
 }
 
 record_new_nvidia_packages() {
-    installed_packages > "$RUN_DIR/packages-after.txt"
-    comm -13 "$RUN_DIR/packages-before.txt" "$RUN_DIR/packages-after.txt" | \
-        grep -E '^(cuda-|nvidia-|libnvidia-|libcuda|libnvcuvid|xserver-xorg-video-nvidia|firmware-nvidia-gsp|glx-alternative-nvidia|nvidia-alternative|libglx-nvidia|libegl-nvidia|libgl1-nvidia)' \
-        > "$RUN_DIR/new-nvidia-packages.txt" || true
+    installed_packages > "$RUN_DIR/packages-after.txt" || return $?
+    comm -13 "$RUN_DIR/packages-before.txt" "$RUN_DIR/packages-after.txt" > "$RUN_DIR/new-packages.txt" || return $?
+    grep -E '^(cuda-|nvidia-|libnvidia-|libcuda|libnvcuvid|xserver-xorg-video-nvidia|firmware-nvidia-gsp|glx-alternative-nvidia|nvidia-alternative|libglx-nvidia|libegl-nvidia|libgl1-nvidia)' \
+        "$RUN_DIR/new-packages.txt" > "$RUN_DIR/new-nvidia-packages.txt" || [ "$?" -eq 1 ]
+}
+
+rollback_step() {
+    local description="$1"
+    shift
+    if "$@"; then
+        return 0
+    fi
+    warning "Recovery step failed: $description. Review the log before rebooting."
+    return 1
 }
 
 rollback_transaction() {
-    local original_code="${1:-30}"
+    local original_code="${1:-30}" failed=0 was_active="$TRANSACTION_ACTIVE"
+    local packages_to_remove=()
     TRANSACTION_ACTIVE=0
-    set +e
-    status "Restoring Nouveau and the previous graphics configuration"
-    dpkg --configure -a
-    apt-get -f install -y
     if [ -z "$RUN_DIR" ] && [ -f "$CURRENT_RUN_FILE" ]; then
         RUN_DIR="$(cat "$CURRENT_RUN_FILE")"
     fi
-    if [ -n "$RUN_DIR" ] && [ -f "$RUN_DIR/packages-before.txt" ]; then
-        record_new_nvidia_packages
-        mapfile -t packages_to_remove < "$RUN_DIR/new-nvidia-packages.txt"
-        if [ "${#packages_to_remove[@]}" -gt 0 ]; then
-            apt-get purge -y "${packages_to_remove[@]}"
-        fi
-        restore_configuration
+    status "Recovering graphics packages and saved configuration"
+    printf 'Original operation status: %s\n' "$original_code"
+    rollback_step "clear previous recovery verification" rm -f "$RECOVERED_FILE" || failed=1
+    # On an interrupted install, capture its partial result before restoring it.
+    if [ "$was_active" -eq 1 ]; then
+        rollback_step "record partial configuration changes" record_configuration_changes || failed=1
     fi
-    rm -f /etc/modprobe.d/zz-spaced-nvidia.conf /etc/modprobe.d/spaced-live-nvidia.conf
-    apt-get update
-    apt-get install -y --reinstall firmware-nvidia-graphics xserver-xorg-video-nouveau libgl1-mesa-dri libglx-mesa0
-    command -v update-glx >/dev/null 2>&1 && update-glx --auto glx || true
-    update-initramfs -u -k all
-    update-grub || true
-    rm -f "$PENDING_FILE"
-    warning "Rollback completed. Nouveau will be available after reboot. Original status: $original_code"
+    rollback_step "complete pending package configuration" dpkg --configure -a || failed=1
+    rollback_step "repair package dependencies" apt-get -o DPkg::Lock::Timeout=120 --no-remove -f install -y || failed=1
+    if [ -n "$RUN_DIR" ] && [ -f "$RUN_DIR/packages-before.txt" ]; then
+        # Recompute only during this installer process. A later manual recovery
+        # must not absorb unrelated NVIDIA/CUDA packages installed afterwards.
+        if [ "$was_active" -eq 1 ]; then
+            rollback_step "identify new driver packages" record_new_nvidia_packages || failed=1
+        fi
+        if [ -f "$RUN_DIR/new-nvidia-packages.txt" ]; then
+            mapfile -t packages_to_remove < "$RUN_DIR/new-nvidia-packages.txt"
+            if [ "${#packages_to_remove[@]}" -gt 0 ]; then
+                rollback_step "remove new NVIDIA packages" remove_recorded_nvidia_packages "${packages_to_remove[@]}" || failed=1
+            fi
+        else
+            warning "The completed driver package record is missing; refusing to infer packages added since this installation."
+            failed=1
+        fi
+        if [ -f "$RUN_DIR/driver-versions-before.txt" ]; then
+            local previous_versions=()
+            mapfile -t previous_versions < "$RUN_DIR/driver-versions-before.txt"
+            if [ "${#previous_versions[@]}" -gt 0 ]; then
+                rollback_step "restore previous NVIDIA package versions" apt-get -o DPkg::Lock::Timeout=120 --no-remove --allow-downgrades install -y "${previous_versions[@]}" || failed=1
+            fi
+        else
+            warning "Previous driver package versions were not recorded; recovery cannot be verified."
+            failed=1
+        fi
+        rollback_step "restore graphics configuration" restore_configuration || failed=1
+    else
+        warning "The saved package list is missing; automatic recovery cannot safely remove driver packages."
+        failed=1
+    fi
+    rollback_step "refresh package information" apt-get -o APT::Update::Error-Mode=any -o Acquire::Retries=3 update || failed=1
+    rollback_step "restore Nouveau and Mesa packages" apt-get -o DPkg::Lock::Timeout=120 --no-remove install -y --reinstall firmware-nvidia-graphics xserver-xorg-video-nouveau libgl1-mesa-dri libglx-mesa0 || failed=1
+    if command -v update-glx >/dev/null 2>&1; then
+        rollback_step "restore GLX alternatives" update-glx --auto glx || failed=1
+    fi
+    rollback_step "refresh desktop defaults" dconf update || failed=1
+    rollback_step "rebuild boot images" update-initramfs -u -k all || failed=1
+    rollback_step "rebuild GRUB configuration" update-grub || failed=1
+    # A failed recovery must never leave a marker authorizing the verified-driver reboot path.
+    rollback_step "clear installation verification" rm -f "$PENDING_FILE" || failed=1
+    if [ "$failed" -eq 0 ]; then
+        rollback_step "record completed recovery" touch "$RECOVERED_FILE" || failed=1
+    fi
+    if [ "$failed" -ne 0 ]; then
+        printf 'SPACED_ERROR:52:Graphics recovery is incomplete. Review the log and repair the failed steps before rebooting.\n'
+        return 52
+    fi
+    status "Saved graphics configuration restored; reboot to activate it"
+    printf 'SPACED_SUCCESS:restored:%s\n' "$KERNEL"
     if [ "$REBOOT_AFTER" -eq 1 ]; then
         sync
         /sbin/reboot
     fi
-    set -e
     return 0
+}
+
+remove_recorded_nvidia_packages() {
+    local planned package allowed recorded
+    apt-get -o DPkg::Lock::Timeout=120 --simulate purge -y "$@" > "$RUN_DIR/recovery-removal-plan.txt" || return $?
+    planned="$(awk '/^(Remv|Purg) / {print $2}' "$RUN_DIR/recovery-removal-plan.txt")"
+    while IFS= read -r package; do
+        [ -n "$package" ] || continue
+        allowed=0
+        for recorded in "$@"; do
+            if [ "${package%:$ARCH}" = "${recorded%:$ARCH}" ]; then allowed=1; break; fi
+        done
+        if [ "$allowed" -eq 0 ]; then
+            warning "Removing these driver packages would also remove $package, which was not installed by this transaction. Preserve it and review the recovery plan."
+            return 52
+        fi
+    done <<< "$planned"
+    apt-get -o DPkg::Lock::Timeout=120 purge -y "$@"
 }
 
 check_secure_boot() {
@@ -301,7 +356,7 @@ install_prerequisites() {
         fi
     done
     status "Installing exact kernel headers and graphics prerequisites"
-    apt-get install -y "${packages[@]}" || fatal 21 "One or more required Devuan packages could not be installed."
+    apt-get -o DPkg::Lock::Timeout=120 --no-remove install -y "${packages[@]}" || fatal 21 "One or more required Devuan packages could not be installed without removing existing packages."
     [ -e "/lib/modules/$KERNEL/build/Makefile" ] || fatal 20 "The exact kernel headers were installed, but /lib/modules/$KERNEL/build is unavailable."
 }
 
@@ -310,29 +365,44 @@ install_official_repository() {
     status "Enabling NVIDIA's official Debian $DEBIAN_VERSION repository"
     TMP_KEYRING="$(mktemp --suffix=.deb)"
     curl --fail --location --show-error --connect-timeout 20 --retry 3 --output "$TMP_KEYRING" "$CUDA_KEYRING_URL" || fatal 22 "NVIDIA's official repository keyring could not be downloaded."
+    printf '%s  %s\n' "$CUDA_KEYRING_SHA256" "$TMP_KEYRING" | sha256sum --check --status || fatal 22 "NVIDIA's repository keyring checksum changed. No downloaded package was executed; update Spaced Linux and retry."
     [ "$(dpkg-deb -f "$TMP_KEYRING" Package 2>/dev/null)" = "cuda-keyring" ] || fatal 22 "The downloaded NVIDIA repository package failed validation."
     dpkg -i "$TMP_KEYRING" || fatal 22 "NVIDIA's repository keyring could not be installed."
     rm -f "$TMP_KEYRING"
     TMP_KEYRING=""
-    apt-get update || fatal 22 "NVIDIA's repository was enabled, but its package index could not be downloaded."
+    apt-get -o APT::Update::Error-Mode=any -o Acquire::Retries=3 update || fatal 22 "NVIDIA's repository was enabled, but its package index could not be downloaded."
     require_candidate nvidia-driver-assistant 23
-    apt-get install -y nvidia-driver-assistant || fatal 23 "NVIDIA Driver Assistant could not be installed."
+    apt-get -o DPkg::Lock::Timeout=120 --no-remove install -y nvidia-driver-assistant || fatal 23 "NVIDIA Driver Assistant could not be installed without removing existing packages."
+    select_driver_package
+}
+
+select_driver_package() {
     local supported_distros
-    supported_distros="$(nvidia-driver-assistant --list-supported-distros 2>&1 || true)"
-    if ! grep -Eqi "Debian(:|[[:space:]])?${DEBIAN_VERSION}|Debian.*${DEBIAN_VERSION}" <<<"$supported_distros"; then
-        warning "NVIDIA Driver Assistant does not officially list Debian $DEBIAN_VERSION, but attempting installation anyway."
+    supported_distros="$(nvidia-driver-assistant --list-supported-distros 2>&1)" || fatal 24 "NVIDIA Driver Assistant could not list supported distributions."
+    if ! grep -Eqi "^[[:space:]]*debian(:${DEBIAN_VERSION})?[[:space:]]*$" <<<"$supported_distros"; then
+        fatal 24 "NVIDIA Driver Assistant does not support Debian $DEBIAN_VERSION. Driver installation has stopped."
     fi
-    if [ "$(apt_candidate "nvidia-driver-pinning-$DRIVER_BRANCH")" != "(none)" ] && [ -n "$(apt_candidate "nvidia-driver-pinning-$DRIVER_BRANCH")" ]; then
-        status "Pinning NVIDIA driver branch $DRIVER_BRANCH"
-        apt-get install -y "nvidia-driver-pinning-$DRIVER_BRANCH" || warning "Branch pinning was unavailable; Driver Assistant will use its compatible default."
-    else
-        warning "NVIDIA branch-$DRIVER_BRANCH pinning is unavailable; Driver Assistant will use its compatible default."
-    fi
+    # The assistant recommends latest cuda-drivers even for legacy-only GPUs.
+    # Validate every physical NVIDIA display device against its signed package's
+    # support database before accepting the recommendation.
+    python3 /usr/lib/spaced-linux/spaced-nvidia-compat.py hardware ||
+        fatal 24 "This GPU cannot use the available NVIDIA driver. See the PCI ID and compatibility reason above; keep the current driver."
+    nvidia-driver-assistant --distro "Debian:$DEBIAN_VERSION" --verbose | tee "$RUN_DIR/recommendation.txt" ||
+        fatal 24 "NVIDIA Driver Assistant could not select a driver for this system."
+    DRIVER_PACKAGE="$(python3 /usr/lib/spaced-linux/spaced-nvidia-compat.py recommendation "$RUN_DIR/recommendation.txt")" ||
+        fatal 24 "NVIDIA's package recommendation could not be validated."
+    require_candidate "$DRIVER_PACKAGE" 23
+    apt-get -o DPkg::Lock::Timeout=120 --simulate --no-remove install -y "$DRIVER_PACKAGE" > "$RUN_DIR/driver-plan.txt" ||
+        fatal 30 "The recommended NVIDIA driver cannot be installed without removing existing packages. Keep the current driver and review the package plan."
+    cat "$RUN_DIR/driver-plan.txt"
 }
 
 install_driver_packages() {
     status "Selecting and installing the NVIDIA driver"
-    nvidia-driver-assistant --distro "Debian:$DEBIAN_VERSION" --branch "$DRIVER_BRANCH" --install --verbose || fatal 30 "NVIDIA Driver Assistant could not complete the driver installation."
+    [ -n "$DRIVER_PACKAGE" ] || fatal 24 "No verified NVIDIA package recommendation is available."
+    # Upstream --install does not reliably return its apt-get failure status.
+    # Execute its validated package directly and preserve the real exit status.
+    apt-get -o DPkg::Lock::Timeout=120 --no-remove install -y "$DRIVER_PACKAGE" || fatal 30 "The NVIDIA driver package could not be installed."
     status "Completing DKMS builds for kernel $KERNEL"
     dkms autoinstall -k "$KERNEL" || warning "DKMS reported an error; module verification will decide whether rollback is required."
     depmod -a "$KERNEL"
@@ -357,14 +427,14 @@ import re
 
 root = Path('/etc/modprobe.d')
 root.mkdir(parents=True, exist_ok=True)
-modules = r'(?:nvidia|nvidia_drm|nvidia_modeset|nvidia_uvm|nvidia_peermem)'
+modules = r'(?:nvidia|nvidia[-_]drm|nvidia[-_]modeset|nvidia[-_]uvm|nvidia[-_]peermem)'
 patterns = [
     re.compile(rf'^\s*blacklist\s+{modules}(?:\s|$)', re.I),
     re.compile(rf'^\s*install\s+{modules}(?:\s|$)', re.I),
-    re.compile(r'^\s*options\s+nvidia_drm\b.*\bmodeset\s*=\s*0(?:\s|$)', re.I),
+    re.compile(r'^\s*options\s+nvidia[-_]drm\b.*\bmodeset\s*=\s*0(?:\s|$)', re.I),
 ]
 for path in sorted(root.glob('*')):
-    if not path.is_file():
+    if not path.is_file() or path.is_symlink():
         continue
     try:
         original = path.read_text(encoding='utf-8')
@@ -423,11 +493,11 @@ nvidia_names = {'nvidia', 'nvidia_drm', 'nvidia_modeset', 'nvidia_uvm', 'nvidia_
 def clean_token(token):
     if token == 'nomodeset':
         return None
-    if token.startswith('nouveau.modeset=') or token.startswith('nvidia-drm.modeset='):
+    if token.startswith(('nouveau.modeset=', 'nvidia-drm.modeset=', 'nvidia_drm.modeset=')):
         return None
     for prefix in ('module_blacklist=', 'modprobe.blacklist=', 'rd.driver.blacklist='):
         if token.startswith(prefix):
-            values = [v for v in token[len(prefix):].split(',') if v and v not in nvidia_names and v != 'nouveau']
+            values = [v for v in token[len(prefix):].split(',') if v and v.replace('-', '_') not in nvidia_names and v != 'nouveau']
             return prefix + ','.join(values) if values else None
     return token
 
@@ -470,66 +540,29 @@ remove_stale_xorg_configs() {
 }
 
 install_compiz_launcher() {
-    status "Installing the renderer-aware Compiz launcher"
-    install -d -m 0755 /usr/local/bin
-    cat > /usr/local/bin/spaced-window-manager <<'EOF_WM'
-#!/bin/bash
-set -u
-unset LIBGL_ALWAYS_SOFTWARE
-renderer=""
-for _attempt in $(seq 1 40); do
-    renderer="$(glxinfo -B 2>/dev/null | sed -n 's/^OpenGL renderer string:[[:space:]]*//p' | head -n1)"
-    [ -n "$renderer" ] && break
-    sleep 0.25
-done
-renderer_lower="$(printf '%s' "$renderer" | tr '[:upper:]' '[:lower:]')"
-case "$renderer_lower" in
-    *zink*|*nvk*)
-        export LIBGL_ALWAYS_SOFTWARE=1
-        logger -t spaced-window-manager "Compiz software OpenGL workaround for renderer: $renderer"
-        ;;
-    *)
-        logger -t spaced-window-manager "Compiz hardware OpenGL renderer: $renderer"
-        ;;
-esac
-exec compiz ccp --replace
-EOF_WM
-    chmod 0755 /usr/local/bin/spaced-window-manager
-    ln -sfn /usr/local/bin/spaced-window-manager /usr/bin/spaced-window-manager
-    bash -n /usr/local/bin/spaced-window-manager
+    status "Verifying the installed Compiz launcher"
+    # Keep the maintained session supervisor supplied by desktop updates.
+    [ -x /usr/local/bin/spaced-window-manager ] || fatal 46 "Update Spaced Linux to install the supported Compiz session launcher."
+    bash -n /usr/local/bin/spaced-window-manager || fatal 46 "The Compiz session launcher is invalid."
 
-    install -d -m 0755 /etc/dconf/db/local.d
-    cat > /etc/dconf/db/local.d/00-spaced-compiz <<'EOF_DCONF'
-[org/mate/session]
-required-components-list=['windowmanager', 'panel', 'filemanager']
 
-[org/mate/session/required-components]
-windowmanager='spaced-window-manager'
-panel='mate-panel'
-filemanager='caja'
-EOF_DCONF
-    dconf update
-
-    resolve_desktop_user
-    run_as_desktop_user dbus-run-session -- gsettings set org.mate.session required-components-list "['windowmanager', 'panel', 'filemanager']"
-    run_as_desktop_user dbus-run-session -- gsettings set org.mate.session.required-components windowmanager 'spaced-window-manager'
-    run_as_desktop_user dbus-run-session -- gsettings set org.mate.session.required-components panel 'mate-panel'
-    run_as_desktop_user dbus-run-session -- gsettings set org.mate.session.required-components filemanager 'caja'
 }
 
 verify_modprobe_policy() {
     status "Verifying module policy"
     local config line
     config="$(modprobe --showconfig 2>/dev/null || true)"
-    if grep -Eqi '^[[:space:]]*(blacklist|install)[[:space:]]+(nvidia|nvidia_drm|nvidia_modeset|nvidia_uvm|nvidia_peermem)([[:space:]]|$)' <<<"$config"; then
+    if grep -Eqi '^[[:space:]]*(blacklist|install)[[:space:]]+(nvidia|nvidia[-_]drm|nvidia[-_]modeset|nvidia[-_]uvm|nvidia[-_]peermem)([[:space:]]|$)' <<<"$config"; then
         while IFS= read -r line; do
             printf '%s\n' "$line"
-        done <<<"$(grep -Ei '^[[:space:]]*(blacklist|install)[[:space:]]+(nvidia|nvidia_drm|nvidia_modeset|nvidia_uvm|nvidia_peermem)([[:space:]]|$)' <<<"$config")"
+        done <<<"$(grep -Ei '^[[:space:]]*(blacklist|install)[[:space:]]+(nvidia|nvidia[-_]drm|nvidia[-_]modeset|nvidia[-_]uvm|nvidia[-_]peermem)([[:space:]]|$)' <<<"$config")"
         fatal 42 "An active modprobe rule still blocks an NVIDIA module."
     fi
     grep -Eqi '^[[:space:]]*blacklist[[:space:]]+nouveau([[:space:]]|$)' <<<"$config" || fatal 43 "Nouveau is not blacklisted in the final module policy."
     modprobe -S "$KERNEL" -n -v nvidia 2>&1 | tee "$RUN_DIR/modprobe-nvidia-dry-run.txt"
-    grep -Eqi '(/bin/false|/bin/true)' "$RUN_DIR/modprobe-nvidia-dry-run.txt" && fatal 42 "The NVIDIA module is redirected by an install rule." || true
+    if grep -Eqi '(/bin/false|/bin/true)' "$RUN_DIR/modprobe-nvidia-dry-run.txt"; then
+        fatal 42 "The NVIDIA module is redirected by an install rule."
+    fi
 }
 
 verify_initramfs() {
@@ -557,10 +590,16 @@ verify_userspace_and_grub() {
     command -v glxinfo >/dev/null 2>&1 || fatal 46 "glxinfo is not installed."
     grep -Eq 'nvidia-drm\.modeset=1' /etc/default/grub || fatal 47 "GRUB does not enable NVIDIA DRM modesetting."
     grep -Eq 'modprobe\.blacklist=nouveau' /etc/default/grub || fatal 47 "GRUB does not blacklist Nouveau."
-    grep -Eq "(^|[[:space:]\"'])nomodeset($|[[:space:]\"'])" /etc/default/grub && fatal 47 "A nomodeset argument remains in /etc/default/grub." || true
-    grep -Eqi "(module_blacklist|modprobe\.blacklist|rd\.driver\.blacklist)=[^\"' ]*nvidia" /etc/default/grub && fatal 47 "A GRUB argument still blacklists NVIDIA." || true
-    command -v update-glx >/dev/null 2>&1 && update-glx --auto glx || true
-    update-grub || warning "GRUB configuration update reported an error."
+    if grep -Eq "(^|[[:space:]\"'])nomodeset($|[[:space:]\"'])" /etc/default/grub; then
+        fatal 47 "A nomodeset argument remains in /etc/default/grub."
+    fi
+    if grep -Eqi "(module_blacklist|modprobe\.blacklist|rd\.driver\.blacklist)=[^\"' ]*nvidia" /etc/default/grub; then
+        fatal 47 "A GRUB argument still blacklists NVIDIA."
+    fi
+    if command -v update-glx >/dev/null 2>&1; then
+        update-glx --auto glx || fatal 45 "GLX alternatives could not be configured."
+    fi
+    update-grub || fatal 47 "GRUB could not be rebuilt; the installation is not verified."
 }
 
 write_pending_marker() {
@@ -571,27 +610,25 @@ kernel=$KERNEL
 desktop_user=$DESKTOP_USER
 gpu=$gpu
 installed_at=$(date --iso-8601=seconds)
+boot_id=$(cat /proc/sys/kernel/random/boot_id)
 EOF_MARKER
     chmod 0644 "$PENDING_FILE"
 }
 
 audit_system() {
+    /usr/local/bin/spaced-graphics-report
+}
+
+install_amd() {
     require_root
-    resolve_desktop_user
-    status "Auditing NVIDIA installation prerequisites"
-    local gpu
-    gpu="$(detect_nvidia_gpu || true)"
-    [ -n "$gpu" ] || fatal 12 "No NVIDIA graphics device was detected."
-    printf '%s\n' "$gpu"
-    [ "$ARCH" = amd64 ] || fatal 11 "This installer currently supports amd64 only. Detected: $ARCH."
-    check_disk_space
-    apt-get update || fatal 16 "Package information could not be downloaded."
-    install_prerequisites
-    check_secure_boot
-    status "Checking Compiz integration"
-    command -v compiz >/dev/null 2>&1 || fatal 46 "Compiz is unavailable."
-    [ -x /usr/local/bin/spaced-window-manager ] || warning "The Compiz launcher will be replaced during installation."
-    printf 'SPACED_SUCCESS:audit:%s\n' "$KERNEL"
+    lspci -nn | grep -E '(VGA|3D|Display) controller|VGA compatible controller' | grep -qiE 'AMD|ATI|\[1002:' || fatal 12 "No AMD graphics device was detected."
+    [ -s /etc/X11/xorg.conf.d/20-spaced-amdgpu.conf ] || fatal 21 "Update Spaced Linux to install the AMD TearFree configuration."
+    status "Refreshing verified Devuan graphics packages"
+    apt-get -o APT::Update::Error-Mode=any -o Acquire::Retries=3 update || fatal 16 "Package information could not be downloaded."
+    apt-get -o DPkg::Lock::Timeout=120 --no-remove install -y \
+        firmware-amd-graphics xserver-xorg-video-amdgpu libgl1-mesa-dri mesa-vulkan-drivers amdgpu-top || fatal 21 "AMD graphics packages could not be updated."
+    update-initramfs -u -k all || fatal 41 "AMD packages were updated, but the boot images could not be refreshed. Review the log and retry before rebooting."
+    printf 'SPACED_SUCCESS:amd:%s\n' "$KERNEL"
 }
 
 install_system() {
@@ -607,10 +644,11 @@ install_system() {
     [ "$ARCH" = amd64 ] || fatal 11 "This installer currently supports amd64 only. Detected: $ARCH."
     check_disk_space
     status "Refreshing Devuan package information"
-    apt-get update || fatal 16 "Package information could not be downloaded."
+    apt-get -o APT::Update::Error-Mode=any -o Acquire::Retries=3 update || fatal 16 "Package information could not be downloaded."
     install_prerequisites
     check_secure_boot
     backup_configuration
+    rm -f "$RECOVERED_FILE"
     TRANSACTION_ACTIVE=1
     trap 'unexpected_failure $? $LINENO' ERR
     install_official_repository
@@ -624,6 +662,7 @@ install_system() {
     verify_modprobe_policy
     verify_initramfs
     verify_userspace_and_grub
+    record_configuration_changes
     write_pending_marker "$gpu"
     TRANSACTION_ACTIVE=0
     trap - ERR
@@ -634,8 +673,8 @@ install_system() {
 
 reboot_system() {
     require_root
-    [ -f "$PENDING_FILE" ] || fatal 50 "No verified NVIDIA installation is awaiting reboot."
-    status "Rebooting into the NVIDIA driver"
+    [ -f "$PENDING_FILE" ] || [ -f "$RECOVERED_FILE" ] || fatal 50 "No verified graphics installation or completed recovery is awaiting reboot."
+    status "Rebooting into the verified graphics configuration"
     sync
     /sbin/reboot
 }
@@ -648,16 +687,25 @@ rollback_system() {
 }
 
 main() {
-    mkdir -p "$RUNS_DIR"
+    parse_args "$@" || return $?
+    if [ "$MODE" = --audit ]; then
+        audit_system
+        return
+    fi
+    require_root
+    install -d -m 0755 "$RUNS_DIR"
+    exec 9>"$STATE_DIR/transaction.lock"
+    flock -n 9 || fatal 17 "Another graphics operation is already running."
     touch "$LOG_FILE"
     chmod 0644 "$LOG_FILE"
-    parse_args "$@" || return $?
     case "$MODE" in
-        --audit) audit_system ;;
         --install) install_system ;;
+        --install-amd) install_amd ;;
         --reboot) reboot_system ;;
         --rollback) rollback_system ;;
     esac
 }
 
-main "$@"
+if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+    main "$@"
+fi

@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
-Name=Spaced NVIDIA Driver Installer
-Comment=Install, verify, and recover NVIDIA drivers for Spaced Linux
+Name=Spaced Video Drivers
+Comment=Check graphics, update AMD drivers, and install or recover NVIDIA drivers
 Exec=spaced-nvidia-installer
 Icon=video-display
 Terminal=false

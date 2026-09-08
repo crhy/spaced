@@ -10,6 +10,34 @@ text/plain=pluma.desktop
 text/x-shellscript=pluma.desktop
 application/x-shellscript=pluma.desktop
 
+image/bmp=eom.desktop
+image/gif=eom.desktop
+image/jpeg=eom.desktop
+image/jpg=eom.desktop
+image/pjpeg=eom.desktop
+image/png=eom.desktop
+image/tiff=eom.desktop
+image/webp=eom.desktop
+image/svg+xml=eom.desktop
+image/svg+xml-compressed=eom.desktop
+image/vnd.microsoft.icon=eom.desktop
+image/x-icon=eom.desktop
+image/x-bmp=eom.desktop
+image/x-MS-bmp=eom.desktop
+image/x-png=eom.desktop
+image/x-portable-anymap=eom.desktop
+image/x-portable-bitmap=eom.desktop
+image/x-portable-graymap=eom.desktop
+image/x-portable-pixmap=eom.desktop
+image/x-xbitmap=eom.desktop
+image/x-xpixmap=eom.desktop
+image/x-tga=eom.desktop
+image/jp2=eom.desktop
+image/jpeg2000=eom.desktop
+image/jpx=eom.desktop
+image/x-icns=eom.desktop
+image/vnd.wap.wbmp=eom.desktop
+
 [Added Associations]
 text/plain=pluma.desktop;
 text/x-shellscript=pluma.desktop;

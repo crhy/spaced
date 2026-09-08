@@ -12,7 +12,7 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 gi.require_version("GdkPixbuf", "2.0")
 gi.require_version("Pango", "1.0")
-from gi.repository import Gdk, GdkPixbuf, Gtk, Pango  # noqa: E402
+from gi.repository import Gdk, GdkPixbuf, GLib, Gtk, Pango  # noqa: E402
 
 
 def os_release():
@@ -65,10 +65,13 @@ class SystemInfo(Gtk.Window):
         self.add(box)
 
         logo_path = os.environ.get(
-            "SPACED_SYSTEM_INFO_LOGO", "/usr/share/pixmaps/spaced-logo.png"
+            "SPACED_SYSTEM_INFO_LOGO", "/usr/share/pixmaps/spaced-medallion.png"
         )
-        pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(logo_path, 112, 112, True)
-        logo = Gtk.Image.new_from_pixbuf(pixbuf)
+        try:
+            pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(logo_path, 112, 112, True)
+            logo = Gtk.Image.new_from_pixbuf(pixbuf)
+        except GLib.Error:
+            logo = Gtk.Image.new_from_icon_name("spaced-linux", Gtk.IconSize.DIALOG)
         box.pack_start(logo, False, False, 0)
 
         title = Gtk.Label()
@@ -114,6 +117,14 @@ class SystemInfo(Gtk.Window):
         actions.pack_start(help_link, False, False, 0)
         actions.pack_start(close, False, False, 0)
         box.pack_end(actions, False, False, 0)
+
+        community = Gtk.Box(spacing=16)
+        community.set_halign(Gtk.Align.CENTER)
+        community.pack_start(Gtk.LinkButton.new_with_label(
+            "https://discord.gg/BMW9Y6NB3y", "Discord community"), False, False, 0)
+        community.pack_start(Gtk.LinkButton.new_with_label(
+            "https://t.me/+pjmFzHo-i9A2ZWY5", "Telegram community"), False, False, 0)
+        box.pack_end(community, False, False, 0)
 
 
 if __name__ == "__main__":
