@@ -4,7 +4,9 @@ set -euo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 OUTPUT="${LOCAL_PACKAGE_OUTPUT:-$ROOT/build/local-packages}"
 VERSION="$(cat "$ROOT/VERSION")"
-export SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH:-$(git -C "$ROOT" log -1 --format=%ct)}
+# Use the package revision date, so later documentation/test commits cannot
+# change the bytes of an already-published native package.
+export SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH:-$(git -C "$ROOT" log -1 --format=%ct -- packages/spaced-meta/DEBIAN/control packages/spaced-mate-default-settings/DEBIAN/control)}
 
 mkdir -p "$OUTPUT"
 
