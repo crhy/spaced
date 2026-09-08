@@ -84,8 +84,6 @@ assert f"DISTRIB_CODENAME={release_code}" in lsb_release, \
     "lsb-release codename does not match VERSION"
 for path in (
     "README.md",
-    "website/index.html",
-    "website/themes.html",
     "live-build/auto/config",
     "overlays/etc/calamares/branding/spaced/branding.desc",
     "overlays/etc/calamares/branding/spaced/slideshow/Show.qml",
@@ -94,6 +92,15 @@ for path in (
 ):
     assert f"Spaced Linux {version}" in Path(path).read_text(encoding="utf-8"), \
         f"{path} does not identify the current release"
+
+# The website can announce a testing line while linking the last published
+# image. Do not require an unpublished ISO URL merely to match VERSION.
+assert version in Path("website/index.html").read_text(encoding="utf-8"), \
+    "website/index.html does not identify the current development line"
+for path in ("website/index.html", "website/themes.html", "website/help.html"):
+    website_page = Path(path).read_text(encoding="utf-8")
+    assert "https://github.com/crhy/spaced/releases" in website_page, \
+        f"{path} does not link to published releases"
 
 package_groups = loaded_yaml["config/packages.yaml"]
 packages = [package for group in package_groups.values() for package in group]

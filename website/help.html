@@ -26,8 +26,18 @@
 <main>
 <section class="section" id="start">
   <div class="heading"><p class="kicker">SPACED HELP</p><h1>Get comfortable.<br>Find your community.</h1><p>Open <strong>About Spaced Linux</strong> from the menu for Welcome's local Help tab. Use this page for desktop instructions, update guidance, and help from other Spaced users.</p></div>
-  <p><strong>Version note:</strong> the shortcut changes below are part of the 9.26 testing work. Check the <a href="https://github.com/crhy/spaced/releases">release notes</a> for the version you installed; older releases can have different bindings. VM and physical-hardware testing is still in progress.</p>
+  <p><strong>Version note:</strong> this guide describes the 9.26 testing work. Check the <a href="https://github.com/crhy/spaced/releases">release notes</a> for the version you installed; older releases can have different shortcuts and driver tools.</p>
   <div class="actions"><a class="button primary" href="https://discord.gg/BMW9Y6NB3y">Join Discord</a><a class="button" href="https://t.me/+pjmFzHo-i9A2ZWY5">Join Telegram</a><a class="button" href="https://github.com/crhy/spaced/issues">Report an issue</a></div>
+</section>
+
+<section class="section" id="testing">
+  <div class="heading"><p class="kicker">9.26 RELEASE STATUS</p><h2>Help test the next release.</h2><p>Spaced Linux 9.26 is being prepared for testing. The latest published image is <a href="https://github.com/crhy/spaced/releases/tag/v8.26.9">8.26.9</a>. A 9.26 ISO will be linked here after release checks pass.</p></div>
+  <div class="grid">
+    <article><h3>What is changing</h3><p>Work focuses on complete system and application updates, display settings, graphics-driver recovery, desktop stability, and clearer help. Larger new applications and partitioning features are tracked separately.</p></article>
+    <article><h3>What still needs testing</h3><p>Physical NVIDIA and AMD GPUs, 4K displays, five-monitor arrangements, Wi-Fi cold starts, and suspend/resume need results from the affected hardware. A VM boot cannot confirm those fixes.</p></article>
+    <article><h3>Choose when to test</h3><p>Testing releases use a separate, signed update channel. Follow the instructions included with the testing release when it is published; switching to testing is an explicit choice. Use a spare disk or VM and keep a backup you have checked.</p></article>
+  </div>
+  <p>Download an ISO and its matching <code>.sha256</code> file from the same release. In the download folder, run <code>sha256sum -c spaced-linux-8.26.9-amd64.iso.sha256</code> for the currently published image. Continue only when the result is <strong>OK</strong>. For a newer release, use its matching checksum filename.</p>
 </section>
 
 <section class="section" id="desktop">
@@ -50,6 +60,25 @@
     <article><h3>Restart when needed</h3><p>A new kernel or graphics driver needs a reboot to become active. Save your work first. If an update reports a failure, keep its log and include it with your support request.</p></article>
   </div>
   <p>Keep a separate backup of personal files before testing a release or changing drivers. Check that your Timeshift snapshots exist and can be restored; a system snapshot is not a backup of your documents.</p>
+</section>
+
+<section class="section" id="graphics">
+  <div class="heading"><p class="kicker">GRAPHICS AND DISPLAYS</p><h2>Start with the detected hardware.</h2><p>In 9.26, open <strong>Spaced Video Drivers</strong> from the menu. Record your current GPU and display setup before a driver change, then keep the result and any error log.</p></div>
+  <div class="grid">
+    <article><h3>NVIDIA</h3><p>Let Spaced Video Drivers check which packaged driver supports the exact GPU. Names such as “GT 730” cover different hardware variants. If the tool reports no supported package, keep the working driver and share the diagnostic report before attempting a replacement.</p></article>
+    <article><h3>AMD</h3><p>9.26 includes the AMDGPU TearFree setting reported to fix RX 7600 scrolling artifacts in <a href="https://github.com/crhy/spaced/issues/177">issue #177</a>. It applies to AMDGPU devices. Use the driver tool to check updates, reboot when requested, and test scrolling, video, games, and resume on your display.</p></article>
+    <article><h3>Multiple monitors and 4K</h3><p>Use <strong>Monitor Preferences</strong> to set resolution and arrange displays to match your desk. Check one display at a time, then the complete layout. If a mode is absent or the arrangement will not save, include monitor connections and <code>spaced-graphics-report</code> output with the report.</p></article>
+  </div>
+  <p>If a driver change fails, keep the recovery result and log. Reboot after the tool confirms a completed change or successful recovery. An incomplete recovery needs attention before another driver change.</p>
+</section>
+
+<section class="section" id="files">
+  <div class="heading"><p class="kicker">FILES AND EVERYDAY TASKS</p><h2>Connect and get things done.</h2><p>These starting points are also available in Welcome's local help. Device permissions, phone software, and network policies can affect the result.</p></div>
+  <div class="grid">
+    <article><h3>Android and iPhone</h3><p>Connect with a data-capable USB cable and unlock the phone. On Android, choose <strong>File transfer</strong> in the USB notification. On iPhone, approve <strong>Trust</strong> if prompted. Look for the device in Caja's sidebar; if it is missing, include the phone model and what appeared on both screens in your support request.</p></article>
+    <article><h3>Windows network shares</h3><p>In Caja, press <strong>Ctrl+L</strong> and enter <code>smb://server/share</code>, replacing the server and share names with yours. Supply the account allowed to access that share. Gigolo can keep connection bookmarks. Browsing a share does not enable sharing files from your Spaced computer.</p></article>
+    <article><h3>Choose an application</h3><p>Open Welcome's <strong>Help &amp; Apps</strong> tab for task-based suggestions, or search SpacedBazaar. Typical starting points include Kdenlive for video editing, GIMP for images, Tenacity for audio editing, Ardour for recording, and LibreOffice for documents. Check each app's requirements before installing.</p></article>
+  </div>
 </section>
 
 <section class="section" id="troubleshooting">
