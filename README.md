@@ -26,7 +26,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/crhy/spaced/releases/tag/v8.26.9"><strong>Download published Spaced Linux 8.26.9</strong></a> ·
+  <a href="https://github.com/crhy/spaced/releases/tag/v9.26"><strong>Download Spaced Linux 9.26</strong></a> ·
   <a href="docs/9.26-ISSUE-STATUS.md"><strong>9.26 release status</strong></a>
 </p>
 
@@ -150,14 +150,14 @@ Spaced Linux combines a modern system with visual ideas from the best desktop er
 
 ## Download Spaced Linux
 
-The latest published image is **8.26.9**. Version **9.26 is being prepared for testing**; its ISO will appear on the [Spaced Linux releases page](https://github.com/crhy/spaced/releases) after the release checks pass. See the [9.26 issue audit](docs/9.26-ISSUE-STATUS.md) for fixes and outstanding verification.
+The current production release is **Spaced Linux 9.26**. Download the ISO and matching checksum from the [Spaced Linux releases page](https://github.com/crhy/spaced/releases/tag/v9.26). See the [9.26 issue audit](docs/9.26-ISSUE-STATUS.md) for release validation details.
 
 Download the ISO and its matching checksum from the same release.
 
 Verify the download on Linux:
 
 ```bash
-sha256sum -c spaced-linux-8.26.9-amd64.iso.sha256
+sha256sum -c spaced-linux-9.26-amd64.iso.sha256
 ```
 
 Test release images in a virtual machine or on non-critical hardware before adopting them for daily use.
