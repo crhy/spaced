@@ -34,7 +34,7 @@ key_fingerprint=$(gpg --batch --show-keys --with-colons \
 }
 gpg --batch --list-secret-keys "$SIGNING_KEY" >/dev/null
 metadata=$package_work/metadata
-mkdir -p "$metadata/$COMP/binary-amd64" "$package_work/verify-key"
+mkdir -p "$metadata/$COMP/binary-amd64" "$metadata/$COMP/source" "$package_work/verify-key"
 chmod 0700 "$package_work/verify-key"
 
 echo "Staging verified standalone release artifacts…"
@@ -67,6 +67,23 @@ apt-ftparchive packages . > "$metadata/$COMP/binary-amd64/Packages"
 sed -i "s|^Filename: \./|Filename: dists/$DIST/$COMP/binary-amd64/|" "$metadata/$COMP/binary-amd64/Packages"
 gzip -n9c "$metadata/$COMP/binary-amd64/Packages" > "$metadata/$COMP/binary-amd64/Packages.gz"
 
+# Publish the corresponding patched Marco sources beside the binaries.
+# Keep old source archives immutable just like the binary packages.
+source_dir="$OUT/dists/$DIST/$COMP/source"
+mkdir -p "$source_dir"
+marco_artifacts=${SPACED_MARCO_ARTIFACT_DIR:-$ROOT/build/marco/artifacts}
+for source in "$marco_artifacts"/marco_*.dsc "$marco_artifacts"/marco_*.orig.tar.* "$marco_artifacts"/marco_*.debian.tar.*; do
+    [[ -f "$source" ]] || { echo "Missing corresponding Marco source: $source" >&2; exit 1; }
+    destination="$source_dir/${source##*/}"
+    if [[ -e "$destination" ]] && ! cmp -s "$source" "$destination"; then
+        echo "Refusing to replace published source bytes: $destination" >&2; exit 1
+    fi
+    cp "$source" "$destination"
+done
+(cd "$source_dir" && apt-ftparchive sources .) > "$metadata/$COMP/source/Sources"
+sed -i "s|^Directory: \.$|Directory: dists/$DIST/$COMP/source|" "$metadata/$COMP/source/Sources"
+gzip -n9c "$metadata/$COMP/source/Sources" > "$metadata/$COMP/source/Sources.gz"
+
 cd "$metadata"
 echo "Generating Release metadata…"
 apt-ftparchive -o APT::FTPArchive::Release::Origin="Spaced Linux" \
@@ -85,6 +102,7 @@ gpg --batch --homedir "$package_work/verify-key" --no-default-keyring \
     --verify "$package_work/InRelease"
 cp "$metadata/$COMP/binary-amd64/Packages" "$metadata/$COMP/binary-amd64/Packages.gz" \
     "$OUT/dists/$DIST/$COMP/binary-amd64/"
+cp "$metadata/$COMP/source/Sources" "$metadata/$COMP/source/Sources.gz" "$source_dir/"
 cp "$package_work/Release" "$package_work/Release.gpg" "$package_work/InRelease" "$OUT/dists/$DIST/"
 
 echo "Repository written to $OUT"
