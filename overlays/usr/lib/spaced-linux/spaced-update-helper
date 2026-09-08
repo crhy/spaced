@@ -5,7 +5,12 @@ set -Eeuo pipefail
 export DEBIAN_FRONTEND=noninteractive LC_ALL=C
 step() { printf 'SPACED_STEP:%s:%s\n' "$1" "$2"; }
 log() { printf '%s\n' "$*"; }
-trap 'status=$?; log "Update stopped (status $status). Review the preceding error and retry; completed package transactions are preserved."; exit "$status"' ERR
+update_failed() {
+  local status=$?
+  log "Update stopped (status $status). Review the preceding error and retry; completed package transactions are preserved."
+  exit "$status"
+}
+trap update_failed ERR
 
 MODE=${1:-all}
 if [ "$#" -gt 0 ]; then shift; fi
@@ -49,6 +54,21 @@ APT_OPTIONS=(-o DPkg::Lock::Timeout=120 -o Acquire::Retries=3
              -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold)
 apt_run() { apt-get "${APT_OPTIONS[@]}" "$@"; }
 
+if [[ $MODE == all || $MODE == apt-install ]]; then
+  GUARD=/usr/lib/spaced-linux/spaced-update-apt-guard
+  if [[ ! -f $GUARD || ! -x $GUARD || -L $GUARD ]]; then
+    log 'The installed Spaced Update APT transaction guard is missing. Reinstall spaced-mate-default-settings or run the complete Spaced Update install.sh before retrying. No package changes were started.'
+    exit 1
+  fi
+  read -r GUARD_OWNER GUARD_MODE <<< "$(stat -c '%u %a' "$GUARD")"
+  if [[ $GUARD_OWNER != 0 ]] || (( (8#$GUARD_MODE & 8#022) != 0 )); then
+    log 'The Spaced Update APT guard must be owned by root and not writable by other accounts. Reinstall the native package before retrying.'
+    exit 1
+  fi
+  APT_OPTIONS+=(-o "DPkg::Pre-Install-Pkgs::=$GUARD"
+               -o "DPkg::Tools::Options::$GUARD::Version=2")
+fi
+
 if [[ $MODE == flatpak-update ]]; then
   step 30 "Updating selected Flatpak apps and runtimes ($SCOPE)"
   flatpak update --noninteractive -y "$SCOPE" "$@"
@@ -84,7 +104,7 @@ while read -r ACTION PACKAGE _; do
   case "$ACTION:$PACKAGE" in
     Inst:systemd-sysv|Inst:systemd|Inst:runit-init|Inst:openrc)
       log "Refusing an upgrade that changes the sysvinit system: $PACKAGE"; exit 1 ;;
-    Remv:sysvinit-core|Remv:sysvinit-utils|Remv:initscripts|Remv:spaced-meta|Remv:spaced-mate-default-settings|Remv:mate-session-manager|Remv:mate-panel|Remv:caja|Remv:lightdm|Remv:network-manager|Remv:apt|Remv:dpkg|Remv:flatpak)
+    Remv:sysvinit-core|Remv:sysvinit-utils|Remv:initscripts|Remv:spaced-meta|Remv:spaced-mate-default-settings|Remv:mate-session-manager|Remv:mate-panel|Remv:caja|Remv:compiz|Remv:lightdm|Remv:network-manager|Remv:apt|Remv:dpkg|Remv:flatpak)
       log "Refusing removal of a core Spaced Linux package: $PACKAGE"; exit 1 ;;
   esac
 done <<< "$PLAN"

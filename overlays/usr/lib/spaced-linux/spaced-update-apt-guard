@@ -1,0 +1,43 @@
+#!/bin/bash
+# APT protocol v2 hook: validate the actual transaction before dpkg runs,
+# while APT holds its frontend lock. Never execute input from the protocol.
+set -euo pipefail
+export LC_ALL=C
+fail() { printf 'Spaced Update: %s\n' "$*" >&2; exit 1; }
+IFS= read -r header || fail 'APT did not provide a transaction header.'
+[ "$header" = 'VERSION 2' ] || fail "Unsupported APT transaction protocol: $header"
+
+# APT percent-encodes its configuration and terminates it with an empty line.
+complete=0
+while IFS= read -r line; do
+    if [ -z "$line" ]; then complete=1; break; fi
+    [[ $line == *=* ]] || fail 'Malformed APT configuration record.'
+done
+[ "$complete" -eq 1 ] || fail 'Incomplete APT transaction configuration.'
+
+while IFS= read -r line || [ -n "$line" ]; do
+    [ -n "$line" ] || fail 'Empty APT package action.'
+    read -r package old relation new action <<< "$line"
+    [[ $package =~ ^[a-z0-9][a-z0-9.+-]*(:[a-z0-9][a-z0-9-]*)?$ ]] || fail 'Malformed APT package name.'
+    [[ $old =~ ^[A-Za-z0-9.+:~_-]+$ && $new =~ ^[A-Za-z0-9.+:~_-]+$ ]] || fail 'Malformed APT package version.'
+    [[ $relation == '<' || $relation == '>' || $relation == '=' ]] || fail 'Malformed APT version comparison.'
+    case "$action" in
+        '**REMOVE**'|'**CONFIGURE**'|/*.deb) ;;
+        *) fail 'Malformed APT package action.' ;;
+    esac
+    package=${package%%:*}
+    case "$action:$package" in
+        '**REMOVE**':sysvinit-core|'**REMOVE**':sysvinit-utils|'**REMOVE**':initscripts|\
+        '**REMOVE**':spaced-meta|'**REMOVE**':spaced-mate-default-settings|\
+        '**REMOVE**':mate-session-manager|'**REMOVE**':mate-panel|'**REMOVE**':caja|'**REMOVE**':compiz|\
+        '**REMOVE**':lightdm|'**REMOVE**':network-manager|'**REMOVE**':apt|\
+        '**REMOVE**':dpkg|'**REMOVE**':flatpak)
+            fail "Refusing removal of a core Spaced Linux package: $package" ;;
+    esac
+    if [ "$action" != '**REMOVE**' ]; then
+        case "$package" in
+            systemd|systemd-sysv|runit-init|openrc)
+                fail "Refusing an upgrade that changes the sysvinit system: $package" ;;
+        esac
+    fi
+done
