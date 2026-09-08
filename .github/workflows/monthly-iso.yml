@@ -39,6 +39,12 @@ jobs:
           sudo dpkg --install "$package"
           test "$(dpkg-query -W -f='${Version}' live-build)" = '1:20250814'
 
+      - name: Enable isolated user namespaces on this disposable runner
+        run: |
+          if sysctl kernel.apparmor_restrict_unprivileged_userns >/dev/null 2>&1; then
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          fi
+
       - name: Validate release source
         run: make check
 

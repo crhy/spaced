@@ -1,0 +1,36 @@
+name: Release source checks
+
+on:
+  push:
+    branches: [main, 'release/**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: source-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install validation dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-yaml python3-gi gir1.2-gtk-3.0 desktop-file-utils xvfb bubblewrap dpkg-dev
+      - name: Enable isolated user namespaces on this disposable runner
+        run: |
+          if sysctl kernel.apparmor_restrict_unprivileged_userns >/dev/null 2>&1; then
+            sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          fi
+      - name: Validate source and desktop behavior
+        run: make check
+      - name: Exercise real dpkg release upgrade and identity triggers
+        run: scripts/tests/test-release-identity.sh
+      - name: Build the help website
+        run: scripts/build-site.sh
