@@ -15,7 +15,7 @@
 
 <p align="center">
   <a href="https://spacedlinux.com"><strong>Website</strong></a> ·
-  <a href="https://spacedlinux.com/#help"><strong>Help</strong></a> ·
+  <a href="https://spacedlinux.com/help.html"><strong>Help</strong></a> ·
   <a href="https://discord.gg/BMW9Y6NB3y"><strong>Discord</strong></a> ·
   <a href="https://t.me/+pjmFzHo-i9A2ZWY5"><strong>Telegram</strong></a> ·
   <a href="https://github.com/crhy/spaced/releases"><strong>Download releases</strong></a> ·
@@ -23,6 +23,10 @@
   <a href="docs/DESIGN.md"><strong>Design</strong></a> ·
   <a href="docs/MATE-theming.md"><strong>Themes</strong></a> ·
   <a href="#support-spaced-linux"><strong>Support</strong></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/crhy/spaced/releases/download/v9.26/spaced-linux-9.26-amd64.iso"><strong>⬇ Download Spaced Linux 9.26</strong>&nbsp;(·iso·)</a>
 </p>
 
 <p align="center">
