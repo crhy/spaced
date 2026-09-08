@@ -52,7 +52,7 @@ deps: ## Install host build and test dependencies
 	$(ROOT_RUN) apt-get install -y \
 		live-build debootstrap xorriso squashfs-tools grub-common \
 		qemu-system-x86 qemu-utils ovmf rsync curl gnupg sshpass \
-		python3-yaml desktop-file-utils apt-utils python3-gi gir1.2-gtk-3.0 xvfb
+		python3-yaml desktop-file-utils apt-utils python3-gi gir1.2-gtk-3.0 xvfb bubblewrap
 
 check: ## Validate configuration, scripts, themes, and desktop entries
 	$(HOST_RUN) scripts/tests/test-testing-upgrade.sh
