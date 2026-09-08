@@ -3,7 +3,7 @@
 set -euo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 REPO=${1:?Usage: test-release-package-payload.sh SIGNED_REPO}
-SUITE=${SPACED_APT_SUITE:-spaced-testing}
+SUITE=${SPACED_APT_SUITE:-spaced}
 [[ "$SUITE" =~ ^[a-z0-9][a-z0-9-]*$ ]] || exit 2
 WORK=$(mktemp -d)
 trap 'rm -rf -- "$WORK"' EXIT

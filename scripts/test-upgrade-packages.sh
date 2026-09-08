@@ -7,7 +7,7 @@ ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 REPO=${1:?Usage: test-upgrade-packages.sh SIGNED_REPO [DPKG_STATUS ...]}
 shift
 [[ "$#" -gt 0 ]] || set -- /dev/null
-SUITE=${SPACED_APT_SUITE:-spaced-testing}
+SUITE=${SPACED_APT_SUITE:-spaced}
 [[ "$SUITE" =~ ^[a-z0-9][a-z0-9-]*$ ]] || { echo 'Invalid APT suite.' >&2; exit 1; }
 REPO=$(realpath "$REPO")
 [[ -f "$REPO/dists/$SUITE/InRelease" ]] || { echo "Build the signed $SUITE APT repository first." >&2; exit 1; }

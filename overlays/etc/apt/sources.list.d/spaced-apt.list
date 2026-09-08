@@ -1,4 +1,3 @@
 # Spaced Linux apt repository (GitHub Pages).
 # Releases are signed by the Spaced archive key shipped with desktop updates.
-# 9.26 testing images follow the opt-in testing suite.
-deb [signed-by=/usr/share/keyrings/spaced-archive-keyring.gpg] https://crhy.github.io/spaced-apt spaced-testing main
+deb [signed-by=/usr/share/keyrings/spaced-archive-keyring.gpg] https://crhy.github.io/spaced-apt spaced main

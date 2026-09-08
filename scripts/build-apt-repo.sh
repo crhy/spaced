@@ -11,7 +11,7 @@ set -euo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 OUT="${1:-$ROOT/spaced-apt}"
-DIST=${SPACED_APT_SUITE:-spaced-testing}
+DIST=${SPACED_APT_SUITE:-spaced}
 case "$DIST" in spaced|spaced-testing) ;; *) echo "Unknown Spaced archive suite: $DIST" >&2; exit 2 ;; esac
 COMP="main"
 SIGNING_KEY=${SPACED_APT_SIGNING_KEY:-6C16F77C2DAE19D262CFD9F0CC05F885576EBB05}

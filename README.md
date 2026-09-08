@@ -27,7 +27,7 @@
 
 <p align="center">
   <a href="https://github.com/crhy/spaced/releases/tag/v8.26.9"><strong>Download published Spaced Linux 8.26.9</strong></a> ·
-  <a href="docs/9.26-ISSUE-STATUS.md"><strong>9.26 testing progress</strong></a>
+  <a href="docs/9.26-ISSUE-STATUS.md"><strong>9.26 release status</strong></a>
 </p>
 
 <p align="center">
