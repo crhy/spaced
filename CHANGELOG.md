@@ -1,5 +1,164 @@
 # Changelog
 
+## 9.26 - 2026-09-08
+
+Spaced Linux 9.26 is a major production release focused on upgrade reliability, graphics-driver recovery, desktop startup resilience, signed package delivery, and substantially stronger automated release validation.
+
+### System updates and upgrade reliability
+
+* Reworked **Spaced Update** to handle complete operating-system upgrades more safely and predictably.
+* Added a dedicated APT transaction guard so package changes are protected during the actual locked package-management operation rather than only during preliminary checks.
+* Improved handling of package refreshes, native package upgrades, Flatpak updates, release-marker changes, and error reporting.
+* Added explicit testing for upgrades from earlier Spaced Linux installations to reduce the chance of regressions affecting existing users.
+* Added package-payload validation to confirm that the packages delivered by the production repository match the expected release.
+* Added release-identity checks so the built ISO, installed release metadata, package repository, and release version cannot silently drift apart.
+* Added a controlled testing-channel upgrade helper while keeping the normal production installation on the stable `spaced` APT suite.
+* Improved `spaced-meta` post-install behavior and package triggers to make desktop and system migrations more dependable during upgrades.
+* Added migration logic for older desktop configurations so existing installations can adopt 9.26 defaults without unnecessarily overwriting user choices.
+
+### Signed production APT repository
+
+* Moved Spaced Linux to the signed production APT suite at `https://crhy.github.io/spaced-apt`.
+* Added the Spaced archive keyring directly to the system image.
+* Added cryptographic verification of repository metadata before release publication.
+* Repository generation now produces and validates `InRelease`, `Release`, and `Release.gpg`.
+* Added automated APT trust testing so unsigned, incorrectly signed, or wrong-key repository metadata fails the release gate.
+* Hardened repository publishing so already-published package versions cannot be silently replaced with different package contents.
+* Added production package and source metadata generation for Spaced Linux packages and patched components.
+
+### NVIDIA support and recovery
+
+* Significantly reworked the Spaced NVIDIA installation and recovery stack.
+* Added hardware compatibility detection based on the actual NVIDIA PCI device rather than relying only on broad marketing names.
+* Added dedicated NVIDIA compatibility, configuration, and persistent-state modules.
+* Improved selection of supported packaged NVIDIA drivers for both current and older hardware.
+* Improved hybrid-GPU handling and validation.
+* Strengthened pre-reboot verification after driver changes.
+* Strengthened post-boot validation so a driver installation is not considered successful until the graphics stack and desktop have actually recovered.
+* Improved automatic rollback and recovery when an NVIDIA installation fails.
+* Added safer handling of Xorg configuration and existing system files during repair.
+* Improved detection of Compiz and the active desktop session during post-install checks.
+* Expanded NVIDIA installer diagnostics and recovery documentation.
+* Added a dedicated `spaced-graphics-report` utility for collecting GPU, driver, display, and graphics-session information when troubleshooting.
+* Added extensive automated NVIDIA compatibility and driver-recovery tests.
+
+### AMD graphics and display behavior
+
+* Added a Spaced AMDGPU Xorg configuration with TearFree support to address visible scrolling and presentation artifacts on affected AMD hardware.
+* Improved AMD graphics diagnostics through the new graphics-report tooling.
+* Expanded display and graphics validation for upgraded systems.
+* Improved monitor-state migration and recovery behavior.
+
+### MATE, Compiz, and desktop startup
+
+* Hardened the installed MATE/Compiz startup path to reduce black-screen and incomplete-desktop failures after installation or upgrade.
+* Improved the Spaced window-manager launcher and Compiz startup checks.
+* Added a dedicated Spaced window-decorator launcher and recovery path.
+* Improved first-login repair behavior for systems migrating from previous releases.
+* Reworked display repair so stale or invalid display state is less likely to prevent a usable desktop from appearing.
+* Added a desktop migration utility for applying release-specific configuration fixes while preserving user-owned settings where possible.
+* Updated LightDM installed-system configuration for more reliable desktop startup.
+* Updated default Compiz configuration and desktop shortcuts.
+* Improved MIME defaults for fresh and upgraded users.
+* Improved desktop application associations and system defaults.
+* Added additional release checks specifically targeting MATE, Caja, Compiz, and desktop-session reliability.
+
+### Marco window manager fixes
+
+* Added Spaced-maintained patches for Marco 1.26.2.
+* Corrected an XRes success-condition bug.
+* Removed an incorrect mask check affecting Marco behavior.
+* Added reproducible source checksums and dedicated build scripts for the patched Marco package.
+* Published the patched Marco build through the signed Spaced Linux APT repository.
+
+### Desktop polish and applications
+
+* Updated **Spaced Welcome** integration and pinned the verified native release used by 9.26.
+* Updated **SpacedBazaar** integration.
+* Updated Spaced Update artwork and desktop integration.
+* Added improved system-information output for release and graphics diagnostics.
+* Added `btop` defaults appropriate for the Spaced desktop.
+* Refined GTK3 theme behavior in the Spaced dark themes.
+* Improved application and file-type defaults.
+* Updated Brave's supplied bookmarks.
+* Added Discord and Telegram community links to Welcome, the website, Help documentation, and GitHub project documentation.
+
+### Wallpapers and visual presentation
+
+* Added selected astronomical imagery from ESA's Euclid mission to the Spaced Linux wallpaper collection.
+* Added attribution and source documentation for the Euclid imagery.
+* Updated wallpaper registration so the new backgrounds appear in MATE's background chooser.
+* Updated Calamares branding and release presentation for 9.26.
+* Updated bootloader, installer, release, and system-identification branding to the 9.26 release.
+
+### Boot and installation
+
+* Updated live-build configuration and bootloader metadata for 9.26.
+* Improved release boot configuration and ISO provenance checks.
+* Added a pinned Devuan archive keyring to make bootstrap and build trust more deterministic.
+* Added package-selection adjustments needed for the current Devuan Ceres base.
+* Added explicit init-system package preferences to protect Spaced Linux's systemd-free design during package resolution.
+* Improved local package staging during ISO construction.
+* Added dedicated staging and build paths for patched Marco and AMD graphics tooling.
+
+### Release testing and CI
+
+9.26 substantially expands the automated release test matrix.
+
+* Added a dedicated source-check GitHub Actions workflow.
+* Expanded the monthly clean-ISO workflow.
+* Added BIOS and UEFI boot validation.
+* Added both KVM/QEMU and VirtualBox smoke testing.
+* Added automated 4K virtual-desktop validation.
+* Added a live-desktop probe that verifies the actual graphical session rather than treating a successful kernel boot as sufficient.
+* Smoke tests now validate the MATE session, panel, Caja, Compiz, and usable graphical desktop state.
+* Added screenshot-based validation to help reject blank or unusable virtual desktops.
+* Added GTK desktop tests under Xvfb.
+* Added automated desktop-reliability tests.
+* Added automated driver-recovery tests.
+* Added automated NVIDIA compatibility tests.
+* Added QEMU smoke-test regression coverage.
+* Added APT trust tests.
+* Added release identity tests.
+* Added release package-payload tests.
+* Added production/testing upgrade tests.
+* Expanded the release gate so source checks, package checks, desktop checks, and VM checks are exercised together.
+* The final 9.26 source gate passed all source checks, 43 unit tests, and the GTK/Xvfb desktop test before release.
+
+### Documentation and support
+
+* Added a dedicated 9.26 desktop audit.
+* Added a 9.26 issue-status and release-validation document.
+* Added expanded release-testing documentation.
+* Added a new Spaced Help document.
+* Significantly expanded NVIDIA recovery and troubleshooting documentation.
+* Updated boot troubleshooting documentation.
+* Added guidance for collecting graphics diagnostics and reporting reproducible hardware issues.
+* Added clearer instructions for desktop shortcuts, upgrades, applications, graphics, multi-monitor setups, and recovery.
+
+### Website and community
+
+* Updated `spacedlinux.com` for Spaced Linux 9.26.
+* Added a full Help and Community page.
+* Added direct Discord and Telegram community links throughout the website and GitHub README.
+* Updated public download links to the 9.26 GitHub release.
+* Updated release text so 9.26 is presented as the current production release rather than a testing build.
+* Updated theme and support documentation links.
+
+### Release artifacts
+
+* Production ISO: `spaced-linux-9.26-amd64.iso`
+* SHA-256: `7f9d5eeec990c68399d185dfb5aa090ffefd8f3ab451ad33d0c0d5104f9fa173`
+* Signed APT suite: `spaced`
+* Architecture: `amd64`
+* Base: Devuan Ceres
+* Desktop: MATE
+* Window manager/compositor: Compiz
+* Init system: sysvinit
+
+Spaced Linux 9.26 continues the project's goal of providing a polished, familiar Linux desktop without systemd, while keeping the operating system inspectable, customizable, reproducible, and practical on real hardware.
+
+
 ## 8.26.9 - 2026-08-27
 - Unified the Calamares installer surface with the charcoal field behind the
   silver Spaced emblem, eliminating the visible square around the logo.
