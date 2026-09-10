@@ -1,5 +1,15 @@
 # Changelog
 
+## 9.26.1-2 - 2026-09-10
+- Stopped Spaced Update reporting "Could not check for updates" on a system
+  that is simply up to date. A single unreachable Flatpak remote — a stale
+  local development remote, or one that is briefly offline — made the window
+  claim the whole check had failed and show no results, even though APT and
+  the other remotes had answered. The window now reports what the reachable
+  sources found and names the ones it could not reach. A machine that can
+  reach nothing at all is still reported as a failed check rather than being
+  told it is up to date.
+
 ## 9.26.1 - 2026-09-10
 - Restored **About Spaced Linux** as its own dialog (issues #160, #181). It now
   reports the installed release, shows the fancy medallion, and links straight

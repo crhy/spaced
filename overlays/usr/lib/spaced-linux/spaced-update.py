@@ -269,7 +269,18 @@ def flatpak_scope(scope):
     return f"--installation={scope}"
 
 
-def enumerate_flatpak(warnings=None):
+def enumerate_flatpak(warnings=None, stats=None):
+    """List Flatpak updates.
+
+    Individual unreachable remotes are reported through ``warnings`` rather
+    than aborting: a stale or offline remote must not hide the updates the
+    other remotes did report. ``stats`` receives how many remotes were
+    consulted and how many failed, so the caller can tell "nothing to update"
+    apart from "nothing could be checked".
+    """
+    if stats is not None:
+        stats.setdefault("remotes_total", 0)
+        stats.setdefault("remotes_failed", 0)
     if not flatpak_available():
         return []
     listed = run_capture(
@@ -298,6 +309,8 @@ def enumerate_flatpak(warnings=None):
                 remotes.append(parts[0].strip())
 
         for remote in remotes:
+            if stats is not None:
+                stats["remotes_total"] += 1
             try:
                 updates = run_capture(
                     [
@@ -313,6 +326,8 @@ def enumerate_flatpak(warnings=None):
                 )
             except (OSError, RuntimeError, subprocess.TimeoutExpired) as error:
                 errors.append(f"{scope}/{remote}: {error}")
+                if stats is not None:
+                    stats["remotes_failed"] += 1
                 continue
             for line in updates.splitlines():
                 ref = line.strip().split()[0] if line.strip() else ""
@@ -753,25 +768,39 @@ class App(Gtk.Window):
 
     def _check_worker(self):
         apt, flatpak, errors = [], [], []
+        stats = {"remotes_total": 0, "remotes_failed": 0}
+        apt_checked = False
+        flatpak_checked = False
         try:
             # A successful check must use freshly fetched indexes; an offline
             # APT update must not fall back to stale lists and claim success.
             run_capture(["pkexec", HELPER, "apt-refresh"], timeout=300)
             apt = enumerate_apt()
+            apt_checked = True
         except Exception as error:
             errors.append(f"System packages: {error}")
         try:
-            flatpak = enumerate_flatpak(errors)
+            flatpak = enumerate_flatpak(errors, stats)
+            # A remote that never answered has told us nothing. Only count the
+            # Flatpak side as checked when at least one remote responded, so an
+            # entirely offline machine is never told it is up to date.
+            flatpak_checked = (
+                stats["remotes_total"] == 0
+                or stats["remotes_failed"] < stats["remotes_total"]
+            )
         except Exception as error:
             errors.append(f"Flatpak: {error}")
-        GLib.idle_add(self._check_done, apt, flatpak, "; ".join(errors) or None)
+        GLib.idle_add(
+            self._check_done, apt, flatpak, "; ".join(errors) or None,
+            apt_checked or flatpak_checked,
+        )
 
-    def _check_done(self, apt, flatpak, error):
+    def _check_done(self, apt, flatpak, error, checked=True):
         self._set_busy(False)
         self.empty_spinner.stop()
         self.empty_spinner.hide()
         self.empty_icon.show()
-        if error and not (apt or flatpak):
+        if error and not checked and not (apt or flatpak):
             self._set_status(
                 "dialog-warning-symbolic",
                 "Could not check for updates",
@@ -794,14 +823,30 @@ class App(Gtk.Window):
 
         total = len(apt) + len(flatpak)
         if not total:
-            self._set_status(
-                "emblem-ok-symbolic",
-                "You’re up to date",
-                "No system package or Flatpak application updates are available.",
-            )
-            self.empty_icon.set_from_icon_name("emblem-ok-symbolic", Gtk.IconSize.DIALOG)
-            self.empty_title.set_text("Everything is current")
-            self.empty_detail.set_text("Check again whenever you like.")
+            if error:
+                # The sources that answered had nothing to offer. Say so, and
+                # name the ones that did not, rather than reporting the whole
+                # check as a failure on an otherwise healthy system.
+                self._set_status(
+                    "dialog-warning-symbolic",
+                    "No updates found; some sources could not be checked",
+                    str(error),
+                )
+                self.empty_icon.set_from_icon_name(
+                    "dialog-warning-symbolic", Gtk.IconSize.DIALOG)
+                self.empty_title.set_text("No updates found")
+                self.empty_detail.set_text(
+                    "Everything the reachable sources offer is already installed. "
+                    f"These could not be checked: {error}")
+            else:
+                self._set_status(
+                    "emblem-ok-symbolic",
+                    "You’re up to date",
+                    "No system package or Flatpak application updates are available.",
+                )
+                self.empty_icon.set_from_icon_name("emblem-ok-symbolic", Gtk.IconSize.DIALOG)
+                self.empty_title.set_text("Everything is current")
+                self.empty_detail.set_text("Check again whenever you like.")
             self.content_stack.set_visible_child_name("empty")
             return
 
