@@ -1,5 +1,12 @@
 # Changelog
 
+## 9.26.1-3 - 2026-09-10
+- Corrected the Spaced Update version shown in the window and About dialog.
+  9.26.1-2 shipped the corrected update-check logic but was built before the
+  application version was raised, so it reported itself as 0.2.1 while running
+  0.2.2 code. The repository tooling refused to republish different bytes under
+  the same package version, which is what caught this.
+
 ## 9.26.1-2 - 2026-09-10
 - Stopped Spaced Update reporting "Could not check for updates" on a system
   that is simply up to date. A single unreachable Flatpak remote — a stale
