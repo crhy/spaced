@@ -16,7 +16,7 @@ from gi.repository import Gdk, GLib, Gtk, Pango
 
 GITHUB_API = "https://api.github.com/repos/crhy/spaced/releases/latest"
 # Keep this application version in sync with the repository VERSION file.
-APP_VERSION = "0.2.1"
+APP_VERSION = "0.2.2"
 HELPER = "/usr/lib/spaced-linux/spaced-update-helper"
 APT_RE = re.compile(
     r"^(\S+?)/\S+\s+(\S+)\s+(\S+)\s+\[upgradable from:\s+(.+)\]$"
