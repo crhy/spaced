@@ -20,6 +20,17 @@ IMAGE_TYPES = (
     "image/x-xbitmap", "image/x-xpixmap", "image/x-tga", "image/jp2",
     "image/jpeg2000", "image/jpx", "image/x-icns", "image/vnd.wap.wbmp",
 )
+# Script files are plain text to a desktop user. Issue #182 reported that
+# Pluma was not retained for bash and Python files; the Python and shell alias
+# types were simply never declared, so each launch fell back to whatever the
+# shared MIME database guessed.
+TEXT_TYPES = (
+    "text/plain",
+    "text/x-shellscript", "application/x-shellscript",
+    "text/x-sh", "application/x-sh",
+    "text/x-python", "text/x-python3",
+    "text/x-perl", "application/x-perl",
+)
 BROWSERS = {
     "com.brave.Browser.desktop", "brave-browser.desktop", "firefox.desktop",
     "org.mozilla.firefox.desktop", "chromium.desktop", "google-chrome.desktop",
@@ -38,7 +49,7 @@ def read_ini(path):
 def atomic_write(path, content):
     path.parent.mkdir(parents=True, exist_ok=True)
     # Keep one pre-migration copy. Only the user's own files are touched.
-    backup = path.with_name(path.name + ".pre-9.26")
+    backup = path.with_name(path.name + ".pre-9.26.1")
     if path.exists() and not backup.exists():
         shutil.copy2(path, backup)
     fd, name = tempfile.mkstemp(prefix="." + path.name + ".", dir=path.parent)
@@ -70,7 +81,7 @@ def migrate_mime(path):
         if not current or current in BROWSERS:
             defaults[mime] = "eom.desktop"
             changed = True
-    for mime in ("text/plain", "text/x-shellscript", "application/x-shellscript"):
+    for mime in TEXT_TYPES:
         if not defaults.get(mime):
             defaults[mime] = "pluma.desktop"
             changed = True
@@ -116,7 +127,7 @@ def migrate(config):
     state.mkdir(parents=True, exist_ok=True)
     with (state / "desktop-migration.lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
-        marker = state / "desktop-migration-9.26-v1"
+        marker = state / "desktop-migration-9.26.1-v1"
         if marker.exists():
             return
         migrate_mime(config / "mimeapps.list")
@@ -128,7 +139,7 @@ def migrate(config):
         btop = config / "btop/btop.conf"
         if not btop.exists():
             atomic_write(btop, 'graph_symbol = "block"\n')
-        atomic_write(marker, "9.26\n")
+        atomic_write(marker, "9.26.1\n")
 
 
 if __name__ == "__main__":

@@ -10,6 +10,15 @@ if [ -z "$THEME_ID" ]; then
     exit 2
 fi
 
+# Issue #181: switching several themes in a row in Appearance Preferences
+# pegged the CPU and took the desktop down with it. Every switch used to run
+# its panel, dock and Flatpak export work concurrently with the previous one.
+# One exclusive lock per user means the work happens once per settled choice.
+LOCK_DIR=${XDG_RUNTIME_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}}
+mkdir -p "$LOCK_DIR" 2>/dev/null || true
+exec 7>"$LOCK_DIR/spaced-switch-theme.lock" 2>/dev/null || true
+flock 7 2>/dev/null || true
+
 assignments=$(python3 - "$THEMES_JSON" "$THEME_ID" <<'PY'
 import json
 import shlex
@@ -136,13 +145,28 @@ fi
 if command -v flatpak >/dev/null 2>&1; then
     theme_export=${XDG_DATA_HOME:-$HOME/.local/share}/themes
     mkdir -p "$theme_export"
-    for theme_dir in /usr/share/themes/Spaced-*; do
-        [ -d "$theme_dir" ] || continue
-        rsync -a --delete "$theme_dir/" "$theme_export/${theme_dir##*/}/" 2>/dev/null \
-            || true
-    done
-    flatpak override --user --filesystem=xdg-data/themes:ro >/dev/null 2>&1 || true
-    flatpak override --user --env="GTK_THEME=$gtk_theme" >/dev/null 2>&1 || true
+    # The exported copy is the same for every theme, so it only has to be
+    # rebuilt when the installed theme packages change. Copying 11 theme trees
+    # on each switch was the single most expensive part of a theme change.
+    stamp_file="$theme_export/.spaced-export-stamp"
+    stamp=$(find /usr/share/themes -maxdepth 1 -name 'Spaced-*' -printf '%f %T@\n' \
+        2>/dev/null | sort | cksum)
+    if [ "$stamp" != "$(cat "$stamp_file" 2>/dev/null || true)" ]; then
+        for theme_dir in /usr/share/themes/Spaced-*; do
+            [ -d "$theme_dir" ] || continue
+            rsync -a --delete "$theme_dir/" "$theme_export/${theme_dir##*/}/" 2>/dev/null \
+                || true
+        done
+        flatpak override --user --filesystem=xdg-data/themes:ro >/dev/null 2>&1 || true
+        printf '%s\n' "$stamp" >"$stamp_file" 2>/dev/null || true
+    fi
+    # `flatpak override` rewrites every application's override file, so skip it
+    # unless the theme name a sandbox would see has actually changed.
+    theme_stamp="$theme_export/.spaced-gtk-theme"
+    if [ "$gtk_theme" != "$(cat "$theme_stamp" 2>/dev/null || true)" ]; then
+        flatpak override --user --env="GTK_THEME=$gtk_theme" >/dev/null 2>&1 || true
+        printf '%s\n' "$gtk_theme" >"$theme_stamp" 2>/dev/null || true
+    fi
 fi
 
 logger -t spaced-switch-theme "Applied desktop extras for $name"

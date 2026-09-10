@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=Spaced Display Recovery
-Comment=Repair TV underscan after login and screensaver unlock
+Comment=Apply the chosen display power policy and repair TV underscan
 Exec=/usr/local/bin/spaced-display-repair --watch
 OnlyShowIn=MATE;
 NoDisplay=true

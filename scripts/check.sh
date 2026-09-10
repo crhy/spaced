@@ -462,9 +462,11 @@ for environment in (flatpak_xsession, flatpak_profile):
 remote_helper_path = root / "usr/local/bin/spaced-enable-flatpak-remotes"
 remote_helper = remote_helper_path.read_text(encoding="utf-8")
 assert remote_helper_path.stat().st_mode & 0o111, "Flatpak remote helper is not executable"
-assert "seq 1 90" in remote_helper and "sleep 2" in remote_helper \
+assert 'elapsed" -lt 180' in remote_helper and "sleep \"$delay\"" in remote_helper \
     and "for name in flathub spaced-github" in remote_helper, \
     "login-time signed remote registration does not survive delayed networking"
+assert 'delay=$((delay * 2))' in remote_helper, \
+    "offline logins still poll for Flatpak remotes at a fixed interval"
 session_reset = (root / "etc/X11/Xsession.d/05spaced-reset-session-env").read_text(encoding="utf-8")
 assert "AT_SPI_BUS_ADDRESS" in session_reset and "var/lib/lightdm" in session_reset \
     and "xprop -root -remove AT_SPI_BUS" in session_reset, \
@@ -701,6 +703,24 @@ assert "format='12-hour'" in schema_override and "show-date=false" in schema_ove
     "clock does not default to 12-hour time without the date"
 assert "[org.mate.caja.preferences]" in schema_override and "show-hidden-files=true" in schema_override, \
     "Caja does not retain the requested hidden-file default"
+assert "executable-text-activation='display'" in schema_override, \
+    "Double-clicking a script does not open the text editor (issue #182)"
+assert "[org.mate.caja.desktop]" in schema_override and "volumes-visible=true" in schema_override, \
+    "Mounted network shares are not shown on the desktop (issue #184)"
+
+icon_repair = root / "usr/local/bin/spaced-desktop-icon-repair"
+assert icon_repair.stat().st_mode & 0o111 and "caja-icon-position" in icon_repair.read_text(encoding="utf-8"), \
+    "Desktop icons stranded outside the current monitors are not repaired (issue #184)"
+icon_repair_autostart = (root / "etc/xdg/autostart/spaced-desktop-icon-repair.desktop").read_text(encoding="utf-8")
+assert "spaced-desktop-icon-repair --watch" in icon_repair_autostart, \
+    "Desktop icon repair does not follow monitor layout changes (issue #184)"
+
+brave_policy = json.loads(
+    (root / "etc/brave/policies/managed/spaced-extensions.json").read_text(encoding="utf-8"))
+ublock = brave_policy["ExtensionSettings"]["jcokkipkhhgiakinbnnplhkdbjbgcgpe"]
+assert brave_policy["ExtensionManifestV2Availability"] == 2 \
+    and ublock["installation_mode"] == "normal_installed", \
+    "Brave does not ship uBlock Origin under Manifest V2 support (issue #181)"
 menu_on_dark = icon_root / "Spaced-Menu-On-Dark/scalable/places"
 menu_on_light = icon_root / "Spaced-Menu-On-Light/scalable/places"
 for menu_directory, color in ((menu_on_dark, "#b8bcc2"), (menu_on_light, "#202020")):
@@ -830,9 +850,15 @@ assert system_info_path.stat().st_mode & 0o111 \
     and "PRETTY_NAME" in system_info and "/proc/cpuinfo" in system_info \
     and "/proc/meminfo" in system_info, \
     "Spaced System Info does not report the release and basic hardware"
-assert "Name=About Spaced Linux" in mate_about and "Exec=spaced-welcome --page help" in mate_about \
+spaced_help = (root / "usr/local/share/applications/spaced-help.desktop").read_text(encoding="utf-8")
+assert "Name=About Spaced Linux" in mate_about and "Exec=spaced-system-info" in mate_about \
     and "Icon=/usr/share/pixmaps/spaced-medallion.png" in mate_about, \
-    "About Spaced Linux does not open local help with the medallion (issues #160/#161)"
+    "About Spaced Linux does not open its own dialog with the medallion (issues #160/#181)"
+assert "Exec=spaced-welcome --page help" in spaced_help, \
+    "Offline Welcome help lost its own launcher (issue #161)"
+assert 'VERSION_ID' in system_info and 'https://spacedlinux.com/#donate' in system_info \
+    and 'https://spacedlinux.com/' in system_info, \
+    "About Spaced Linux does not show the release version with website and donation links (issue #181)"
 assert not (root / "usr/share/applications/mate-about.desktop").exists(), \
     "Spaced System Info collides with mate-desktop instead of using the /usr/local override"
 

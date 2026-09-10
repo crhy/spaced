@@ -58,8 +58,25 @@ else
 fi
 save_current
 
-pactl subscribe 2>/dev/null | while IFS= read -r event; do
-    case "$event" in
-        *" on sink "*|*" on server "*) save_current ;;
-    esac
-done
+# Dragging a volume slider emits a stream of sink events. Saving on each one
+# spawns three pactl processes per event; wait for the burst to settle first.
+SETTLE_SECONDS=${SPACED_AUDIO_SETTLE_SECONDS:-1}
+pending=''
+while :; do
+    if [ -n "$pending" ]; then
+        IFS= read -r -t "$SETTLE_SECONDS" event
+    else
+        IFS= read -r event
+    fi
+    status=$?
+    if [ "$status" -eq 0 ]; then
+        case "$event" in
+            *" on sink "*|*" on server "*) pending=1 ;;
+        esac
+        continue
+    fi
+    # A status above 128 is the read timing out, which means the burst has
+    # settled. Anything else is end-of-stream: save once more and stop.
+    [ -n "$pending" ] && { save_current; pending=''; }
+    [ "$status" -gt 128 ] || break
+done < <(pactl subscribe 2>/dev/null)

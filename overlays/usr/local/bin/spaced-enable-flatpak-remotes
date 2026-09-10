@@ -31,9 +31,17 @@ add_missing_remotes() {
 # NetworkManager may still be connecting when desktop autostart runs. Flatpak
 # can import each bundled signing key locally, while retries cover the initial
 # repository-summary fetch on a new installation.
-for attempt in $(seq 1 90); do
+# Back off instead of polling every two seconds for three minutes. A machine
+# that is simply offline used to run this loop ninety times, spawning several
+# flatpak processes each round for no possible gain.
+delay=2
+elapsed=0
+while [ "$elapsed" -lt 180 ]; do
     add_missing_remotes && exit 0
-    sleep 2
+    sleep "$delay"
+    elapsed=$((elapsed + delay))
+    [ "$delay" -lt 30 ] && delay=$((delay * 2))
+    [ "$delay" -gt 30 ] && delay=30
 done
 
 logger -t spaced-enable-flatpak-remotes \

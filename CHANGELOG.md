@@ -1,5 +1,49 @@
 # Changelog
 
+## 9.26.1 - 2026-09-10
+- Restored **About Spaced Linux** as its own dialog (issues #160, #181). It now
+  reports the installed release, shows the fancy medallion, and links straight
+  to spacedlinux.com and the donation page. The offline Welcome help it had
+  replaced keeps its own "Spaced Linux Help" launcher, so issue #161 stays
+  fixed.
+- Fixed desktop icons for Gigolo's network shares disappearing (issue #184).
+  Caja stores an explicit position per icon; positions saved against a monitor
+  layout that no longer exists placed those icons off screen, which is why the
+  reporter saw them return only when a fifth display extended the desktop
+  (issue #180). Unreachable positions are now cleared at login and whenever the
+  monitor layout changes, and mounted volumes are explicitly shown on the
+  desktop.
+- Made "Never" actually keep the monitors on (issue #178). MATE writes 0 for
+  Never and then stops programming a timeout, leaving the X server's own
+  ten-minute DPMS and blanking defaults in force. The session now turns both
+  off when Never is selected and hands DPMS back to mate-power-manager when a
+  real timeout is chosen.
+- Stopped Appearance Preferences pegging the CPU when several themes are
+  selected in a row (issue #181). A burst of theme changes is now coalesced
+  into a single switch, switches are serialised, the theme table is read once
+  per session instead of once per change, and the Flatpak theme export is
+  rebuilt only when the installed themes actually change rather than on every
+  switch.
+- Made Pluma stick as the editor for bash and Python scripts (issue #182). The
+  Python and shell alias MIME types were never declared, so each launch fell
+  back to whatever the shared MIME database guessed; double-clicking a script
+  now opens it in the editor instead of asking whether to run it.
+- Shipped uBlock Origin enabled by default under Brave's Manifest V2 support
+  (issue #181), as a managed policy that the Brave Flatpak picks up from the
+  host and that users can still disable.
+- SpacedBazaar: Explore no longer appears empty for the length of a catalog
+  sync (issue #181). The page switched to its content view as soon as the
+  Flathub object existed, long before the catalog arrived; it now stays on the
+  updating view, showing the current sync step, until there is something to
+  browse.
+- SpacedBazaar: search results show app names again instead of a bare ellipsis
+  and a verified checkmark (issue #181). The results grid was too narrow for
+  the rich tiles once desktop text scaling exceeded 100%.
+- Reduced idle session work: PulseAudio event bursts are coalesced into one
+  state save instead of three processes per event, and Flatpak remote
+  registration backs off instead of polling every two seconds for three
+  minutes on a machine that is simply offline.
+
 ## 8.26.9 - 2026-08-27
 - Unified the Calamares installer surface with the charcoal field behind the
   silver Spaced emblem, eliminating the visible square around the logo.

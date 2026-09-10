@@ -1,5 +1,11 @@
 #!/usr/bin/python3
-"""Small, distribution-owned replacement for MATE's generic About dialog."""
+"""About Spaced Linux: the release you are on, the logo, and where to help.
+
+Issue #181 asked for this dialog to stay deliberately basic. The release
+version, the fancy medallion, spacedlinux.com and the donation page are the
+only things shown by default. Hardware details stay behind a collapsed
+expander so a bug report can still quote them without cluttering the window.
+"""
 
 import html
 import os
@@ -14,17 +20,26 @@ gi.require_version("GdkPixbuf", "2.0")
 gi.require_version("Pango", "1.0")
 from gi.repository import Gdk, GdkPixbuf, GLib, Gtk, Pango  # noqa: E402
 
+WEBSITE_URL = "https://spacedlinux.com/"
+DONATE_URL = "https://spacedlinux.com/#donate"
+DISCORD_URL = "https://discord.gg/BMW9Y6NB3y"
+TELEGRAM_URL = "https://t.me/+pjmFzHo-i9A2ZWY5"
+
 
 def os_release():
     values = {}
-    try:
-        for line in Path("/etc/os-release").read_text(encoding="utf-8").splitlines():
+    for candidate in (Path("/etc/os-release"), Path("/usr/lib/os-release")):
+        try:
+            text = candidate.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        for line in text.splitlines():
             if "=" not in line:
                 continue
             key, value = line.split("=", 1)
-            values[key] = value.strip().strip('"')
-    except OSError:
-        pass
+            values.setdefault(key, value.strip().strip('"'))
+        if values:
+            break
     return values
 
 
@@ -53,22 +68,25 @@ class SystemInfo(Gtk.Window):
     def __init__(self):
         super().__init__(title="About Spaced Linux")
         self.set_icon_name("spaced-linux")
-        self.set_default_size(580, 470)
+        self.set_default_size(520, 480)
         self.set_resizable(False)
         self.set_position(Gtk.WindowPosition.CENTER)
         self.set_border_width(28)
 
         release = os_release()
-        name = release.get("PRETTY_NAME", "Spaced Linux")
+        # VERSION_ID is the release the running system reports. Never invent a
+        # version: an unbranded base image should say so rather than lie.
+        version = release.get("VERSION_ID") or release.get("VERSION") or ""
+        name = release.get("NAME", "Spaced Linux")
 
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=14)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         self.add(box)
 
         logo_path = os.environ.get(
             "SPACED_SYSTEM_INFO_LOGO", "/usr/share/pixmaps/spaced-medallion.png"
         )
         try:
-            pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(logo_path, 112, 112, True)
+            pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(logo_path, 176, 176, True)
             logo = Gtk.Image.new_from_pixbuf(pixbuf)
         except GLib.Error:
             logo = Gtk.Image.new_from_icon_name("spaced-linux", Gtk.IconSize.DIALOG)
@@ -78,15 +96,55 @@ class SystemInfo(Gtk.Window):
         title.set_markup(f'<span size="xx-large" weight="bold">{html.escape(name)}</span>')
         box.pack_start(title, False, False, 0)
 
-        subtitle = Gtk.Label(label="A polished, systemd-free desktop powered by Devuan, MATE, and Compiz.")
+        version_label = Gtk.Label()
+        version_text = f"Version {version}" if version else "Version unknown"
+        version_label.set_markup(
+            f'<span size="large">{html.escape(version_text)}</span>'
+        )
+        version_label.set_selectable(True)
+        box.pack_start(version_label, False, False, 0)
+
+        subtitle = Gtk.Label(
+            label="A polished, systemd-free desktop powered by Devuan, MATE, and Compiz."
+        )
         subtitle.set_line_wrap(True)
         subtitle.set_justify(Gtk.Justification.CENTER)
+        subtitle.get_style_context().add_class("dim-label")
         box.pack_start(subtitle, False, False, 0)
 
-        details = Gtk.Grid(column_spacing=24, row_spacing=9)
+        links = Gtk.Box(spacing=10)
+        links.set_halign(Gtk.Align.CENTER)
+        links.pack_start(
+            Gtk.LinkButton.new_with_label(WEBSITE_URL, "SpacedLinux.com"), False, False, 0)
+        donate = Gtk.LinkButton.new_with_label(DONATE_URL, "Donate")
+        donate.set_tooltip_text("Support Spaced Linux development")
+        links.pack_start(donate, False, False, 0)
+        box.pack_start(links, False, False, 4)
+
+        community = Gtk.Box(spacing=14)
+        community.set_halign(Gtk.Align.CENTER)
+        community.pack_start(Gtk.LinkButton.new_with_label(
+            DISCORD_URL, "Discord"), False, False, 0)
+        community.pack_start(Gtk.LinkButton.new_with_label(
+            TELEGRAM_URL, "Telegram"), False, False, 0)
+        box.pack_start(community, False, False, 0)
+
+        box.pack_start(self.build_details(release), False, False, 4)
+
+        close = Gtk.Button.new_with_label("Close")
+        close.get_style_context().add_class("suggested-action")
+        close.set_halign(Gtk.Align.CENTER)
+        close.connect("clicked", lambda _button: self.close())
+        box.pack_end(close, False, False, 0)
+
+    def build_details(self, release):
+        """Collapsed hardware summary, kept for pasting into bug reports."""
+        expander = Gtk.Expander(label="System details")
+        expander.set_halign(Gtk.Align.CENTER)
+        details = Gtk.Grid(column_spacing=20, row_spacing=6, margin_top=10)
         details.set_halign(Gtk.Align.CENTER)
         rows = (
-            ("Operating system", name),
+            ("Operating system", release.get("PRETTY_NAME", "Spaced Linux")),
             ("Desktop", os.environ.get("XDG_CURRENT_DESKTOP", "MATE")),
             ("Kernel", platform.release()),
             ("Architecture", platform.machine()),
@@ -101,30 +159,11 @@ class SystemInfo(Gtk.Window):
             val.set_halign(Gtk.Align.START)
             val.set_selectable(True)
             val.set_ellipsize(Pango.EllipsizeMode.END)
-            val.set_max_width_chars(48)
+            val.set_max_width_chars(40)
             details.attach(key, 0, row, 1, 1)
             details.attach(val, 1, row, 1, 1)
-        box.pack_start(details, True, True, 6)
-
-        actions = Gtk.Box(spacing=10)
-        actions.set_halign(Gtk.Align.CENTER)
-        website = Gtk.LinkButton.new_with_label("https://spacedlinux.com/", "SpacedLinux.com")
-        help_link = Gtk.LinkButton.new_with_label("https://spacedlinux.com/#help", "Help & tutorials")
-        close = Gtk.Button.new_with_label("Close")
-        close.get_style_context().add_class("suggested-action")
-        close.connect("clicked", lambda _button: self.close())
-        actions.pack_start(website, False, False, 0)
-        actions.pack_start(help_link, False, False, 0)
-        actions.pack_start(close, False, False, 0)
-        box.pack_end(actions, False, False, 0)
-
-        community = Gtk.Box(spacing=16)
-        community.set_halign(Gtk.Align.CENTER)
-        community.pack_start(Gtk.LinkButton.new_with_label(
-            "https://discord.gg/BMW9Y6NB3y", "Discord community"), False, False, 0)
-        community.pack_start(Gtk.LinkButton.new_with_label(
-            "https://t.me/+pjmFzHo-i9A2ZWY5", "Telegram community"), False, False, 0)
-        box.pack_end(community, False, False, 0)
+        expander.add(details)
+        return expander
 
 
 if __name__ == "__main__":

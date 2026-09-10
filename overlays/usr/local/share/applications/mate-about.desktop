@@ -1,8 +1,8 @@
 [Desktop Entry]
 Type=Application
 Name=About Spaced Linux
-Comment=Open Spaced Welcome help and tutorials
-Exec=spaced-welcome --page help
+Comment=Show the Spaced Linux release, logo, website, and donation links
+Exec=spaced-system-info
 Icon=/usr/share/pixmaps/spaced-medallion.png
 Terminal=false
 Categories=System;

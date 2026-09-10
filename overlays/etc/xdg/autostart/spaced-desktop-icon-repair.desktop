@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Spaced Linux Desktop Icon Repair
+Comment=Bring desktop icons saved outside the current monitors back into view
+Exec=/usr/local/bin/spaced-desktop-icon-repair --watch
+OnlyShowIn=MATE;
+NoDisplay=true
+X-MATE-Autostart-Phase=Applications
+X-MATE-Autostart-Delay=4

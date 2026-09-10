@@ -4,7 +4,7 @@
   </a>
 </p>
 
-<h1 align="center">Spaced Linux 9.26</h1>
+<h1 align="center">Spaced Linux 9.26.1</h1>
 
 <p align="center"><strong>Spaced. Polished. Agile. Compiz. Efficient. Devuan.</strong></p>
 
@@ -27,7 +27,7 @@
 
 <p align="center">
   <a href="https://github.com/crhy/spaced/releases/tag/v9.26"><strong>Download Spaced Linux 9.26</strong></a> ·
-  <a href="docs/9.26-ISSUE-STATUS.md"><strong>9.26 release status</strong></a>
+  <a href="docs/9.26.1-ISSUE-STATUS.md"><strong>9.26.1 release status</strong></a>
 </p>
 
 <p align="center">
@@ -150,7 +150,9 @@ Spaced Linux combines a modern system with visual ideas from the best desktop er
 
 ## Download Spaced Linux
 
-The current production release is **Spaced Linux 9.26**. Download the ISO and matching checksum from the [Spaced Linux releases page](https://github.com/crhy/spaced/releases/tag/v9.26). See the [9.26 issue audit](docs/9.26-ISSUE-STATUS.md) for release validation details.
+The current published release is **Spaced Linux 9.26**. Download the ISO and matching checksum from the [Spaced Linux releases page](https://github.com/crhy/spaced/releases/tag/v9.26).
+
+**Spaced Linux 9.26.1** is the maintenance release in preparation. Its source changes are described in the [9.26.1 issue audit](docs/9.26.1-ISSUE-STATUS.md); the download links above move to 9.26.1 only once that ISO and its checksum are published and verified.
 
 Download the ISO and its matching checksum from the same release.
 

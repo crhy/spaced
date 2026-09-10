@@ -57,7 +57,9 @@ stage_desktop_defaults() {
         etc/profile.d/spaced-xdg-runtime.sh \
         etc/profile.d/spaced-xdg-user-dirs.sh \
         etc/skel \
+        etc/brave/policies/managed/spaced-extensions.json \
         etc/xdg/autostart/spaced-audio-restore.desktop \
+        etc/xdg/autostart/spaced-desktop-icon-repair.desktop \
         etc/xdg/autostart/spaced-display-repair.desktop \
         etc/xdg/autostart/spaced-enable-flatpak-remotes.desktop \
         etc/xdg/autostart/spaced-first-login-repair.desktop \
@@ -68,6 +70,7 @@ stage_desktop_defaults() {
         usr/local/bin \
         usr/local/sbin \
         usr/local/share/applications/mate-about.desktop \
+        usr/local/share/applications/spaced-help.desktop \
         usr/share/applications/mimeapps.list \
         usr/share/applications/spaced-nvidia-installer.desktop \
         usr/share/applications/spaced-update.desktop \

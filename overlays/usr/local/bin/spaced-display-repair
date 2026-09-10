@@ -1,5 +1,7 @@
 #!/bin/bash
-# Disable driver-side TV underscan after login/unlock.
+# Keep the X server's own display power state consistent with MATE's policy,
+# and disable driver-side TV underscan, after login and after unlock.
+#
 # MATE's settings daemon alone owns modes, refresh rates, positions, rotation,
 # transforms and panning. Replaying a snapshot here races Monitor Preferences
 # and can undo a newly saved multi-monitor or 4K configuration.
@@ -30,16 +32,79 @@ repair_outputs() {
     ')
 }
 
+# Issue #178: choosing "Never" for display sleep did not keep the monitors on.
+# MATE writes 0 for Never and then simply stops programming a timeout, which
+# leaves the X server's *own* defaults in force: DPMS still powers the outputs
+# down and the built-in screen saver still blanks them after ten minutes. Only
+# turning both off in the X server actually honours the user's choice.
+on_battery() {
+    local supply type online
+    for supply in /sys/class/power_supply/*; do
+        [ -r "$supply/type" ] || continue
+        IFS= read -r type < "$supply/type" || continue
+        [ "$type" = Mains ] || continue
+        [ -r "$supply/online" ] || continue
+        IFS= read -r online < "$supply/online" || continue
+        [ "$online" = 0 ] && return 0
+        return 1
+    done
+    # No mains supply is reported: treat the machine as a desktop on AC.
+    return 1
+}
+
+display_sleep_timeout() {
+    local key=sleep-display-ac
+    on_battery && key=sleep-display-battery
+    gsettings get org.mate.power-manager "$key" 2>/dev/null |
+        awk '{gsub(/[^0-9-]/, "", $NF); print $NF + 0; exit}'
+}
+
+apply_power_policy() {
+    local timeout
+    gsettings list-schemas 2>/dev/null | grep -qx org.mate.power-manager || return 0
+    timeout=$(display_sleep_timeout)
+    [ -n "$timeout" ] || return 0
+    if [ "$timeout" -le 0 ]; then
+        # Never: no blanking, no DPMS, no matter what X defaulted to.
+        xset -dpms 2>/dev/null || true
+        xset s off 2>/dev/null || true
+        xset s noblank 2>/dev/null || true
+    else
+        # A real timeout was chosen. Hand DPMS back to mate-power-manager
+        # rather than programming a competing timeout here.
+        xset +dpms 2>/dev/null || true
+    fi
+}
+
 [ -n "${DISPLAY:-}" ] || exit 0
 command -v xrandr >/dev/null 2>&1 || exit 0
 repair_outputs
+command -v xset >/dev/null 2>&1 && apply_power_policy
 
 [ "${1:-}" = --watch ] || exit 0
+
+# Re-apply whenever the user changes the power policy, so "Never" takes effect
+# immediately instead of at the next login.
+policy_watchers=()
+if command -v gsettings >/dev/null 2>&1 && command -v xset >/dev/null 2>&1 \
+    && gsettings list-schemas 2>/dev/null | grep -qx org.mate.power-manager; then
+    for key in sleep-display-ac sleep-display-battery; do
+        while IFS= read -r _; do
+            apply_power_policy
+        done < <(gsettings monitor org.mate.power-manager "$key" 2>/dev/null) &
+        policy_watchers+=("$!")
+    done
+    trap 'kill "${policy_watchers[@]}" 2>/dev/null || true' EXIT
+fi
+
 command -v gdbus >/dev/null 2>&1 || exit 0
 gdbus monitor --session --dest org.mate.ScreenSaver \
     --object-path /org/mate/ScreenSaver 2>/dev/null |
 while IFS= read -r event; do
     case "$event" in
-        *'ActiveChanged (false,'*) repair_outputs ;;
+        *'ActiveChanged (false,'*)
+            repair_outputs
+            command -v xset >/dev/null 2>&1 && apply_power_policy
+            ;;
     esac
 done

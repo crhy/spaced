@@ -1,0 +1,194 @@
+#!/usr/bin/python3
+"""Return desktop icons that are stored outside every monitor.
+
+Caja remembers an explicit position for each desktop icon. When a display is
+removed, or a multi-monitor layout is rearranged, positions saved against the
+old geometry can land beyond the visible area: the icon still exists and Caja
+still draws it, just nowhere the user can see. Issue #184 reported Gigolo's
+network shares vanishing from the desktop, and issue #180 recorded the same
+icons reappearing the moment a fifth monitor extended the desktop far enough
+to cover their saved coordinates.
+
+Clearing only the unreachable positions makes Caja auto-place those icons on
+the next desktop refresh. Positions that are still on screen are never
+touched, so a deliberately arranged desktop survives.
+"""
+
+import configparser
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+# Caja lays desktop icons out on a grid; allow a cell's worth of slack so an
+# icon that is merely clipped at a screen edge is left where the user put it.
+ICON_SLACK = 128
+POSITION_KEY = "caja-icon-position"
+METADATA_ATTRIBUTE = f"metadata::{POSITION_KEY}"
+MODE_PATTERN = re.compile(r"\b(\d+)x(\d+)\+(-?\d+)\+(-?\d+)\b")
+
+
+def run(command):
+    try:
+        result = subprocess.run(
+            command, capture_output=True, text=True, timeout=20, check=False)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return result.stdout if result.returncode == 0 else None
+
+
+def screen_rectangles():
+    """Active CRTC rectangles, as (x, y, width, height)."""
+    output = run(["xrandr", "--query"])
+    if not output:
+        return []
+    rectangles = []
+    for line in output.splitlines():
+        if line[:1].isspace() or " connected" not in line:
+            continue
+        match = MODE_PATTERN.search(line)
+        if match:
+            width, height, x, y = (int(value) for value in match.groups())
+            if width > 0 and height > 0:
+                rectangles.append((x, y, width, height))
+    return rectangles
+
+
+def reachable(position, rectangles):
+    """True when a stored icon position still falls on a connected screen."""
+    try:
+        x_text, y_text = position.split(",", 1)
+        x, y = int(x_text.strip()), int(y_text.strip())
+    except (AttributeError, ValueError):
+        # An unparseable position cannot be validated; leave it alone.
+        return True
+    for left, top, width, height in rectangles:
+        if (left - ICON_SLACK <= x < left + width
+                and top - ICON_SLACK <= y < top + height):
+            return True
+    return False
+
+
+def repair_file_icons(desktop, rectangles):
+    """Clear stranded positions Caja stored in gvfs metadata for real files."""
+    repaired = []
+    if not shutil.which("gio") or not desktop.is_dir():
+        return repaired
+    for entry in sorted(desktop.iterdir()):
+        info = run(["gio", "info", "-a", METADATA_ATTRIBUTE, str(entry)])
+        if not info:
+            continue
+        position = None
+        prefix = f"{METADATA_ATTRIBUTE}:"
+        for line in info.splitlines():
+            stripped = line.strip()
+            # The attribute name itself contains "::", so trim the known
+            # prefix rather than splitting on the first colon.
+            if stripped.startswith(prefix):
+                position = stripped[len(prefix):].strip()
+                break
+        if position is None or reachable(position, rectangles):
+            continue
+        if run(["gio", "set", "-t", "unset", str(entry), METADATA_ATTRIBUTE]) is not None:
+            repaired.append(entry.name)
+    return repaired
+
+
+def repair_desktop_metadata(path, rectangles):
+    """Clear stranded positions for volumes, trash, and other non-file items."""
+    if not path.is_file():
+        return []
+    parser = configparser.ConfigParser(interpolation=None, strict=False)
+    parser.optionxform = str
+    try:
+        parser.read_string(path.read_text(encoding="utf-8", errors="replace"))
+    except configparser.Error:
+        return []
+    repaired = []
+    for section in parser.sections():
+        position = parser[section].get(POSITION_KEY)
+        if position is None or reachable(position, rectangles):
+            continue
+        parser.remove_option(section, POSITION_KEY)
+        repaired.append(section)
+    if not repaired:
+        return []
+    handle, temporary = tempfile.mkstemp(prefix="." + path.name + ".", dir=path.parent)
+    try:
+        with os.fdopen(handle, "w", encoding="utf-8") as stream:
+            parser.write(stream, space_around_delimiters=False)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+    return repaired
+
+
+def watch():
+    """Repair again whenever the monitor layout changes, with no polling."""
+    import gi
+
+    gi.require_version("Gdk", "3.0")
+    from gi.repository import Gdk, GLib
+
+    display = Gdk.Display.get_default()
+    if display is None:
+        return repair_once()
+    screen = display.get_default_screen()
+    loop = GLib.MainLoop()
+    pending = 0
+
+    def settle():
+        nonlocal pending
+        pending = 0
+        repair_once()
+        return GLib.SOURCE_REMOVE
+
+    def changed(*_args):
+        # Rearranging monitors emits a burst of events. Coalesce them so the
+        # repair runs once, after the new layout has settled.
+        nonlocal pending
+        if pending:
+            GLib.source_remove(pending)
+        pending = GLib.timeout_add_seconds(3, settle)
+
+    screen.connect("size-changed", changed)
+    screen.connect("monitors-changed", changed)
+    repair_once()
+    loop.run()
+    return 0
+
+
+def repair_once():
+    rectangles = screen_rectangles()
+    if not rectangles:
+        # Without a trustworthy layout, doing nothing is the safe choice.
+        return 0
+    config = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
+    desktop = Path(os.environ.get("XDG_DESKTOP_DIR", Path.home() / "Desktop"))
+    repaired = repair_file_icons(desktop, rectangles)
+    repaired += repair_desktop_metadata(config / "caja" / "desktop-metadata", rectangles)
+    if repaired:
+        print("Re-placed desktop icons stored off screen: " + ", ".join(repaired))
+    return 0
+
+
+def main():
+    if not os.environ.get("DISPLAY"):
+        return 0
+    if "--watch" in sys.argv[1:]:
+        return watch()
+    return repair_once()
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except OSError as error:
+        print(f"Desktop icon repair skipped: {error}", file=sys.stderr)
+        sys.exit(0)

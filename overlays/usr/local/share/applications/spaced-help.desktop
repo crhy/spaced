@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Spaced Linux Help
+Comment=Open the offline Spaced Welcome help and tutorials
+Exec=spaced-welcome --page help
+Icon=/usr/share/pixmaps/spaced-medallion.png
+Terminal=false
+Categories=System;Documentation;
+OnlyShowIn=MATE;
+StartupNotify=true
