@@ -359,7 +359,7 @@ package_version = re.search(r"^Version: (.+)$", meta_control, re.M).group(1)
 assert package_version.split("-", 1)[0] == version, "Native package version does not match OS release"
 assert f"Version: {package_version}\n" in defaults_control
 assert f"spaced-mate-default-settings (= {package_version})" in meta_control \
-    and "spaced-welcome (>= 0.1.12)" in meta_control \
+    and "spaced-welcome (>= 0.1.13)" in meta_control \
     and "libfuse2t64" in meta_control, \
     "spaced-meta does not pull in the standalone Welcome package and desktop defaults"
 assert "spaced-welcome.desktop" not in package_builder \
@@ -376,7 +376,7 @@ def artifact_default(name):
     return match.group(1)
 
 assert artifact_default("SPACED_WELCOME_REPOSITORY") == "crhy/spacedwelcome"
-assert artifact_default("SPACED_WELCOME_VERSION") == "0.1.12"
+assert artifact_default("SPACED_WELCOME_VERSION") == "0.1.13"
 assert artifact_default("SPACED_GITHUB_REMOTE_NAME") == "spaced-github"
 assert artifact_default("SPACED_GITHUB_REMOTE_DESCRIPTOR_URL") == \
     "https://crhy.github.io/spacedbazaar/spaced-github.flatpakrepo"

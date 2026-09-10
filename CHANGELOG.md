@@ -1,5 +1,14 @@
 # Changelog
 
+## 9.26.1-4 - 2026-09-10
+- Stopped installing a second copy of Spaced Update. Spaced Linux ships it
+  natively and the menu entry runs that copy, but Welcome also offered the
+  Flatpak as a suggested application and SpacedBazaar featured it, so choosing
+  the suggested applications left two identically named launchers, one of
+  which never followed OS updates. Welcome 0.1.13 no longer suggests it and
+  the catalog no longer features it; the Flatpak stays published so anyone who
+  already installed it keeps a working update source.
+
 ## 9.26.1-3 - 2026-09-10
 - Corrected the Spaced Update version shown in the window and About dialog.
   9.26.1-2 shipped the corrected update-check logic but was built before the
