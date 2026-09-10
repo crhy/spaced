@@ -13,7 +13,6 @@ rows:
           - io.github.crhy.voice2textai
           - io.github.crhy.CardsWithCats
           - io.github.crhy.BrutalChess
-          - org.spacedlinux.SpacedUpdate
           - io.github.crhy.SpacedWelcome
   - section:
       title: "Create"

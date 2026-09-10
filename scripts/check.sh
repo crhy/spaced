@@ -424,8 +424,13 @@ assert bazaar_main["start-on-curated"] is True \
 bazaar_apps = bazaar_content["rows"][0]["section"]["appids"]["list"]
 assert {"io.github.crhy.SpacedBazaar", "io.github.crhy.voice2textai",
         "io.github.crhy.CardsWithCats", "io.github.crhy.BrutalChess",
-        "org.spacedlinux.SpacedUpdate", "io.github.crhy.SpacedWelcome"}.issubset(bazaar_apps), \
+        "io.github.crhy.SpacedWelcome"}.issubset(bazaar_apps), \
     "SpacedBazaar's CRHY catalog is incomplete"
+# Spaced Update is part of the operating system and its menu entry runs the
+# native copy. Featuring the Flatpak here invited a second, separately
+# versioned install that exported an identically named launcher.
+assert "org.spacedlinux.SpacedUpdate" not in bazaar_apps, \
+    "Spaced Update ships with the OS and must not be offered as a Flatpak to install"
 suggested_apps = {
     app_id
     for row in bazaar_content["rows"][1:]
