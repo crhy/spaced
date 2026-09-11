@@ -45,4 +45,13 @@ if [ -x /usr/bin/flatpak ]; then
     done
 fi
 
+# Core dumps land in one findable directory. Existing installations do not
+# re-run the live-image hooks, so create the directory and apply the pattern
+# here instead of waiting for the next boot. It is world-writable with the
+# sticky bit because the kernel writes each core as the crashing user.
+install -d -m 1777 /var/crash
+if [ -r /etc/sysctl.d/60-spaced-coredump.conf ] && command -v sysctl >/dev/null 2>&1; then
+    sysctl -q -p /etc/sysctl.d/60-spaced-coredump.conf >/dev/null 2>&1 || true
+fi
+
 exit 0

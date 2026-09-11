@@ -1,5 +1,33 @@
 # Changelog
 
+## 9.26.1-5 - 2026-09-10
+- Fixed "Never" not keeping the screen on (issue #189). The Power Management
+  choice was always honoured by mate-power-manager, which never blanks without
+  a timeout, but mate-screensaver activates on its own schedule -- MATE's
+  session idle-delay, five minutes by default -- and blanked and locked the
+  screen regardless. No control in Power Preferences can reach that setting,
+  so "Never" had never meant never in any Spaced release. Choosing Never now
+  also suspends screensaver idle activation, and choosing a real timeout again
+  puts the user's own screensaver choice back. A screensaver the user had
+  already switched off is never switched back on.
+- Kept window decorations for the whole session. The decorator is supervised
+  by spaced-window-decorator, but only Compiz's stored decoration command
+  started it, and Compiz reads that command once at startup. On the first
+  login after an upgrade that sets it, Compiz had already launched a bare,
+  unsupervised gtk-window-decorator; when that crashed, the session ran with
+  no titlebars or borders until the next login. An autostart entry now starts
+  the supervisor as well, and its existing lock keeps the two from racing.
+- Collected crash dumps. An elogind poweroff helper segfaulted on 9.26.1 and
+  left nothing behind but one kernel line, because the default core limit is
+  zero. Cores are now written to /var/crash, capped at 512 MB so they cannot
+  fill the disk, and pruned after a week.
+- Corrected the Spaced Update release comparison across the turn of the year.
+  Release lines are named month.year, so the line after 12.26 is 1.27, but the
+  version numbers were compared as written -- which ranks 12.26 above every
+  2027 release. From December the OS tab would have reported a year-old system
+  as current and stopped offering the upgrade. Versions are now compared in
+  calendar order.
+
 ## 9.26.1-4 - 2026-09-10
 - Stopped installing a second copy of Spaced Update. Spaced Linux ships it
   natively and the menu entry runs that copy, but Welcome also offered the

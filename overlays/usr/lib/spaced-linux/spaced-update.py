@@ -162,8 +162,18 @@ expander > title {
 
 
 def version_key(version):
-    numbers = re.findall(r"\d+", version or "0")
-    return tuple(int(number) for number in numbers[:4])
+    # Release lines are named month.year: 9.26 is September 2026, and because
+    # the month wraps the line after 12.26 is 1.27, not 13.26. The number
+    # before the dot is therefore a calendar month and never a major version.
+    # Ordering the numbers as written ranks 12.26 above every 2027 release, so
+    # the check would call a year-old system current and stop offering the
+    # upgrade. Compare in calendar order instead: year, then month, then the
+    # patch and revision components.
+    numbers = [int(number) for number in re.findall(r"\d+", version or "0")[:4]]
+    if len(numbers) < 2:
+        return (0, 0, *numbers)
+    month, year, *patch = numbers
+    return (year, month, *patch)
 
 
 def read_installed_version():

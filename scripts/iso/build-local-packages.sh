@@ -48,6 +48,7 @@ stage_desktop_defaults() {
         etc/apt/preferences.d \
         etc/apt/sources.list.d/spaced-apt.list \
         etc/bazaar \
+        etc/cron.daily/spaced-prune-crashes \
         etc/default/spaced-first-boot-snapshot \
         etc/fastfetch \
         etc/init.d/spaced-first-boot-snapshot \
@@ -56,7 +57,9 @@ stage_desktop_defaults() {
         etc/profile.d/spaced-flatpak-exports.sh \
         etc/profile.d/spaced-xdg-runtime.sh \
         etc/profile.d/spaced-xdg-user-dirs.sh \
+        etc/security/limits.d/60-spaced-coredump.conf \
         etc/skel \
+        etc/sysctl.d/60-spaced-coredump.conf \
         etc/brave/policies/managed/spaced-extensions.json \
         etc/xdg/autostart/spaced-audio-restore.desktop \
         etc/xdg/autostart/spaced-desktop-icon-repair.desktop \
@@ -65,6 +68,7 @@ stage_desktop_defaults() {
         etc/xdg/autostart/spaced-first-login-repair.desktop \
         etc/xdg/autostart/spaced-nvidia-postboot.desktop \
         etc/xdg/autostart/spaced-theme-monitor.desktop \
+        etc/xdg/autostart/spaced-window-decorator.desktop \
         etc/xdg/QtProject/qtquickcontrols2.conf \
         usr/lib/spaced-linux \
         usr/local/bin \
