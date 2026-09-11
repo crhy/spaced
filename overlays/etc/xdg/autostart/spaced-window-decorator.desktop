@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Spaced Window Decorator
+Comment=Keep window titlebars and borders present for the whole session
+Exec=/usr/local/bin/spaced-window-decorator
+OnlyShowIn=MATE;
+NoDisplay=true
+X-MATE-Autostart-Delay=2

@@ -898,6 +898,28 @@ assert "ActiveChanged (false," in display_repair and not re.search(r"^\s*xset\s+
 assert "pactl subscribe" in audio_restore and "set-sink-mute" in audio_restore \
     and "set-sink-volume" in audio_restore, \
     "audio state is not restored and persisted for reappearing sinks"
+assert "org.mate.screensaver" in display_repair \
+    and "idle-activation-enabled" in display_repair, \
+    "\"Never\" still leaves mate-screensaver free to blank the screen (issue #189)"
+assert "suspend_screensaver_idle" in display_repair \
+    and "restore_screensaver_idle" in display_repair, \
+    "the screensaver override is one-way and cannot give the user's choice back"
+decorator_autostart = (root / "etc/xdg/autostart/spaced-window-decorator.desktop").read_text(encoding="utf-8")
+assert "Exec=/usr/local/bin/spaced-window-decorator" in decorator_autostart, \
+    "the decorator supervisor depends solely on Compiz's stored decoration command"
+coredump_sysctl = (root / "etc/sysctl.d/60-spaced-coredump.conf").read_text(encoding="utf-8")
+coredump_limits = (root / "etc/security/limits.d/60-spaced-coredump.conf").read_text(encoding="utf-8")
+assert "kernel.core_pattern" in coredump_sysctl and "/var/crash/" in coredump_sysctl, \
+    "a desktop crash still leaves no core behind to diagnose"
+assert "unlimited" not in coredump_limits and re.search(r"core\s+\d+", coredump_limits), \
+    "core dumps are unbounded and can fill the disk"
+assert (root / "etc/cron.daily/spaced-prune-crashes").exists(), \
+    "collected core dumps are never pruned"
+assert "etc/xdg/autostart/spaced-window-decorator.desktop" in local_package_builder \
+    and "etc/sysctl.d/60-spaced-coredump.conf" in local_package_builder \
+    and "etc/security/limits.d/60-spaced-coredump.conf" in local_package_builder \
+    and "etc/cron.daily/spaced-prune-crashes" in local_package_builder, \
+    "installed systems never receive the decorator autostart or crash-dump collection"
 finished = yaml.safe_load((root / "etc/calamares/modules/finished.conf").read_text(encoding="utf-8"))
 assert finished["restartNowCommand"] == "/sbin/reboot", \
     "Calamares uses a PATH-dependent reboot command"

@@ -203,6 +203,75 @@ HDMI-2 disconnected (normal left inverted right x axis y axis)
         self.assertEqual((self.state / 'power-writes').read_text().splitlines(),
                          ['-dpms', 's off', 's noblank'])
 
+    def fake_desktop_settings(self, timeout, screensaver=None):
+        """MATE's power schema, and optionally the screensaver schema too."""
+        schemas = ['org.mate.power-manager']
+        if screensaver is not None:
+            schemas.append('org.mate.screensaver')
+        self.command('gsettings',
+                     'case "$1" in\n'
+                     '  list-schemas) printf "%s\\n" ' + ' '.join(schemas) + ' ;;\n'
+                     '  get)\n'
+                     '    case "$2" in\n'
+                     '      org.mate.screensaver) cat "$TEST_STATE/screensaver-value" ;;\n'
+                     f'      *) echo "uint32 {timeout}" ;;\n'
+                     '    esac ;;\n'
+                     '  set)\n'
+                     '    printf "%s %s %s\\n" "$2" "$3" "$4" >> "$TEST_STATE/settings-writes"\n'
+                     '    printf "%s\\n" "$4" > "$TEST_STATE/screensaver-value" ;;\n'
+                     'esac')
+        if screensaver is not None:
+            (self.state / 'screensaver-value').write_text(f'{screensaver}\n')
+
+    def stub_display(self):
+        (self.state / 'xrandr').write_text('Screen 0: current 1920 x 1080\n'
+                                           'DP-0 connected primary 1920x1080+0+0\n')
+        self.command('xrandr', 'if [ "$*" = --prop ]; then cat "$TEST_STATE/xrandr"; else exit 0; fi')
+        self.command('xset', 'exit 0')
+
+    def settings_writes(self):
+        path = self.state / 'settings-writes'
+        return path.read_text().splitlines() if path.exists() else []
+
+    def test_never_also_stops_the_screensaver_from_blanking(self):
+        # Issue #189: "Never" was honoured by mate-power-manager, which simply
+        # never blanks without a timeout, but mate-screensaver activates on
+        # org.mate.session's own idle-delay -- five minutes by default -- and
+        # blanked the screen anyway. Power Preferences cannot reach that key,
+        # so Never has to suppress it here or it does not mean never.
+        self.stub_display()
+        self.fake_desktop_settings('0', screensaver='true')
+        self.assertEqual(self.run_helper('spaced-display-repair').returncode, 0)
+        self.assertEqual(self.settings_writes(),
+                         ['org.mate.screensaver idle-activation-enabled false'])
+
+    def test_choosing_a_timeout_restores_the_user_screensaver_choice(self):
+        self.stub_display()
+        self.fake_desktop_settings('0', screensaver='true')
+        self.assertEqual(self.run_helper('spaced-display-repair').returncode, 0)
+        # The same session now picks a real timeout again.
+        self.fake_desktop_settings('1800', screensaver='false')
+        self.assertEqual(self.run_helper('spaced-display-repair').returncode, 0)
+        self.assertEqual(self.settings_writes(), [
+            'org.mate.screensaver idle-activation-enabled false',
+            'org.mate.screensaver idle-activation-enabled true'])
+
+    def test_a_screensaver_the_user_switched_off_is_never_switched_back_on(self):
+        # Nothing was suspended, so there is nothing to restore. Turning the
+        # screensaver on here would enable a lock the user had disabled.
+        self.stub_display()
+        self.fake_desktop_settings('0', screensaver='false')
+        self.assertEqual(self.run_helper('spaced-display-repair').returncode, 0)
+        self.fake_desktop_settings('1800', screensaver='false')
+        self.assertEqual(self.run_helper('spaced-display-repair').returncode, 0)
+        self.assertEqual(self.settings_writes(), [])
+
+    def test_a_desktop_without_the_screensaver_schema_is_left_alone(self):
+        self.stub_display()
+        self.fake_desktop_settings('0')
+        self.assertEqual(self.run_helper('spaced-display-repair').returncode, 0)
+        self.assertEqual(self.settings_writes(), [])
+
     def test_audio_state_is_saved_once_per_burst_of_events(self):
         # Dragging the volume slider emits a stream of sink events. Saving on
         # each one spawned three pactl processes per event; the helper now
