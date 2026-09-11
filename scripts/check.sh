@@ -915,6 +915,8 @@ assert "unlimited" not in coredump_limits and re.search(r"core\s+\d+", coredump_
     "core dumps are unbounded and can fill the disk"
 assert (root / "etc/cron.daily/spaced-prune-crashes").exists(), \
     "collected core dumps are never pruned"
+assert "/etc/default/rcS" in defaults_postinst and "ulimit -c" in defaults_postinst, \
+    "daemons started by sysvinit never get a core limit, so elogind still cannot be diagnosed"
 assert "etc/xdg/autostart/spaced-window-decorator.desktop" in local_package_builder \
     and "etc/sysctl.d/60-spaced-coredump.conf" in local_package_builder \
     and "etc/security/limits.d/60-spaced-coredump.conf" in local_package_builder \

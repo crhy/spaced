@@ -1,5 +1,16 @@
 # Changelog
 
+## 9.26.1-6 - 2026-09-10
+- Made crash-dump collection actually reach daemons. 9.26.1-5 raised the core
+  limit through /etc/security/limits.d, which PAM applies to login sessions
+  only. sysvinit starts services from /etc/init.d/rc without PAM, so every
+  daemon kept the default limit of 0 -- including elogind, whose poweroff
+  helper is the crash that prompted the change (issue #198). The limit is now
+  also set in /etc/default/rcS, which /etc/init.d/rc sources before it runs
+  any service script. Note that rc is #!/bin/sh and dash counts ulimit -c in
+  512-byte blocks rather than bash's 1024, so the value differs from the PAM
+  one while granting the same 512 MB.
+
 ## 9.26.1-5 - 2026-09-10
 - Fixed "Never" not keeping the screen on (issue #189). The Power Management
   choice was always honoured by mate-power-manager, which never blanks without
