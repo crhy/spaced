@@ -45,4 +45,32 @@ if [ -x /usr/bin/flatpak ]; then
     done
 fi
 
+# Core dumps land in one findable directory. Existing installations do not
+# re-run the live-image hooks, so create the directory and apply the pattern
+# here instead of waiting for the next boot. It is world-writable with the
+# sticky bit because the kernel writes each core as the crashing user.
+install -d -m 1777 /var/crash
+if [ -r /etc/sysctl.d/60-spaced-coredump.conf ] && command -v sysctl >/dev/null 2>&1; then
+    sysctl -q -p /etc/sysctl.d/60-spaced-coredump.conf >/dev/null 2>&1 || true
+fi
+
+# PAM applies /etc/security/limits.d to login sessions only. sysvinit starts
+# services from /etc/init.d/rc, which never goes through PAM, so every daemon
+# keeps the default core limit of 0 -- including elogind, whose poweroff
+# helper is the crash we cannot currently diagnose. /etc/init.d/rc sources
+# /etc/default/rcS before it runs any service script, which is the one lever
+# that reaches all of them. It is an initscripts conffile, so dpkg prompts on
+# an initscripts upgrade rather than silently reverting this.
+#
+# rc is #!/bin/sh, and dash counts ulimit -c in 512-byte blocks (bash uses
+# 1024), so 1048576 blocks is the same 512 MB the PAM limit grants.
+if [ -f /etc/default/rcS ] && ! grep -q '^ulimit -c ' /etc/default/rcS; then
+    cat >> /etc/default/rcS <<'SPACED_CORE_LIMIT'
+
+# Added by spaced-mate-default-settings: allow a bounded core dump from
+# daemons, which sysvinit starts without PAM. 512-byte blocks under dash.
+ulimit -c 1048576
+SPACED_CORE_LIMIT
+fi
+
 exit 0
