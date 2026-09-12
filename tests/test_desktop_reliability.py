@@ -124,7 +124,9 @@ class SessionTests(unittest.TestCase):
         self.state = Path(self.temp.name)
         self.fakebin = self.state / 'bin'
         self.fakebin.mkdir()
-        self.env = dict(os.environ, HOME=str(self.state), XDG_RUNTIME_DIR=str(self.state),
+        self.env = dict(os.environ, HOME=str(self.state),
+                        XDG_CONFIG_HOME=str(self.state / '.config'),
+                        XDG_RUNTIME_DIR=str(self.state),
                         DISPLAY=':spaced-test', TEST_STATE=str(self.state),
                         PATH=str(self.fakebin) + os.pathsep + os.environ['PATH'])
         self.command('logger', 'exit 0')
