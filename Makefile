@@ -69,6 +69,7 @@ cache-clean: ## Remove cached live-build packages and bootstrap data
 	$(ROOT_RUN) rm -rf "$(abspath $(CACHE_DIR))" "$(abspath $(EXTERNAL_CACHE_DIR))"
 
 marco: ## Build the upstream Marco fixes in an isolated Devuan chroot
+	mkdir -p $(BUILD_DIR)
 	if ! $(HOST_RUN) scripts/iso/stage-marco.sh --check; then
 		$(ROOT_RUN) bash "$(abspath scripts/iso/build-marco-chroot.sh)"
 	fi
