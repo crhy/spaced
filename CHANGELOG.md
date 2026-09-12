@@ -5,6 +5,13 @@
   identity triggers after the APT transaction, then rereading `/etc/os-release`
   whenever Spaced Update checks the published release. The update is delivered
   through Spaced Update; no new ISO is required.
+- Fix issue #213: switching themes again moves the panel back to the bottom and
+  closes Cairo-dock. The dock no longer inherits the theme-switch lock.
+- Replace the Brave bookmark bar for new profiles with SpacedLinux,
+  OpenAirShips, rhYciv, Cards and Devuan (issue #211).
+- Use the Spaced medallion as the default About Me picture (issue #212).
+- SpacedBazaar 0.1.12 (issue #195) is delivered separately through its Flatpak
+  origin.
 
 ## 9.26.2 - 2026-09-12
 - Preserve the selected audio output across sessions and flush the saved choice
@@ -20,8 +27,8 @@
 - Repair unreachable Caja icon positions in a completed startup phase before
   Caja loads its cached virtual mount positions, while retaining the monitor
   watcher for later layout changes.
-- Update Welcome to 0.1.14 and SpacedBazaar to 0.1.12. Bazaar now shows phase
-  progress during catalog sync and never exposes an empty Explore page.
+- Update Welcome to 0.1.14 and prepare SpacedBazaar 0.1.11 so suggested apps and
+  startup synchronization match the 9.26.2 desktop.
 - Add focused regression tests and troubleshooting capture instructions for the
   remaining hardware-dependent display, elogind, GIMP, and desktop-integration
   reports.
