@@ -150,7 +150,7 @@ Spaced Linux combines a modern system with visual ideas from the best desktop er
 
 ## Download Spaced Linux
 
-The release candidate is **Spaced Linux 9.26.2**. Once published, download the ISO and matching checksum from the [Spaced Linux 9.26.2 release page](https://github.com/crhy/spaced/releases/tag/v9.26.2).
+**Spaced Linux 9.26.2** is available now. Download the ISO and matching checksum from the [Spaced Linux 9.26.2 release page](https://github.com/crhy/spaced/releases/tag/v9.26.2).
 
 9.26.2 is a maintenance release for 9.26. What it fixes, and what still needs confirmation on real hardware, is recorded in the [9.26.2 issue audit](docs/9.26.2-ISSUE-STATUS.md).
 
