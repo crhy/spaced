@@ -20,8 +20,8 @@
 - Repair unreachable Caja icon positions in a completed startup phase before
   Caja loads its cached virtual mount positions, while retaining the monitor
   watcher for later layout changes.
-- Update Welcome to 0.1.14 and prepare SpacedBazaar 0.1.11 so suggested apps and
-  startup synchronization match the 9.26.2 desktop.
+- Update Welcome to 0.1.14 and SpacedBazaar to 0.1.12. Bazaar now shows phase
+  progress during catalog sync and never exposes an empty Explore page.
 - Add focused regression tests and troubleshooting capture instructions for the
   remaining hardware-dependent display, elogind, GIMP, and desktop-integration
   reports.

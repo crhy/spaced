@@ -1,26 +1,82 @@
 {
-  "checksum": "05438caa7c5facc53cda6b5d3e2a90e1",
+  "checksum": "dedbf1dbb2ac125036a928c82a7d8255",
   "roots": {
     "bookmark_bar": {
       "children": [
-        {"date_added": "13401120000000000", "date_last_used": "0", "guid": "ae14aa02-70e8-4eb5-9ed1-53ac74ea2d92", "id": "2", "name": "OpenAirShips.com", "type": "url", "url": "https://openairships.com/"},
-        {"date_added": "13401120000000001", "date_last_used": "0", "guid": "09dd44f3-7b08-41df-af53-df47c1b508bf", "id": "3", "name": "SpacedLinux.com", "type": "url", "url": "https://spacedlinux.com/"},
-        {"date_added": "13401120000000002", "date_last_used": "0", "guid": "52902d4d-f86a-43d6-a6dd-a4582a3b75cd", "id": "4", "name": "Devuan", "type": "url", "url": "https://www.devuan.org/"},
-        {"date_added": "13401120000000003", "date_last_used": "0", "guid": "f8b1627a-e0cc-4273-be69-b5c8278d8f89", "id": "5", "name": "SpacedBazaar", "type": "url", "url": "https://github.com/crhy/spacedbazaar"},
-        {"date_added": "13401120000000004", "date_last_used": "0", "guid": "2f78ff19-bf44-4c63-b327-e75a3a382d93", "id": "6", "name": "SpacedHelp", "type": "url", "url": "https://spacedlinux.com/#help"},
-        {"date_added": "13433212800000000", "date_last_used": "0", "guid": "22fa4ab6-7c7e-5e93-be44-5648789edcb0", "id": "9", "name": "Discord", "type": "url", "url": "https://discord.gg/BMW9Y6NB3y"},
-        {"date_added": "13433212800000000", "date_last_used": "0", "guid": "81fe21f2-547d-5506-bcff-e4895a85fed1", "id": "10", "name": "Telegram", "type": "url", "url": "https://web.telegram.org/"}
+        {
+          "date_added": "13401120000000000",
+          "date_last_used": "0",
+          "guid": "09dd44f3-7b08-41df-af53-df47c1b508bf",
+          "id": "3",
+          "name": "SpacedLinux",
+          "type": "url",
+          "url": "https://spacedlinux.com/"
+        },
+        {
+          "date_added": "13401120000000001",
+          "date_last_used": "0",
+          "guid": "ae14aa02-70e8-4eb5-9ed1-53ac74ea2d92",
+          "id": "2",
+          "name": "OpenAirShips",
+          "type": "url",
+          "url": "https://openairships.com/"
+        },
+        {
+          "date_added": "13401120000000002",
+          "date_last_used": "0",
+          "guid": "f538e3df-9219-4825-ab04-e8ee68c9bc37",
+          "id": "5",
+          "name": "rhYciv",
+          "type": "url",
+          "url": "https://rhyciv.org/"
+        },
+        {
+          "date_added": "13401120000000003",
+          "date_last_used": "0",
+          "guid": "7dbbb924-e783-4332-854d-3113e869003d",
+          "id": "6",
+          "name": "Cards",
+          "type": "url",
+          "url": "https://crhy.github.io/CardsWithCats/"
+        },
+        {
+          "date_added": "13401120000000004",
+          "date_last_used": "0",
+          "guid": "52902d4d-f86a-43d6-a6dd-a4582a3b75cd",
+          "id": "4",
+          "name": "Devuan",
+          "type": "url",
+          "url": "https://www.devuan.org/"
+        }
       ],
       "date_added": "13401120000000000",
       "date_last_used": "0",
-      "date_modified": "13433212800000000",
+      "date_modified": "13401120000000004",
       "guid": "00000000-0000-4000-a000-000000000002",
       "id": "1",
       "name": "Bookmarks bar",
       "type": "folder"
     },
-    "other": {"children": [], "date_added": "13401120000000000", "date_last_used": "0", "date_modified": "0", "guid": "00000000-0000-4000-a000-000000000003", "id": "7", "name": "Other bookmarks", "type": "folder"},
-    "synced": {"children": [], "date_added": "13401120000000000", "date_last_used": "0", "date_modified": "0", "guid": "00000000-0000-4000-a000-000000000004", "id": "8", "name": "Mobile bookmarks", "type": "folder"}
+    "other": {
+      "children": [],
+      "date_added": "13401120000000000",
+      "date_last_used": "0",
+      "date_modified": "0",
+      "guid": "00000000-0000-4000-a000-000000000003",
+      "id": "7",
+      "name": "Other bookmarks",
+      "type": "folder"
+    },
+    "synced": {
+      "children": [],
+      "date_added": "13401120000000000",
+      "date_last_used": "0",
+      "date_modified": "0",
+      "guid": "00000000-0000-4000-a000-000000000004",
+      "id": "8",
+      "name": "Mobile bookmarks",
+      "type": "folder"
+    }
   },
   "version": 1
 }
