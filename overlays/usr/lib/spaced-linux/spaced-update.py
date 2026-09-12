@@ -1218,7 +1218,9 @@ class OsUpdateTab(Gtk.Box):
         threading.Thread(target=self._check_worker, daemon=True).start()
 
     def _check_worker(self):
+        installed = None
         try:
+            installed = read_installed_version()
             request = urllib.request.Request(
                 GITHUB_API,
                 headers={
@@ -1230,11 +1232,14 @@ class OsUpdateTab(Gtk.Box):
                 release = json.load(response)
             if release.get("draft") or not release.get("tag_name"):
                 raise RuntimeError("No published release was returned.")
-            GLib.idle_add(self._check_done, release["tag_name"], None)
+            GLib.idle_add(self._check_done, release["tag_name"], None, installed)
         except Exception as error:
-            GLib.idle_add(self._check_done, None, error)
+            GLib.idle_add(self._check_done, None, error, installed)
 
-    def _check_done(self, latest, error):
+    def _check_done(self, latest, error, installed=None):
+        if installed:
+            self.installed = installed
+            self.inst.set_text(installed)
         self.checkbtn.set_sensitive(not self.app._busy)
         # A release-feed request may finish after the user starts an upgrade.
         # Keep its informational result without replacing live update status.

@@ -1071,12 +1071,20 @@ assert "spaced-primary-action" in update_app and "spaced-update-list" in update_
     "Spaced Update theme-aware interface is incomplete"
 assert "installed_after_update = read_installed_version()" in update_app and "finish_update" in update_app, \
     "Spaced Update does not refresh the installed OS version after an update"
+assert "installed = read_installed_version()" in update_app \
+    and "self._check_done, release[\"tag_name\"], None, installed" in update_app, \
+    "Spaced Update does not reread the installed release before comparing releases"
 assert 'scope in ("user", "system")' in update_app \
     and '"runtime/' in update_app and 'flatpak-update' in update_helper, \
     "Spaced Update must handle both Flatpak scopes, applications, and runtimes"
 assert 'apt-refresh' in update_helper and 'flock -n' in update_helper \
     and 'APT::Update::Error-Mode=any' in update_helper, \
     "Spaced Update must serialize transactions and reject incomplete APT indexes"
+assert "dpkg --force-confdef --force-confold --configure --pending" in update_helper \
+    and "dpkg --triggers-only --pending" in update_helper \
+    and update_helper.index("apt_run -y \"${TRANSACTION[@]}\"") < \
+        update_helper.index("dpkg --triggers-only --pending"), \
+    "Spaced Update must finalize package scripts and release triggers after APT"
 assert not list(Path("overlays").rglob("spaced-upgrade-testing.sh")), \
     "the testing-channel bootstrap is a host script and must not stage into the ISO"
 

@@ -114,6 +114,10 @@ apt_run -y --download-only "${TRANSACTION[@]}"
 step 35 'Installing APT upgrades'
 apt_run -y "${TRANSACTION[@]}"
 
+step 50 'Finalizing package configuration'
+dpkg --force-confdef --force-confold --configure --pending
+dpkg --triggers-only --pending
+
 # Maintainer scripts normally handle these, but report a failed final refresh.
 # Keep cached downloads and old kernels for recovery; cleanup is not an update.
 step 65 'Refreshing boot files'
