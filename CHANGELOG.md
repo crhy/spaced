@@ -1,5 +1,18 @@
 # Changelog
 
+## 9.26.2-2 - 2026-09-12
+- Fix issue #209 by finalizing pending package maintainer scripts and release
+  identity triggers after the APT transaction, then rereading `/etc/os-release`
+  whenever Spaced Update checks the published release. The update is delivered
+  through Spaced Update; no new ISO is required.
+- Fix issue #213: switching themes again moves the panel back to the bottom and
+  closes Cairo-dock. The dock no longer inherits the theme-switch lock.
+- Replace the Brave bookmark bar for new profiles with SpacedLinux,
+  OpenAirShips, rhYciv, Cards and Devuan (issue #211).
+- Use the Spaced medallion as the default About Me picture (issue #212).
+- SpacedBazaar 0.1.12 (issue #195) is delivered separately through its Flatpak
+  origin.
+
 ## 9.26.2 - 2026-09-12
 - Preserve the selected audio output across sessions and flush the saved choice
   during logout.

@@ -53,6 +53,22 @@ Two components sit below the line name:
 - Prefer bash scripts over inline code
 - Progressive disclosure — reference files only when needed
 
+## Maintenance rules learned from releases
+
+- Never edit a published release's `CHANGELOG.md` entry or its issue-status
+  evidence. Record later fixes under a new revision section (for example
+  `9.26.2-2`), and say where a change is delivered (APT package revision,
+  Welcome release, or Bazaar Flatpak).
+- `components/spacedwelcome` and `components/spacedbazaar` are separate
+  repositories. Commit, PR and release there; see `docs/FIXES.md`.
+- Close an issue only after its fix is merged to `main` (and released, for
+  component repositories), not when a branch is pushed.
+- Any background process started from a script that holds a `flock` must close
+  the lock descriptor (`7>&-`), or it keeps the lock for its lifetime.
+- Recurring root causes and their resolutions are recorded in `docs/FIXES.md`.
+- Unit tests run with `python3 -m unittest discover -s tests` (pytest is not
+  installed).
+
 ## Commands
 
 - Test config: `python3 -c "import glob, yaml; [yaml.safe_load(open(path)) for path in glob.glob('config/*.yaml')]"`
