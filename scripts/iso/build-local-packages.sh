@@ -62,6 +62,7 @@ stage_desktop_defaults() {
         etc/sysctl.d/60-spaced-coredump.conf \
         etc/brave/policies/managed/spaced-extensions.json \
         etc/xdg/autostart/spaced-audio-restore.desktop \
+        etc/xdg/autostart/spaced-desktop-icon-repair-before-caja.desktop \
         etc/xdg/autostart/spaced-desktop-icon-repair.desktop \
         etc/xdg/autostart/spaced-display-repair.desktop \
         etc/xdg/autostart/spaced-enable-flatpak-remotes.desktop \

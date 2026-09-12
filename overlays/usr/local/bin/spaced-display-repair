@@ -53,68 +53,51 @@ on_battery() {
 }
 
 display_sleep_timeout() {
-    local key=sleep-display-ac
+    local key=sleep-display-ac value
     on_battery && key=sleep-display-battery
-    gsettings get org.mate.power-manager "$key" 2>/dev/null |
-        awk '{gsub(/[^0-9-]/, "", $NF); print $NF + 0; exit}'
+    value=$(gsettings get org.mate.power-manager "$key" 2>/dev/null) || return 1
+    [[ "$value" =~ ^(uint32\ )?([0-9]+)$ ]] || return 1
+    printf '%s\n' "${BASH_REMATCH[2]}"
 }
 
-# Issue #189: choosing "Never" still let the screen go dark after five minutes.
-# The display-sleep choice only governs mate-power-manager, and it does honour
-# 0 correctly -- with no blank timeout it never enters its BLANK mode and never
-# touches DPMS. The screen was going dark because mate-screensaver activates on
-# its own schedule, at org.mate.session's idle-delay, which MATE defaults to
-# five minutes. That blanks and locks regardless of the power policy, and no
-# control in Power Preferences can reach it, so "Never" has never meant never.
-# Suppress idle activation while Never is selected and put the user's own
-# choice back when a real timeout returns.
-screensaver_state="${XDG_CONFIG_HOME:-$HOME/.config}/spaced/screensaver-idle-activation"
-
-have_screensaver() {
-    gsettings list-schemas 2>/dev/null | grep -qx org.mate.screensaver
-}
-
-suspend_screensaver_idle() {
-    local current
-    have_screensaver || return 0
-    current=$(gsettings get org.mate.screensaver idle-activation-enabled 2>/dev/null)
-    # Already off, whether by our own doing or the user's: leave it and keep
-    # any saved value, so a restore still returns what the user chose.
-    [ "$current" = false ] && return 0
-    mkdir -p "${screensaver_state%/*}" 2>/dev/null || true
-    printf '%s\n' "$current" > "$screensaver_state" 2>/dev/null || true
-    gsettings set org.mate.screensaver idle-activation-enabled false 2>/dev/null || true
-}
-
-restore_screensaver_idle() {
-    local saved
-    have_screensaver || return 0
-    # No saved value means Never was never applied here; never turn on a
-    # screensaver the user had deliberately switched off.
-    [ -r "$screensaver_state" ] || return 0
-    IFS= read -r saved < "$screensaver_state" || saved=true
-    rm -f "$screensaver_state" 2>/dev/null || true
-    [ "$saved" = false ] && return 0
-    gsettings set org.mate.screensaver idle-activation-enabled true 2>/dev/null || true
-}
+sync_screensaver_idle() (
+    local timeout=$1 current saved
+    local state_dir="${XDG_CONFIG_HOME:-$HOME/.config}/spaced"
+    local state="$state_dir/screensaver-idle-activation"
+    gsettings list-schemas 2>/dev/null | grep -qx org.mate.screensaver || return 0
+    mkdir -p -m 700 "$state_dir" || return 0
+    exec 9>"$state.lock" || return 0
+    flock -x 9 || return 0
+    current=$(gsettings get org.mate.screensaver idle-activation-enabled 2>/dev/null) || return 0
+    case "$current" in true|false) ;; *) return 0 ;; esac
+    if [[ "$timeout" =~ ^0+$ ]]; then
+        [ "$current" = true ] || return 0
+        printf 'true\n' > "$state" || return 0
+        gsettings set org.mate.screensaver idle-activation-enabled false 2>/dev/null || true
+    elif [ -r "$state" ]; then
+        IFS= read -r saved < "$state" || return 0
+        [ "$saved" = true ] || return 0
+        if gsettings set org.mate.screensaver idle-activation-enabled true 2>/dev/null; then
+            rm -f -- "$state"
+        fi
+    fi
+)
 
 apply_power_policy() {
     local timeout
     gsettings list-schemas 2>/dev/null | grep -qx org.mate.power-manager || return 0
-    timeout=$(display_sleep_timeout)
-    [ -n "$timeout" ] || return 0
-    if [ "$timeout" -le 0 ]; then
+    timeout=$(display_sleep_timeout) || return 0
+    if [[ "$timeout" =~ ^0+$ ]]; then
         # Never: no blanking, no DPMS, no matter what X defaulted to.
         xset -dpms 2>/dev/null || true
         xset s off 2>/dev/null || true
         xset s noblank 2>/dev/null || true
-        suspend_screensaver_idle
     else
         # A real timeout was chosen. Hand DPMS back to mate-power-manager
         # rather than programming a competing timeout here.
         xset +dpms 2>/dev/null || true
-        restore_screensaver_idle
     fi
+    sync_screensaver_idle "$timeout"
 }
 
 [ -n "${DISPLAY:-}" ] || exit 0
@@ -135,6 +118,14 @@ if command -v gsettings >/dev/null 2>&1 && command -v xset >/dev/null 2>&1 \
         done < <(gsettings monitor org.mate.power-manager "$key" 2>/dev/null) &
         policy_watchers+=("$!")
     done
+
+    # Some drivers and power-manager events can restore X's default DPMS
+    # state without changing either GSettings key. Reconcile infrequently so
+    # Never remains authoritative without racing normal timeout management.
+    while sleep 30; do
+        apply_power_policy
+    done &
+    policy_watchers+=("$!")
     trap 'kill "${policy_watchers[@]}" 2>/dev/null || true' EXIT
 fi
 

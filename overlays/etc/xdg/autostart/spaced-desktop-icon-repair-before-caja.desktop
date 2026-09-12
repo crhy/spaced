@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Spaced Linux Pre-Caja Desktop Icon Repair
+Comment=Repair saved desktop icon positions before Caja loads them
+Exec=/usr/local/bin/spaced-desktop-icon-repair
+OnlyShowIn=MATE;
+NoDisplay=true
+X-MATE-Autostart-Phase=Panel

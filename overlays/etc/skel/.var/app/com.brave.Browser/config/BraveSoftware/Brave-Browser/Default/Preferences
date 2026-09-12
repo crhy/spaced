@@ -1,5 +1,13 @@
 {
   "bookmark_bar": {
     "show_on_all_tabs": true
+  },
+  "brave": {
+    "new_tab_page": {
+      "show_background_image": false
+    }
+  },
+  "search": {
+    "suggest_enabled": false
   }
 }

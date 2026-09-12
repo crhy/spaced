@@ -4,7 +4,7 @@
   </a>
 </p>
 
-<h1 align="center">Spaced Linux 9.26.1</h1>
+<h1 align="center">Spaced Linux 9.26.2</h1>
 
 <p align="center"><strong>Spaced. Polished. Agile. Compiz. Efficient. Devuan.</strong></p>
 
@@ -26,8 +26,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/crhy/spaced/releases/tag/v9.26.1"><strong>Download Spaced Linux 9.26.1</strong></a> ·
-  <a href="docs/9.26.1-ISSUE-STATUS.md"><strong>9.26.1 release status</strong></a>
+  <a href="https://github.com/crhy/spaced/releases/tag/v9.26.2"><strong>Download Spaced Linux 9.26.2</strong></a> ·
+  <a href="docs/9.26.2-ISSUE-STATUS.md"><strong>9.26.2 release status</strong></a>
 </p>
 
 <p align="center">
@@ -36,7 +36,7 @@
   <img alt="Compiz" src="https://img.shields.io/badge/window%20manager-Compiz-5b5bd6">
   <img alt="Init system" src="https://img.shields.io/badge/init-sysvinit-555555">
   <img alt="Architecture" src="https://img.shields.io/badge/architecture-amd64-2563eb">
-  <img alt="Release" src="https://img.shields.io/badge/release-9.26.1-0ea5e9">
+  <img alt="Release" src="https://img.shields.io/badge/release-9.26.2-0ea5e9">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-black">
 </p>
 
@@ -65,7 +65,7 @@ These are real Spaced Linux desktop sessions—not wallpaper mockups. Click any 
       <sub><strong>Compiz-first desktop</strong> — Workspaces, accessibility, motion, and organization are part of the core experience.</sub>
     </td>
     <td width="50%" align="center">
-      <a href="website/assets/screenshots/desktop-welcome.webp?v=9.26.1"><img src="website/assets/screenshots/desktop-welcome.webp?v=9.26.1" alt="Welcome to Spaced Linux first-run application"></a><br>
+      <a href="website/assets/screenshots/desktop-welcome.webp?v=9.26.2"><img src="website/assets/screenshots/desktop-welcome.webp?v=9.26.2" alt="Welcome to Spaced Linux first-run application"></a><br>
       <sub><strong>Friendly first run</strong> — Start installing software or open the browser from one clear welcome screen.</sub>
     </td>
   </tr>
@@ -150,14 +150,14 @@ Spaced Linux combines a modern system with visual ideas from the best desktop er
 
 ## Download Spaced Linux
 
-The current published release is **Spaced Linux 9.26.1**. Download the ISO and matching checksum from the [Spaced Linux 9.26.1 release page](https://github.com/crhy/spaced/releases/tag/v9.26.1).
+The release candidate is **Spaced Linux 9.26.2**. Once published, download the ISO and matching checksum from the [Spaced Linux 9.26.2 release page](https://github.com/crhy/spaced/releases/tag/v9.26.2).
 
-9.26.1 is a maintenance release for 9.26. What it fixes, and what still needs confirmation on real hardware, is recorded in the [9.26.1 issue audit](docs/9.26.1-ISSUE-STATUS.md).
+9.26.2 is a maintenance release for 9.26. What it fixes, and what still needs confirmation on real hardware, is recorded in the [9.26.2 issue audit](docs/9.26.2-ISSUE-STATUS.md).
 
 Verify the download on Linux:
 
 ```bash
-sha256sum -c spaced-linux-9.26.1-amd64.iso.sha256
+sha256sum -c spaced-linux-9.26.2-amd64.iso.sha256
 ```
 
 Test release images in a virtual machine or on non-critical hardware before adopting them for daily use.
@@ -244,7 +244,7 @@ Thank you for helping keep an independent, polished, systemd-free desktop availa
 
 ## Project status
 
-The current development line is **9.26.1**. Spaced Linux is an independent community project under active development.
+The current development line is **9.26.2**. Spaced Linux is an independent community project under active development.
 
 ## Contributing
 

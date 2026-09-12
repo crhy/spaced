@@ -1,10 +1,10 @@
 Package: spaced-meta
-Version: 9.26.1-6
+Version: 9.26.2-1
 Section: metapackages
 Priority: optional
 Architecture: all
 Maintainer: Spaced Linux Team
-Depends: base-files, flatpak, libfuse2t64, libmarco-private2 (>= 1.26.2-6+spaced9.26.1), spaced-mate-default-settings (= 9.26.1-6), spaced-welcome (>= 0.1.13)
+Depends: base-files, flatpak, libfuse2t64, libmarco-private2 (>= 1.26.2-6+spaced9.26.1), spaced-mate-default-settings (= 9.26.2-1), spaced-welcome (>= 0.1.14)
 Provides: spaced-release
 Breaks: base-files (<< 13)
 Replaces: base-files (<< 13)

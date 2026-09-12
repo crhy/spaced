@@ -9,6 +9,8 @@ SUITE=${SPACED_APT_SUITE:-spaced}
 WORK=$(mktemp -d)
 trap 'rm -rf -- "$WORK"' EXIT
 VERSION=$(sed -n 's/^Version: //p' "$ROOT/packages/spaced-meta/DEBIAN/control")
+# shellcheck source=../../config/external-artifacts.conf
+source "$ROOT/config/external-artifacts.conf"
 KEY="$ROOT/overlays/usr/share/keyrings/spaced-archive-keyring.gpg"
 [[ -s "$REPO/dists/$SUITE/InRelease" ]]
 
@@ -58,6 +60,18 @@ expect_rejection() {
 }
 new_probe valid
 apt-get update > "$PROBE/update.log" 2>&1
+for package_version in \
+    "spaced-meta=$VERSION" \
+    "spaced-mate-default-settings=$VERSION" \
+    "spaced-welcome=$SPACED_WELCOME_VERSION"; do
+    package=${package_version%%=*}
+    expected=${package_version#*=}
+    candidate=$(apt-cache policy "$package" | sed -n 's/^  Candidate: //p')
+    if [ "$candidate" != "$expected" ]; then
+        echo "FAIL: $package candidate is ${candidate:-missing}, expected $expected" >&2
+        exit 1
+    fi
+done
 (cd "$PROBE/downloads" && apt-get download spaced-meta > "$PROBE/download.log" 2>&1)
 [[ -s "$PROBE/downloads/spaced-meta_${VERSION}_all.deb" ]]
 echo 'PASS: valid signed metadata and package accepted'

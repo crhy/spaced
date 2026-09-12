@@ -41,7 +41,7 @@ class MigrationTests(unittest.TestCase):
         self.assertEqual(updated['commands']['as_command0'], 'my-custom-command')
         self.assertEqual(updated['commands']['as_command1'], 'mate-screenshot --area')
         self.assertEqual(updated['commands']['as_run_command1_key'], '<Shift>Print')
-        self.assertEqual(profile.with_name('Default.ini.pre-9.26.1').read_text(), original)
+        self.assertEqual(profile.with_name('Default.ini.pre-9.26.2').read_text(), original)
         files = {p: (p.read_bytes(), p.stat().st_mtime_ns) for p in self.config.rglob('*') if p.is_file()}
         migration.migrate(self.config)
         for p, state in files.items():
@@ -89,6 +89,32 @@ class MigrationTests(unittest.TestCase):
         defaults = migration.read_ini(mime)['Default Applications']
         self.assertEqual(defaults['image/png'], 'eom.desktop')
         self.assertEqual(defaults['image/tiff'], 'gimp.desktop')
+
+    def test_mate_defaults_inherit_explicit_generic_choices(self):
+        generic = self.config / 'mimeapps.list'
+        generic.write_text('[Default Applications]\nimage/png=gimp.desktop\ntext/x-python=custom-ide.desktop\n')
+        mate = self.config / 'mate-mimeapps.list'
+        mate.write_text('[Default Applications]\n')
+        migration.migrate(self.config)
+        defaults = migration.read_ini(mate)['Default Applications']
+        self.assertNotIn('image/png', defaults)
+        self.assertNotIn('text/x-python', defaults)
+
+    def test_v1_inserted_mate_defaults_are_removed(self):
+        generic = self.config / 'mimeapps.list'
+        generic.write_text('[Default Applications]\nimage/png=gimp.desktop\ntext/x-python=custom-ide.desktop\n')
+        mate = self.config / 'mate-mimeapps.list'
+        mate.write_text('[Default Applications]\nimage/png=eom.desktop\ntext/x-python=pluma.desktop\nimage/tiff=eom.desktop\n')
+        mate.with_name('mate-mimeapps.list.pre-9.26.1').write_text(
+            '[Default Applications]\nimage/tiff=eom.desktop\n')
+        state = self.config / 'spaced'
+        state.mkdir()
+        (state / 'desktop-migration-9.26.1-v1').write_text('9.26.1\n')
+        migration.migrate(self.config)
+        defaults = migration.read_ini(mate)['Default Applications']
+        self.assertNotIn('image/png', defaults)
+        self.assertNotIn('text/x-python', defaults)
+        self.assertEqual(defaults['image/tiff'], 'eom.desktop')
 
 
 class SessionTests(unittest.TestCase):
@@ -298,7 +324,7 @@ HDMI-2 disconnected (normal left inverted right x axis y axis)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(
             (self.state / 'config' / 'spaced' / 'audio-state').read_text().split(),
-            ['50', 'no'])
+            ['50', 'no', 'spaced-test-sink'])
         # One read for the initial state and one for the settled burst, rather
         # than one per event.
         self.assertEqual(len((self.state / 'volume-reads').read_text().split()), 3)
@@ -354,6 +380,17 @@ class DesktopIconTests(unittest.TestCase):
         path.write_text(text)
         return path
 
+    def test_login_repair_finishes_before_caja_desktop_phase(self):
+        pre_caja = (ROOT / 'overlays/etc/xdg/autostart/'
+                    'spaced-desktop-icon-repair-before-caja.desktop').read_text()
+        watcher = (ROOT / 'overlays/etc/xdg/autostart/'
+                   'spaced-desktop-icon-repair.desktop').read_text()
+        self.assertIn('Exec=/usr/local/bin/spaced-desktop-icon-repair\n', pre_caja)
+        self.assertNotIn('--watch', pre_caja)
+        self.assertIn('X-MATE-Autostart-Phase=Panel', pre_caja)
+        self.assertIn('Exec=/usr/local/bin/spaced-desktop-icon-repair --watch', watcher)
+        self.assertIn('X-MATE-Autostart-Phase=Applications', watcher)
+
     def test_offscreen_volume_positions_are_cleared_and_others_kept(self):
         path = self.metadata(
             '[smb:__nas__public]\ncaja-icon-position=7400,2600\n'
@@ -401,6 +438,26 @@ class DesktopIconTests(unittest.TestCase):
         self.assertEqual((self.state / 'gio-writes').read_text().splitlines(),
                          [f'set -t unset {self.desktop}/Public on nas '
                           'metadata::caja-icon-position'])
+
+    def test_custom_xdg_desktop_directory_is_used_without_environment_override(self):
+        custom_desktop = self.state / 'Arbeitsfläche'
+        custom_desktop.mkdir()
+        (self.config / 'user-dirs.dirs').write_text(
+            'XDG_DESKTOP_DIR="$HOME/Arbeitsfläche"\n')
+        (custom_desktop / 'Public on nas').write_text('')
+        environment = dict(self.env)
+        environment.pop('XDG_DESKTOP_DIR')
+        self.command('gio',
+                     'if [ "$1" = info ]; then\n'
+                     '  echo "  metadata::caja-icon-position: 9000,4000"\n'
+                     '  else printf "%s\\n" "$*" >> "$TEST_STATE/gio-writes"\n'
+                     'fi')
+        result = subprocess.run([str(BIN / 'spaced-desktop-icon-repair')], env=environment,
+                                capture_output=True, text=True, timeout=20)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            (self.state / 'gio-writes').read_text().splitlines(),
+            [f'set -t unset {custom_desktop}/Public on nas metadata::caja-icon-position'])
 
 
 class ThemeSwitchTests(unittest.TestCase):

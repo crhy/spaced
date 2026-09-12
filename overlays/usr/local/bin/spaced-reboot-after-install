@@ -1,0 +1,14 @@
+#!/bin/sh
+set -eu
+
+if command -v zenity >/dev/null 2>&1; then
+    zenity --question \
+        --title='Spaced Linux installation complete' \
+        --text='Remove the installation USB drive before restarting Spaced Linux.' \
+        --ok-label='Restart' \
+        --cancel-label='Stay here'
+    exec /sbin/reboot
+fi
+
+printf '%s\n' 'Remove the installation USB drive before restarting Spaced Linux.' >&2
+exit 1

@@ -77,6 +77,7 @@ if [ -d /usr/share/cairo-dock/themes/Default-Single ]; then
 fi
 
 cp -a /etc/skel/. /home/user/
+find /home/user/Desktop -maxdepth 1 -type f ! -name install-spaced-linux.desktop -delete
 chown -R user:user /home/user
 
 # Keep Debian's Calamares module defaults, but never expose its launcher or

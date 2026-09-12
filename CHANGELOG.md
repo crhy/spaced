@@ -1,5 +1,25 @@
 # Changelog
 
+## 9.26.2 - 2026-09-12
+- Preserve the selected audio output across sessions and flush the saved choice
+  during logout.
+- Stop first-login repair from overwriting MATE display scaling, and make the
+  display repair continuously enforce the screensaver's Never setting without
+  weakening manual locking.
+- Add an installer USB-removal prompt, keep only the installer launcher on the
+  live desktop, and improve installer and network-server icon visibility.
+- Correct Brave privacy defaults and add Telegram Web to the shipped bookmarks.
+- Repair desktop MIME and custom desktop-directory migrations without replacing
+  explicit user choices.
+- Repair unreachable Caja icon positions in a completed startup phase before
+  Caja loads its cached virtual mount positions, while retaining the monitor
+  watcher for later layout changes.
+- Update Welcome to 0.1.14 and prepare SpacedBazaar 0.1.11 so suggested apps and
+  startup synchronization match the 9.26.2 desktop.
+- Add focused regression tests and troubleshooting capture instructions for the
+  remaining hardware-dependent display, elogind, GIMP, and desktop-integration
+  reports.
+
 ## 9.26.1-6 - 2026-09-10
 - Made crash-dump collection actually reach daemons. 9.26.1-5 raised the core
   limit through /etc/security/limits.d, which PAM applies to login sessions
