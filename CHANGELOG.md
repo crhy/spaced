@@ -1,10 +1,14 @@
 # Changelog
 
 ## 9.26.2-2 - 2026-09-12
-- Fix issue #209 by finalizing pending package maintainer scripts and release
-  identity triggers after the APT transaction, then rereading `/etc/os-release`
-  whenever Spaced Update checks the published release. The update is delivered
-  through Spaced Update; no new ISO is required.
+- Fix issue #209. The 9.26.2 GitHub release was published without its APT
+  packages, so Spaced Update offered 9.26.2 but APT had nothing newer than
+  9.26.1-6 to install. This revision is published to the APT repository. Spaced
+  Update also now finalizes pending maintainer scripts and release-identity
+  triggers after APT, and rereads `/etc/os-release` on every release check. The
+  update is delivered through Spaced Update; no new ISO is required.
+- Require Spaced Welcome 0.1.15, which clears the "Opening SpacedBazaar" status
+  once Bazaar launches (issue #210).
 - Fix issue #213: switching themes again moves the panel back to the bottom and
   closes Cairo-dock. The dock no longer inherits the theme-switch lock.
 - Replace the Brave bookmark bar for new profiles with SpacedLinux,

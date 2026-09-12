@@ -61,6 +61,10 @@ Two components sit below the line name:
   Welcome release, or Bazaar Flatpak).
 - `components/spacedwelcome` and `components/spacedbazaar` are separate
   repositories. Commit, PR and release there; see `docs/FIXES.md`.
+- Publishing a patch release or package revision includes `make
+  apt-repo-publish` to `crhy/spaced-apt`. Spaced Update offers any newer GitHub
+  release tag, so a tag without APT packages makes every system loop on the
+  upgrade (issue #209).
 - Close an issue only after its fix is merged to `main` (and released, for
   component repositories), not when a branch is pushed.
 - Any background process started from a script that holds a `flock` must close
