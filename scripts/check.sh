@@ -957,18 +957,18 @@ for permanent_root in ("bookmark_bar", "other", "synced"):
     checksum_bookmark(brave_bookmarks["roots"][permanent_root])
 assert brave_bookmarks["checksum"] == bookmark_checksum.hexdigest(), \
     "Brave bookmarks do not carry a Chromium-compatible integrity checksum"
-assert {"OpenAirShips.com", "SpacedLinux.com", "Devuan", "SpacedBazaar", "SpacedHelp", "Discord", "Telegram"} == \
-    {bookmark["name"] for bookmark in bookmark_bar["children"]}, \
-    "fresh Brave profiles do not receive the requested bookmark-bar links (issue #145)"
+assert ["SpacedLinux", "OpenAirShips", "rhYciv", "Cards", "Devuan"] == \
+    [bookmark["name"] for bookmark in bookmark_bar["children"]], \
+    "fresh Brave profiles do not receive the requested bookmark-bar links (issue #211)"
+assert ["https://spacedlinux.com/", "https://openairships.com/", "https://rhyciv.org/", "https://crhy.github.io/CardsWithCats/", "https://www.devuan.org/"] == \
+    [bookmark["url"] for bookmark in bookmark_bar["children"]], \
+    "Brave bookmark-bar links do not point at the requested pages (issue #211)"
 assert brave_preferences["bookmark_bar"]["show_on_all_tabs"] is True, \
     "Brave's seeded bookmarks are hidden by default"
 assert brave_preferences["brave"]["new_tab_page"]["show_background_image"] is False, \
     "Brave background images are enabled by default (issue #196)"
 assert brave_preferences["search"]["suggest_enabled"] is False, \
     "Brave search suggestions are enabled by default (issue #196)"
-telegram = next(bookmark for bookmark in bookmark_bar["children"] if bookmark["name"] == "Telegram")
-assert telegram["url"] == "https://web.telegram.org/", \
-    "Telegram bookmark does not open Telegram Web (issue #196)"
 
 display_repair = (root / "usr/local/bin/spaced-display-repair").read_text(encoding="utf-8")
 audio_restore = (root / "usr/local/bin/spaced-audio-restore").read_text(encoding="utf-8")
