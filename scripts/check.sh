@@ -78,10 +78,41 @@ assert iso_config["iso_name"] == f"spaced-linux-{version}", \
     "config/iso.yaml ISO name does not match VERSION"
 os_release = Path("overlays/etc/os-release").read_text(encoding="utf-8")
 lsb_release = Path("overlays/etc/lsb-release").read_text(encoding="utf-8")
-assert f'VERSION_CODENAME="{release_code}"' in os_release, \
+def exact_field_values(text, key, quoted=False):
+    prefix = f'{key}="' if quoted else f"{key}="
+    suffix = '"' if quoted else ''
+    return [line[len(prefix):-len(suffix) if suffix else None]
+            for line in text.splitlines()
+            if line.startswith(prefix) and line.endswith(suffix)]
+
+
+def has_exact_field(text, key, value, quoted=False):
+    return exact_field_values(text, key, quoted) == [value]
+
+
+assert has_exact_field(os_release, "VERSION", version, quoted=True), \
+    "os-release VERSION does not match VERSION"
+assert has_exact_field(os_release, "VERSION_CODENAME", release_code, quoted=True), \
     "os-release codename does not match VERSION"
-assert f"DISTRIB_CODENAME={release_code}" in lsb_release, \
+assert has_exact_field(lsb_release, "DISTRIB_ID", "SpacedLinux"), \
+    "lsb-release distributor identity does not match the overlay"
+assert has_exact_field(lsb_release, "DISTRIB_RELEASE", version), \
+    "lsb-release release does not match VERSION"
+assert has_exact_field(lsb_release, "DISTRIB_CODENAME", release_code), \
     "lsb-release codename does not match VERSION"
+assert not has_exact_field(f"DISTRIB_RELEASE={version}.0", "DISTRIB_RELEASE", version), \
+    "release field matcher accepts a non-exact release"
+branding = Path("overlays/etc/calamares/branding/spaced/branding.desc").read_text(encoding="utf-8")
+def calamares_field_values(key):
+    return re.findall(rf"^\s+{key}:\s*(\S+)\s*$", branding, re.MULTILINE)
+
+
+assert calamares_field_values("version") == [version], \
+    "Calamares version does not match VERSION"
+assert calamares_field_values("shortVersion") == [version], \
+    "Calamares shortVersion does not match VERSION"
+assert calamares_field_values("version") != [f"{version}0"], \
+    "Calamares version matcher accepts a non-exact release"
 for path in (
     "README.md",
     "live-build/auto/config",
@@ -228,6 +259,10 @@ assert 'chown -R 0:0 "$(abspath $(LB_DIR)/config/includes.chroot)"' in makefile_
     "live-build overlay staging can preserve non-root ownership in /usr"
 assert '$(HOST_RUN) scripts/build-apt-repo.sh "$(abspath $(APT_REPO_DIR))"' in makefile_text, \
     "APT repository builds do not use the host packaging tools"
+assert '$(HOST_RUN) scripts/tests/test-release-package-payload.sh "$(abspath $(APT_REPO_DIR))"' in makefile_text, \
+    "APT repository publication can bypass package payload validation"
+assert '$(HOST_RUN) scripts/tests/test-apt-trust.sh "$(abspath $(APT_REPO_DIR))"' in makefile_text, \
+    "APT repository publication can bypass signed candidate validation"
 for gpu_source in (qemu_common, qemu_smoke, makefile_text):
     assert "virtio-gpu-pci" not in gpu_source and "virtio-vga" not in gpu_source, \
         "test VM must use a single GPU; dual virtio VGA leaves the guest on a black screen"
@@ -359,7 +394,7 @@ package_version = re.search(r"^Version: (.+)$", meta_control, re.M).group(1)
 assert package_version.split("-", 1)[0] == version, "Native package version does not match OS release"
 assert f"Version: {package_version}\n" in defaults_control
 assert f"spaced-mate-default-settings (= {package_version})" in meta_control \
-    and "spaced-welcome (>= 0.1.13)" in meta_control \
+    and "spaced-welcome (>= 0.1.14)" in meta_control \
     and "libfuse2t64" in meta_control, \
     "spaced-meta does not pull in the standalone Welcome package and desktop defaults"
 assert "spaced-welcome.desktop" not in package_builder \
@@ -376,7 +411,7 @@ def artifact_default(name):
     return match.group(1)
 
 assert artifact_default("SPACED_WELCOME_REPOSITORY") == "crhy/spacedwelcome"
-assert artifact_default("SPACED_WELCOME_VERSION") == "0.1.13"
+assert artifact_default("SPACED_WELCOME_VERSION") == "0.1.14"
 assert artifact_default("SPACED_GITHUB_REMOTE_NAME") == "spaced-github"
 assert artifact_default("SPACED_GITHUB_REMOTE_DESCRIPTOR_URL") == \
     "https://crhy.github.io/spacedbazaar/spaced-github.flatpakrepo"
@@ -405,6 +440,18 @@ assert "dpkg-deb -f" in artifact_stager and "verify_sha256" in artifact_stager \
 assert makefile_text.index("scripts/iso/stage-external-artifacts.sh") < \
     makefile_text.index("scripts/iso/build-local-packages.sh", makefile_text.index("prepare:")), \
     "standalone release artifacts are not staged before local packages"
+release_preflight = Path("scripts/release-preflight.sh").read_text(encoding="utf-8")
+assert "release-preflight: check" in makefile_text \
+    and "release: release-preflight" in makefile_text \
+    and "$(MAKE) clean" in makefile_text[makefile_text.index("release: release-preflight"):], \
+    "release builds do not run the fail-fast validation gate"
+for release_pin in (
+    "SPACED_WELCOME_SHA256",
+    "SPACED_GITHUB_REMOTE_SHA256",
+    "SPACED_GITHUB_GPG_FINGERPRINT",
+):
+    assert f"require_digest {release_pin}" in release_preflight, \
+        f"release preflight does not enforce {release_pin}"
 assert "SPACED_EXTERNAL_STAGE_DIR" in package_builder \
     and 'spaced-github.flatpakrepo' in package_builder, \
     "the verified spaced-github descriptor is not owned by the desktop package"
@@ -524,6 +571,11 @@ assert "/usr/local/bin/install-spaced-linux" in cleanup \
     and "/usr/share/spaced-themes/cairo-dock/launchers/04-install.desktop" in cleanup \
     and "/home/*/.config/cairo-dock/current_theme/launchers/04-install.desktop" in cleanup, \
     "installed system retains the Spaced Linux installer launcher"
+reboot_helper = root / "usr/local/bin/spaced-reboot-after-install"
+assert reboot_helper.stat().st_mode & 0o111 \
+    and "Remove the installation USB drive" in reboot_helper.read_text(encoding="utf-8") \
+    and "zenity --question" in reboot_helper.read_text(encoding="utf-8"), \
+    "post-install reboot does not warn before the USB installer is removed (issue #192)"
 assert "test ! -x /usr/bin/calamares" in cleanup, \
     "Calamares cleanup lacks a hard package-removal postcondition"
 assert not {"live-config-systemd", "live-task-localisation", "live-task-recommended"}.intersection(removed_after_install), \
@@ -572,6 +624,16 @@ assert "QWidget {\n    background-color: #1b1b1f;" in calamares_stylesheet, \
     "Calamares base surface does not match the transparent logo field"
 assert "Icon=install-spaced-linux" in launcher.read_text(encoding="utf-8"), \
     "Calamares desktop launcher does not use the light download-arrow icon"
+installer_icon = (root / "usr/share/icons/hicolor/scalable/apps/install-spaced-linux.svg").read_text(encoding="utf-8")
+assert 'width="128"' in installer_icon and 'height="128"' in installer_icon \
+    and "<circle" in installer_icon, \
+    "live installer icon is not large and noticeable (issue #191)"
+live_hook = Path("scripts/iso/01-configure.chroot").read_text(encoding="utf-8")
+assert "find /home/user/Desktop -maxdepth 1 -type f ! -name install-spaced-linux.desktop -delete" in live_hook, \
+    "live desktop is not restricted to the installer icon (issue #191)"
+network_server_icon = (root / "usr/share/icons/hicolor/scalable/places/network-server.svg").read_text(encoding="utf-8")
+assert "#6b7078" in network_server_icon and "#b9" not in network_server_icon.lower(), \
+    "Network Servers still falls back to the purple theme icon (issue #190)"
 calamares_launcher = (root / "usr/local/bin/install-spaced-linux").read_text(encoding="utf-8")
 assert "sudo --preserve-env=DISPLAY,XAUTHORITY,DBUS_SESSION_BUS_ADDRESS" in calamares_launcher, \
     "Calamares launcher does not use the authorized live-session sudo path"
@@ -716,6 +778,10 @@ assert "[org.mate.caja.desktop]" in schema_override and "volumes-visible=true" i
 icon_repair = root / "usr/local/bin/spaced-desktop-icon-repair"
 assert icon_repair.stat().st_mode & 0o111 and "caja-icon-position" in icon_repair.read_text(encoding="utf-8"), \
     "Desktop icons stranded outside the current monitors are not repaired (issue #184)"
+icon_repair_before_caja = (root / "etc/xdg/autostart/spaced-desktop-icon-repair-before-caja.desktop").read_text(encoding="utf-8")
+assert "Exec=/usr/local/bin/spaced-desktop-icon-repair\n" in icon_repair_before_caja \
+    and "X-MATE-Autostart-Phase=Panel" in icon_repair_before_caja, \
+    "Desktop icon positions are not repaired before Caja starts (issue #184)"
 icon_repair_autostart = (root / "etc/xdg/autostart/spaced-desktop-icon-repair.desktop").read_text(encoding="utf-8")
 assert "spaced-desktop-icon-repair --watch" in icon_repair_autostart, \
     "Desktop icon repair does not follow monitor layout changes (issue #184)"
@@ -726,6 +792,12 @@ ublock = brave_policy["ExtensionSettings"]["jcokkipkhhgiakinbnnplhkdbjbgcgpe"]
 assert brave_policy["ExtensionManifestV2Availability"] == 2 \
     and ublock["installation_mode"] == "normal_installed", \
     "Brave does not ship uBlock Origin under Manifest V2 support (issue #181)"
+assert brave_policy["BraveP3AEnabled"] is False \
+    and brave_policy["BraveStatsPingEnabled"] is False \
+    and brave_policy["BraveWebDiscoveryEnabled"] is False \
+    and brave_policy["BraveNewsDisabled"] is True \
+    and brave_policy["BraveRewardsDisabled"] is True, \
+    "Brave privacy, search, news, and rewards defaults are not disabled (issue #196)"
 menu_on_dark = icon_root / "Spaced-Menu-On-Dark/scalable/places"
 menu_on_light = icon_root / "Spaced-Menu-On-Light/scalable/places"
 for menu_directory, color in ((menu_on_dark, "#b8bcc2"), (menu_on_light, "#202020")):
@@ -830,8 +902,8 @@ assert "gsettings monitor org.mate.background picture-filename" not in theme_mon
 
 first_login_repair = (root / "usr/local/bin/spaced-first-login-repair").read_text(encoding="utf-8")
 assert "first-login-repair-v5" in first_login_repair, "first-login repair marker was not advanced"
-assert "window-scaling-factor 1" in first_login_repair, \
-    "standard-DPI profiles do not get an explicit 100% scaling factor"
+assert "window-scaling-factor" not in first_login_repair and "xdpyinfo" not in first_login_repair, \
+    "first-login repair overrides MATE's automatic or user-selected scaling"
 assert "text/x-shellscript" in first_login_repair and "pluma.desktop" in first_login_repair, \
     "upgraded profiles do not receive the Pluma shell-script association"
 assert "org.mate.caja.preferences show-hidden-files true" in first_login_repair, \
@@ -890,6 +962,13 @@ assert {"OpenAirShips.com", "SpacedLinux.com", "Devuan", "SpacedBazaar", "Spaced
     "fresh Brave profiles do not receive the requested bookmark-bar links (issue #145)"
 assert brave_preferences["bookmark_bar"]["show_on_all_tabs"] is True, \
     "Brave's seeded bookmarks are hidden by default"
+assert brave_preferences["brave"]["new_tab_page"]["show_background_image"] is False, \
+    "Brave background images are enabled by default (issue #196)"
+assert brave_preferences["search"]["suggest_enabled"] is False, \
+    "Brave search suggestions are enabled by default (issue #196)"
+telegram = next(bookmark for bookmark in bookmark_bar["children"] if bookmark["name"] == "Telegram")
+assert telegram["url"] == "https://web.telegram.org/", \
+    "Telegram bookmark does not open Telegram Web (issue #196)"
 
 display_repair = (root / "usr/local/bin/spaced-display-repair").read_text(encoding="utf-8")
 audio_restore = (root / "usr/local/bin/spaced-audio-restore").read_text(encoding="utf-8")
@@ -899,8 +978,8 @@ assert "pactl subscribe" in audio_restore and "set-sink-mute" in audio_restore \
     and "set-sink-volume" in audio_restore, \
     "audio state is not restored and persisted for reappearing sinks"
 finished = yaml.safe_load((root / "etc/calamares/modules/finished.conf").read_text(encoding="utf-8"))
-assert finished["restartNowCommand"] == "/sbin/reboot", \
-    "Calamares uses a PATH-dependent reboot command"
+assert finished["restartNowCommand"] == "/usr/local/bin/spaced-reboot-after-install", \
+    "Calamares does not use the USB-removal warning before reboot (issue #192)"
 assert (root / "usr/local/bin/reboot").read_text(encoding="utf-8").startswith("#!/bin/sh"), \
     "desktop users do not have an unqualified reboot command"
 timezone_helper = (root / "usr/local/sbin/spaced-finalize-timezone").read_text(encoding="utf-8")

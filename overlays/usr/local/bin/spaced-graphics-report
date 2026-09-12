@@ -19,6 +19,20 @@ run glxinfo -B
 run xrandr --listproviders
 run xrandr --verbose
 run xset q
+run xdpyinfo
+run xrdb -query
+run xprop -root _NET_SUPPORTING_WM_CHECK _NET_ACTIVE_WINDOW
+for schema in org.mate.interface org.mate.font-rendering org.mate.power-manager org.mate.session org.mate.screensaver; do
+    run gsettings list-recursively "$schema"
+done
+run ps -C compiz,gtk-window-decorator,mate-settings-daemon,mate-power-manager,mate-screensaver -o pid,ppid,etimes,stat,comm
+printf '\n--- Saved screensaver idle preference ---\n'
+state="${XDG_CONFIG_HOME:-$HOME/.config}/spaced/screensaver-idle-activation"
+if [ -r "$state" ]; then
+    head -c 64 "$state"
+else
+    printf 'No saved override.\n'
+fi
 run dpkg-query -W '-f=${binary:Package} ${Version}\n' firmware-amd-graphics firmware-realtek firmware-mediatek libgl1-mesa-dri mesa-vulkan-drivers xserver-xorg-video-amdgpu amdgpu-top
 run mokutil --sb-state
 if command -v nvidia-smi >/dev/null 2>&1; then

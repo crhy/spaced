@@ -59,6 +59,7 @@ check_identity() {
         grep -qx "VERSION_ID=\"$1\"" "$marker"
         grep -qx 'ID=spaced' "$marker"
     done
+    grep -qx 'DISTRIB_ID=SpacedLinux' /etc/lsb-release
     grep -qx "DISTRIB_RELEASE=$1" /etc/lsb-release
     grep -q "Spaced Linux $1" /etc/issue
     grep -qx "Spaced Linux $1" /etc/issue.net

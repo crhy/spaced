@@ -1,4 +1,9 @@
 {
+  "BraveNewsDisabled": true,
+  "BraveP3AEnabled": false,
+  "BraveRewardsDisabled": true,
+  "BraveStatsPingEnabled": false,
+  "BraveWebDiscoveryEnabled": false,
   "ExtensionManifestV2Availability": 2,
   "ExtensionSettings": {
     "jcokkipkhhgiakinbnnplhkdbjbgcgpe": {

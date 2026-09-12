@@ -36,6 +36,8 @@ BROWSERS = {
     "org.mozilla.firefox.desktop", "chromium.desktop", "google-chrome.desktop",
     "epiphany.desktop", "org.gnome.Epiphany.desktop",
 }
+FALLBACKS = {mime: "eom.desktop" for mime in IMAGE_TYPES}
+FALLBACKS.update({mime: "pluma.desktop" for mime in TEXT_TYPES})
 
 
 def read_ini(path):
@@ -49,7 +51,7 @@ def read_ini(path):
 def atomic_write(path, content):
     path.parent.mkdir(parents=True, exist_ok=True)
     # Keep one pre-migration copy. Only the user's own files are touched.
-    backup = path.with_name(path.name + ".pre-9.26.1")
+    backup = path.with_name(path.name + ".pre-9.26.2")
     if path.exists() and not backup.exists():
         shutil.copy2(path, backup)
     fd, name = tempfile.mkstemp(prefix="." + path.name + ".", dir=path.parent)
@@ -70,19 +72,40 @@ def save_ini(path, parser):
     atomic_write(path, stream.getvalue())
 
 
-def migrate_mime(path):
+def remove_v1_mime_overrides(path, parser, inherited):
+    backup = path.with_name(path.name + ".pre-9.26.1")
+    if not backup.exists() or not parser.has_section("Default Applications"):
+        return False
+    previous = read_ini(backup)
+    previous_defaults = previous["Default Applications"] if previous.has_section("Default Applications") else {}
+    defaults = parser["Default Applications"]
+    changed = False
+    for mime, fallback in FALLBACKS.items():
+        inherited_choice = inherited.get(mime, "").split(";", 1)[0]
+        if (defaults.get(mime, "").split(";", 1)[0] == fallback
+                and not previous_defaults.get(mime)
+                and inherited_choice
+                and inherited_choice != fallback):
+            defaults.pop(mime, None)
+            changed = True
+    return changed
+
+
+def migrate_mime(path, inherited=None, repair_v1=False):
+    inherited = inherited or {}
     parser = read_ini(path)
     if not parser.has_section("Default Applications"):
         parser.add_section("Default Applications")
     defaults = parser["Default Applications"]
-    changed = False
+    changed = remove_v1_mime_overrides(path, parser, inherited) if repair_v1 else False
     for mime in IMAGE_TYPES:
         current = defaults.get(mime, "").split(";", 1)[0]
-        if not current or current in BROWSERS:
+        effective = current or inherited.get(mime, "").split(";", 1)[0]
+        if not effective or effective in BROWSERS:
             defaults[mime] = "eom.desktop"
             changed = True
     for mime in TEXT_TYPES:
-        if not defaults.get(mime):
+        if not defaults.get(mime) and not inherited.get(mime):
             defaults[mime] = "pluma.desktop"
             changed = True
     if changed:
@@ -127,19 +150,22 @@ def migrate(config):
     state.mkdir(parents=True, exist_ok=True)
     with (state / "desktop-migration.lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
-        marker = state / "desktop-migration-9.26.1-v1"
+        marker = state / "desktop-migration-9.26.2-v1"
         if marker.exists():
             return
-        migrate_mime(config / "mimeapps.list")
+        generic_mime = config / "mimeapps.list"
+        migrate_mime(generic_mime)
+        generic = read_ini(generic_mime)
+        inherited = generic["Default Applications"] if generic.has_section("Default Applications") else {}
         # Desktop-specific files take precedence over mimeapps.list in MATE.
         mate_mime = config / "mate-mimeapps.list"
         if mate_mime.exists():
-            migrate_mime(mate_mime)
+            migrate_mime(mate_mime, inherited, repair_v1=True)
         migrate_compiz(config / "compiz/compizconfig/Default.ini")
         btop = config / "btop/btop.conf"
         if not btop.exists():
             atomic_write(btop, 'graph_symbol = "block"\n')
-        atomic_write(marker, "9.26.1\n")
+        atomic_write(marker, "9.26.2\n")
 
 
 if __name__ == "__main__":

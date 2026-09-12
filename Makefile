@@ -41,7 +41,7 @@ VM_RUN := $(HOST_RUN) env SPACED_VM_SSH_PORT=$(VM_SSH_PORT) SPACED_VM_XRES=$(VM_
 ISO_SMOKE_RUN := $(HOST_RUN) env SPACED_ISO_SMOKE_TIMEOUT=$(ISO_SMOKE_TIMEOUT)
 VBOX_RUN := $(ISO_SMOKE_RUN) SPACED_VBOX_SSH_PORT=$(VBOX_SSH_PORT)
 
-.PHONY: help check deps clean cache-clean marco prepare lb-config lb-build iso-build iso-test iso-smoke iso-smoke-kvm iso-smoke-kvm-efi iso-smoke-kvm-4k iso-smoke-virtualbox iso-smoke-virtualbox-efi iso-test-safe iso-test-safe-1024 iso-test-safe-1080 vm-create vm-install vm-start vm-stop release apt-repo apt-repo-publish
+.PHONY: help check deps clean cache-clean marco prepare lb-config lb-build iso-build iso-test iso-smoke iso-smoke-kvm iso-smoke-kvm-efi iso-smoke-kvm-4k iso-smoke-virtualbox iso-smoke-virtualbox-efi iso-test-safe iso-test-safe-1024 iso-test-safe-1080 vm-create vm-install vm-start vm-stop release-preflight release apt-repo apt-repo-publish
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -212,7 +212,18 @@ vm-start: ## Boot the installed KVM test disk
 vm-stop: ## Stop a headless KVM test instance
 	$(VM_RUN) scripts/vm/qemu/stop.sh
 
-release: clean ## Clean-build the current Spaced Linux ISO
+release-preflight: check ## Run tests and reject unpublished release inputs
+	$(HOST_RUN) env \
+		SPACED_EXTERNAL_ARTIFACT_CONFIG="$(SPACED_EXTERNAL_ARTIFACT_CONFIG)" \
+		SPACED_WELCOME_VERSION="$(SPACED_WELCOME_VERSION)" \
+		SPACED_WELCOME_RELEASE_TAG="$(SPACED_WELCOME_RELEASE_TAG)" \
+		SPACED_WELCOME_SHA256="$(SPACED_WELCOME_SHA256)" \
+		SPACED_GITHUB_REMOTE_SHA256="$(SPACED_GITHUB_REMOTE_SHA256)" \
+		SPACED_GITHUB_GPG_FINGERPRINT="$(SPACED_GITHUB_GPG_FINGERPRINT)" \
+		scripts/release-preflight.sh
+
+release: release-preflight ## Test and clean-build the current Spaced Linux ISO
+	$(MAKE) clean
 	$(MAKE) lb-build
 
 APT_REPO_DIR := spaced-apt
@@ -223,6 +234,8 @@ apt-repo: marco ## Rebuild the update repository into ./spaced-apt (from crhy/sp
 		gh repo clone crhy/spaced-apt "$(APT_REPO_DIR)"; \
 	fi
 	$(HOST_RUN) scripts/build-apt-repo.sh "$(abspath $(APT_REPO_DIR))"
+	$(HOST_RUN) scripts/tests/test-release-package-payload.sh "$(abspath $(APT_REPO_DIR))"
+	$(HOST_RUN) scripts/tests/test-apt-trust.sh "$(abspath $(APT_REPO_DIR))"
 
 apt-repo-publish: apt-repo ## Rebuild and publish the update repository to crhy/spaced-apt
 	cd "$(APT_REPO_DIR)" && \

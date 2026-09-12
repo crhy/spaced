@@ -29,6 +29,7 @@ ICON_SLACK = 128
 POSITION_KEY = "caja-icon-position"
 METADATA_ATTRIBUTE = f"metadata::{POSITION_KEY}"
 MODE_PATTERN = re.compile(r"\b(\d+)x(\d+)\+(-?\d+)\+(-?\d+)\b")
+DESKTOP_DIR_PATTERN = re.compile(r"^\s*XDG_DESKTOP_DIR=(.*)\s*$")
 
 
 def run(command):
@@ -129,6 +130,30 @@ def repair_desktop_metadata(path, rectangles):
     return repaired
 
 
+def desktop_directory(config):
+    """Return the user's XDG desktop directory, including custom locations."""
+    configured = os.environ.get("XDG_DESKTOP_DIR")
+    if configured:
+        return Path(os.path.expandvars(os.path.expanduser(configured)))
+
+    user_dirs = config / "user-dirs.dirs"
+    try:
+        lines = user_dirs.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        lines = []
+    for line in lines:
+        match = DESKTOP_DIR_PATTERN.match(line)
+        if not match:
+            continue
+        value = match.group(1).strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+            value = value[1:-1]
+        value = value.replace(r"\040", " ")
+        value = value.replace("${HOME}", str(Path.home())).replace("$HOME", str(Path.home()))
+        return Path(os.path.expandvars(os.path.expanduser(value)))
+    return Path.home() / "Desktop"
+
+
 def watch():
     """Repair again whenever the monitor layout changes, with no polling."""
     import gi
@@ -170,7 +195,7 @@ def repair_once():
         # Without a trustworthy layout, doing nothing is the safe choice.
         return 0
     config = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
-    desktop = Path(os.environ.get("XDG_DESKTOP_DIR", Path.home() / "Desktop"))
+    desktop = desktop_directory(config)
     repaired = repair_file_icons(desktop, rectangles)
     repaired += repair_desktop_metadata(config / "caja" / "desktop-metadata", rectangles)
     if repaired:

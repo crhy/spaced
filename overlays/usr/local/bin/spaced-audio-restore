@@ -2,9 +2,11 @@
 # PulseAudio normally restores sink state itself. Keep a small user-level copy
 # as a fallback for hardware and virtual sinks that reappear muted or at 0%.
 set -u
+export LC_ALL=C
 
 state_dir=${XDG_CONFIG_HOME:-$HOME/.config}/spaced
 state_file=$state_dir/audio-state
+unavailable_default=''
 
 wait_for_pulse() {
     local attempt
@@ -18,35 +20,46 @@ wait_for_pulse() {
 read_current() {
     local sink volume mute
     sink=$(pactl get-default-sink 2>/dev/null || true)
-    [ -n "$sink" ] || return 1
+    case "$sink" in ''|auto_null) return 1 ;; esac
     volume=$(pactl get-sink-volume "$sink" 2>/dev/null |
         awk 'match($0, /[0-9]+%/) {print substr($0, RSTART, RLENGTH-1); exit}')
     mute=$(pactl get-sink-mute "$sink" 2>/dev/null | awk '{print $2; exit}')
     [[ "$volume" =~ ^[0-9]+$ ]] || return 1
     case "$mute" in yes|no) ;; *) return 1 ;; esac
-    printf '%s %s\n' "$volume" "$mute"
+    printf '%s %s %s\n' "$volume" "$mute" "$sink"
 }
 
 save_current() {
-    local current temporary
+    local current temporary volume mute sink
     current=$(read_current) || return 0
-    mkdir -p "$state_dir"
+    read -r volume mute sink <<< "$current"
+    if [ -n "$unavailable_default" ]; then
+        [ "$sink" != "$unavailable_default" ] || return 0
+        unavailable_default=''
+    fi
+    mkdir -p "$state_dir" || return 0
     temporary=$state_file.tmp
-    printf '%s\n' "$current" > "$temporary"
+    printf '%s\n' "$current" > "$temporary" || return 0
     mv "$temporary" "$state_file"
 }
 
 command -v pactl >/dev/null 2>&1 || exit 0
 wait_for_pulse || exit 0
 
-if read -r saved_volume saved_mute < "$state_file" 2>/dev/null \
+if { read -r saved_volume saved_mute saved_sink < "$state_file"; } 2>/dev/null \
     && [[ "$saved_volume" =~ ^[0-9]+$ ]] \
     && [[ "$saved_mute" =~ ^(yes|no)$ ]]; then
-    pactl set-sink-volume @DEFAULT_SINK@ "$saved_volume%" >/dev/null 2>&1 || true
-    [ "$saved_mute" = yes ] && mute=1 || mute=0
-    pactl set-sink-mute @DEFAULT_SINK@ "$mute" >/dev/null 2>&1 || true
+    if [ -z "$saved_sink" ] || pactl set-default-sink "$saved_sink" >/dev/null 2>&1; then
+        target=${saved_sink:-@DEFAULT_SINK@}
+        pactl set-sink-volume "$target" "$saved_volume%" >/dev/null 2>&1 || true
+        [ "$saved_mute" = yes ] && mute=1 || mute=0
+        pactl set-sink-mute "$target" "$mute" >/dev/null 2>&1 || true
+    else
+        unavailable_default=$(pactl get-default-sink 2>/dev/null) || exit 0
+        [ -n "$unavailable_default" ] || exit 0
+    fi
 else
-    read -r current_volume current_mute < <(read_current) || exit 0
+    read -r current_volume current_mute current_sink < <(read_current) || exit 0
     # Only correct the broken first-boot state. A healthy device's existing
     # volume is preserved, and intentional later mute/0% choices are saved.
     if [ "$current_volume" -eq 0 ]; then
@@ -57,6 +70,7 @@ else
     fi
 fi
 save_current
+trap 'save_current; exit 0' HUP INT TERM
 
 # Dragging a volume slider emits a stream of sink events. Saving on each one
 # spawns three pactl processes per event; wait for the burst to settle first.

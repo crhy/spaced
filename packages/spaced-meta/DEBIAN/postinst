@@ -34,7 +34,7 @@ EOF
 install -Dm0644 "$identity" /usr/lib/os-release
 install -Dm0644 "$identity" /etc/os-release
 cat > /etc/lsb-release <<EOF
-DISTRIB_ID=Spaced
+DISTRIB_ID=SpacedLinux
 DISTRIB_RELEASE=$VERSION
 DISTRIB_CODENAME=$CODENAME
 DISTRIB_DESCRIPTION="Spaced Linux $VERSION"
