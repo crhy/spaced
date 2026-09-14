@@ -1,5 +1,17 @@
 # Changelog
 
+## 9.26.3 - unreleased
+- VirtualBox ISO smoke test now exercises the configuration real users get
+  (Refs #218). `scripts/vm/virtualbox/smoke-iso.sh` accepts
+  `--graphics default|vboxsvga` (`SPACED_VBOX_GRAPHICS`); `default` leaves
+  VirtualBox's own VMSVGA defaults in place and records the chosen controller,
+  reporting the expected "Compiz cannot start" outcome distinctly as
+  `NO WINDOW MANAGER` (exit 3) instead of timing out. Both profiles now also
+  launch the live installer over SSH, wait for a Calamares process and window,
+  screenshot it, and close it without installing. `make vbox-smoke`
+  (VBoxSVGA) and `make vbox-smoke-default` (VirtualBox defaults) cover the
+  release checklist; VirtualBox stays out of GitHub Actions.
+
 ## 9.26.2-2 - 2026-09-12
 - Fix issue #209. The 9.26.2 GitHub release was published without its APT
   packages, so Spaced Update offered 9.26.2 but APT had nothing newer than
