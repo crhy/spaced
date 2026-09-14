@@ -1,5 +1,12 @@
 # Changelog
 
+## 9.26.3 - unreleased
+- Fix issue #219: "Activate screen saver when computer is idle" no longer
+  unticks itself when display sleep is "Never". Only a real display-sleep
+  transition changes screensaver idle activation now; login, unlock and the
+  30-second DPMS reconcile only reapply xset, and ticking the box while on
+  Never discards the remembered state so it is not flipped back later.
+
 ## 9.26.2-2 - 2026-09-12
 - Fix issue #209. The 9.26.2 GitHub release was published without its APT
   packages, so Spaced Update offered 9.26.2 but APT had nothing newer than

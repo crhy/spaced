@@ -53,34 +53,92 @@ esac''')
         executable.write_text(f'#!/bin/bash\n{body}\n')
         executable.chmod(0o755)
 
-    def run_helper(self, name='spaced-display-repair'):
-        result = subprocess.run([str(BIN / name)], env=self.env,
+    def run_helper(self, name='spaced-display-repair', args=()):
+        result = subprocess.run([str(BIN / name), *args], env=self.env,
                                 capture_output=True, text=True, timeout=5)
         self.assertEqual(result.returncode, 0, result.stderr)
         return result
+
+    def run_transition(self, prev, new):
+        return self.run_helper(args=['--screensaver-transition', str(prev), str(new)])
 
     def writes(self, name='settings-writes'):
         path = self.state / name
         return path.read_text().splitlines() if path.exists() else []
 
-    def test_never_suppresses_idle_without_changing_lock_or_session_delay(self):
+    def test_never_startup_leaves_idle_alone_but_reapplies_dpms(self):
+        # Issue #219: the login/periodic run must never flip the checkbox.
         self.run_helper()
-        self.assertEqual(self.writes(), ['set org.mate.screensaver idle-activation-enabled false'])
-        self.assertEqual(self.saved.read_text(), 'true\n')
+        self.assertEqual(self.writes(), [])
+        self.assertFalse(self.saved.exists())
         self.assertEqual(self.writes('xset-writes'), ['-dpms', 's off', 's noblank'])
 
-    def test_repeated_login_retains_original_preference_then_restores_once(self):
+    def test_never_periodic_run_keeps_user_enabled_idle(self):
+        # Issue #219: ticking the box while display sleep is Never sticks.
+        self.write('idle', 'true\n')
         self.run_helper()
         self.run_helper()
+        self.assertEqual((self.state / 'idle').read_text(), 'true\n')
+        self.assertEqual(self.writes(), [])
+        self.assertFalse(self.saved.exists())
+
+    def test_timeout_to_never_transition_disables_and_remembers(self):
+        self.run_transition(1800, 0)
+        self.assertEqual(self.writes(), ['set org.mate.screensaver idle-activation-enabled false'])
         self.assertEqual(self.saved.read_text(), 'true\n')
-        self.assertEqual(len(self.writes()), 1)
+        self.assertEqual((self.state / 'idle').read_text(), 'false\n')
+
+    def test_never_to_timeout_transition_restores_and_clears(self):
+        self.run_transition(1800, 0)
         self.write('timeout', '1800\n')
-        self.run_helper()
-        self.run_helper()
+        self.run_transition(0, 1800)
         self.assertEqual(self.writes(), [
             'set org.mate.screensaver idle-activation-enabled false',
             'set org.mate.screensaver idle-activation-enabled true'])
         self.assertFalse(self.saved.exists())
+        self.assertEqual((self.state / 'idle').read_text(), 'true\n')
+
+    def test_user_reenabled_idle_survives_periodic_run_and_discards_state(self):
+        # Timeout -> Never remembers, the user ticks the box back on while
+        # still on Never, then a periodic/startup run must leave it on and
+        # drop the stale marker so a later switch does not flip it.
+        self.run_transition(1800, 0)
+        self.write('idle', 'true\n')
+        self.write('timeout', 'uint32 0\n')
+        self.run_helper()
+        self.assertEqual((self.state / 'idle').read_text(), 'true\n')
+        self.assertEqual(self.writes(), [
+            'set org.mate.screensaver idle-activation-enabled false'])
+        self.assertFalse(self.saved.exists())
+
+    def test_never_to_timeout_with_already_true_discards_without_write(self):
+        self.run_transition(1800, 0)
+        self.write('idle', 'true\n')
+        self.run_transition(0, 1800)
+        self.assertEqual(self.writes(), [
+            'set org.mate.screensaver idle-activation-enabled false'])
+        self.assertFalse(self.saved.exists())
+
+    def test_same_value_transition_is_noop(self):
+        for prev, new in [('0', '0'), ('1800', '1800'), ('1800', '900')]:
+            with self.subTest(prev=prev, new=new):
+                (self.state / 'settings-writes').unlink(missing_ok=True)
+                if self.saved.exists():
+                    self.saved.unlink()
+                self.run_transition(prev, new)
+                self.assertEqual(self.writes(), [])
+                self.assertFalse(self.saved.exists())
+
+    def test_repeated_login_never_touches_idle(self):
+        self.run_helper()
+        self.run_helper()
+        self.assertFalse(self.saved.exists())
+        self.assertEqual(self.writes(), [])
+        self.write('timeout', '1800\n')
+        self.run_helper()
+        self.run_helper()
+        self.assertFalse(self.saved.exists())
+        self.assertEqual(self.writes(), [])
         self.assertEqual(self.writes('xset-writes')[-2:], ['+dpms', '+dpms'])
 
     def test_previously_disabled_idle_stays_disabled(self):
@@ -130,15 +188,25 @@ esac''')
         self.assertEqual(self.writes(), [])
 
     def test_failed_restore_retains_state_for_retry(self):
-        self.run_helper()
-        self.write('timeout', 'uint32 1800\n')
+        self.run_transition(1800, 0)
         self.write('set-failure', '')
-        self.run_helper()
+        self.run_transition(0, 1800)
         self.assertEqual(self.saved.read_text(), 'true\n')
         (self.state / 'set-failure').unlink()
-        self.run_helper()
+        self.run_transition(0, 1800)
         self.assertFalse(self.saved.exists())
         self.assertEqual((self.state / 'idle').read_text(), 'true\n')
+
+    def test_invalid_transition_values_do_nothing(self):
+        for prev, new in [('', '0'), ('0', ''), ('bogus', '0'), ('0', 'bogus'),
+                          ('', ''), ('unknown', '1800')]:
+            with self.subTest(prev=prev, new=new):
+                (self.state / 'settings-writes').unlink(missing_ok=True)
+                if self.saved.exists():
+                    self.saved.unlink()
+                self.run_transition(prev, new)
+                self.assertEqual(self.writes(), [])
+                self.assertFalse(self.saved.exists())
 
     def test_invalid_saved_preference_cannot_enable_idle(self):
         self.saved.parent.mkdir(parents=True)
@@ -152,6 +220,18 @@ esac''')
         helper = (BIN / 'spaced-display-repair').read_text()
         self.assertIn('while sleep 30; do', helper)
         self.assertIn('apply_power_policy\n    done &', helper)
+
+    def test_watch_mode_only_transitions_change_idle(self):
+        helper = (BIN / 'spaced-display-repair').read_text()
+        # Sleep-display watchers pass an explicit transition with the
+        # previous and new timeout; startup/unlock/reconcile never do.
+        self.assertIn('apply_power_policy transition', helper)
+        self.assertIn('gsettings monitor org.mate.power-manager', helper)
+        self.assertIn('gsettings monitor org.mate.screensaver idle-activation-enabled', helper)
+        # sync_screensaver_idle runs only for the transition call ...
+        self.assertIn('if [ "$mode" = transition ]; then', helper)
+        # ... and ignores the monitor's initial/spurious emissions.
+        self.assertIn('[ "$new" = "$prev" ]', helper)
 
     def test_first_login_does_not_override_auto_or_explicit_scaling(self):
         self.command('python3', 'exit 0')
