@@ -209,14 +209,13 @@ VirtualBox graphics profiles (`scripts/vm/virtualbox/smoke-iso.sh
 
 ```bash
 make vbox-smoke          # VBoxSVGA: must reach a usable desktop (exit 0)
-make vbox-smoke-default  # VirtualBox defaults (VMSVGA): currently documents
-                         # the known "no window manager" result (exit 3)
-                         # until issue #218 is resolved
+make vbox-smoke-default  # VirtualBox's own default graphics controller
 ```
 
-`vbox-smoke-default` exercises the configuration real users get and is
-expected today to exit 3 with a `NO WINDOW MANAGER` diagnosis (Compiz cannot
-start under VMSVGA) rather than a usable desktop. Both profiles run the
+`vbox-smoke-default` exercises the configuration real users get and records
+the controller VirtualBox chose (VBoxVGA on VirtualBox 7.2.16, which reaches a
+usable desktop). It exits 3 with a `NO WINDOW MANAGER` diagnosis when Compiz
+cannot start on that controller (issue #218). Both profiles run the
 installer launch check once the desktop is reached.
 
 ### Useful targets

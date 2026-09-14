@@ -91,7 +91,7 @@ class VBoxSmokeStaticTests(unittest.TestCase):
         self.assertIn('/usr/local/bin/install-spaced-linux', TEXT)
         self.assertIn('INSTALLER_TIMEOUT=90', TEXT)
         self.assertIn('wmctrl -l', TEXT)
-        self.assertIn('xdotool search --name', TEXT)
+        self.assertIn('xdotool search --class calamares', TEXT)
         self.assertIn('capture_screenshot_to', TEXT)
 
     def test_makefile_exposes_both_targets(self):

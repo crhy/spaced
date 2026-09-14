@@ -183,10 +183,10 @@ iso-smoke-virtualbox-efi: ## Headlessly boot the ISO in VirtualBox EFI mode
 
 vbox-smoke: iso-smoke-virtualbox iso-smoke-virtualbox-efi ## VirtualBox smoke with VBoxSVGA (BIOS+EFI) plus installer launch check
 
-vbox-smoke-default: ## VirtualBox smoke with VirtualBox defaults (documents the known no-window-manager result, issue #218)
+vbox-smoke-default: ## VirtualBox smoke with VirtualBox defaults (exit 3 = Compiz cannot start, issue #218)
 	test -f $(ISO_DIR)/$(ISO_NAME) || { echo "Missing $(ISO_DIR)/$(ISO_NAME)"; exit 1; }
-	$(VBOX_RUN) SPACED_VBOX_FIRMWARE=bios scripts/vm/virtualbox/smoke-iso.sh --graphics default $(abspath $(ISO_DIR)/$(ISO_NAME)) || [ $$? -eq 3 ]
-	$(VBOX_RUN) SPACED_VBOX_FIRMWARE=efi scripts/vm/virtualbox/smoke-iso.sh --graphics default $(abspath $(ISO_DIR)/$(ISO_NAME)) || [ $$? -eq 3 ]
+	$(VBOX_RUN) SPACED_VBOX_FIRMWARE=bios scripts/vm/virtualbox/smoke-iso.sh --graphics default $(abspath $(ISO_DIR)/$(ISO_NAME))
+	$(VBOX_RUN) SPACED_VBOX_FIRMWARE=efi scripts/vm/virtualbox/smoke-iso.sh --graphics default $(abspath $(ISO_DIR)/$(ISO_NAME))
 
 iso-test-safe: ## Boot ISO with safe 2D graphics at the selected resolution
 	test -f $(ISO_DIR)/$(ISO_NAME)
