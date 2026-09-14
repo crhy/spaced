@@ -4,10 +4,12 @@
 - VirtualBox ISO smoke test now exercises the configuration real users get
   (Refs #218). `scripts/vm/virtualbox/smoke-iso.sh` accepts
   `--graphics default|vboxsvga` (`SPACED_VBOX_GRAPHICS`); `default` leaves
-  VirtualBox's own VMSVGA defaults in place and records the chosen controller,
-  reporting the expected "Compiz cannot start" outcome distinctly as
+  VirtualBox's own graphics defaults in place and records the chosen controller,
+  reporting a "Compiz cannot start" outcome distinctly as
   `NO WINDOW MANAGER` (exit 3) instead of timing out. Both profiles now also
-  launch the live installer over SSH, wait for a Calamares process and window,
+  launch the live installer over SSH, wait for a Calamares process and window
+  (matched by its X window class, since the branded title is "Spaced Linux
+  Installer"),
   screenshot it, and close it without installing. `make vbox-smoke`
   (VBoxSVGA) and `make vbox-smoke-default` (VirtualBox defaults) cover the
   release checklist; VirtualBox stays out of GitHub Actions.

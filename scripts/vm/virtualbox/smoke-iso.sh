@@ -6,8 +6,8 @@
 #       --accelerate-3d off. Linux 7.1 rejects VirtualBox's default VMSVGA
 #       adapter, so this keeps the Compiz desktop usable in the test.
 #   default - passes neither --graphicscontroller nor --accelerate-3d, so
-#       VirtualBox's own defaults for the ostype apply (VMSVGA for
-#       Debian_64, which real users get). The controller VirtualBox chose is
+#       VirtualBox's own defaults for the ostype apply, as real users get
+#       (VirtualBox 7.2.16 picks VBoxVGA for Debian_64). The controller VirtualBox chose is
 #       recorded in the run log and the runtime JSON report.
 #
 # Exit codes:
@@ -17,8 +17,8 @@
 #       running) but Compiz cannot start. Diagnosed via the
 #       spaced-window-manager logger message, the absence of a compiz process
 #       for the live user, and `wmctrl -m` showing no window manager owns the
-#       screen. This is the expected result of the `default` profile until the
-#       #218 graphics issue is resolved.
+#       screen. This is how a VM whose graphics cannot run Compiz fails
+#       (issue #218).
 #   1 - any other failure (VM died, SSH/desktop never ready, blank captures,
 #       installer launch check failed).
 #   2 - usage error (bad arguments or numeric settings).
@@ -285,8 +285,10 @@ if command -v runuser >/dev/null 2>&1; then
 else
     as_user() { su -s /bin/sh user -c "DISPLAY='$display' XAUTHORITY='$xauth' $*"; }
 fi
-if as_user wmctrl -l 2>/dev/null | grep -qi calamares; then exit 0; fi
-if command -v xdotool >/dev/null 2>&1 && as_user xdotool search --name -i calamares >/dev/null 2>&1; then exit 0; fi
+# Calamares titles its window from the branding ("Spaced Linux Installer"),
+# so match the X window class, which stays "calamares".
+if as_user wmctrl -lx 2>/dev/null | awk '{print $3}' | grep -qi calamares; then exit 0; fi
+if command -v xdotool >/dev/null 2>&1 && as_user xdotool search --class calamares >/dev/null 2>&1; then exit 0; fi
 exit 1
 REMOTE
         then
@@ -304,8 +306,11 @@ REMOTE
         return 1
     fi
     if [ -z "$window_seen" ]; then
-        INSTALLER_RESULT="fail:calamares process ran but no visible Calamares window appeared within ${INSTALLER_TIMEOUT}s (wmctrl -l / xdotool)"
+        INSTALLER_RESULT="fail:calamares process ran but no visible Calamares window appeared within ${INSTALLER_TIMEOUT}s (wmctrl -lx / xdotool --class)"
         echo "Installer check FAILED: $INSTALLER_RESULT" >&2
+        # Keep evidence of what the screen showed instead of the installer.
+        capture_screenshot_to "$INSTALLER_SCREENSHOT" \
+            && echo "Screen at installer failure: $INSTALLER_SCREENSHOT" >&2
     else
         if capture_screenshot_to "$INSTALLER_SCREENSHOT"; then
             echo "Installer window screenshot: $INSTALLER_SCREENSHOT"
@@ -377,8 +382,8 @@ if [ "$GRAPHICS" = vboxsvga ]; then
         --nic1 nat --nat-pf1 "live-ssh,tcp,127.0.0.1,$SSH_PORT,,22"
 else
     # `default` profile: pass neither --graphicscontroller nor --accelerate-3d
-    # so VirtualBox's own defaults for the ostype apply (VMSVGA for
-    # Debian_64), exactly as real users create their VMs (issue #218).
+    # so VirtualBox's own defaults for the ostype apply, exactly as real users
+    # create their VMs (issue #218).
     VBoxManage modifyvm "$VM_NAME" \
         --memory "$RAM" --cpus "$CPUS" --vram 128 \
         --firmware "$FIRMWARE" --boot1 dvd --boot2 none --boot3 none --boot4 none \
