@@ -1097,6 +1097,13 @@ assert "uname -r" in update_helper, \
     "Spaced Update cleanup must protect the running kernel (issue #217)"
 assert "MODE == apt-install || $MODE == cleanup-apply" in update_helper, \
     "cleanup-apply must install the APT transaction guard like updates (issue #217)"
+assert "CLEANUP_CACHE_ONLY_STATUS=3" in update_helper \
+    and 'exit "$CLEANUP_CACHE_ONLY_STATUS"' in update_helper, \
+    "a cache-only cleanup must use its distinct success code (issue #217)"
+assert "CLEANUP_CACHE_ONLY_STATUS = 3" in update_app \
+    and '"cache-only"' in update_app \
+    and "Package cache cleaned" in update_app, \
+    "Spaced Update does not report a cache-only cleanup as success (issue #217)"
 update_path = update_helper.split("TRANSACTION=(dist-upgrade", 1)[1].split(
     "Requested system updates complete", 1)[0]
 assert "autoremove" not in update_path, \

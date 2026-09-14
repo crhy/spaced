@@ -8,6 +8,7 @@ SPACED_UPDATE_TEST_CACHE_DIR points du at a scratch cache directory.
 """
 import os
 from pathlib import Path
+import importlib.util
 import subprocess
 import sys
 import tempfile
@@ -17,6 +18,17 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.dont_write_bytecode = True
 HELPER = ROOT / 'overlays/usr/lib/spaced-linux/spaced-update-helper'
 RUNNING_KERNEL = '6.1.0-99-amd64'
+
+try:
+    _spec = importlib.util.spec_from_file_location(
+        'spaced_update',
+        ROOT / 'overlays/usr/lib/spaced-linux/spaced-update.py')
+    spaced_update = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(spaced_update)
+except Exception:
+    # GUI mapping tests are skipped where PyGObject/GTK is unavailable;
+    # check.sh still asserts the GUI handles the cache-only status code.
+    spaced_update = None
 
 APT_GET = """#!/bin/bash
 echo "$@" >> "$FAKE_APT_LOG"
@@ -174,8 +186,10 @@ class CleanupHelperTests(unittest.TestCase):
 
     def test_apply_with_blocked_plan_runs_only_autoclean(self):
         result = self.run_helper('cleanup-apply', 'mate-panel libfoo1')
-        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(result.returncode, 3, result.stderr)
         self.assertIn('mate-panel', result.stdout)
+        self.assertIn('Package cache cleaned', result.stdout)
+        self.assertNotIn('Update stopped', result.stdout)
         invocations = self.apt_invocations()
         self.assertTrue(any('autoclean' in invocation
                             for invocation in invocations),
@@ -201,6 +215,28 @@ class CleanupHelperTests(unittest.TestCase):
                 'Requested system updates complete', 1)[0]
         self.assertNotIn('autoremove', update_path)
         self.assertNotIn('autoclean', update_path)
+
+
+@unittest.skipUnless(spaced_update, 'PyGObject/GTK is unavailable')
+class CleanupGuiMappingTests(unittest.TestCase):
+    def test_exit_code_mapping(self):
+        self.assertEqual(spaced_update.CLEANUP_CACHE_ONLY_STATUS, 3)
+        self.assertEqual(spaced_update.cleanup_apply_outcome(0), 'done')
+        self.assertEqual(spaced_update.cleanup_apply_outcome(3), 'cache-only')
+        for status in (1, 2, 75, 126):
+            self.assertEqual(spaced_update.cleanup_apply_outcome(status),
+                             'failed', status)
+
+    def test_blocked_package_parsing(self):
+        output = ('Cleanup refused automatic removal for safety.\n'
+                  'Blocked package: mate-panel (matches protected pattern mate-)\n'
+                  'Blocked package: compiz-core (matches protected pattern compiz)\n'
+                  'SPACED_STEP:40:Cleaning the package cache\n'
+                  'Package cache cleaned.\n')
+        self.assertEqual(spaced_update.App._parse_blocked_packages(output),
+                         ['mate-panel', 'compiz-core'])
+        self.assertEqual(spaced_update.App._parse_blocked_packages(''), [])
+        self.assertEqual(spaced_update.App._parse_blocked_packages(None), [])
 
 
 if __name__ == '__main__':

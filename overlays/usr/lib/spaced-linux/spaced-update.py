@@ -235,6 +235,27 @@ def check_status(status):
         raise RuntimeError(f"Update command exited with status {status}")
 
 
+# cleanup-apply exit code meaning "package cache cleaned; autoremove
+# refused for safety". Must match CLEANUP_CACHE_ONLY_STATUS in
+# spaced-update-helper; it is unused by check_status() and every other
+# helper/pkexec code (0, 1, 2, 75, 126).
+CLEANUP_CACHE_ONLY_STATUS = 3
+
+
+def cleanup_apply_outcome(returncode):
+    """Classify a cleanup-apply exit status without needing a display.
+
+    Returns "done" for 0, "cache-only" for CLEANUP_CACHE_ONLY_STATUS, and
+    "failed" for anything else. check_status() still owns 126
+    (authentication cancelled).
+    """
+    if returncode == 0:
+        return "done"
+    if returncode == CLEANUP_CACHE_ONLY_STATUS:
+        return "cache-only"
+    return "failed"
+
+
 def enumerate_apt():
     output = run_capture(["apt", "list", "--upgradable"])
     items = []
@@ -1132,7 +1153,7 @@ class App(Gtk.Window):
                 f"({self._format_cleanup_bytes(cache_bytes)}) can be cleaned."
             )
             dialog.add_button("Cancel", Gtk.ResponseType.CANCEL)
-            dialog.add_button("Clean Package Cache", Gtk.ResponseType.OK)
+            dialog.add_button("Clean Package Cache", Gtk.ResponseType.APPLY)
             dialog.set_default_response(Gtk.ResponseType.CANCEL)
         else:
             listing = "\n".join(
@@ -1160,14 +1181,22 @@ class App(Gtk.Window):
 
     def _on_cleanup_response(self, dialog, response):
         dialog.destroy()
-        if response != Gtk.ResponseType.OK:
+        if response == Gtk.ResponseType.OK:
+            cache_only = False
+        elif response == Gtk.ResponseType.APPLY:
+            cache_only = True
+        else:
             self._set_busy(False)
             return
         # The helper re-plans internally; nothing selected here is trusted.
+        if cache_only:
+            detail = "Cleaning the package cache\u2026"
+        else:
+            detail = "Removing unused packages and cleaning the package cache\u2026"
         self._set_status(
             "content-loading-symbolic",
             "Cleaning up",
-            "Removing unused packages and cleaning the package cache\u2026",
+            detail,
         )
         threading.Thread(target=self._cleanup_apply_worker, daemon=True).start()
 
@@ -1182,25 +1211,69 @@ class App(Gtk.Window):
                 env={**os.environ, "LC_ALL": "C"},
             )
         except (OSError, subprocess.TimeoutExpired) as error:
-            GLib.idle_add(self._cleanup_apply_done, False, str(error))
+            GLib.idle_add(self._cleanup_apply_done, False, "failed", str(error))
             return
         output = ((result.stdout or "") + (result.stderr or "")).strip()
+        outcome = cleanup_apply_outcome(result.returncode)
+        if outcome != "failed":
+            if not output:
+                output = (
+                    "Cleanup complete."
+                    if outcome == "done"
+                    else "Package cache cleaned."
+                )
+            GLib.idle_add(self._cleanup_apply_done, True, outcome, output)
+            return
         try:
             check_status(result.returncode)
         except UpdateCancelled as error:
-            GLib.idle_add(self._cleanup_apply_done, False, str(error))
+            GLib.idle_add(self._cleanup_apply_done, False, "failed", str(error))
         except RuntimeError as error:
-            GLib.idle_add(self._cleanup_apply_done, False, output or str(error))
-        else:
-            GLib.idle_add(
-                self._cleanup_apply_done, True, output or "Cleanup complete."
-            )
+            GLib.idle_add(self._cleanup_apply_done, False, "failed", output or str(error))
 
-    def _cleanup_apply_done(self, succeeded, message):
+    @staticmethod
+    def _parse_blocked_packages(output):
+        blocked = []
+        for line in (output or "").splitlines():
+            if line.startswith("Blocked package: "):
+                rest = line[len("Blocked package: "):]
+                blocked.append(rest.split(" (", 1)[0])
+        return blocked
+
+    def _cleanup_apply_done(self, succeeded, kind, message):
         self._set_busy(False)
+        if succeeded and kind == "cache-only":
+            blocked = self._parse_blocked_packages(message)
+            if blocked:
+                listing = "\n".join(blocked[:25])
+                if len(blocked) > 25:
+                    listing += f"\n\u2026 and {len(blocked) - 25} more"
+                detail = (
+                    "The package cache was cleaned. "
+                    "These packages were left installed for safety:\n"
+                    f"{listing}"
+                )
+            else:
+                detail = (
+                    "The package cache was cleaned. "
+                    "Unused packages were left installed for safety."
+                )
+            self._set_status(
+                "emblem-ok-symbolic",
+                "Package cache cleaned",
+                "Unused packages were left installed for safety.",
+            )
+            dialog = Gtk.MessageDialog(
+                transient_for=self,
+                flags=Gtk.DialogFlags.MODAL,
+                message_type=Gtk.MessageType.INFO,
+                buttons=Gtk.ButtonsType.CLOSE,
+                text="Package cache cleaned",
+            )
+            dialog.format_secondary_text(detail)
         if len(message) > 3000:
-            message = message[:3000] + "\u2026"
-        if succeeded:
+            message = message[:3000] + "…"
+        elif succeeded:
             self._set_status(
                 "emblem-ok-symbolic",
                 "Cleanup complete",

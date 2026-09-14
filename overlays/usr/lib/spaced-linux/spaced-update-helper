@@ -115,6 +115,13 @@ cleanup_compute_plan() {
   fi
 }
 
+# Exit code meaning "package cache cleaned; autoremove refused for safety".
+# Distinct from real failures, which keep the existing codes below (1 for
+# errors and safety refusals during updates, 2 for usage errors, 75 for a
+# contended transaction lock, plus the ERR trap status). 126 is pkexec's own
+# authentication-cancelled code and never comes from this script.
+CLEANUP_CACHE_ONLY_STATUS=3
+
 MODE=${1:-all}
 if [ "$#" -gt 0 ]; then shift; fi
 case "$MODE" in
@@ -226,7 +233,7 @@ if [[ $MODE == cleanup-apply ]]; then
     step 40 'Cleaning the package cache'
     apt_run -y autoclean
     log 'Package cache cleaned. The blocked packages were left installed.'
-    exit 1
+    exit "$CLEANUP_CACHE_ONLY_STATUS"
   fi
   step 40 'Cleaning the package cache'
   apt_run -y autoclean
