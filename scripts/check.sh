@@ -1095,6 +1095,8 @@ for required_pattern in ("spaced-meta", "mate-", "compiz"):
         f"Spaced Update cleanup does not protect {required_pattern} (issue #217)"
 assert "uname -r" in update_helper, \
     "Spaced Update cleanup must protect the running kernel (issue #217)"
+assert "MODE == apt-install || $MODE == cleanup-apply" in update_helper, \
+    "cleanup-apply must install the APT transaction guard like updates (issue #217)"
 update_path = update_helper.split("TRANSACTION=(dist-upgrade", 1)[1].split(
     "Requested system updates complete", 1)[0]
 assert "autoremove" not in update_path, \

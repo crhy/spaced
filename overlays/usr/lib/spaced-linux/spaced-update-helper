@@ -165,14 +165,24 @@ APT_OPTIONS=(-o DPkg::Lock::Timeout=120 -o Acquire::Retries=3
              -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold)
 apt_run() { apt-get "${APT_OPTIONS[@]}" "$@"; }
 
-if [[ $MODE == all || $MODE == apt-install ]]; then
+if [[ $MODE == all || $MODE == apt-install || $MODE == cleanup-apply ]]; then
   GUARD=/usr/lib/spaced-linux/spaced-update-apt-guard
+  if [[ ${SPACED_UPDATE_TEST:-} == 1 && -n ${SPACED_UPDATE_TEST_GUARD:-} ]]; then
+    # Test hook only: validate a stub guard instead of the installed one.
+    # pkexec strips test variables in production, so this cannot redirect
+    # the real privileged path.
+    GUARD=$SPACED_UPDATE_TEST_GUARD
+  fi
   if [[ ! -f $GUARD || ! -x $GUARD || -L $GUARD ]]; then
     log 'The installed Spaced Update APT transaction guard is missing. Reinstall spaced-mate-default-settings or run the complete Spaced Update install.sh before retrying. No package changes were started.'
     exit 1
   fi
   read -r GUARD_OWNER GUARD_MODE <<< "$(stat -c '%u %a' "$GUARD")"
-  if [[ $GUARD_OWNER != 0 ]] || (( (8#$GUARD_MODE & 8#022) != 0 )); then
+  # In test mode the stub guard is owned by the invoking test user, so the
+  # root-ownership requirement is relaxed there only. The production path
+  # still demands root ownership, and the no-group/other-write check applies
+  # in both modes.
+  if [[ ${SPACED_UPDATE_TEST:-} != 1 && $GUARD_OWNER != 0 ]] || (( (8#$GUARD_MODE & 8#022) != 0 )); then
     log 'The Spaced Update APT guard must be owned by root and not writable by other accounts. Reinstall the native package before retrying.'
     exit 1
   fi

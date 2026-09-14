@@ -62,10 +62,17 @@ class CleanupHelperTests(unittest.TestCase):
         (self.fakebin / 'dpkg-query').write_text(DPKG_QUERY)
         for name in ('apt-get', 'uname', 'dpkg-query'):
             (self.fakebin / name).chmod(0o755)
+        # Stub APT transaction guard. It is owned by the invoking test user,
+        # so the helper relaxes only the root-ownership check in test mode;
+        # existence, executability, and no-group/other-write still apply.
+        self.guard = self.state / 'spaced-update-apt-guard'
+        self.guard.write_text('#!/bin/bash\nexit 0\n')
+        self.guard.chmod(0o755)
         self.env = dict(os.environ,
                         PATH=str(self.fakebin) + os.pathsep + os.environ['PATH'],
                         SPACED_UPDATE_TEST='1',
                         SPACED_UPDATE_TEST_CACHE_DIR=str(self.cache),
+                        SPACED_UPDATE_TEST_GUARD=str(self.guard),
                         FAKE_APT_LOG=str(self.log),
                         FAKE_UNAME_R=RUNNING_KERNEL)
 
@@ -107,6 +114,9 @@ class CleanupHelperTests(unittest.TestCase):
                                   ('libbar2', '1.2.3-test')])
         self.assertEqual(blocked, [])
         self.assertGreaterEqual(cache, 4096)
+        self.assertFalse(any('Pre-Install-Pkgs' in invocation
+                             for invocation in self.apt_invocations()),
+                         self.apt_invocations())
 
     def test_plan_marks_protected_desktop_packages_blocked(self):
         result = self.run_helper('cleanup-plan',
@@ -153,6 +163,14 @@ class CleanupHelperTests(unittest.TestCase):
         self.assertEqual(removes, [])
         self.assertEqual(blocked, [])
         self.assertIsNotNone(cache)
+
+    def test_apply_installs_transaction_guard(self):
+        result = self.run_helper('cleanup-apply', 'libfoo1')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        expected = 'DPkg::Pre-Install-Pkgs::=%s' % self.guard
+        self.assertTrue(any(expected in invocation
+                            for invocation in self.apt_invocations()),
+                        self.apt_invocations())
 
     def test_apply_with_blocked_plan_runs_only_autoclean(self):
         result = self.run_helper('cleanup-apply', 'mate-panel libfoo1')
