@@ -628,6 +628,11 @@ class App(Gtk.Window):
         actions = Gtk.Box(spacing=8)
         self.checkbtn = add_style(Gtk.Button(label="Check for Updates"), "spaced-action")
         self.checkbtn.connect("clicked", self.do_check)
+        self.cleanupbtn = add_style(Gtk.Button(label="Clean Up…"), "spaced-action")
+        self.cleanupbtn.set_tooltip_text(
+            "Remove unused packages and clean the package cache"
+        )
+        self.cleanupbtn.connect("clicked", self.do_cleanup)
         self.runbtn = add_style(
             Gtk.Button(label="Install Selected"),
             "spaced-action",
@@ -637,6 +642,7 @@ class App(Gtk.Window):
         self.runbtn.connect("clicked", self.do_install)
         actions.pack_end(self.runbtn, False, False, 0)
         actions.pack_end(self.checkbtn, False, False, 0)
+        actions.pack_end(self.cleanupbtn, False, False, 0)
         page.pack_start(actions, False, False, 0)
         return page
 
@@ -727,6 +733,7 @@ class App(Gtk.Window):
     def _set_busy(self, busy):
         self._busy = busy
         self.checkbtn.set_sensitive(not busy)
+        self.cleanupbtn.set_sensitive(not busy)
         self.header_refresh.set_sensitive(not busy)
         self.os_tab.checkbtn.set_sensitive(not busy)
         self.os_tab.updatebtn.set_sensitive(not busy)
@@ -1029,6 +1036,200 @@ class App(Gtk.Window):
                     self._update_warnings.append(line.split(":", 1)[1])
                 GLib.idle_add(log_callback, line)
         return process.wait()
+
+    @staticmethod
+    def _parse_cleanup_plan(output):
+        removes, blocked, cache_bytes = [], [], 0
+        for line in (output or "").splitlines():
+            parts = line.split(None, 2)
+            if len(parts) == 3 and parts[0] == "REMOVE":
+                removes.append((parts[1], parts[2]))
+            elif len(parts) == 3 and parts[0] == "BLOCKED":
+                blocked.append((parts[1], parts[2]))
+            elif len(parts) == 2 and parts[0] == "AUTOCLEAN_BYTES":
+                try:
+                    cache_bytes = int(parts[1])
+                except ValueError:
+                    cache_bytes = 0
+        return removes, blocked, cache_bytes
+
+    @staticmethod
+    def _format_cleanup_bytes(count):
+        size = float(max(0, count))
+        for unit in ("B", "KB", "MB", "GB", "TB"):
+            if size < 1024 or unit == "TB":
+                if unit == "B":
+                    return f"{size:.0f} {unit}"
+                return f"{size:.1f} {unit}"
+            size /= 1024
+
+    def do_cleanup(self, *_):
+        # Optional, explicitly confirmed cleanup (issue #217). Never runs
+        # automatically or as part of Install Selected / Update System.
+        if self._busy:
+            return
+        self._set_busy(True)
+        threading.Thread(target=self._cleanup_plan_worker, daemon=True).start()
+
+    def _cleanup_plan_worker(self):
+        try:
+            output = run_capture(["pkexec", HELPER, "cleanup-plan"], timeout=300)
+        except Exception as error:
+            GLib.idle_add(self._cleanup_plan_failed, str(error))
+            return
+        removes, blocked, cache_bytes = self._parse_cleanup_plan(output)
+        GLib.idle_add(self._show_cleanup_dialog, removes, blocked, cache_bytes)
+
+    def _cleanup_plan_failed(self, detail):
+        self._set_busy(False)
+        dialog = Gtk.MessageDialog(
+            transient_for=self,
+            flags=Gtk.DialogFlags.MODAL,
+            message_type=Gtk.MessageType.WARNING,
+            buttons=Gtk.ButtonsType.CLOSE,
+            text="Could not check for cleanup",
+        )
+        dialog.format_secondary_text(
+            detail or "The cleanup check did not complete."
+        )
+        dialog.connect("response", lambda response_dialog, _r: response_dialog.destroy())
+        dialog.show_all()
+
+    def _show_cleanup_dialog(self, removes, blocked, cache_bytes):
+        if not removes and not blocked and cache_bytes <= 0:
+            self._set_busy(False)
+            dialog = Gtk.MessageDialog(
+                transient_for=self,
+                flags=Gtk.DialogFlags.MODAL,
+                message_type=Gtk.MessageType.INFO,
+                buttons=Gtk.ButtonsType.CLOSE,
+                text="Nothing to clean up",
+            )
+            dialog.format_secondary_text(
+                "No unused packages or cached downloads were found."
+            )
+            dialog.connect(
+                "response", lambda response_dialog, _r: response_dialog.destroy()
+            )
+            dialog.show_all()
+            return
+        if blocked:
+            listing = "\n".join(
+                f"{name} \u2014 {reason}" for name, reason in blocked[:25]
+            )
+            if len(blocked) > 25:
+                listing += f"\n\u2026 and {len(blocked) - 25} more"
+            dialog = Gtk.MessageDialog(
+                transient_for=self,
+                flags=Gtk.DialogFlags.MODAL,
+                message_type=Gtk.MessageType.WARNING,
+                buttons=Gtk.ButtonsType.NONE,
+                text="Automatic removal is disabled for safety",
+            )
+            dialog.format_secondary_text(
+                "These packages cannot be removed automatically:\n"
+                f"{listing}\n\nOnly the package cache "
+                f"({self._format_cleanup_bytes(cache_bytes)}) can be cleaned."
+            )
+            dialog.add_button("Cancel", Gtk.ResponseType.CANCEL)
+            dialog.add_button("Clean Package Cache", Gtk.ResponseType.OK)
+            dialog.set_default_response(Gtk.ResponseType.CANCEL)
+        else:
+            listing = "\n".join(
+                f"{name} ({version})" for name, version in removes[:25]
+            )
+            if len(removes) > 25:
+                listing += f"\n\u2026 and {len(removes) - 25} more"
+            dialog = Gtk.MessageDialog(
+                transient_for=self,
+                flags=Gtk.DialogFlags.MODAL,
+                message_type=Gtk.MessageType.QUESTION,
+                buttons=Gtk.ButtonsType.NONE,
+                text="Clean up unused packages?",
+            )
+            dialog.format_secondary_text(
+                "These unused packages will be removed:\n"
+                f"{listing}\n\nPackage cache to free: "
+                f"{self._format_cleanup_bytes(cache_bytes)}."
+            )
+            dialog.add_button("Cancel", Gtk.ResponseType.CANCEL)
+            dialog.add_button("Clean Up", Gtk.ResponseType.OK)
+            dialog.set_default_response(Gtk.ResponseType.CANCEL)
+        dialog.connect("response", self._on_cleanup_response)
+        dialog.show_all()
+
+    def _on_cleanup_response(self, dialog, response):
+        dialog.destroy()
+        if response != Gtk.ResponseType.OK:
+            self._set_busy(False)
+            return
+        # The helper re-plans internally; nothing selected here is trusted.
+        self._set_status(
+            "content-loading-symbolic",
+            "Cleaning up",
+            "Removing unused packages and cleaning the package cache\u2026",
+        )
+        threading.Thread(target=self._cleanup_apply_worker, daemon=True).start()
+
+    def _cleanup_apply_worker(self):
+        try:
+            result = subprocess.run(
+                host(["pkexec", HELPER, "cleanup-apply"]),
+                capture_output=True,
+                text=True,
+                timeout=900,
+                check=False,
+                env={**os.environ, "LC_ALL": "C"},
+            )
+        except (OSError, subprocess.TimeoutExpired) as error:
+            GLib.idle_add(self._cleanup_apply_done, False, str(error))
+            return
+        output = ((result.stdout or "") + (result.stderr or "")).strip()
+        try:
+            check_status(result.returncode)
+        except UpdateCancelled as error:
+            GLib.idle_add(self._cleanup_apply_done, False, str(error))
+        except RuntimeError as error:
+            GLib.idle_add(self._cleanup_apply_done, False, output or str(error))
+        else:
+            GLib.idle_add(
+                self._cleanup_apply_done, True, output or "Cleanup complete."
+            )
+
+    def _cleanup_apply_done(self, succeeded, message):
+        self._set_busy(False)
+        if len(message) > 3000:
+            message = message[:3000] + "\u2026"
+        if succeeded:
+            self._set_status(
+                "emblem-ok-symbolic",
+                "Cleanup complete",
+                "Unused packages and cached downloads were removed.",
+            )
+            dialog = Gtk.MessageDialog(
+                transient_for=self,
+                flags=Gtk.DialogFlags.MODAL,
+                message_type=Gtk.MessageType.INFO,
+                buttons=Gtk.ButtonsType.CLOSE,
+                text="Cleanup complete",
+            )
+            dialog.format_secondary_text(message)
+        else:
+            self._set_status(
+                "dialog-warning-symbolic",
+                "Cleanup needs attention",
+                "Review the cleanup message for details.",
+            )
+            dialog = Gtk.MessageDialog(
+                transient_for=self,
+                flags=Gtk.DialogFlags.MODAL,
+                message_type=Gtk.MessageType.WARNING,
+                buttons=Gtk.ButtonsType.CLOSE,
+                text="Cleanup did not complete",
+            )
+            dialog.format_secondary_text(message)
+        dialog.connect("response", lambda response_dialog, _r: response_dialog.destroy())
+        dialog.show_all()
 
     def do_os_update(self, *_):
         if self._busy:

@@ -1,5 +1,14 @@
 # Changelog
 
+## 9.26.3 - unreleased
+- Add an optional, confirmed "Clean Up" action to Spaced Update (issue #217).
+  The updates page offers a secondary Clean Up button that plans
+  `autoremove`/`autoclean` through the privileged helper, shows what would be
+  removed, and only proceeds on confirmation. Protected desktop, init, and
+  running-kernel packages (or an unusually large removal set) disable removal
+  for safety, leaving only the package cache. Updates themselves never clean
+  up automatically.
+
 ## 9.26.2-2 - 2026-09-12
 - Fix issue #209. The 9.26.2 GitHub release was published without its APT
   packages, so Spaced Update offered 9.26.2 but APT had nothing newer than

@@ -1085,6 +1085,26 @@ assert "dpkg --force-confdef --force-confold --configure --pending" in update_he
     and update_helper.index("apt_run -y \"${TRANSACTION[@]}\"") < \
         update_helper.index("dpkg --triggers-only --pending"), \
     "Spaced Update must finalize package scripts and release triggers after APT"
+assert "cleanup-plan" in update_helper and "cleanup-apply" in update_helper, \
+    "Spaced Update cleanup modes are missing (issue #217)"
+assert "CLEANUP_PROTECTED_PATTERNS" in update_helper, \
+    "Spaced Update cleanup protection list is missing (issue #217)"
+protected = update_helper.split("CLEANUP_PROTECTED_PATTERNS", 1)[1].split(")", 1)[0]
+for required_pattern in ("spaced-meta", "mate-", "compiz"):
+    assert required_pattern in protected, \
+        f"Spaced Update cleanup does not protect {required_pattern} (issue #217)"
+assert "uname -r" in update_helper, \
+    "Spaced Update cleanup must protect the running kernel (issue #217)"
+update_path = update_helper.split("TRANSACTION=(dist-upgrade", 1)[1].split(
+    "Requested system updates complete", 1)[0]
+assert "autoremove" not in update_path, \
+    "updates must never clean up automatically (issue #217)"
+assert "Clean Up" in update_app and "cleanup-plan" in update_app \
+    and "cleanup-apply" in update_app, \
+    "Spaced Update cleanup button is missing (issue #217)"
+assert "self.cleanupbtn.set_sensitive(not busy)" in update_app \
+    and "if self._busy:\n            return\n        self._set_busy(True)" in update_app, \
+    "Spaced Update cleanup does not respect the busy flag (issue #217)"
 assert not list(Path("overlays").rglob("spaced-upgrade-testing.sh")), \
     "the testing-channel bootstrap is a host script and must not stage into the ISO"
 
