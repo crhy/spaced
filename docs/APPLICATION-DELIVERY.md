@@ -130,3 +130,47 @@ updated through the Spaced APT repository and the `spaced-meta` dependency.
   the exact suggested application without starting an installation.
 - Publish a newer test commit to a staging repository and confirm `flatpak
   update` upgrades an existing app without downloading a GitHub bundle.
+
+## APT repository retention
+
+The signed APT repository (`crhy/spaced-apt`, served at
+`https://crhy.github.io/spaced-apt`) is a GitHub Pages site, which is limited
+to 1 GB. `scripts/build-apt-repo.sh` only adds package files and regenerates
+the signed indexes; it never deletes anything, so every published revision of
+every package would otherwise stay in `dists/<suite>/main/binary-amd64/`
+(and the Marco sources in `dists/<suite>/main/source/`) forever.
+
+Retention policy: keep the newest 2 revisions of each package/architecture
+combination, plus any older revision pinned by an exact `(= X)` dependency of
+the newest `spaced-meta` in that suite (installed systems still resolve those
+pins). `scripts/prune-apt-repo.sh` implements this with `dpkg
+--compare-versions` ordering and a dry run by default:
+
+```sh
+bash scripts/prune-apt-repo.sh <repo-dir>                  # dry run
+bash scripts/prune-apt-repo.sh --keep 2 --apply <repo-dir> # delete
+```
+
+`make apt-repo` runs the pruner with `--apply` (overridable through
+`SPACED_APT_KEEP`, default 2) *before* `scripts/build-apt-repo.sh`, so the
+regenerated, signed index never lists deleted files. The pruner itself never
+regenerates or signs indexes and refuses to run on a dirty git checkout, on a
+repository without `dists/`, or on a suite without `spaced-meta`.
+
+Deleting files from the working tree does not shrink the `crhy/spaced-apt`
+clone: git history still holds every deleted revision. The one-time history
+reset below reclaims that space. It has been documented but NOT performed;
+do not run it as part of a normal release.
+
+One-time history reset for `crhy/spaced-apt` (manual, out of band):
+
+1. Back up the repository (a full clone or bundle kept offline).
+2. From a clean, current checkout, create an orphan branch with the current
+   tree: `git checkout --orphan fresh-main`, `git add -A`,
+   `git commit -m "..."`.
+3. Force-push it over `main`: `git push --force origin fresh-main:main`.
+4. Verify Pages serves the site and `apt-get update` accepts the signed
+   index before deleting the backup.
+
+Clients are unaffected because APT only reads the current signed index
+(`InRelease`/`Packages`); no client depends on repository git history.

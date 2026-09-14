@@ -229,6 +229,25 @@ assert "-rtc base=utc" in qemu_common and "-rtc base=localtime" not in qemu_comm
 qemu_smoke = Path("scripts/vm/qemu/smoke-iso.sh").read_text(encoding="utf-8")
 assert "SPACED_QEMU_ACCEL" in qemu_smoke and "tcg,thread=multi" in qemu_smoke, \
     "headless ISO smoke testing has no non-KVM fallback"
+vbox_smoke = Path("scripts/vm/virtualbox/smoke-iso.sh").read_text(encoding="utf-8")
+assert "--graphics" in vbox_smoke and "SPACED_VBOX_GRAPHICS" in vbox_smoke \
+    and "vboxsvga" in vbox_smoke and "default" in vbox_smoke, \
+    "VirtualBox smoke test does not support both graphics profiles (issue #218)"
+assert "graphicscontroller" in vbox_smoke \
+    and "showvminfo" in vbox_smoke and "--machinereadable" in vbox_smoke, \
+    "VirtualBox smoke test does not record the controller VirtualBox chose"
+assert "NO_WINDOW_MANAGER" in vbox_smoke and "NO_WM_EXIT=3" in vbox_smoke \
+    and "spaced-window-manager" in vbox_smoke and "wmctrl -m" in vbox_smoke, \
+    "VirtualBox smoke test does not distinctly report the no-window-manager result (issue #218)"
+assert "/usr/local/bin/install-spaced-linux" in vbox_smoke \
+    and "calamares" in vbox_smoke.lower() and "wmctrl -l" in vbox_smoke \
+    and "INSTALLER_TIMEOUT=90" in vbox_smoke, \
+    "VirtualBox smoke test has no installer launch check"
+assert "vbox-smoke:" in Path("Makefile").read_text(encoding="utf-8") \
+    and "vbox-smoke-default:" in Path("Makefile").read_text(encoding="utf-8"), \
+    "Makefile does not expose both VirtualBox smoke targets (issue #218)"
+assert "make vbox-smoke" in Path("docs/9.26-TESTING.md").read_text(encoding="utf-8"), \
+    "release testing record does not include the VirtualBox smoke checklist (issue #218)"
 monthly_workflow = Path(".github/workflows/monthly-iso.yml").read_text(encoding="utf-8")
 assert 'cron: "23 9 1 * *"' in monthly_workflow and "make release" in monthly_workflow \
     and "make iso-smoke-kvm" in monthly_workflow and "upload-artifact@v4" in monthly_workflow, \
@@ -667,6 +686,10 @@ assert "as_zoom_in_key = <Shift><Super>Up" in compiz_text, "Compiz enhanced zoom
 window_manager = (root / "usr/local/bin/spaced-window-manager").read_text(encoding="utf-8")
 assert 'if [ "$status" -eq 0 ]' in window_manager and "xprop -root" in window_manager, \
     "normal logout is still treated as a Compiz crash"
+assert "marco" not in window_manager and "metacity" not in window_manager, \
+    "spaced-window-manager must never fall back to another window manager (issue #218)"
+assert "VBoxSVGA" in window_manager, \
+    "spaced-window-manager does not explain the VirtualBox 3D recovery (issue #218)"
 
 shared_gtk = (theme_root / "Spaced-Dark/gtk-3.0/spaced-overrides.css").read_text(encoding="utf-8")
 engine_gtk = (theme_root / "Spaced-Dark/gtk-3.0/gtk.css").read_text(encoding="utf-8")
