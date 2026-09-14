@@ -2,6 +2,7 @@
 import configparser
 import importlib.util
 import os
+import shutil
 from pathlib import Path
 import subprocess
 import sys
@@ -508,6 +509,126 @@ class ThemeSwitchTests(unittest.TestCase):
         # Eight rapid clicks collapse into one switch; the later, separate
         # choice still gets applied.
         self.assertEqual(result.stdout.split(), ['H', 'Z'])
+
+
+class WindowManagerNoticeTests(unittest.TestCase):
+    """Issue #218: without Compiz the session paints a desktop that can never
+    take focus. The launcher must explain loudly (once per session) instead of
+    leaving that unresponsive desktop, and must never start another window
+    manager."""
+
+    SENTINEL = 'spaced-window-manager-no-compiz-notified'
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.state = Path(self.temp.name)
+        self.bindir = self.state / 'bin'
+        self.bindir.mkdir()
+        # An isolated PATH without the real compiz/zenity: symlinks provide the
+        # helpers can_compiz() shells out to, stubs record the rest.
+        for tool in ('timeout', 'grep', 'tr'):
+            target = shutil.which(tool)
+            self.assertIsNotNone(target, tool)
+            os.symlink(target, self.bindir / tool)
+        self.env = dict(os.environ, HOME=str(self.state),
+                        XDG_RUNTIME_DIR=str(self.state),
+                        DISPLAY=':spaced-test', TEST_STATE=str(self.state),
+                        PATH=str(self.bindir))
+        self.stub('logger', 'printf "%s\\n" "$*" >> "$TEST_STATE/logger-calls"')
+        self.stub('glxinfo', "printf 'direct rendering: No\\nOpenGL renderer string: llvmpipe\\n'")
+        self.stub('zenity', 'printf "%s\\n" "$*" | tr "\\n" "|" >> "$TEST_STATE/zenity-calls"\n'
+                              'echo >> "$TEST_STATE/zenity-calls"\n'
+                              'exit "${ZENITY_STATUS:-0}"')
+        self.stub('mate-session-save', 'printf "%s\\n" "$*" >> "$TEST_STATE/logout-calls"')
+        self.stub('mate-terminal', 'printf "%s\\n" "$*" >> "$TEST_STATE/terminal-calls"')
+        for fallback in ('marco', 'metacity', 'mutter', 'openbox', 'xfwm4'):
+            self.stub(fallback, 'printf "%s\\n" "$*" >> "$TEST_STATE/fallback-calls"')
+        self.stub('compiz', 'printf invoked >> "$TEST_STATE/compiz-calls"')
+
+    def stub(self, name, body):
+        path = self.bindir / name
+        path.write_text('#!/bin/bash\n' + body + '\n')
+        path.chmod(0o755)
+
+    def run_manager(self, extra=None):
+        env = dict(self.env)
+        if extra:
+            env.update(extra)
+        return subprocess.run([str(BIN / 'spaced-window-manager')], env=env,
+                              capture_output=True, text=True, timeout=10)
+
+    def calls(self, name):
+        path = self.state / name
+        return path.read_text().splitlines() if path.exists() else []
+
+    def test_logout_choice_explains_vboxsvas_and_logs_out(self):
+        result = self.run_manager({'ZENITY_STATUS': '0'})
+        self.assertNotEqual(result.returncode, 0)
+        zenity = self.calls('zenity-calls')
+        self.assertEqual(len(zenity), 1)
+        self.assertIn('Spaced Linux cannot start the desktop', zenity[0])
+        self.assertIn('VBoxSVGA', zenity[0])
+        self.assertIn('direct rendering is not enabled', zenity[0])
+        self.assertEqual(self.calls('logout-calls'), ['--logout'])
+        self.assertEqual(self.calls('terminal-calls'), [])
+        self.assertTrue((self.state / self.SENTINEL).exists())
+        logger = self.calls('logger-calls')
+        self.assertEqual(len(logger), 1)
+        self.assertIn('direct rendering is not enabled', logger[0])
+
+    def test_terminal_choice_opens_terminal_and_still_fails(self):
+        result = self.run_manager({'ZENITY_STATUS': '1'})
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(len(self.calls('zenity-calls')), 1)
+        self.assertEqual(self.calls('terminal-calls'), [''])
+        self.assertEqual(self.calls('logout-calls'), [])
+
+    def test_dialog_is_shown_only_once_per_session(self):
+        first = self.run_manager({'ZENITY_STATUS': '0'})
+        second = self.run_manager({'ZENITY_STATUS': '0'})
+        self.assertNotEqual(first.returncode, 0)
+        self.assertNotEqual(second.returncode, 0)
+        self.assertEqual(len(self.calls('zenity-calls')), 1)
+        self.assertEqual(self.calls('logout-calls'), ['--logout'])
+
+    def test_missing_compiz_names_the_reason(self):
+        (self.bindir / 'compiz').unlink()
+        result = self.run_manager({'ZENITY_STATUS': '0'})
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(len(self.calls('zenity-calls')), 1)
+        self.assertIn('compiz is not installed', self.calls('zenity-calls')[0])
+        self.assertIn('compiz is not installed', self.calls('logger-calls')[0])
+
+    def test_without_display_it_just_logs_and_exits(self):
+        display = self.env.pop('DISPLAY')
+        try:
+            result = self.run_manager()
+        finally:
+            self.env['DISPLAY'] = display
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(self.calls('zenity-calls'), [])
+        self.assertEqual(len(self.calls('logger-calls')), 1)
+        # A later login with a display still gets the explanation.
+        result = self.run_manager({'ZENITY_STATUS': '0'})
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(len(self.calls('zenity-calls')), 1)
+
+    def test_without_zenity_it_just_logs_and_exits(self):
+        (self.bindir / 'zenity').unlink()
+        result = self.run_manager()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(self.calls('zenity-calls'), [])
+        self.assertEqual(len(self.calls('logger-calls')), 1)
+
+    def test_no_other_window_manager_is_ever_started(self):
+        for status in ('0', '1'):
+            with self.subTest(choice=status):
+                (self.state / self.SENTINEL).unlink(missing_ok=True)
+                result = self.run_manager({'ZENITY_STATUS': status})
+                self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(self.calls('fallback-calls'), [])
+        self.assertEqual(self.calls('compiz-calls'), [])
 
 
 if __name__ == '__main__':

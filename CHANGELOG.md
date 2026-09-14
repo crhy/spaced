@@ -1,5 +1,8 @@
 # Changelog
 
+## 9.26.3 - unreleased
+- When Compiz cannot start (no working 3D graphics), the session now shows a blocking, keyboard-usable explanation with the VirtualBox VBoxSVGA recovery steps, Log Out and Open Terminal actions instead of a painted but unresponsive desktop. Refs #218.
+
 ## 9.26.2-2 - 2026-09-12
 - Fix issue #209. The 9.26.2 GitHub release was published without its APT
   packages, so Spaced Update offered 9.26.2 but APT had nothing newer than

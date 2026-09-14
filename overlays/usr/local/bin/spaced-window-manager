@@ -4,20 +4,91 @@
 # replacing it. Wallpaper rendering deliberately remains MATE's job.
 set -u
 
+# Set by can_compiz() when the check fails; empty when Compiz may start.
+compiz_fail_reason=''
+
 can_compiz() {
-    local glx
+    compiz_fail_reason=''
     # Need an X display and a working GLX direct-rendering context.
-    [ -n "${DISPLAY:-}" ] || return 1
-    command -v glxinfo >/dev/null 2>&1 || return 1
-    glx=$(timeout 15 glxinfo -B 2>/dev/null) || return 1
-    grep -q "direct rendering: Yes" <<<"$glx" || return 1
+    if [ -z "${DISPLAY:-}" ]; then
+        compiz_fail_reason='no X display (DISPLAY is unset)'
+        return 1
+    fi
+    if ! command -v glxinfo >/dev/null 2>&1; then
+        compiz_fail_reason='glxinfo is not installed'
+        return 1
+    fi
+    local glx
+    if ! glx=$(timeout 15 glxinfo -B 2>/dev/null); then
+        compiz_fail_reason='glxinfo probe failed'
+        return 1
+    fi
+    if ! grep -q "direct rendering: Yes" <<<"$glx"; then
+        compiz_fail_reason='direct rendering is not enabled'
+        return 1
+    fi
     # Compiz also needs the GLX extension advertised by the server.
-    grep -qi "OpenGL renderer string" <<<"$glx" || return 1
+    if ! grep -qi "OpenGL renderer string" <<<"$glx"; then
+        compiz_fail_reason='no OpenGL renderer string'
+        return 1
+    fi
     return 0
 }
 
-if ! command -v compiz >/dev/null 2>&1 || ! can_compiz; then
-    logger -t spaced-window-manager "Compiz is unavailable; ending the session without a window manager"
+# Shown when Compiz cannot start (issue #218). MATE runs this script as its
+# required window manager, so without Compiz the session paints a desktop that
+# can never take focus. Explain loudly instead: zenity works without a window
+# manager and stays keyboard navigable, while any fallback stays forbidden.
+# Displayed at most once per session, because the session manager may restart
+# this required component after it exits.
+show_no_compiz_notice() {
+    local reason="$1"
+    local sentinel="${XDG_RUNTIME_DIR:-/tmp}/spaced-window-manager-no-compiz-notified"
+    [ -n "${DISPLAY:-}" ] || return 1
+    command -v zenity >/dev/null 2>&1 || return 1
+    # Atomic take: only the first instance per session shows the dialog, even
+    # if the session manager starts several in parallel.
+    if ! (set -o noclobber; : > "$sentinel") 2>/dev/null; then
+        return 1
+    fi
+    local details="Spaced Linux's desktop requires OpenGL (Compiz) and this system did not provide working 3D graphics.
+
+Reason: $reason
+
+In VirtualBox: power off the virtual machine, open Settings > Display, set Graphics Controller to VBoxSVGA (optionally enable 3D acceleration), then start it again.
+
+In other virtual machines: enable 3D acceleration (virtio-gpu with GL where available) and start again.
+
+On physical hardware: the graphics driver failed to load. On NVIDIA systems, run Spaced Video Drivers (spaced-nvidia-installer) from a terminal once graphics are restored."
+    zenity --question --no-wrap \
+        --title='Spaced Linux cannot start the desktop' \
+        --text="$details" \
+        --ok-label='Log Out' \
+        --cancel-label='Open Terminal'
+    local choice=$?
+    if [ "$choice" -eq 0 ]; then
+        if command -v mate-session-save >/dev/null 2>&1; then
+            mate-session-save --logout 2>/dev/null \
+                || mate-session-save --force-logout 2>/dev/null || true
+        fi
+    elif [ "$choice" -eq 1 ]; then
+        if command -v mate-terminal >/dev/null 2>&1; then
+            mate-terminal 2>/dev/null || true
+        fi
+    fi
+    return 0
+}
+
+fail_reason=''
+if ! command -v compiz >/dev/null 2>&1; then
+    fail_reason='compiz is not installed'
+elif ! can_compiz; then
+    fail_reason="$compiz_fail_reason"
+fi
+
+if [ -n "$fail_reason" ]; then
+    logger -t spaced-window-manager "Compiz is unavailable ($fail_reason); ending the session without a window manager"
+    show_no_compiz_notice "$fail_reason" || true
     exit 1
 fi
 

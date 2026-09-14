@@ -667,6 +667,10 @@ assert "as_zoom_in_key = <Shift><Super>Up" in compiz_text, "Compiz enhanced zoom
 window_manager = (root / "usr/local/bin/spaced-window-manager").read_text(encoding="utf-8")
 assert 'if [ "$status" -eq 0 ]' in window_manager and "xprop -root" in window_manager, \
     "normal logout is still treated as a Compiz crash"
+assert "marco" not in window_manager and "metacity" not in window_manager, \
+    "spaced-window-manager must never fall back to another window manager (issue #218)"
+assert "VBoxSVGA" in window_manager, \
+    "spaced-window-manager does not explain the VirtualBox 3D recovery (issue #218)"
 
 shared_gtk = (theme_root / "Spaced-Dark/gtk-3.0/spaced-overrides.css").read_text(encoding="utf-8")
 engine_gtk = (theme_root / "Spaced-Dark/gtk-3.0/gtk.css").read_text(encoding="utf-8")
