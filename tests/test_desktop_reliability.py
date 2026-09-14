@@ -517,7 +517,7 @@ class WindowManagerNoticeTests(unittest.TestCase):
     leaving that unresponsive desktop, and must never start another window
     manager."""
 
-    SENTINEL = 'spaced-window-manager-no-compiz-notified'
+    SENTINEL_GLOB = 'spaced-window-manager-no-compiz-*'
 
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -527,7 +527,7 @@ class WindowManagerNoticeTests(unittest.TestCase):
         self.bindir.mkdir()
         # An isolated PATH without the real compiz/zenity: symlinks provide the
         # helpers can_compiz() shells out to, stubs record the rest.
-        for tool in ('timeout', 'grep', 'tr'):
+        for tool in ('timeout', 'grep', 'tr', 'id'):
             target = shutil.which(tool)
             self.assertIsNotNone(target, tool)
             os.symlink(target, self.bindir / tool)
@@ -539,7 +539,11 @@ class WindowManagerNoticeTests(unittest.TestCase):
         self.stub('glxinfo', "printf 'direct rendering: No\\nOpenGL renderer string: llvmpipe\\n'")
         self.stub('zenity', 'printf "%s\\n" "$*" | tr "\\n" "|" >> "$TEST_STATE/zenity-calls"\n'
                               'echo >> "$TEST_STATE/zenity-calls"\n'
-                              'exit "${ZENITY_STATUS:-0}"')
+                              '# ZENITY_STATUS lists one exit status per call, e.g. "1,0";\n'
+                              '# calls beyond the list answer 0 (Log Out).\n'
+                              'IFS=, read -ra answers <<< "${ZENITY_STATUS:-0}"\n'
+                              'mapfile -t seen < "$TEST_STATE/zenity-calls"\n'
+                              'exit "${answers[${#seen[@]}-1]:-0}"')
         self.stub('mate-session-save', 'printf "%s\\n" "$*" >> "$TEST_STATE/logout-calls"')
         self.stub('mate-terminal', 'printf "%s\\n" "$*" >> "$TEST_STATE/terminal-calls"')
         for fallback in ('marco', 'metacity', 'mutter', 'openbox', 'xfwm4'):
@@ -572,7 +576,7 @@ class WindowManagerNoticeTests(unittest.TestCase):
         self.assertIn('direct rendering is not enabled', zenity[0])
         self.assertEqual(self.calls('logout-calls'), ['--logout'])
         self.assertEqual(self.calls('terminal-calls'), [])
-        self.assertTrue((self.state / self.SENTINEL).exists())
+        self.assertEqual(len(list(self.state.glob(self.SENTINEL_GLOB))), 1)
         logger = self.calls('logger-calls')
         self.assertEqual(len(logger), 1)
         self.assertIn('direct rendering is not enabled', logger[0])
@@ -580,9 +584,23 @@ class WindowManagerNoticeTests(unittest.TestCase):
     def test_terminal_choice_opens_terminal_and_still_fails(self):
         result = self.run_manager({'ZENITY_STATUS': '1'})
         self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(self.calls('terminal-calls'), ['--disable-factory'])
+
+    def test_dialog_returns_after_terminal_until_logout(self):
+        # Closing the terminal must not strand the user without a window
+        # manager: the choices come back until they log out.
+        result = self.run_manager({'ZENITY_STATUS': '1,1,0'})
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(len(self.calls('zenity-calls')), 3)
+        self.assertEqual(self.calls('terminal-calls'),
+                         ['--disable-factory', '--disable-factory'])
+        self.assertEqual(self.calls('logout-calls'), ['--logout'])
+
+    def test_zenity_failure_stops_the_dialog_loop(self):
+        result = self.run_manager({'ZENITY_STATUS': '5'})
+        self.assertNotEqual(result.returncode, 0)
         self.assertEqual(len(self.calls('zenity-calls')), 1)
-        self.assertEqual(self.calls('terminal-calls'), [''])
-        self.assertEqual(self.calls('logout-calls'), [])
+        self.assertEqual(self.calls('terminal-calls'), [])
 
     def test_dialog_is_shown_only_once_per_session(self):
         first = self.run_manager({'ZENITY_STATUS': '0'})
@@ -624,7 +642,9 @@ class WindowManagerNoticeTests(unittest.TestCase):
     def test_no_other_window_manager_is_ever_started(self):
         for status in ('0', '1'):
             with self.subTest(choice=status):
-                (self.state / self.SENTINEL).unlink(missing_ok=True)
+                for sentinel in self.state.glob(self.SENTINEL_GLOB):
+                    sentinel.unlink()
+                (self.state / 'zenity-calls').unlink(missing_ok=True)
                 result = self.run_manager({'ZENITY_STATUS': status})
                 self.assertNotEqual(result.returncode, 0)
         self.assertEqual(self.calls('fallback-calls'), [])

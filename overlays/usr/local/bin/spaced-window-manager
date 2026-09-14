@@ -43,7 +43,9 @@ can_compiz() {
 # this required component after it exits.
 show_no_compiz_notice() {
     local reason="$1"
-    local sentinel="${XDG_RUNTIME_DIR:-/tmp}/spaced-window-manager-no-compiz-notified"
+    # Key the marker by user and parent session process: a restarted component
+    # shares its session manager parent, while the next login gets a new one.
+    local sentinel="${XDG_RUNTIME_DIR:-/tmp}/spaced-window-manager-no-compiz-$(id -u)-$PPID"
     [ -n "${DISPLAY:-}" ] || return 1
     command -v zenity >/dev/null 2>&1 || return 1
     # Atomic take: only the first instance per session shows the dialog, even
@@ -60,22 +62,31 @@ In VirtualBox: power off the virtual machine, open Settings > Display, set Graph
 In other virtual machines: enable 3D acceleration (virtio-gpu with GL where available) and start again.
 
 On physical hardware: the graphics driver failed to load. On NVIDIA systems, run Spaced Video Drivers (spaced-nvidia-installer) from a terminal once graphics are restored."
-    zenity --question --no-wrap \
-        --title='Spaced Linux cannot start the desktop' \
-        --text="$details" \
-        --ok-label='Log Out' \
-        --cancel-label='Open Terminal'
-    local choice=$?
-    if [ "$choice" -eq 0 ]; then
-        if command -v mate-session-save >/dev/null 2>&1; then
-            mate-session-save --logout 2>/dev/null \
-                || mate-session-save --force-logout 2>/dev/null || true
+    # Keep offering the choices until the user logs out, so closing the
+    # terminal never leaves an unresponsive desktop with no way out.
+    local choice
+    while :; do
+        zenity --question --no-wrap \
+            --title='Spaced Linux cannot start the desktop' \
+            --text="$details" \
+            --ok-label='Log Out' \
+            --cancel-label='Open Terminal'
+        choice=$?
+        if [ "$choice" -eq 0 ]; then
+            if command -v mate-session-save >/dev/null 2>&1; then
+                mate-session-save --logout 2>/dev/null \
+                    || mate-session-save --force-logout 2>/dev/null || true
+            fi
+            break
+        elif [ "$choice" -eq 1 ] && command -v mate-terminal >/dev/null 2>&1; then
+            # Without --disable-factory the call returns at once via an
+            # existing terminal server and the dialog would reappear on top.
+            mate-terminal --disable-factory 2>/dev/null || true
+        else
+            # zenity itself failed (for example X went away): stop.
+            break
         fi
-    elif [ "$choice" -eq 1 ]; then
-        if command -v mate-terminal >/dev/null 2>&1; then
-            mate-terminal 2>/dev/null || true
-        fi
-    fi
+    done
     return 0
 }
 
