@@ -1,6 +1,11 @@
 # Changelog
 
 ## 9.26.3 - unreleased
+- Fix issue #219: "Activate screen saver when computer is idle" no longer
+  unticks itself when display sleep is "Never". Only a real display-sleep
+  transition changes screensaver idle activation now; login, unlock and the
+  30-second DPMS reconcile only reapply xset, and ticking the box while on
+  Never discards the remembered state so it is not flipped back later.
 - Prune superseded APT repository revisions before regenerating the signed
   index: `make apt-repo` now runs `scripts/prune-apt-repo.sh --apply` first
   (newest 2 per package plus exact `spaced-meta` pins, `SPACED_APT_KEEP`
