@@ -1,7 +1,30 @@
 # Changelog
 
 ## 9.26.3 - unreleased
-- When Compiz cannot start (no working 3D graphics), the session now shows a blocking, keyboard-usable explanation with the VirtualBox VBoxSVGA recovery steps, Log Out and Open Terminal actions instead of a painted but unresponsive desktop. Refs #218.
+- VirtualBox ISO smoke test now exercises the configuration real users get
+  (Refs #218). `scripts/vm/virtualbox/smoke-iso.sh` accepts
+  `--graphics default|vboxsvga` (`SPACED_VBOX_GRAPHICS`); `default` leaves
+  VirtualBox's own VMSVGA defaults in place and records the chosen controller,
+  reporting the expected "Compiz cannot start" outcome distinctly as
+  `NO WINDOW MANAGER` (exit 3) instead of timing out. Both profiles now also
+  launch the live installer over SSH, wait for a Calamares process and window,
+  screenshot it, and close it without installing. `make vbox-smoke`
+  (VBoxSVGA) and `make vbox-smoke-default` (VirtualBox defaults) cover the
+  release checklist; VirtualBox stays out of GitHub Actions.
+- Fix issue #219: "Activate screen saver when computer is idle" no longer
+  unticks itself when display sleep is "Never". Only a real display-sleep
+  transition changes screensaver idle activation now; login, unlock and the
+  30-second DPMS reconcile only reapply xset, and ticking the box while on
+  Never discards the remembered state so it is not flipped back later.
+- Prune superseded APT repository revisions before regenerating the signed
+  index: `make apt-repo` now runs `scripts/prune-apt-repo.sh --apply` first
+  (newest 2 per package plus exact `spaced-meta` pins, `SPACED_APT_KEEP`
+  overridable), keeping the 1 GB GitHub Pages site from growing forever. No
+  new ISO is required.
+- When Compiz cannot start (no working 3D graphics), the session now shows a
+  keyboard-usable explanation with the VirtualBox VBoxSVGA recovery steps and
+  Log Out / Open Terminal actions, instead of a painted but unresponsive
+  desktop (Refs #218).
 
 ## 9.26.2-2 - 2026-09-12
 - Fix issue #209. The 9.26.2 GitHub release was published without its APT

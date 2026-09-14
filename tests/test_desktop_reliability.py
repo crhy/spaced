@@ -145,8 +145,12 @@ class SessionTests(unittest.TestCase):
                            'n=$((n+1))\necho "$n" > "$TEST_STATE/count"\n'
                            f'[ "$n" -gt {failures} ] && exit 0\nexit 139')
 
-    def run_helper(self, name):
-        return subprocess.run([str(BIN / name)], env=self.env, capture_output=True, text=True, timeout=5)
+    def run_helper(self, name, args=()):
+        return subprocess.run([str(BIN / name), *args], env=self.env, capture_output=True, text=True, timeout=5)
+
+    def run_display_transition(self, prev, new):
+        return self.run_helper('spaced-display-repair',
+                               args=['--screensaver-transition', str(prev), str(new)])
 
     def test_compiz_recovers_with_capped_backoff(self):
         self.crash_program('compiz', 7)
@@ -267,20 +271,28 @@ HDMI-2 disconnected (normal left inverted right x axis y axis)
         # never blanks without a timeout, but mate-screensaver activates on
         # org.mate.session's own idle-delay -- five minutes by default -- and
         # blanked the screen anyway. Power Preferences cannot reach that key,
-        # so Never has to suppress it here or it does not mean never.
+        # so the timeout -> Never transition has to suppress it here.
+        self.stub_display()
+        self.fake_desktop_settings('0', screensaver='true')
+        self.assertEqual(self.run_display_transition(1800, 0).returncode, 0)
+        self.assertEqual(self.settings_writes(),
+                         ['org.mate.screensaver idle-activation-enabled false'])
+
+    def test_startup_with_never_leaves_user_idle_choice_alone(self):
+        # Issue #219: the login/periodic run must never flip the checkbox,
+        # so a user with display sleep Never who ticks the box keeps it.
         self.stub_display()
         self.fake_desktop_settings('0', screensaver='true')
         self.assertEqual(self.run_helper('spaced-display-repair').returncode, 0)
-        self.assertEqual(self.settings_writes(),
-                         ['org.mate.screensaver idle-activation-enabled false'])
+        self.assertEqual(self.settings_writes(), [])
 
     def test_choosing_a_timeout_restores_the_user_screensaver_choice(self):
         self.stub_display()
         self.fake_desktop_settings('0', screensaver='true')
-        self.assertEqual(self.run_helper('spaced-display-repair').returncode, 0)
+        self.assertEqual(self.run_display_transition(1800, 0).returncode, 0)
         # The same session now picks a real timeout again.
         self.fake_desktop_settings('1800', screensaver='false')
-        self.assertEqual(self.run_helper('spaced-display-repair').returncode, 0)
+        self.assertEqual(self.run_display_transition(0, 1800).returncode, 0)
         self.assertEqual(self.settings_writes(), [
             'org.mate.screensaver idle-activation-enabled false',
             'org.mate.screensaver idle-activation-enabled true'])
@@ -290,9 +302,9 @@ HDMI-2 disconnected (normal left inverted right x axis y axis)
         # screensaver on here would enable a lock the user had disabled.
         self.stub_display()
         self.fake_desktop_settings('0', screensaver='false')
-        self.assertEqual(self.run_helper('spaced-display-repair').returncode, 0)
+        self.assertEqual(self.run_display_transition(1800, 0).returncode, 0)
         self.fake_desktop_settings('1800', screensaver='false')
-        self.assertEqual(self.run_helper('spaced-display-repair').returncode, 0)
+        self.assertEqual(self.run_display_transition(0, 1800).returncode, 0)
         self.assertEqual(self.settings_writes(), [])
 
     def test_a_desktop_without_the_screensaver_schema_is_left_alone(self):
