@@ -1,6 +1,16 @@
 # Changelog
 
 ## 9.26.3 - unreleased
+- VirtualBox ISO smoke test now exercises the configuration real users get
+  (Refs #218). `scripts/vm/virtualbox/smoke-iso.sh` accepts
+  `--graphics default|vboxsvga` (`SPACED_VBOX_GRAPHICS`); `default` leaves
+  VirtualBox's own VMSVGA defaults in place and records the chosen controller,
+  reporting the expected "Compiz cannot start" outcome distinctly as
+  `NO WINDOW MANAGER` (exit 3) instead of timing out. Both profiles now also
+  launch the live installer over SSH, wait for a Calamares process and window,
+  screenshot it, and close it without installing. `make vbox-smoke`
+  (VBoxSVGA) and `make vbox-smoke-default` (VirtualBox defaults) cover the
+  release checklist; VirtualBox stays out of GitHub Actions.
 - Fix issue #219: "Activate screen saver when computer is idle" no longer
   unticks itself when display sleep is "Never". Only a real display-sleep
   transition changes screensaver idle activation now; login, unlock and the

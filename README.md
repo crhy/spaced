@@ -197,8 +197,27 @@ make iso-smoke
 ```
 
 The smoke tests pass only after SSH and the complete MATE desktop (session,
-panel, Caja, and Compiz) are running. KVM and VirtualBox screenshots are saved
+panel, Caja, and Compiz) are running. The VirtualBox smoke test then launches
+the live installer (`/usr/local/bin/install-spaced-linux`, the same command
+the desktop launcher runs) over SSH, waits up to 90 seconds for a Calamares
+process and a visible Calamares window, screenshots it, and closes it without
+installing. KVM and VirtualBox screenshots are saved
 beneath `build/test-artifacts/`; VirtualBox also rejects blank captures.
+
+VirtualBox graphics profiles (`scripts/vm/virtualbox/smoke-iso.sh
+--graphics default|vboxsvga`, or `SPACED_VBOX_GRAPHICS`):
+
+```bash
+make vbox-smoke          # VBoxSVGA: must reach a usable desktop (exit 0)
+make vbox-smoke-default  # VirtualBox defaults (VMSVGA): currently documents
+                         # the known "no window manager" result (exit 3)
+                         # until issue #218 is resolved
+```
+
+`vbox-smoke-default` exercises the configuration real users get and is
+expected today to exit 3 with a `NO WINDOW MANAGER` diagnosis (Compiz cannot
+start under VMSVGA) rather than a usable desktop. Both profiles run the
+installer launch check once the desktop is reached.
 
 ### Useful targets
 
