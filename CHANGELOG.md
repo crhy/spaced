@@ -1,5 +1,12 @@
 # Changelog
 
+## 9.26.3 - unreleased
+- Prune superseded APT repository revisions before regenerating the signed
+  index: `make apt-repo` now runs `scripts/prune-apt-repo.sh --apply` first
+  (newest 2 per package plus exact `spaced-meta` pins, `SPACED_APT_KEEP`
+  overridable), keeping the 1 GB GitHub Pages site from growing forever. No
+  new ISO is required.
+
 ## 9.26.2-2 - 2026-09-12
 - Fix issue #209. The 9.26.2 GitHub release was published without its APT
   packages, so Spaced Update offered 9.26.2 but APT had nothing newer than
