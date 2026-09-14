@@ -112,6 +112,10 @@ discard_stale_screensaver_state() (
     local state="${XDG_CONFIG_HOME:-$HOME/.config}/spaced/screensaver-idle-activation"
     [ -e "$state" ] || return 0
     gsettings list-schemas 2>/dev/null | grep -qx org.mate.screensaver || return 0
+    # Share sync_screensaver_idle's lock so a concurrent Never transition
+    # cannot save its marker between this read and the removal.
+    exec 9>"$state.lock" || return 0
+    flock -x 9 || return 0
     current=$(gsettings get org.mate.screensaver idle-activation-enabled 2>/dev/null) || return 0
     [ "$current" = true ] || return 0
     rm -f -- "$state"
@@ -188,16 +192,9 @@ if command -v gsettings >/dev/null 2>&1 && command -v xset >/dev/null 2>&1 \
     # sleep is Never, forget the remembered "was on" marker so a later
     # Never -> timeout switch does not write the setting unexpectedly.
     if gsettings list-schemas 2>/dev/null | grep -qx org.mate.screensaver; then
-        (
-        state_dir="${XDG_CONFIG_HOME:-$HOME/.config}/spaced"
-        state="$state_dir/screensaver-idle-activation"
         while IFS= read -r _; do
-            current=$(gsettings get org.mate.screensaver idle-activation-enabled 2>/dev/null) || continue
-            [ "$current" = true ] || continue
-            [ -e "$state" ] || continue
-            ( flock -x 9 || exit 0; rm -f -- "$state"; ) 9>"$state.lock" 2>/dev/null || rm -f -- "$state"
-        done < <(gsettings monitor org.mate.screensaver idle-activation-enabled 2>/dev/null)
-        ) &
+            discard_stale_screensaver_state || true
+        done < <(gsettings monitor org.mate.screensaver idle-activation-enabled 2>/dev/null) &
         policy_watchers+=("$!")
     fi
 
