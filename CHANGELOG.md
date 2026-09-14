@@ -21,6 +21,10 @@
   (newest 2 per package plus exact `spaced-meta` pins, `SPACED_APT_KEEP`
   overridable), keeping the 1 GB GitHub Pages site from growing forever. No
   new ISO is required.
+- When Compiz cannot start (no working 3D graphics), the session now shows a
+  keyboard-usable explanation with the VirtualBox VBoxSVGA recovery steps and
+  Log Out / Open Terminal actions, instead of a painted but unresponsive
+  desktop (Refs #218).
 
 ## 9.26.2-2 - 2026-09-12
 - Fix issue #209. The 9.26.2 GitHub release was published without its APT
