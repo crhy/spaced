@@ -75,7 +75,8 @@ try:
     report['kernel'] = run('uname', '-r')[1]
     report['versions'] = run('dpkg-query', '-W', '-f=${binary:Package} ${Version}\n',
                              'compiz-core', 'compiz-gtk', 'mate-panel', 'libmarco-private2',
-                             'spaced-meta', 'spaced-mate-default-settings')[1]
+                             'spaced-meta', 'spaced-mate-default-settings',
+                             'spaced-themes', 'spaced-wallpapers')[1]
 except Exception as error:
     report['errors'].append(str(error))
 report['desktop_ready'] = not report['errors']

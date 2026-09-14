@@ -461,8 +461,9 @@ cd /path/to/spaced
 make check
 scripts/iso/build-local-packages.sh
 
-version=$(cat VERSION)
-sudo dpkg -i "build/local-packages/spaced-mate-default-settings_${version}_all.deb"
+sudo dpkg -i build/local-packages/spaced-themes_*_all.deb \
+    build/local-packages/spaced-wallpapers_*_all.deb \
+    build/local-packages/spaced-mate-default-settings_*_all.deb
 ```
 
 The package version may be identical to the installed version during local development. A normal APT upgrade will not regard that rebuild as newer, so install the local `.deb` explicitly.

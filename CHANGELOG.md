@@ -1,5 +1,12 @@
 # Changelog
 
+## 9.26.3 - unreleased
+- Split `spaced-mate-default-settings` into three packages: `spaced-wallpapers`
+  (wallpapers, independently versioned), `spaced-themes` (themes, icons, and
+  GRUB artwork), and a leaner `spaced-mate-default-settings` that depends on
+  both. Desktop fixes no longer re-ship the full artwork payload on every APT
+  update.
+
 ## 9.26.2-2 - 2026-09-12
 - Fix issue #209. The 9.26.2 GitHub release was published without its APT
   packages, so Spaced Update offered 9.26.2 but APT had nothing newer than

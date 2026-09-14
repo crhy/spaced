@@ -615,7 +615,8 @@ These are defaults for new profiles. Existing user dconf values take precedence.
 After a visual change:
 
 1. Run `make check`.
-2. Build and explicitly install `spaced-mate-default-settings` on the test system.
+2. Build and explicitly install `spaced-themes`, `spaced-wallpapers` and
+   `spaced-mate-default-settings` on the test system.
 3. Confirm `/usr/share/themes` matches the checkout.
 4. Confirm no user-local theme copy shadows the installed file.
 5. Start a new GTK3 process and test real controls.

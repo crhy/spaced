@@ -1,0 +1,13 @@
+#!/bin/sh
+set -e
+
+[ "${1:-}" = configure ] || exit 0
+
+if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+    for theme in /usr/share/icons/Spaced-*; do
+        [ -d "$theme" ] || continue
+        gtk-update-icon-cache -f "$theme" >/dev/null 2>&1 || true
+    done
+fi
+
+exit 0

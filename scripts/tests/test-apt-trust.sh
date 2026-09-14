@@ -9,6 +9,7 @@ SUITE=${SPACED_APT_SUITE:-spaced}
 WORK=$(mktemp -d)
 trap 'rm -rf -- "$WORK"' EXIT
 VERSION=$(sed -n 's/^Version: //p' "$ROOT/packages/spaced-meta/DEBIAN/control")
+WALLPAPERS_VERSION=$(sed -n 's/^Version: //p' "$ROOT/packages/spaced-wallpapers/DEBIAN/control")
 # shellcheck source=../../config/external-artifacts.conf
 source "$ROOT/config/external-artifacts.conf"
 KEY="$ROOT/overlays/usr/share/keyrings/spaced-archive-keyring.gpg"
@@ -63,6 +64,8 @@ apt-get update > "$PROBE/update.log" 2>&1
 for package_version in \
     "spaced-meta=$VERSION" \
     "spaced-mate-default-settings=$VERSION" \
+    "spaced-themes=$VERSION" \
+    "spaced-wallpapers=$WALLPAPERS_VERSION" \
     "spaced-welcome=$SPACED_WELCOME_VERSION"; do
     package=${package_version%%=*}
     expected=${package_version#*=}
