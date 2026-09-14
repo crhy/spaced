@@ -56,6 +56,7 @@ deps: ## Install host build and test dependencies
 
 check: ## Validate configuration, scripts, themes, and desktop entries
 	$(HOST_RUN) scripts/tests/test-testing-upgrade.sh
+	$(HOST_RUN) scripts/tests/test-prune-apt-repo.sh
 	$(HOST_RUN) scripts/check.sh
 	$(HOST_RUN) env PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests
 	$(HOST_RUN) env PYTHONDONTWRITEBYTECODE=1 xvfb-run -a python3 tests/gtk_desktop.py
@@ -228,12 +229,14 @@ release: release-preflight ## Test and clean-build the current Spaced Linux ISO
 	$(MAKE) lb-build
 
 APT_REPO_DIR := spaced-apt
+SPACED_APT_KEEP ?= 2
 
 apt-repo: marco ## Rebuild the update repository into ./spaced-apt (from crhy/spaced-apt)
 	@if [ ! -d "$(APT_REPO_DIR)/.git" ]; then \
 		rm -rf "$(APT_REPO_DIR)"; \
 		gh repo clone crhy/spaced-apt "$(APT_REPO_DIR)"; \
 	fi
+	$(HOST_RUN) scripts/prune-apt-repo.sh --keep $(SPACED_APT_KEEP) --apply "$(abspath $(APT_REPO_DIR))"
 	$(HOST_RUN) scripts/build-apt-repo.sh "$(abspath $(APT_REPO_DIR))"
 	$(HOST_RUN) scripts/tests/test-release-package-payload.sh "$(abspath $(APT_REPO_DIR))"
 	$(HOST_RUN) scripts/tests/test-apt-trust.sh "$(abspath $(APT_REPO_DIR))"
