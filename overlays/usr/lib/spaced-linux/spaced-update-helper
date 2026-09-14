@@ -12,10 +12,121 @@ update_failed() {
 }
 trap update_failed ERR
 
+# Optional cleanup safety list (issue #217). The privileged helper never
+# cleans up during updates; cleanup only runs through the explicit
+# cleanup-plan/cleanup-apply modes below. Any candidate matching one of
+# these prefixes blocks autoremove entirely.
+CLEANUP_PROTECTED_PATTERNS=(
+  spaced-meta spaced-mate-default-settings spaced-themes spaced-wallpapers spaced-welcome
+  mate- caja compiz libcompiz marco libmarco lightdm
+  network-manager sysvinit elogind libpam-elogind xserver-xorg-core flatpak apt dpkg
+)
+
+# Prints why a package must not be autoremoved; succeeds only when blocked.
+cleanup_protected_reason() {
+  local package=$1 pattern running
+  for pattern in "${CLEANUP_PROTECTED_PATTERNS[@]}"; do
+    if [[ $package == "$pattern"* ]]; then
+      printf 'matches protected pattern %s' "$pattern"
+      return 0
+    fi
+  done
+  running=$(uname -r)
+  if [[ $package == "linux-image-$running" || $package == "linux-headers-$running" ]]; then
+    printf 'running kernel %s; refusing' "$running"
+    return 0
+  fi
+  return 1
+}
+
+cleanup_candidate_version() {
+  local package=$1 version
+  version=$(dpkg-query -W -f='${Version}' "$package" 2>/dev/null || true)
+  if [[ -z $version ]]; then
+    version=unknown
+  fi
+  printf '%s' "$version"
+}
+
+# Reads apt-get autoremove simulation output on stdin; prints one package
+# name per line in first-seen order.
+cleanup_parse_simulation() {
+  local line word in_removed=0
+  declare -A seen=()
+  while IFS= read -r line; do
+    if [[ $line =~ ^Remv[[:space:]]+([^[:space:]]+) ]]; then
+      word=${BASH_REMATCH[1]%%:*}
+      if [[ -n $word && -z ${seen[$word]:-} ]]; then
+        seen[$word]=1
+        printf '%s\n' "$word"
+      fi
+    elif (( in_removed == 0 )) && [[ $line == *'will be REMOVED:'* ]]; then
+      in_removed=1
+    elif (( in_removed == 1 )); then
+      if [[ $line =~ ^[[:space:]]+[^[:space:]] ]]; then
+        for word in $line; do
+          word=${word%%:*}
+          word=${word%,}
+          if [[ -n $word && -z ${seen[$word]:-} ]]; then
+            seen[$word]=1
+            printf '%s\n' "$word"
+          fi
+        done
+      elif [[ -z ${line//[[:space:]]/} ]]; then
+        continue
+      else
+        in_removed=0
+      fi
+    fi
+  done
+  return 0
+}
+
+# Shared planning used by both cleanup modes; never trusts caller input.
+# Sets CLEANUP_PKGS, CLEANUP_SAFE, CLEANUP_BLOCKED ("name|reason") and
+# CLEANUP_CACHE_BYTES.
+cleanup_compute_plan() {
+  local simulation cache_dir package reason
+  simulation=$(apt_run -s autoremove)
+  mapfile -t CLEANUP_PKGS < <(cleanup_parse_simulation <<< "$simulation")
+  CLEANUP_SAFE=()
+  CLEANUP_BLOCKED=()
+  if (( ${#CLEANUP_PKGS[@]} > 50 )); then
+    reason="unusually large removal set; refusing (${#CLEANUP_PKGS[@]} packages)"
+    for package in "${CLEANUP_PKGS[@]}"; do
+      CLEANUP_BLOCKED+=("$package|$reason")
+    done
+  else
+    for package in "${CLEANUP_PKGS[@]}"; do
+      if reason=$(cleanup_protected_reason "$package"); then
+        CLEANUP_BLOCKED+=("$package|$reason")
+      else
+        CLEANUP_SAFE+=("$package")
+      fi
+    done
+  fi
+  cache_dir=/var/cache/apt/archives
+  if [[ ${SPACED_UPDATE_TEST:-} == 1 && -n ${SPACED_UPDATE_TEST_CACHE_DIR:-} ]]; then
+    cache_dir=$SPACED_UPDATE_TEST_CACHE_DIR
+  fi
+  CLEANUP_CACHE_BYTES=$(du -sb "$cache_dir" 2>/dev/null | cut -f1 || true)
+  if [[ ! $CLEANUP_CACHE_BYTES =~ ^[0-9]+$ ]]; then
+    CLEANUP_CACHE_BYTES=0
+  fi
+}
+
+# Exit code meaning "package cache cleaned; autoremove refused for safety".
+# Distinct from real failures, which keep the existing codes below (1 for
+# errors and safety refusals during updates, 2 for usage errors, 75 for a
+# contended transaction lock, plus the ERR trap status). 126 is pkexec's own
+# authentication-cancelled code and never comes from this script.
+CLEANUP_CACHE_ONLY_STATUS=3
+
 MODE=${1:-all}
 if [ "$#" -gt 0 ]; then shift; fi
 case "$MODE" in
   apt-refresh|all) [ "$#" -eq 0 ] || { log 'Unexpected update arguments.'; exit 2; } ;;
+  cleanup-plan|cleanup-apply) [ "$#" -eq 0 ] || { log 'Unexpected update arguments.'; exit 2; } ;;
   apt-install)
     [ "$#" -gt 0 ] || { log 'No APT packages were selected.'; exit 2; }
     for PACKAGE in "$@"; do
@@ -42,10 +153,17 @@ esac
 
 # Serialize privileged operations across windows and the native/Flatpak app.
 # APT also takes its own locks, including against unrelated package managers.
-exec 9>/run/lock/spaced-update.lock
-if ! flock -n 9; then
-  log 'Another Spaced Update transaction is running. Wait for it to finish and retry.'
-  exit 75
+# The read-only cleanup plan takes no lock; cleanup-apply serializes like updates.
+if [[ $MODE != cleanup-plan ]]; then
+  if [[ ${SPACED_UPDATE_TEST:-} == 1 ]]; then
+    : # Tests run the helper directly without the system transaction lock.
+  else
+    exec 9>/run/lock/spaced-update.lock
+    if ! flock -n 9; then
+      log 'Another Spaced Update transaction is running. Wait for it to finish and retry.'
+      exit 75
+    fi
+  fi
 fi
 
 APT_OPTIONS=(-o DPkg::Lock::Timeout=120 -o Acquire::Retries=3
@@ -54,14 +172,24 @@ APT_OPTIONS=(-o DPkg::Lock::Timeout=120 -o Acquire::Retries=3
              -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold)
 apt_run() { apt-get "${APT_OPTIONS[@]}" "$@"; }
 
-if [[ $MODE == all || $MODE == apt-install ]]; then
+if [[ $MODE == all || $MODE == apt-install || $MODE == cleanup-apply ]]; then
   GUARD=/usr/lib/spaced-linux/spaced-update-apt-guard
+  if [[ ${SPACED_UPDATE_TEST:-} == 1 && -n ${SPACED_UPDATE_TEST_GUARD:-} ]]; then
+    # Test hook only: validate a stub guard instead of the installed one.
+    # pkexec strips test variables in production, so this cannot redirect
+    # the real privileged path.
+    GUARD=$SPACED_UPDATE_TEST_GUARD
+  fi
   if [[ ! -f $GUARD || ! -x $GUARD || -L $GUARD ]]; then
     log 'The installed Spaced Update APT transaction guard is missing. Reinstall spaced-mate-default-settings or run the complete Spaced Update install.sh before retrying. No package changes were started.'
     exit 1
   fi
   read -r GUARD_OWNER GUARD_MODE <<< "$(stat -c '%u %a' "$GUARD")"
-  if [[ $GUARD_OWNER != 0 ]] || (( (8#$GUARD_MODE & 8#022) != 0 )); then
+  # In test mode the stub guard is owned by the invoking test user, so the
+  # root-ownership requirement is relaxed there only. The production path
+  # still demands root ownership, and the no-group/other-write check applies
+  # in both modes.
+  if [[ ${SPACED_UPDATE_TEST:-} != 1 && $GUARD_OWNER != 0 ]] || (( (8#$GUARD_MODE & 8#022) != 0 )); then
     log 'The Spaced Update APT guard must be owned by root and not writable by other accounts. Reinstall the native package before retrying.'
     exit 1
   fi
@@ -73,6 +201,49 @@ if [[ $MODE == flatpak-update ]]; then
   step 30 "Updating selected Flatpak apps and runtimes ($SCOPE)"
   flatpak update --noninteractive -y "$SCOPE" "$@"
   step 100 'Selected Flatpak updates complete'
+  exit 0
+fi
+
+# Optional cleanup (issue #217). This is the only path that removes
+# packages or cleans the cache; the update modes never clean up automatically.
+if [[ $MODE == cleanup-plan ]]; then
+  cleanup_compute_plan
+  if (( ${#CLEANUP_SAFE[@]} > 0 )); then
+    for PACKAGE in "${CLEANUP_SAFE[@]}"; do
+      log "REMOVE $PACKAGE $(cleanup_candidate_version "$PACKAGE")"
+    done
+  fi
+  if (( ${#CLEANUP_BLOCKED[@]} > 0 )); then
+    for ENTRY in "${CLEANUP_BLOCKED[@]}"; do
+      log "BLOCKED ${ENTRY%%|*} ${ENTRY#*|}"
+    done
+  fi
+  log "AUTOCLEAN_BYTES $CLEANUP_CACHE_BYTES"
+  exit 0
+fi
+
+if [[ $MODE == cleanup-apply ]]; then
+  step 5 'Checking the cleanup plan'
+  cleanup_compute_plan
+  if (( ${#CLEANUP_BLOCKED[@]} > 0 )); then
+    log 'Cleanup refused automatic removal for safety; cleaning the package cache only.'
+    for ENTRY in "${CLEANUP_BLOCKED[@]}"; do
+      log "Blocked package: ${ENTRY%%|*} (${ENTRY#*|})"
+    done
+    step 40 'Cleaning the package cache'
+    apt_run -y autoclean
+    log 'Package cache cleaned. The blocked packages were left installed.'
+    exit "$CLEANUP_CACHE_ONLY_STATUS"
+  fi
+  step 40 'Cleaning the package cache'
+  apt_run -y autoclean
+  if (( ${#CLEANUP_SAFE[@]} == 0 )); then
+    step 100 'Nothing to clean up'
+    exit 0
+  fi
+  step 70 'Removing unused packages'
+  apt_run -y autoremove
+  step 100 'Cleanup complete'
   exit 0
 fi
 
