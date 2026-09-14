@@ -61,29 +61,64 @@ display_sleep_timeout() {
 }
 
 sync_screensaver_idle() (
-    local timeout=$1 current saved
+    # Only called for a real display-sleep transition (issue #219): the
+    # periodic reconcile and the login run must never flip the screensaver
+    # checkbox, so they never reach this function.
+    local prev=${1:-} new=${2:-} current saved
     local state_dir="${XDG_CONFIG_HOME:-$HOME/.config}/spaced"
     local state="$state_dir/screensaver-idle-activation"
+    local prev_never=0 new_never=0
+    [[ "$prev" =~ ^0+$ ]] && prev_never=1
+    [[ "$new" =~ ^0+$ ]] && new_never=1
+    # Only act when crossing the Never boundary; ignore the monitor's
+    # initial emission and any spurious line where nothing changed.
+    [ "$prev_never" != "$new_never" ] || return 0
+    # Reject garbage so a failed read is never treated as Never.
+    [[ "$prev" =~ ^[0-9]+$ ]] || return 0
+    [[ "$new" =~ ^[0-9]+$ ]] || return 0
     gsettings list-schemas 2>/dev/null | grep -qx org.mate.screensaver || return 0
     mkdir -p -m 700 "$state_dir" || return 0
     exec 9>"$state.lock" || return 0
     flock -x 9 || return 0
     current=$(gsettings get org.mate.screensaver idle-activation-enabled 2>/dev/null) || return 0
     case "$current" in true|false) ;; *) return 0 ;; esac
-    if [[ "$timeout" =~ ^0+$ ]]; then
+    if [ "$new_never" = 1 ]; then
+        # Timeout -> Never: suspend idle activation, remembering it was on.
         [ "$current" = true ] || return 0
         printf 'true\n' > "$state" || return 0
         gsettings set org.mate.screensaver idle-activation-enabled false 2>/dev/null || true
     elif [ -r "$state" ]; then
+        # Never -> timeout: give the user's own choice back (issue #189).
         IFS= read -r saved < "$state" || return 0
         [ "$saved" = true ] || return 0
+        if [ "$current" = true ]; then
+            # The user already ticked the box themselves while on Never;
+            # just drop the stale memory without touching gsettings.
+            rm -f -- "$state"
+            return 0
+        fi
         if gsettings set org.mate.screensaver idle-activation-enabled true 2>/dev/null; then
             rm -f -- "$state"
         fi
     fi
 )
 
+# Drop a stale "remembered on" marker once the checkbox is on again (issue
+# #219): if the user ticks the box themselves while display sleep is Never,
+# a later Never -> timeout switch must not write the setting unexpectedly.
+# This never writes to gsettings, so the login and reconcile paths may use it.
+discard_stale_screensaver_state() (
+    local current
+    local state="${XDG_CONFIG_HOME:-$HOME/.config}/spaced/screensaver-idle-activation"
+    [ -e "$state" ] || return 0
+    gsettings list-schemas 2>/dev/null | grep -qx org.mate.screensaver || return 0
+    current=$(gsettings get org.mate.screensaver idle-activation-enabled 2>/dev/null) || return 0
+    [ "$current" = true ] || return 0
+    rm -f -- "$state"
+)
+
 apply_power_policy() {
+    local mode=${1:-} prev=${2:-} new=${3:-}
     local timeout
     gsettings list-schemas 2>/dev/null | grep -qx org.mate.power-manager || return 0
     timeout=$(display_sleep_timeout) || return 0
@@ -97,8 +132,22 @@ apply_power_policy() {
         # rather than programming a competing timeout here.
         xset +dpms 2>/dev/null || true
     fi
-    sync_screensaver_idle "$timeout"
+    # Issue #219: only a real display-sleep transition may change
+    # idle-activation-enabled. Startup, unlock and the 30-second reconcile
+    # only reapply xset above (and drop a stale marker when already on).
+    if [ "$mode" = transition ]; then
+        sync_screensaver_idle "$prev" "$new"
+    else
+        discard_stale_screensaver_state || true
+    fi
 }
+
+# Test hook for the transition path (see tests/test_display_policy.py):
+# run e.g. spaced-display-repair --screensaver-transition 1800 0
+if [ "${1:-}" = --screensaver-transition ]; then
+    sync_screensaver_idle "${2:-}" "${3:-}"
+    exit 0
+fi
 
 [ -n "${DISPLAY:-}" ] || exit 0
 command -v xrandr >/dev/null 2>&1 || exit 0
@@ -108,16 +157,49 @@ command -v xset >/dev/null 2>&1 && apply_power_policy
 [ "${1:-}" = --watch ] || exit 0
 
 # Re-apply whenever the user changes the power policy, so "Never" takes effect
-# immediately instead of at the next login.
+# immediately instead of at the next login. Only a real transition across the
+# Never boundary may change idle-activation-enabled (issue #219); the monitor
+# can emit the current value immediately and can fire without a change.
 policy_watchers=()
 if command -v gsettings >/dev/null 2>&1 && command -v xset >/dev/null 2>&1 \
     && gsettings list-schemas 2>/dev/null | grep -qx org.mate.power-manager; then
     for key in sleep-display-ac sleep-display-battery; do
+        (
+        prev_raw=$(gsettings get org.mate.power-manager "$key" 2>/dev/null) || prev_raw=""
+        if [[ "$prev_raw" =~ ^(uint32\ )?([0-9]+)$ ]]; then
+            prev="${BASH_REMATCH[2]}"
+        else
+            prev=""
+        fi
         while IFS= read -r _; do
-            apply_power_policy
-        done < <(gsettings monitor org.mate.power-manager "$key" 2>/dev/null) &
+            raw=$(gsettings get org.mate.power-manager "$key" 2>/dev/null) || continue
+            [[ "$raw" =~ ^(uint32\ )?([0-9]+)$ ]] || continue
+            new="${BASH_REMATCH[2]}"
+            # Spurious monitor line with no real change: reapply DPMS only.
+            [ "$new" = "$prev" ] && { apply_power_policy; continue; }
+            apply_power_policy transition "$prev" "$new"
+            prev="$new"
+        done < <(gsettings monitor org.mate.power-manager "$key" 2>/dev/null)
+        ) &
         policy_watchers+=("$!")
     done
+
+    # If the user ticks the screensaver checkbox themselves while display
+    # sleep is Never, forget the remembered "was on" marker so a later
+    # Never -> timeout switch does not write the setting unexpectedly.
+    if gsettings list-schemas 2>/dev/null | grep -qx org.mate.screensaver; then
+        (
+        state_dir="${XDG_CONFIG_HOME:-$HOME/.config}/spaced"
+        state="$state_dir/screensaver-idle-activation"
+        while IFS= read -r _; do
+            current=$(gsettings get org.mate.screensaver idle-activation-enabled 2>/dev/null) || continue
+            [ "$current" = true ] || continue
+            [ -e "$state" ] || continue
+            ( flock -x 9 || exit 0; rm -f -- "$state"; ) 9>"$state.lock" 2>/dev/null || rm -f -- "$state"
+        done < <(gsettings monitor org.mate.screensaver idle-activation-enabled 2>/dev/null)
+        ) &
+        policy_watchers+=("$!")
+    fi
 
     # Some drivers and power-manager events can restore X's default DPMS
     # state without changing either GSettings key. Reconcile infrequently so
