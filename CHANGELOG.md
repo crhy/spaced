@@ -1,6 +1,55 @@
 # Changelog
 
 ## 9.26.3 - unreleased
+- VirtualBox ISO smoke test now exercises the configuration real users get
+  (Refs #218). `scripts/vm/virtualbox/smoke-iso.sh` accepts
+  `--graphics default|vboxsvga` (`SPACED_VBOX_GRAPHICS`); `default` leaves
+  VirtualBox's own graphics defaults in place and records the chosen controller,
+  reporting a "Compiz cannot start" outcome distinctly as
+  `NO WINDOW MANAGER` (exit 3) instead of timing out. Both profiles now also
+  launch the live installer over SSH, wait for a Calamares process and window
+  (matched by its X window class, since the branded title is "Spaced Linux
+  Installer"),
+  screenshot it, and close it without installing. `make vbox-smoke`
+  (VBoxSVGA) and `make vbox-smoke-default` (VirtualBox defaults) cover the
+  release checklist; VirtualBox stays out of GitHub Actions.
+- Fix issue #219: "Activate screen saver when computer is idle" no longer
+  unticks itself when display sleep is "Never". Only a real display-sleep
+  transition changes screensaver idle activation now; login, unlock and the
+  30-second DPMS reconcile only reapply xset, and ticking the box while on
+  Never discards the remembered state so it is not flipped back later.
+- Prune superseded APT repository revisions before regenerating the signed
+  index: `make apt-repo` now runs `scripts/prune-apt-repo.sh --apply` first
+  (newest 2 per package plus exact `spaced-meta` pins, `SPACED_APT_KEEP`
+  overridable), keeping the 1 GB GitHub Pages site from growing forever. No
+  new ISO is required.
+- Fix issue #190: the Network Servers desktop icon is gray again. The 9.26.2
+  hicolor fallback never took effect because Caja requests the
+  `network-workgroup` icon and every shipped theme inherits a
+  Spaced-Menu-On-* theme before Papirus and hicolor, so the purple Papirus
+  icon won. Both Spaced-Menu-On-Dark and Spaced-Menu-On-Light now ship the
+  gray artwork as `scalable/places/network-workgroup.svg` (plus
+  `network-server.svg` for individual hosts). Delivered through Spaced
+  Update; no new ISO is required.
+- When Compiz cannot start (no working 3D graphics), the session now shows a
+  keyboard-usable explanation with the VirtualBox VBoxSVGA recovery steps and
+  Log Out / Open Terminal actions, instead of a painted but unresponsive
+  desktop (Refs #218).
+- Add an optional, confirmed "Clean Up" action to Spaced Update (issue #217).
+  The updates page offers a secondary Clean Up button that plans
+  `autoremove`/`autoclean` through the privileged helper, shows what would be
+  removed, and only proceeds on confirmation. Protected desktop, init, and
+  running-kernel packages (or an unusually large removal set) disable removal
+  for safety, leaving only the package cache. Updates themselves never clean
+  up automatically.
+- Make Network Servers discovery work (issue #80). The image now ships
+  `avahi-daemon` and `libnss-mdns` for mDNS/DNS-SD browsing of Macs, Linux
+  servers, NAS devices and printers (including `host.local` names), `wsdd` for
+  Windows 10/11 PCs, and the `smbclient` diagnostic tool. `avahi-daemon` starts
+  from its sysvinit script and `libnss-mdns` configures name resolution itself.
+  `wsdd` has no service: `gvfs-backends` runs `wsdd --no-host --discovery` only
+  while someone browses. The only new always-on listener is mDNS on UDP 5353.
+  Delivered through Spaced Update; no new ISO is required.
 - Split `spaced-mate-default-settings` into three packages: `spaced-wallpapers`
   (wallpapers, independently versioned), `spaced-themes` (themes, icons, and
   GRUB artwork), and a leaner `spaced-mate-default-settings` that depends on

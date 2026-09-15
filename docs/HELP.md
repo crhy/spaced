@@ -13,3 +13,10 @@ physical-hardware checks still required, see the
 [9.26 issue status](9.26-ISSUE-STATUS.md). Community discussions and bug
 reports should identify the Spaced version, whether it is a live or installed
 session, and the steps that reproduce the problem.
+
+## Troubleshooting guides
+
+- [Network Servers is empty / cannot open a Windows share](troubleshooting/network-servers.md):
+  real-network test checklist for mDNS/DNS-SD and WS-Discovery browsing,
+  direct `smb://` connections, diagnostics, and what to include in a bug
+  report.

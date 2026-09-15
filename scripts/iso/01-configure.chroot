@@ -104,6 +104,8 @@ rm -f /etc/modprobe.d/nvidia-installer-disable-nouveau.conf 2>/dev/null || true
 /usr/local/sbin/spaced-sync-time || true
 # Enable chrony on installed/live systems.
 [ ! -e /etc/init.d/chrony ] || update-rc.d chrony defaults
+# Enable mDNS/DNS-SD discovery for Network Servers browsing.
+[ ! -e /etc/init.d/avahi-daemon ] || update-rc.d avahi-daemon defaults
 [ ! -e /etc/init.d/spaced-first-boot-snapshot ] || \
   update-rc.d spaced-first-boot-snapshot defaults 98
 # Let GRUB discover other installed operating systems.

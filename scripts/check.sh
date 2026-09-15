@@ -155,6 +155,11 @@ assert "QT_QPA_PLATFORMTHEME=gtk3" in application_theming \
     and "QT_STYLE_OVERRIDE=Fusion" in application_theming, \
     "Qt applications do not have a complete cross-toolkit control style (issue #78)"
 assert {"bluez", "bluez-tools"}.issubset(packages), "Bluetooth stack is not included by default (issue #77)"
+assert {"avahi-daemon", "libnss-mdns", "smbclient", "wsdd"}.issubset(packages), \
+    "mDNS network discovery or SMB diagnostics are missing (issue #80)"
+assert {package for package in packages if "systemd" in package} == \
+    {"systemd-standalone-sysusers", "systemd-standalone-tmpfiles"}, \
+    "a systemd-named package entered the image set"
 assert {"btop", "caja-admin", "gigolo", "gparted", "nvtop", "timeshift", "zstd"}.issubset(packages), \
     "administrator, partitioning, Windows-share, or backup desktop integration is missing"
 assert "libfuse2t64" in packages, "legacy AppImages cannot start without FUSE 2 compatibility (issue #153)"
@@ -235,6 +240,25 @@ assert "-rtc base=utc" in qemu_common and "-rtc base=localtime" not in qemu_comm
 qemu_smoke = Path("scripts/vm/qemu/smoke-iso.sh").read_text(encoding="utf-8")
 assert "SPACED_QEMU_ACCEL" in qemu_smoke and "tcg,thread=multi" in qemu_smoke, \
     "headless ISO smoke testing has no non-KVM fallback"
+vbox_smoke = Path("scripts/vm/virtualbox/smoke-iso.sh").read_text(encoding="utf-8")
+assert "--graphics" in vbox_smoke and "SPACED_VBOX_GRAPHICS" in vbox_smoke \
+    and "vboxsvga" in vbox_smoke and "default" in vbox_smoke, \
+    "VirtualBox smoke test does not support both graphics profiles (issue #218)"
+assert "graphicscontroller" in vbox_smoke \
+    and "showvminfo" in vbox_smoke and "--machinereadable" in vbox_smoke, \
+    "VirtualBox smoke test does not record the controller VirtualBox chose"
+assert "NO_WINDOW_MANAGER" in vbox_smoke and "NO_WM_EXIT=3" in vbox_smoke \
+    and "spaced-window-manager" in vbox_smoke and "wmctrl -m" in vbox_smoke, \
+    "VirtualBox smoke test does not distinctly report the no-window-manager result (issue #218)"
+assert "/usr/local/bin/install-spaced-linux" in vbox_smoke \
+    and "calamares" in vbox_smoke.lower() and "wmctrl -l" in vbox_smoke \
+    and "INSTALLER_TIMEOUT=90" in vbox_smoke, \
+    "VirtualBox smoke test has no installer launch check"
+assert "vbox-smoke:" in Path("Makefile").read_text(encoding="utf-8") \
+    and "vbox-smoke-default:" in Path("Makefile").read_text(encoding="utf-8"), \
+    "Makefile does not expose both VirtualBox smoke targets (issue #218)"
+assert "make vbox-smoke" in Path("docs/9.26-TESTING.md").read_text(encoding="utf-8"), \
+    "release testing record does not include the VirtualBox smoke checklist (issue #218)"
 monthly_workflow = Path(".github/workflows/monthly-iso.yml").read_text(encoding="utf-8")
 assert 'cron: "23 9 1 * *"' in monthly_workflow and "make release" in monthly_workflow \
     and "make iso-smoke-kvm" in monthly_workflow and "upload-artifact@v4" in monthly_workflow, \
@@ -678,9 +702,25 @@ assert 'width="128"' in installer_icon and 'height="128"' in installer_icon \
 live_hook = Path("scripts/iso/01-configure.chroot").read_text(encoding="utf-8")
 assert "find /home/user/Desktop -maxdepth 1 -type f ! -name install-spaced-linux.desktop -delete" in live_hook, \
     "live desktop is not restricted to the installer icon (issue #191)"
-network_server_icon = (root / "usr/share/icons/hicolor/scalable/places/network-server.svg").read_text(encoding="utf-8")
-assert "#6b7078" in network_server_icon and "#b9" not in network_server_icon.lower(), \
-    "Network Servers still falls back to the purple theme icon (issue #190)"
+# Caja draws the desktop "Network Servers" item with the icon name
+# network-workgroup (network-server covers individual hosts in network:///),
+# and every selectable theme inherits a Spaced-Menu-On-* theme before
+# Papirus-Dark/Papirus and hicolor. The 9.26.2 hicolor network-server fallback
+# therefore never won over the purple Papirus places icon, so the gray
+# override must live in Spaced-Menu-On-* under the requested names.
+purple_hexes = ("#7e57c2", "#8e24aa", "#9c27b0", "#673ab7", "#5e35b1")
+for surface in ("Spaced-Menu-On-Dark", "Spaced-Menu-On-Light"):
+    for network_name in ("network-workgroup.svg", "network-server.svg"):
+        network_icon = (icon_root / surface / "scalable/places" / network_name).read_text(encoding="utf-8")
+        lowered_icon = network_icon.lower()
+        assert not [hex_code for hex_code in purple_hexes if hex_code in lowered_icon], \
+            f"{surface} {network_name} still falls back to the purple theme icon (issue #190)"
+        fills = re.findall(r'fill="(#[0-9a-fA-F]{6})"', network_icon)
+        assert fills, f"{surface} {network_name} carries no fill colors (issue #190)"
+        for fill in fills:
+            channels = [int(fill[i:i + 2], 16) for i in (1, 3, 5)]
+            assert max(channels) - min(channels) <= 8, \
+                f"{surface} {network_name} fill {fill} is not neutral gray (issue #190)"
 calamares_launcher = (root / "usr/local/bin/install-spaced-linux").read_text(encoding="utf-8")
 assert "sudo --preserve-env=DISPLAY,XAUTHORITY,DBUS_SESSION_BUS_ADDRESS" in calamares_launcher, \
     "Calamares launcher does not use the authorized live-session sudo path"
@@ -714,6 +754,10 @@ assert "as_zoom_in_key = <Shift><Super>Up" in compiz_text, "Compiz enhanced zoom
 window_manager = (root / "usr/local/bin/spaced-window-manager").read_text(encoding="utf-8")
 assert 'if [ "$status" -eq 0 ]' in window_manager and "xprop -root" in window_manager, \
     "normal logout is still treated as a Compiz crash"
+assert "marco" not in window_manager and "metacity" not in window_manager, \
+    "spaced-window-manager must never fall back to another window manager (issue #218)"
+assert "VBoxSVGA" in window_manager, \
+    "spaced-window-manager does not explain the VirtualBox 3D recovery (issue #218)"
 
 shared_gtk = (theme_root / "Spaced-Dark/gtk-3.0/spaced-overrides.css").read_text(encoding="utf-8")
 engine_gtk = (theme_root / "Spaced-Dark/gtk-3.0/gtk.css").read_text(encoding="utf-8")
@@ -1076,6 +1120,8 @@ assert "Default-Start:     2 3 4 5" in snapshot_init \
     and "start-stop-daemon" in snapshot_init \
     and "spaced-first-boot-snapshot defaults 98" in live_configure, \
     "Fresh install snapshot is not registered as a SysV service"
+assert "[ ! -e /etc/init.d/avahi-daemon ] || update-rc.d avahi-daemon defaults" in live_configure, \
+    "mDNS discovery is not enabled as a guarded SysV service (issue #80)"
 live_session = (root / "usr/local/bin/spaced-live-session").read_text(encoding="utf-8")
 live_polkit = (root / "etc/polkit-1/rules.d/49-spaced-live-gparted.rules").read_text(encoding="utf-8")
 assert "idle-activation-enabled false" in live_session and "lock-enabled false" in live_session \
@@ -1132,6 +1178,35 @@ assert "dpkg --force-confdef --force-confold --configure --pending" in update_he
     and update_helper.index("apt_run -y \"${TRANSACTION[@]}\"") < \
         update_helper.index("dpkg --triggers-only --pending"), \
     "Spaced Update must finalize package scripts and release triggers after APT"
+assert "cleanup-plan" in update_helper and "cleanup-apply" in update_helper, \
+    "Spaced Update cleanup modes are missing (issue #217)"
+assert "CLEANUP_PROTECTED_PATTERNS" in update_helper, \
+    "Spaced Update cleanup protection list is missing (issue #217)"
+protected = update_helper.split("CLEANUP_PROTECTED_PATTERNS", 1)[1].split(")", 1)[0]
+for required_pattern in ("spaced-meta", "mate-", "compiz"):
+    assert required_pattern in protected, \
+        f"Spaced Update cleanup does not protect {required_pattern} (issue #217)"
+assert "uname -r" in update_helper, \
+    "Spaced Update cleanup must protect the running kernel (issue #217)"
+assert "MODE == apt-install || $MODE == cleanup-apply" in update_helper, \
+    "cleanup-apply must install the APT transaction guard like updates (issue #217)"
+assert "CLEANUP_CACHE_ONLY_STATUS=3" in update_helper \
+    and 'exit "$CLEANUP_CACHE_ONLY_STATUS"' in update_helper, \
+    "a cache-only cleanup must use its distinct success code (issue #217)"
+assert "CLEANUP_CACHE_ONLY_STATUS = 3" in update_app \
+    and '"cache-only"' in update_app \
+    and "Package cache cleaned" in update_app, \
+    "Spaced Update does not report a cache-only cleanup as success (issue #217)"
+update_path = update_helper.split("TRANSACTION=(dist-upgrade", 1)[1].split(
+    "Requested system updates complete", 1)[0]
+assert "autoremove" not in update_path, \
+    "updates must never clean up automatically (issue #217)"
+assert "Clean Up" in update_app and "cleanup-plan" in update_app \
+    and "cleanup-apply" in update_app, \
+    "Spaced Update cleanup button is missing (issue #217)"
+assert "self.cleanupbtn.set_sensitive(not busy)" in update_app \
+    and "if self._busy:\n            return\n        self._set_busy(True)" in update_app, \
+    "Spaced Update cleanup does not respect the busy flag (issue #217)"
 assert not list(Path("overlays").rglob("spaced-upgrade-testing.sh")), \
     "the testing-channel bootstrap is a host script and must not stage into the ISO"
 

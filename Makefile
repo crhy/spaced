@@ -41,7 +41,7 @@ VM_RUN := $(HOST_RUN) env SPACED_VM_SSH_PORT=$(VM_SSH_PORT) SPACED_VM_XRES=$(VM_
 ISO_SMOKE_RUN := $(HOST_RUN) env SPACED_ISO_SMOKE_TIMEOUT=$(ISO_SMOKE_TIMEOUT)
 VBOX_RUN := $(ISO_SMOKE_RUN) SPACED_VBOX_SSH_PORT=$(VBOX_SSH_PORT)
 
-.PHONY: help check deps clean cache-clean marco prepare lb-config lb-build iso-build iso-test iso-smoke iso-smoke-kvm iso-smoke-kvm-efi iso-smoke-kvm-4k iso-smoke-virtualbox iso-smoke-virtualbox-efi iso-test-safe iso-test-safe-1024 iso-test-safe-1080 vm-create vm-install vm-start vm-stop release-preflight release apt-repo apt-repo-publish
+.PHONY: help check deps clean cache-clean marco prepare lb-config lb-build iso-build iso-test iso-smoke iso-smoke-kvm iso-smoke-kvm-efi iso-smoke-kvm-4k iso-smoke-virtualbox iso-smoke-virtualbox-efi vbox-smoke vbox-smoke-default iso-test-safe iso-test-safe-1024 iso-test-safe-1080 vm-create vm-install vm-start vm-stop release-preflight release apt-repo apt-repo-publish
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -56,6 +56,7 @@ deps: ## Install host build and test dependencies
 
 check: ## Validate configuration, scripts, themes, and desktop entries
 	$(HOST_RUN) scripts/tests/test-testing-upgrade.sh
+	$(HOST_RUN) scripts/tests/test-prune-apt-repo.sh
 	$(HOST_RUN) scripts/check.sh
 	$(HOST_RUN) env PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests
 	$(HOST_RUN) env PYTHONDONTWRITEBYTECODE=1 xvfb-run -a python3 tests/gtk_desktop.py
@@ -180,6 +181,13 @@ iso-smoke-virtualbox-efi: ## Headlessly boot the ISO in VirtualBox EFI mode
 	test -f $(ISO_DIR)/$(ISO_NAME) || { echo "Missing $(ISO_DIR)/$(ISO_NAME)"; exit 1; }
 	$(VBOX_RUN) SPACED_VBOX_FIRMWARE=efi scripts/vm/virtualbox/smoke-iso.sh $(abspath $(ISO_DIR)/$(ISO_NAME))
 
+vbox-smoke: iso-smoke-virtualbox iso-smoke-virtualbox-efi ## VirtualBox smoke with VBoxSVGA (BIOS+EFI) plus installer launch check
+
+vbox-smoke-default: ## VirtualBox smoke with VirtualBox defaults (exit 3 = Compiz cannot start, issue #218)
+	test -f $(ISO_DIR)/$(ISO_NAME) || { echo "Missing $(ISO_DIR)/$(ISO_NAME)"; exit 1; }
+	$(VBOX_RUN) SPACED_VBOX_FIRMWARE=bios scripts/vm/virtualbox/smoke-iso.sh --graphics default $(abspath $(ISO_DIR)/$(ISO_NAME))
+	$(VBOX_RUN) SPACED_VBOX_FIRMWARE=efi scripts/vm/virtualbox/smoke-iso.sh --graphics default $(abspath $(ISO_DIR)/$(ISO_NAME))
+
 iso-test-safe: ## Boot ISO with safe 2D graphics at the selected resolution
 	test -f $(ISO_DIR)/$(ISO_NAME)
 	$(HOST_RUN) qemu-system-x86_64 \
@@ -228,12 +236,14 @@ release: release-preflight ## Test and clean-build the current Spaced Linux ISO
 	$(MAKE) lb-build
 
 APT_REPO_DIR := spaced-apt
+SPACED_APT_KEEP ?= 2
 
 apt-repo: marco ## Rebuild the update repository into ./spaced-apt (from crhy/spaced-apt)
 	@if [ ! -d "$(APT_REPO_DIR)/.git" ]; then \
 		rm -rf "$(APT_REPO_DIR)"; \
 		gh repo clone crhy/spaced-apt "$(APT_REPO_DIR)"; \
 	fi
+	$(HOST_RUN) scripts/prune-apt-repo.sh --keep $(SPACED_APT_KEEP) --apply "$(abspath $(APT_REPO_DIR))"
 	$(HOST_RUN) scripts/build-apt-repo.sh "$(abspath $(APT_REPO_DIR))"
 	$(HOST_RUN) scripts/tests/test-release-package-payload.sh "$(abspath $(APT_REPO_DIR))"
 	$(HOST_RUN) scripts/tests/test-apt-trust.sh "$(abspath $(APT_REPO_DIR))"
