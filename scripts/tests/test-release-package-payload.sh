@@ -8,9 +8,12 @@ SUITE=${SPACED_APT_SUITE:-spaced}
 WORK=$(mktemp -d)
 trap 'rm -rf -- "$WORK"' EXIT
 VERSION=$(sed -n 's/^Version: //p' "$ROOT/packages/spaced-meta/DEBIAN/control")
+WALLPAPERS_VERSION=$(sed -n 's/^Version: //p' "$ROOT/packages/spaced-wallpapers/DEBIAN/control")
 PACKAGES="$REPO/dists/$SUITE/main/binary-amd64"
 dpkg-deb -e "$PACKAGES/spaced-meta_${VERSION}_all.deb" "$WORK/meta"
 dpkg-deb -x "$PACKAGES/spaced-mate-default-settings_${VERSION}_all.deb" "$WORK/settings"
+dpkg-deb -x "$PACKAGES/spaced-themes_${VERSION}_all.deb" "$WORK/themes"
+dpkg-deb -x "$PACKAGES/spaced-wallpapers_${WALLPAPERS_VERSION}_all.deb" "$WORK/wallpapers"
 python3 - "$ROOT" "$WORK" <<'PY'
 from pathlib import Path
 import re
@@ -25,10 +28,14 @@ actual = {p.strip().split()[0] for p in re.search(r'^Depends: (.+)$', control, r
 assert not expected - actual, f'Missing runtime dependencies: {sorted(expected - actual)}'
 assert not {'calamares', 'calamares-settings-debian', 'live-boot', 'live-config', 'live-config-sysvinit', 'openssh-server'} & actual
 payload = work / 'settings'
+themes = work / 'themes'
+wallpapers = work / 'wallpapers'
 for path in ('usr/local/bin/install-spaced-linux', 'usr/local/bin/spaced-live-session',
              'etc/skel/Desktop/install-spaced-linux.desktop',
              'usr/share/spaced-themes/cairo-dock/launchers/04-install.desktop'):
     assert not (payload / path).exists(), f'Live-only entrypoint delivered by upgrade: {path}'
+    assert not (themes / path).exists(), f'Live-only entrypoint delivered by upgrade: {path}'
+    assert not (wallpapers / path).exists(), f'Live-only entrypoint delivered by upgrade: {path}'
 for path in ('usr/lib/spaced-linux/spaced-update.py', 'usr/lib/spaced-linux/spaced-update-helper',
              'usr/lib/spaced-linux/spaced-update-apt-guard',
              'usr/share/keyrings/spaced-archive-keyring.gpg', 'etc/apt/sources.list.d/spaced-apt.list',
@@ -40,6 +47,17 @@ for path in ('usr/lib/spaced-linux/spaced-update.py', 'usr/lib/spaced-linux/spac
     assert (payload / path).read_bytes() == (root / 'overlays' / path).read_bytes(), f'Missing/stale overlay: {path}'
 for path in ('postinst', 'triggers'):
     assert (work / 'meta' / path).read_bytes() == (root / 'packages/spaced-meta/DEBIAN' / path).read_bytes(), f'Stale release maintainer script: {path}'
+for path in ('usr/share/backgrounds/spaced/spaced-orbit-4k.png',
+             'usr/share/mate-background-properties/spaced-linux.xml'):
+    assert (wallpapers / path).read_bytes() == (root / 'overlays' / path).read_bytes(), f'Missing/stale wallpaper: {path}'
+    assert not (payload / path).exists(), f'Wallpaper payload duplicated in settings: {path}'
+for path in ('usr/share/spaced-themes/themes.json',
+             'boot/grub/themes/spaced/theme.txt'):
+    assert (themes / path).read_bytes() == (root / 'overlays' / path).read_bytes(), f'Missing/stale theme payload: {path}'
+    assert not (payload / path).exists(), f'Theme payload duplicated in settings: {path}'
+for path in ('usr/share/icons/Spaced-Icons-Linux-Dark/index.theme',):
+    assert (themes / path).is_file(), f'Missing theme payload: {path}'
+    assert not (payload / path).exists(), f'Theme payload duplicated in settings: {path}'
 lightdm = (payload / 'etc/lightdm/lightdm.conf.d/60-spaced-installed.conf').read_text()
 assert re.search(r'\[LightDM\](?:(?!\[).)*minimum-vt=1', lightdm, re.S), 'Upgrade omitted boot VT fix'
 assert not re.search(r'^autologin-user=.+', lightdm, re.M), 'Installed defaults must not enable a test/live account'

@@ -181,6 +181,12 @@ assert "autologin-user=user" in defaults_postinst and "glib-compile-schemas" in 
     "desktop package does not migrate LightDM or compile updated settings"
 assert "update-desktop-database -q /usr/local/share/applications" in defaults_postinst, \
     "the higher-priority Spaced application override database is not refreshed"
+themes_postinst = (Path("packages/spaced-themes/DEBIAN/postinst")
+                   .read_text(encoding="utf-8"))
+assert "gtk-update-icon-cache" in themes_postinst, \
+    "theme package does not refresh icon caches after theme/icon changes"
+assert "gtk-update-icon-cache" not in defaults_postinst, \
+    "icon-cache refresh did not move with the icons to spaced-themes"
 local_package_builder = Path("scripts/iso/build-local-packages.sh").read_text(encoding="utf-8")
 assert "stage_desktop_defaults" in local_package_builder and "usr/share/themes" in local_package_builder, \
     "spaced-mate-default-settings remains an empty metadata package"
@@ -417,10 +423,51 @@ meta_control = Path("packages/spaced-meta/DEBIAN/control").read_text(encoding="u
 package_version = re.search(r"^Version: (.+)$", meta_control, re.M).group(1)
 assert package_version.split("-", 1)[0] == version, "Native package version does not match OS release"
 assert f"Version: {package_version}\n" in defaults_control
+themes_control = (Path("packages/spaced-themes/DEBIAN/control")
+                  .read_text(encoding="utf-8"))
+wallpapers_control = (Path("packages/spaced-wallpapers/DEBIAN/control")
+                      .read_text(encoding="utf-8"))
+assert f"Version: {package_version}\n" in themes_control, \
+    "spaced-themes must share the settings package version it is pinned to"
+wallpapers_version = re.search(r"^Version: (\d{4}\.\d{2}-\d+)$", wallpapers_control, re.M)
+assert wallpapers_version, "spaced-wallpapers must use its independent YYYY.MM-N artwork version"
+wallpapers_version = wallpapers_version.group(1)
+for dependent in (defaults_control, meta_control):
+    assert f"spaced-themes (= {package_version})" in dependent \
+        and f"spaced-wallpapers (>= {wallpapers_version})" in dependent, \
+        "settings and meta packages must depend on the split artwork packages"
+# 9.26.3-1 is the fixed transition point where files left the settings package.
+for split_control in (themes_control, wallpapers_control):
+    assert "Breaks: spaced-mate-default-settings (<< 9.26.3-1)" in split_control \
+        and "Replaces: spaced-mate-default-settings (<< 9.26.3-1)" in split_control, \
+        "split artwork package lacks the Breaks/Replaces takeover for upgrades"
 assert f"spaced-mate-default-settings (= {package_version})" in meta_control \
     and "spaced-welcome (>= 0.1.15)" in meta_control \
     and "libfuse2t64" in meta_control, \
     "spaced-meta does not pull in the standalone Welcome package and desktop defaults"
+# The artwork split moves payload out of spaced-mate-default-settings. No
+# overlay path may be staged into two packages: dpkg refuses to overwrite a
+# file owned by another package.
+def staged_path_lists(builder_text):
+    lists = {}
+    for name in ("WALLPAPER_PATHS", "THEME_PATHS", "SETTINGS_PATHS"):
+        match = re.search(rf"^{name}=\(\n(.*?)\)", builder_text, re.M | re.S)
+        assert match, f"local package builder does not define {name}"
+        lists[name] = {line.strip() for line in match.group(1).splitlines()
+                       if line.strip()}
+    return lists
+staged_lists = staged_path_lists(local_package_builder)
+assert "overlays/usr/share/themes/Spaced-*" in local_package_builder, \
+    "theme glob is missing from the local package builder"
+staged_lists["THEME_PATHS"].add("usr/share/themes/Spaced-*")
+for first, second in (("WALLPAPER_PATHS", "THEME_PATHS"),
+                      ("WALLPAPER_PATHS", "SETTINGS_PATHS"),
+                      ("THEME_PATHS", "SETTINGS_PATHS")):
+    overlap = staged_lists[first] & staged_lists[second]
+    assert not overlap, f"path lists overlap between {first} and {second}: {sorted(overlap)}"
+assert "usr/share/backgrounds/spaced" in staged_lists["WALLPAPER_PATHS"] \
+    and "usr/share/mate-background-properties/spaced-linux.xml" in staged_lists["WALLPAPER_PATHS"], \
+    "wallpaper payload is not owned by spaced-wallpapers"
 assert "spaced-welcome.desktop" not in package_builder \
     and "usr/share/spaced-welcome" not in package_builder, \
     "spaced-mate-default-settings still stages standalone Welcome-owned paths"

@@ -51,7 +51,7 @@ awk '/^Architecture:/ && $2 != "all" && $2 != "amd64" {print $2}' "$@" | sort -u
     done >> "$workspace/apt.conf"
 export APT_CONFIG=$workspace/apt.conf
 apt-get update
-apt-cache policy spaced-meta spaced-mate-default-settings spaced-welcome \
+apt-cache policy spaced-meta spaced-mate-default-settings spaced-themes spaced-wallpapers spaced-welcome \
     linux-image-amd64 linux-headers-amd64 libmarco-private2 amdgpu-top
 candidate=$(apt-cache policy spaced-meta | awk '/Candidate:/ {print $2; exit}')
 [[ "$candidate" == "$(sed -n 's/^Version: //p' "$ROOT/packages/spaced-meta/DEBIAN/control")" ]] || { echo "Wrong release candidate: $candidate" >&2; exit 1; }
@@ -67,7 +67,7 @@ for status in "$@"; do
         echo "Upgrade plan did not install the target metapackage from: ${installed:-absent}." >&2
         exit 1
     fi
-    if grep -Eq '^(Remv (sysvinit-core|sysvinit-utils|initscripts|spaced-meta|spaced-mate-default-settings|mate-session-manager|mate-panel|caja|compiz|lightdm|network-manager|apt|dpkg|flatpak)(:[^ ]+)? |Inst (systemd|systemd-sysv|runit-init|openrc)(:[^ ]+)? )' "$workspace/plan"; then
+    if grep -Eq '^(Remv (sysvinit-core|sysvinit-utils|initscripts|spaced-meta|spaced-mate-default-settings|spaced-themes|spaced-wallpapers|mate-session-manager|mate-panel|caja|compiz|lightdm|network-manager|apt|dpkg|flatpak)(:[^ ]+)? |Inst (systemd|systemd-sysv|runit-init|openrc)(:[^ ]+)? )' "$workspace/plan"; then
         echo 'Upgrade plan removes the supported desktop or changes init systems.' >&2
         exit 1
     fi

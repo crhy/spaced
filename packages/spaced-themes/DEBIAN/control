@@ -1,0 +1,12 @@
+Package: spaced-themes
+Version: 9.26.3-1
+Section: x11
+Priority: optional
+Architecture: all
+Maintainer: Spaced Linux Team
+Breaks: spaced-mate-default-settings (<< 9.26.3-1)
+Replaces: spaced-mate-default-settings (<< 9.26.3-1)
+Description: Spaced Linux MATE themes, icons, and boot artwork
+ Supplies the selectable Spaced GTK/Metacity themes, icon themes including
+ the Brisk start-here mark, the theme registry, and the GRUB theme.
+ Upgrading this package refreshes the compiled icon caches.

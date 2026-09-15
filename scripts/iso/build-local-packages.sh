@@ -6,9 +6,77 @@ OUTPUT="${LOCAL_PACKAGE_OUTPUT:-$ROOT/build/local-packages}"
 VERSION="$(cat "$ROOT/VERSION")"
 # Use the package revision date, so later documentation/test commits cannot
 # change the bytes of an already-published native package.
-export SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH:-$(git -C "$ROOT" log -1 --format=%ct -- packages/spaced-meta/DEBIAN/control packages/spaced-mate-default-settings/DEBIAN/control)}
+export SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH:-$(git -C "$ROOT" log -1 --format=%ct -- packages/spaced-meta/DEBIAN/control packages/spaced-mate-default-settings/DEBIAN/control packages/spaced-themes/DEBIAN/control)}
+# spaced-wallpapers keeps its version across OS revisions, so its bytes must
+# depend only on its own revision; otherwise an unchanged version would get
+# new bytes and build-apt-repo.sh would refuse to republish it.
+WALLPAPERS_SOURCE_DATE_EPOCH=${WALLPAPERS_SOURCE_DATE_EPOCH:-$(git -C "$ROOT" log -1 --format=%ct -- packages/spaced-wallpapers/DEBIAN/control)}
 
 mkdir -p "$OUTPUT"
+
+# Per-package overlay path lists. Each list must be disjoint: dpkg refuses to
+# overwrite a file owned by another package, so no path may appear twice.
+# The Spaced-* theme glob is handled separately in stage_themes and belongs
+# to spaced-themes.
+WALLPAPER_PATHS=(
+    usr/share/backgrounds/spaced
+    usr/share/mate-background-properties/spaced-linux.xml
+)
+THEME_PATHS=(
+    boot/grub/themes/spaced
+    usr/share/icons
+    usr/share/spaced-themes
+)
+SETTINGS_PATHS=(
+    etc/X11/Xsession.d/05spaced-reset-session-env
+    etc/X11/Xsession.d/25spaced-flatpak-exports
+    etc/X11/xorg.conf.d/20-spaced-amdgpu.conf
+    etc/apt/apt.conf.d
+    etc/apt/preferences.d
+    etc/apt/sources.list.d/spaced-apt.list
+    etc/bazaar
+    etc/cron.daily/spaced-prune-crashes
+    etc/default/spaced-first-boot-snapshot
+    etc/fastfetch
+    etc/init.d/spaced-first-boot-snapshot
+    etc/lightdm/lightdm.conf.d/60-spaced-installed.conf
+    etc/profile.d/spaced-application-theming.sh
+    etc/profile.d/spaced-flatpak-exports.sh
+    etc/profile.d/spaced-xdg-runtime.sh
+    etc/profile.d/spaced-xdg-user-dirs.sh
+    etc/security/limits.d/60-spaced-coredump.conf
+    etc/skel
+    etc/sysctl.d/60-spaced-coredump.conf
+    etc/brave/policies/managed/spaced-extensions.json
+    etc/xdg/autostart/spaced-audio-restore.desktop
+    etc/xdg/autostart/spaced-desktop-icon-repair-before-caja.desktop
+    etc/xdg/autostart/spaced-desktop-icon-repair.desktop
+    etc/xdg/autostart/spaced-display-repair.desktop
+    etc/xdg/autostart/spaced-enable-flatpak-remotes.desktop
+    etc/xdg/autostart/spaced-first-login-repair.desktop
+    etc/xdg/autostart/spaced-nvidia-postboot.desktop
+    etc/xdg/autostart/spaced-theme-monitor.desktop
+    etc/xdg/autostart/spaced-window-decorator.desktop
+    etc/xdg/QtProject/qtquickcontrols2.conf
+    usr/lib/spaced-linux
+    usr/local/bin
+    usr/local/sbin
+    usr/local/share/applications/mate-about.desktop
+    usr/local/share/applications/spaced-help.desktop
+    usr/share/applications/mimeapps.list
+    usr/share/applications/spaced-nvidia-installer.desktop
+    usr/share/applications/spaced-update.desktop
+    usr/share/applications/spaced-window-manager.desktop
+    usr/share/fastfetch/logos/spaced-linux.txt
+    usr/share/flatpak/remotes.d/flathub.flatpakrepo
+    usr/share/glib-2.0/schemas/90_spaced-linux.gschema.override
+    usr/share/glib-2.0/schemas/org.gnome.metacity.gschema.xml
+    usr/share/keyrings/spaced-archive-keyring.gpg
+    usr/share/mate-panel/layouts
+    usr/share/pixmaps
+    usr/share/polkit-1/actions/com.spacedlinux.nvidia.policy
+    usr/share/polkit-1/actions/com.spacedlinux.update.policy
+)
 
 build() {
     local pkg="$1" dir="${2:-$ROOT/packages/$1}"
@@ -30,99 +98,40 @@ build() {
     echo "    -> $out"
 }
 
-stage_desktop_defaults() {
+# Shared staging helpers so the three desktop packages keep the same
+# permissions, reproducibility, and live-only exclusion behaviour.
+new_stage() {
+    local pkg="$1"
     local stage
     stage=$(mktemp -d)
-    cp -a "$ROOT/packages/spaced-mate-default-settings/." "$stage/"
+    cp -a "$ROOT/packages/$pkg/." "$stage/"
+    printf '%s' "$stage"
+}
 
-    # Only Spaced-owned paths belong in the update package. Package-owned
-    # LightDM, MATE Media, GRUB, and Calamares files remain image-build policy
-    # and are migrated narrowly from postinst where necessary.
+copy_overlay_paths() {
+    local stage="$1"
+    shift
     local path
-    for path in \
-        boot/grub/themes/spaced \
-        etc/X11/Xsession.d/05spaced-reset-session-env \
-        etc/X11/Xsession.d/25spaced-flatpak-exports \
-        etc/X11/xorg.conf.d/20-spaced-amdgpu.conf \
-        etc/apt/apt.conf.d \
-        etc/apt/preferences.d \
-        etc/apt/sources.list.d/spaced-apt.list \
-        etc/bazaar \
-        etc/cron.daily/spaced-prune-crashes \
-        etc/default/spaced-first-boot-snapshot \
-        etc/fastfetch \
-        etc/init.d/spaced-first-boot-snapshot \
-        etc/lightdm/lightdm.conf.d/60-spaced-installed.conf \
-        etc/profile.d/spaced-application-theming.sh \
-        etc/profile.d/spaced-flatpak-exports.sh \
-        etc/profile.d/spaced-xdg-runtime.sh \
-        etc/profile.d/spaced-xdg-user-dirs.sh \
-        etc/security/limits.d/60-spaced-coredump.conf \
-        etc/skel \
-        etc/sysctl.d/60-spaced-coredump.conf \
-        etc/brave/policies/managed/spaced-extensions.json \
-        etc/xdg/autostart/spaced-audio-restore.desktop \
-        etc/xdg/autostart/spaced-desktop-icon-repair-before-caja.desktop \
-        etc/xdg/autostart/spaced-desktop-icon-repair.desktop \
-        etc/xdg/autostart/spaced-display-repair.desktop \
-        etc/xdg/autostart/spaced-enable-flatpak-remotes.desktop \
-        etc/xdg/autostart/spaced-first-login-repair.desktop \
-        etc/xdg/autostart/spaced-nvidia-postboot.desktop \
-        etc/xdg/autostart/spaced-theme-monitor.desktop \
-        etc/xdg/autostart/spaced-window-decorator.desktop \
-        etc/xdg/QtProject/qtquickcontrols2.conf \
-        usr/lib/spaced-linux \
-        usr/local/bin \
-        usr/local/sbin \
-        usr/local/share/applications/mate-about.desktop \
-        usr/local/share/applications/spaced-help.desktop \
-        usr/share/applications/mimeapps.list \
-        usr/share/applications/spaced-nvidia-installer.desktop \
-        usr/share/applications/spaced-update.desktop \
-        usr/share/applications/spaced-window-manager.desktop \
-        usr/share/backgrounds/spaced \
-        usr/share/fastfetch/logos/spaced-linux.txt \
-        usr/share/flatpak/remotes.d/flathub.flatpakrepo \
-        usr/share/glib-2.0/schemas/90_spaced-linux.gschema.override \
-        usr/share/glib-2.0/schemas/org.gnome.metacity.gschema.xml \
-        usr/share/icons \
-        usr/share/keyrings/spaced-archive-keyring.gpg \
-        usr/share/mate-background-properties/spaced-linux.xml \
-        usr/share/mate-panel/layouts \
-        usr/share/pixmaps \
-        usr/share/polkit-1/actions/com.spacedlinux.nvidia.policy \
-        usr/share/polkit-1/actions/com.spacedlinux.update.policy \
-        usr/share/spaced-themes
-    do
+    for path in "$@"; do
         (cd "$ROOT/overlays" && cp -a --parents "$path" "$stage")
     done
+}
 
-    # These entrypoints are removed by Calamares. An update must not put the
-    # live installer back on an installed system or in a new user's Desktop.
-    rm -f "$stage/usr/local/bin/install-spaced-linux" \
-        "$stage/usr/local/bin/spaced-live-session" \
-        "$stage/etc/skel/Desktop/install-spaced-linux.desktop" \
-        "$stage/usr/share/spaced-themes/cairo-dock/launchers/04-install.desktop"
+fix_perms() {
+    local stage="$1"
+    # Do not let a developer checkout's umask leak group-writable modes into
+    # an installed system.
+    find "$stage" -type d -exec chmod 0755 {} +
+    find "$stage" -type f -perm /111 -exec chmod 0755 {} +
+    find "$stage" -type f ! -perm /111 -exec chmod 0644 {} +
+}
 
-    for path in "$ROOT"/overlays/usr/share/themes/Spaced-*; do
-        (cd "$ROOT/overlays" && cp -a --parents "${path#"$ROOT/overlays/"}" "$stage")
-    done
-
-    # The signed first-party Flatpak descriptor is fetched and verified before
-    # packaging. Keeping it in the settings package lets installed systems get
-    # the same stable remote definition through normal APT updates.
-    local external_stage=${SPACED_EXTERNAL_STAGE_DIR:-$ROOT/build/external-artifacts}
-    local github_remote="$external_stage/spaced-github.flatpakrepo"
-    if [[ ! -f $github_remote ]]; then
-        echo "Missing verified spaced-github descriptor; run stage-external-artifacts.sh first" >&2
-        exit 1
-    fi
-    install -Dm0644 "$github_remote" \
-        "$stage/usr/share/flatpak/remotes.d/spaced-github.flatpakrepo"
-
-    # Brisk asks the active icon theme for start-here-symbolic. Put the exact
-    # issue-provided raster mark directly in each selectable theme so its
-    # compiled cache cannot fall through to an old Papirus or Adwaita icon.
+# Brisk asks the active icon theme for start-here-symbolic. Put the exact
+# issue-provided raster mark directly in each selectable theme so its
+# compiled cache cannot fall through to an old Papirus or Adwaita icon.
+inject_brisk_icons() {
+    local stage="$1"
+    local icon_theme menu_theme
     for icon_theme in "$stage"/usr/share/icons/Spaced-Icons-*; do
         [ -d "$icon_theme" ] || continue
         case $(sed -n 's/^Inherits=\(Spaced-Menu-On-[^,]*\).*/\1/p' "$icon_theme/index.theme") in
@@ -146,12 +155,65 @@ ICON_DIRECTORY
             "$stage/usr/share/icons/$menu_theme/48x48/places/start-here-symbolic.png" \
             "$icon_theme/48x48/places/"
     done
+}
 
-    # Do not let a developer checkout's umask leak group-writable modes into
-    # an installed system.
-    find "$stage" -type d -exec chmod 0755 {} +
-    find "$stage" -type f -perm /111 -exec chmod 0755 {} +
-    find "$stage" -type f ! -perm /111 -exec chmod 0644 {} +
+stage_wallpapers() {
+    local stage
+    stage=$(new_stage spaced-wallpapers)
+    copy_overlay_paths "$stage" "${WALLPAPER_PATHS[@]}"
+    fix_perms "$stage"
+    SOURCE_DATE_EPOCH=$WALLPAPERS_SOURCE_DATE_EPOCH build spaced-wallpapers "$stage"
+    rm -rf -- "$stage"
+}
+
+stage_themes() {
+    local stage
+    stage=$(new_stage spaced-themes)
+    copy_overlay_paths "$stage" "${THEME_PATHS[@]}"
+
+    # This entrypoint is removed by Calamares. An update must not put the
+    # live installer back on an installed system.
+    rm -f "$stage/usr/share/spaced-themes/cairo-dock/launchers/04-install.desktop"
+
+    for path in "$ROOT"/overlays/usr/share/themes/Spaced-*; do
+        (cd "$ROOT/overlays" && cp -a --parents "${path#"$ROOT/overlays/"}" "$stage")
+    done
+
+    inject_brisk_icons "$stage"
+
+    fix_perms "$stage"
+    build spaced-themes "$stage"
+    rm -rf -- "$stage"
+}
+
+stage_desktop_defaults() {
+    local stage
+    stage=$(new_stage spaced-mate-default-settings)
+
+    # Only Spaced-owned paths belong in the update package. Package-owned
+    # LightDM, MATE Media, GRUB, and Calamares files remain image-build policy
+    # and are migrated narrowly from postinst where necessary.
+    copy_overlay_paths "$stage" "${SETTINGS_PATHS[@]}"
+
+    # These entrypoints are removed by Calamares. An update must not put the
+    # live installer back on an installed system or in a new user's Desktop.
+    rm -f "$stage/usr/local/bin/install-spaced-linux" \
+        "$stage/usr/local/bin/spaced-live-session" \
+        "$stage/etc/skel/Desktop/install-spaced-linux.desktop"
+
+    # The signed first-party Flatpak descriptor is fetched and verified before
+    # packaging. Keeping it in the settings package lets installed systems get
+    # the same stable remote definition through normal APT updates.
+    local external_stage=${SPACED_EXTERNAL_STAGE_DIR:-$ROOT/build/external-artifacts}
+    local github_remote="$external_stage/spaced-github.flatpakrepo"
+    if [[ ! -f $github_remote ]]; then
+        echo "Missing verified spaced-github descriptor; run stage-external-artifacts.sh first" >&2
+        exit 1
+    fi
+    install -Dm0644 "$github_remote" \
+        "$stage/usr/share/flatpak/remotes.d/spaced-github.flatpakrepo"
+
+    fix_perms "$stage"
 
     build spaced-mate-default-settings "$stage"
     rm -rf -- "$stage"
@@ -185,6 +247,8 @@ PY
     rm -rf -- "$stage"
 }
 
+stage_wallpapers
+stage_themes
 stage_desktop_defaults
 stage_meta
 "$ROOT/scripts/iso/stage-amdgpu-top.sh"
