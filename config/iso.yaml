@@ -1,6 +1,6 @@
-# Spaced Linux 9.26.2 ISO Configuration
-iso_name: spaced-linux-9.26.2
-version: "9.26.2"
+# Spaced Linux 9.26.3 ISO Configuration
+iso_name: spaced-linux-9.26.3
+version: "9.26.3"
 arch: amd64
 
 # Package sources

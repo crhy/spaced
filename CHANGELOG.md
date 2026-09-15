@@ -1,6 +1,6 @@
 # Changelog
 
-## 9.26.3 - unreleased
+## 9.26.3 - 2026-09-14
 - VirtualBox ISO smoke test now exercises the configuration real users get
   (Refs #218). `scripts/vm/virtualbox/smoke-iso.sh` accepts
   `--graphics default|vboxsvga` (`SPACED_VBOX_GRAPHICS`); `default` leaves
