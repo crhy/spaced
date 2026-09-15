@@ -23,6 +23,14 @@
   (newest 2 per package plus exact `spaced-meta` pins, `SPACED_APT_KEEP`
   overridable), keeping the 1 GB GitHub Pages site from growing forever. No
   new ISO is required.
+- Fix issue #190: the Network Servers desktop icon is gray again. The 9.26.2
+  hicolor fallback never took effect because Caja requests the
+  `network-workgroup` icon and every shipped theme inherits a
+  Spaced-Menu-On-* theme before Papirus and hicolor, so the purple Papirus
+  icon won. Both Spaced-Menu-On-Dark and Spaced-Menu-On-Light now ship the
+  gray artwork as `scalable/places/network-workgroup.svg` (plus
+  `network-server.svg` for individual hosts). Delivered through Spaced
+  Update; no new ISO is required.
 - When Compiz cannot start (no working 3D graphics), the session now shows a
   keyboard-usable explanation with the VirtualBox VBoxSVGA recovery steps and
   Log Out / Open Terminal actions, instead of a painted but unresponsive

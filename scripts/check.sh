@@ -650,9 +650,25 @@ assert 'width="128"' in installer_icon and 'height="128"' in installer_icon \
 live_hook = Path("scripts/iso/01-configure.chroot").read_text(encoding="utf-8")
 assert "find /home/user/Desktop -maxdepth 1 -type f ! -name install-spaced-linux.desktop -delete" in live_hook, \
     "live desktop is not restricted to the installer icon (issue #191)"
-network_server_icon = (root / "usr/share/icons/hicolor/scalable/places/network-server.svg").read_text(encoding="utf-8")
-assert "#6b7078" in network_server_icon and "#b9" not in network_server_icon.lower(), \
-    "Network Servers still falls back to the purple theme icon (issue #190)"
+# Caja draws the desktop "Network Servers" item with the icon name
+# network-workgroup (network-server covers individual hosts in network:///),
+# and every selectable theme inherits a Spaced-Menu-On-* theme before
+# Papirus-Dark/Papirus and hicolor. The 9.26.2 hicolor network-server fallback
+# therefore never won over the purple Papirus places icon, so the gray
+# override must live in Spaced-Menu-On-* under the requested names.
+purple_hexes = ("#7e57c2", "#8e24aa", "#9c27b0", "#673ab7", "#5e35b1")
+for surface in ("Spaced-Menu-On-Dark", "Spaced-Menu-On-Light"):
+    for network_name in ("network-workgroup.svg", "network-server.svg"):
+        network_icon = (icon_root / surface / "scalable/places" / network_name).read_text(encoding="utf-8")
+        lowered_icon = network_icon.lower()
+        assert not [hex_code for hex_code in purple_hexes if hex_code in lowered_icon], \
+            f"{surface} {network_name} still falls back to the purple theme icon (issue #190)"
+        fills = re.findall(r'fill="(#[0-9a-fA-F]{6})"', network_icon)
+        assert fills, f"{surface} {network_name} carries no fill colors (issue #190)"
+        for fill in fills:
+            channels = [int(fill[i:i + 2], 16) for i in (1, 3, 5)]
+            assert max(channels) - min(channels) <= 8, \
+                f"{surface} {network_name} fill {fill} is not neutral gray (issue #190)"
 calamares_launcher = (root / "usr/local/bin/install-spaced-linux").read_text(encoding="utf-8")
 assert "sudo --preserve-env=DISPLAY,XAUTHORITY,DBUS_SESSION_BUS_ADDRESS" in calamares_launcher, \
     "Calamares launcher does not use the authorized live-session sudo path"
