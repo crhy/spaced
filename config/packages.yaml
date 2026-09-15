@@ -33,6 +33,9 @@ network:
   - rfkill
   - wireless-regdb
   - wpasupplicant
+  - avahi-daemon
+  - libnss-mdns
+  - smbclient
 bluetooth:
   - bluez
   - bluez-tools
