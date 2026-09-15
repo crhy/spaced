@@ -187,12 +187,13 @@ Facts:
 - It is a **virtual** Caja desktop link for `network:///`, not a file in
   `~/Desktop` — cf. `docs/troubleshooting/desktop-app-integrations.md:23-28`.
   Looking in the Desktop folder proves nothing about it.
-- Issue #190 ("Network Servers icon visibility") shipped in 9.26.2 a neutral
-  gray scalable fallback,
-  `overlays/usr/share/icons/hicolor/scalable/places/network-server.svg`, so
-  every shipped light/dark palette renders the place icon
-  (`docs/9.26.2-ISSUE-STATUS.md:70`). Before 9.26.2, palettes lacking that
-  icon showed a broken/missing glyph — easy to read as "no icon".
+- Issue #190 ("Network Servers icon visibility"): 9.26.2 shipped a gray
+  `hicolor/scalable/places/network-server.svg` fallback, but it never took
+  effect. Caja requests `network-workgroup`, and Papirus-Dark's purple icon is
+  found before hicolor, so the 9.26.2 live desktop still shows a purple icon.
+  9.26.3 adds gray `network-workgroup`/`network-server` icons to
+  `Spaced-Menu-On-Dark` and `Spaced-Menu-On-Light` (see
+  `docs/9.26.2-ISSUE-STATUS.md`).
 - Both live and installed images ship `gvfs-backends` and `gigolo`
   (`config/packages.yaml:4,28`), and the live image compiles the schemas at
   build time (`01-configure.chroot:32`).
