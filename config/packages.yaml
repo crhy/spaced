@@ -36,6 +36,7 @@ network:
   - avahi-daemon
   - libnss-mdns
   - smbclient
+  - wsdd
 bluetooth:
   - bluez
   - bluez-tools

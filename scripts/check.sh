@@ -155,7 +155,7 @@ assert "QT_QPA_PLATFORMTHEME=gtk3" in application_theming \
     and "QT_STYLE_OVERRIDE=Fusion" in application_theming, \
     "Qt applications do not have a complete cross-toolkit control style (issue #78)"
 assert {"bluez", "bluez-tools"}.issubset(packages), "Bluetooth stack is not included by default (issue #77)"
-assert {"avahi-daemon", "libnss-mdns", "smbclient"}.issubset(packages), \
+assert {"avahi-daemon", "libnss-mdns", "smbclient", "wsdd"}.issubset(packages), \
     "mDNS network discovery or SMB diagnostics are missing (issue #80)"
 assert {package for package in packages if "systemd" in package} == \
     {"systemd-standalone-sysusers", "systemd-standalone-tmpfiles"}, \

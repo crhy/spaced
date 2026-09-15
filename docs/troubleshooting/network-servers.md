@@ -42,8 +42,9 @@ network (same Wi-Fi or same router; no VPN in between).
 3. What you should see:
    - Macs, Linux servers, NAS devices and network printers appear as
      hosts (found through mDNS/DNS-SD).
-   - Windows 10/11 PCs appear through WS-Discovery (the shared
-     `gvfsd-wsdd` backend needs no extra setup).
+   - Windows 10/11 PCs appear through WS-Discovery. Caja's `gvfsd-wsdd`
+     backend starts the `wsdd` program in discovery-only mode while you
+     browse; it does not announce this computer and is not a system service.
    - Very old devices that only speak NetBIOS/SMB1 browsing usually do
      **not** appear. That list has been empty on modern networks for
      years; it is not a Spaced bug. Use the direct connection in step 3

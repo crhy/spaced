@@ -41,16 +41,15 @@
   removed, and only proceeds on confirmation. Protected desktop, init, and
   running-kernel packages (or an unusually large removal set) disable removal
   for safety, leaving only the package cache. Updates themselves never clean
-   up automatically.
+  up automatically.
 - Make Network Servers discovery work (issue #80). The image now ships
   `avahi-daemon` and `libnss-mdns` for mDNS/DNS-SD browsing of Macs, Linux
-  servers, NAS devices and printers (including `host.local` names), plus the
-  `smbclient` diagnostic tool; Windows 10/11 PCs are found through the
-  WS-Discovery backend already built into `gvfs-backends`, which needs no extra
-  daemon. The daemon starts from its sysvinit script, `libnss-mdns` configures
-  name resolution itself, and no new listening ports are opened beyond the
-  standard mDNS UDP 5353. Delivered through Spaced Update; no new ISO is
-  required.
+  servers, NAS devices and printers (including `host.local` names), `wsdd` for
+  Windows 10/11 PCs, and the `smbclient` diagnostic tool. `avahi-daemon` starts
+  from its sysvinit script and `libnss-mdns` configures name resolution itself.
+  `wsdd` has no service: `gvfs-backends` runs `wsdd --no-host --discovery` only
+  while someone browses. The only new always-on listener is mDNS on UDP 5353.
+  Delivered through Spaced Update; no new ISO is required.
 
 ## 9.26.2-2 - 2026-09-12
 - Fix issue #209. The 9.26.2 GitHub release was published without its APT
