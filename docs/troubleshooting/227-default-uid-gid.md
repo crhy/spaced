@@ -189,6 +189,14 @@ Downsides and limits (why "guarantee" is a strong word):
 
 ## 4. Conclusion and minimal change
 
+> **Verified on a real install (2026-09-14):** a Spaced Linux 9.26.2 system
+> installed with Calamares has its first user at **UID 1001, GID 1002**, and
+> no account at UID 1000. The `scanner` group holds GID 1001, so two separate
+> problems push the IDs up: the live `user` occupying 1000 during account
+> creation, and a package-created `scanner` group taking the first free
+> GID ≥ 1000. Any fix must handle both and needs a full-install VM test,
+> so it is planned after 9.26.3.
+
 - **Live user:** already 1000:1000. Nothing to do.
 - **First installed user:** almost certainly **1001:1001 today**, an
   accident of install ordering (live `user` occupies 1000 when the new
