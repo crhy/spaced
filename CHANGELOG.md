@@ -21,16 +21,14 @@
 - Prune superseded APT repository revisions before regenerating the signed
   index: `make apt-repo` now runs `scripts/prune-apt-repo.sh --apply` first
   (newest 2 per package plus exact `spaced-meta` pins, `SPACED_APT_KEEP`
-  overridable), keeping the 1 GB GitHub Pages site from growing forever. No
-  new ISO is required.
+  overridable), keeping the 1 GB GitHub Pages site from growing forever.
 - Fix issue #190: the Network Servers desktop icon is gray again. The 9.26.2
   hicolor fallback never took effect because Caja requests the
   `network-workgroup` icon and every shipped theme inherits a
   Spaced-Menu-On-* theme before Papirus and hicolor, so the purple Papirus
   icon won. Both Spaced-Menu-On-Dark and Spaced-Menu-On-Light now ship the
   gray artwork as `scalable/places/network-workgroup.svg` (plus
-  `network-server.svg` for individual hosts). Delivered through Spaced
-  Update; no new ISO is required.
+  `network-server.svg` for individual hosts).
 - When Compiz cannot start (no working 3D graphics), the session now shows a
   keyboard-usable explanation with the VirtualBox VBoxSVGA recovery steps and
   Log Out / Open Terminal actions, instead of a painted but unresponsive
@@ -49,12 +47,20 @@
   from its sysvinit script and `libnss-mdns` configures name resolution itself.
   `wsdd` has no service: `gvfs-backends` runs `wsdd --no-host --discovery` only
   while someone browses. The only new always-on listener is mDNS on UDP 5353.
-  Delivered through Spaced Update; no new ISO is required.
+ 
 - Split `spaced-mate-default-settings` into three packages: `spaced-wallpapers`
   (wallpapers, independently versioned), `spaced-themes` (themes, icons, and
   GRUB artwork), and a leaner `spaced-mate-default-settings` that depends on
   both. Desktop fixes no longer re-ship the full artwork payload on every APT
   update.
+- Fix issue #158: Super+left-drag opened the Brisk menu instead of capturing
+  the screen. The Compiz `screenshot` plugin's `initiate_button` stays on
+  `Ctrl+Shift+left-drag` (`<Control><Shift>Button1`, plugin kept enabled),
+  which avoids the Brisk menu's Super key and the existing `<Alt>Button1`
+  (move) binding; existing user customizations are still preserved by the
+  desktop migration, and the help documents `Shift+Print` /
+  `Ctrl+Shift+left-drag`. `scripts/check.sh` now fails if any Compiz action
+  is ever bound to plain `<Super>Button1` again (Refs #158).
 
 ## 9.26.2-2 - 2026-09-12
 - Fix issue #209. The 9.26.2 GitHub release was published without its APT

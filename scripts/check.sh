@@ -751,6 +751,8 @@ assert "firepaint" in compiz_text, "Compiz paint-fire-on-screen plugin is not en
 assert "cube;3d;focuspoll;rotate;scale;ezoom;" in compiz_text, "Compiz desktop effects regressed"
 assert "compiz-plugins-extra" in packages, "Compiz 3D Windows plug-in package is missing"
 assert "as_zoom_in_key = <Shift><Super>Up" in compiz_text, "Compiz enhanced zoom shortcut regressed"
+assert re.search(r"(?m)^\s*\w*button\s*=\s*<Super>Button1\s*$", compiz_text) is None, \
+    "Compiz action still uses Super+left-drag, which opens the Brisk menu instead of capturing (issue #158)"
 window_manager = (root / "usr/local/bin/spaced-window-manager").read_text(encoding="utf-8")
 assert 'if [ "$status" -eq 0 ]' in window_manager and "xprop -root" in window_manager, \
     "normal logout is still treated as a Compiz crash"
