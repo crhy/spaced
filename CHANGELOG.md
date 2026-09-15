@@ -50,6 +50,14 @@
   `wsdd` has no service: `gvfs-backends` runs `wsdd --no-host --discovery` only
   while someone browses. The only new always-on listener is mDNS on UDP 5353.
   Delivered through Spaced Update; no new ISO is required.
+- Fix issue #158: Super+left-drag opened the Brisk menu instead of capturing
+  the screen. The Compiz `screenshot` plugin's `initiate_button` stays on
+  `Ctrl+Shift+left-drag` (`<Control><Shift>Button1`, plugin kept enabled),
+  which avoids the Brisk menu's Super key and the existing `<Alt>Button1`
+  (move) binding; existing user customizations are still preserved by the
+  desktop migration, and the help documents `Shift+Print` /
+  `Ctrl+Shift+left-drag`. `scripts/check.sh` now fails if any Compiz action
+  is ever bound to plain `<Super>Button1` again (Refs #158).
 
 ## 9.26.2-2 - 2026-09-12
 - Fix issue #209. The 9.26.2 GitHub release was published without its APT
