@@ -1,6 +1,9 @@
 # Changelog
 
 ## 9.26.4 - unreleased
+- `spaced-wallpapers` is republished as `2026.09-2` with unchanged content.
+  Local packages now set every file timestamp to `SOURCE_DATE_EPOCH`, so a
+  rebuild from a different checkout reproduces the same bytes.
 - Fix issue #239: SpacedBazaar keeps its loading page while the Flathub catalog
   synchronizes, shows progress during that wait, and avoids the brief mostly
   empty screen. SpacedBazaar 0.1.12 is delivered separately through its Flatpak
