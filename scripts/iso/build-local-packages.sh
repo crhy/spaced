@@ -94,6 +94,10 @@ build() {
     find "$OUTPUT" -maxdepth 1 -type f -name "${pkg}_*_all.deb" \
         ! -name "${pkg}_${ver}_all.deb" -delete
     rm -f "$out"
+    # dpkg-deb only clamps timestamps newer than SOURCE_DATE_EPOCH, so older
+    # checkout times would otherwise leak into the archive and a rebuild from
+    # another checkout would change the bytes of an unchanged version.
+    find "$dir" -exec touch --no-dereference --date="@$SOURCE_DATE_EPOCH" {} +
     dpkg-deb --root-owner-group --build "$dir" "$out"
     dpkg-deb --info "$out" | sed -n '1,12p'
     echo "    -> $out"
