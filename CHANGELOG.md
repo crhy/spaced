@@ -1,6 +1,6 @@
 # Changelog
 
-## 9.26.4 - unreleased
+## 9.26.4 - 2026-09-23
 - `spaced-wallpapers` is republished as `2026.09-2` with unchanged content.
   Local packages now set every file timestamp to `SOURCE_DATE_EPOCH`, so a
   rebuild from a different checkout reproduces the same bytes.
