@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Spaced Flatpak Desktop Entries
+Comment=Place installed Flatpak shortcuts on the desktop
+Exec=/usr/local/bin/spaced-flatpak-desktop-entries
+OnlyShowIn=MATE;
+NoDisplay=true
+X-MATE-Autostart-Phase=Panel

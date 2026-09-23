@@ -150,6 +150,12 @@ system:
   - elogind
   - libelogind-compat
   - dconf-gsettings-backend
+compat:
+  - python3-packaging
+  - python3-psutil
+  - python3-xdg
+  - xbase-clients
+  - xvfb
 installer:
   - calamares
   - squashfs-tools

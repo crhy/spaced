@@ -663,5 +663,72 @@ class WindowManagerNoticeTests(unittest.TestCase):
         self.assertEqual(self.calls('compiz-calls'), [])
 
 
+class FlatpakDesktopEntryTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.fakebin = self.root / 'bin'
+        self.fakebin.mkdir()
+        self.exports = self.root / '.local/share/flatpak/exports/share/applications'
+        self.exports.mkdir(parents=True)
+        self.desktop = self.root / 'Desktop'
+        self.desktop.mkdir()
+        self.command('flatpak', 'printf "%s\n" org.example.Visible org.example.Hidden org.example.Existing org.example.Missing')
+        for name in ('update-desktop-database', 'xdg-desktop-menu'):
+            self.command(name, 'exit 0')
+        self.env = dict(
+            os.environ,
+            HOME=str(self.root),
+            XDG_DESKTOP_DIR=str(self.desktop),
+            SPACED_FLATPAK_REAL=str(self.fakebin / 'flatpak'),
+            PATH=str(self.fakebin) + os.pathsep + os.environ['PATH'],
+        )
+
+    def command(self, name, body):
+        path = self.fakebin / name
+        path.write_text('#!/bin/bash\n' + body + '\n')
+        path.chmod(0o755)
+
+    def run_helper(self):
+        return subprocess.run(
+            [str(BIN / 'spaced-flatpak-desktop-entries')],
+            env=self.env,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+
+    def test_installed_visible_entries_are_added_without_overwriting_shortcuts(self):
+        visible = self.exports / 'org.example.Visible.desktop'
+        visible.write_text('[Desktop Entry]\nType=Application\nName=Visible App\nExec=visible\n')
+        hidden = self.exports / 'org.example.Hidden.desktop'
+        hidden.write_text('[Desktop Entry]\nType=Application\nName=Hidden App\nNoDisplay=true\nExec=hidden\n')
+        existing_source = self.exports / 'org.example.Existing.desktop'
+        existing_source.write_text('[Desktop Entry]\nType=Application\nName=Flatpak App\nExec=existing\n')
+        existing_target = self.desktop / 'org.example.Existing.desktop'
+        existing_target.write_text('[Desktop Entry]\nType=Application\nName=User Shortcut\nExec=custom\n')
+
+        result = self.run_helper()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((self.desktop / 'org.example.Visible.desktop').read_text(), visible.read_text())
+        self.assertFalse((self.desktop / 'org.example.Hidden.desktop').exists())
+        self.assertEqual(existing_target.read_text(), '[Desktop Entry]\nType=Application\nName=User Shortcut\nExec=custom\n')
+        self.assertFalse((self.desktop / 'org.example.Missing.desktop').exists())
+
+    def test_helper_is_idempotent_and_preserves_existing_shortcuts(self):
+        visible = self.exports / 'org.example.Visible.desktop'
+        visible.write_text('[Desktop Entry]\nType=Application\nName=Visible App\nExec=visible\n')
+        target = self.desktop / 'org.example.Visible.desktop'
+        target.write_text('[Desktop Entry]\nType=Application\nName=Initial Shortcut\nExec=initial\n')
+
+        self.assertEqual(self.run_helper().returncode, 0)
+        self.assertEqual(target.read_text(), '[Desktop Entry]\nType=Application\nName=Initial Shortcut\nExec=initial\n')
+
+        target.write_text('[Desktop Entry]\nType=Application\nName=Edited Shortcut\nExec=edited\n')
+        self.assertEqual(self.run_helper().returncode, 0)
+        self.assertEqual(target.read_text(), '[Desktop Entry]\nType=Application\nName=Edited Shortcut\nExec=edited\n')
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -54,6 +54,7 @@ SETTINGS_PATHS=(
     etc/xdg/autostart/spaced-display-repair.desktop
     etc/xdg/autostart/spaced-enable-flatpak-remotes.desktop
     etc/xdg/autostart/spaced-first-login-repair.desktop
+    etc/xdg/autostart/spaced-flatpak-desktop-entries.desktop
     etc/xdg/autostart/spaced-nvidia-postboot.desktop
     etc/xdg/autostart/spaced-theme-monitor.desktop
     etc/xdg/autostart/spaced-window-decorator.desktop

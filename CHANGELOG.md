@@ -1,5 +1,34 @@
 # Changelog
 
+## 9.26.4 - unreleased
+- Fix issue #239: SpacedBazaar keeps its loading page while the Flathub catalog
+  synchronizes, shows progress during that wait, and avoids the brief mostly
+  empty screen. SpacedBazaar 0.1.12 is delivered separately through its Flatpak
+  origin.
+- Fix issue #240: add the missing Python and X compatibility packages required by
+  desktop integrations and helpers: `python3-packaging`, `python3-psutil`,
+  `python3-xdg`, `xbase-clients`, and `xvfb`.
+- Fix issue #242: on the live session, GParted is authorized through pkexec's
+  generic `org.freedesktop.policykit.exec` action only when the executable is
+  `/usr/sbin/gparted`, and only for the active local live user `user`. The rule
+  is live-only and Calamares removes it after installation.
+  `tests/test_polkit_rules.py` covers the action, executable path, user guard,
+  and the Calamares removal step.
+- Fix issue #235: the Brisk menu uses canonical power symbols for shutdown,
+  suspend, and related actions across menu surfaces.
+- Fix issue #234: Compiz no longer steals focus while the wireless password
+  dialog is waiting for input.
+- Fix issue #192: the installer now asks users to remove the installation USB
+  drive before restarting after installation.
+- Fix issue #184: installed Flatpak applications now create real Desktop
+  shortcuts while existing user shortcuts and mounted Caja links are preserved.
+- SpacedBazaar's CRHY catalog now lists Voxa (the successor of Voice2Text AI)
+  and rhYciv. Spaced Welcome is no longer offered as a Flatpak because the
+  `spaced-welcome` Debian package is installed by default.
+- Require Spaced Welcome 0.1.16 (`crhy/spacedwelcome` v0.1.16), which suggests
+  Voxa in place of Voice2Text AI. The ISO pins its published Debian asset by
+  SHA-256 in `config/external-artifacts.conf`.
+
 ## 9.26.3 - 2026-09-14
 - VirtualBox ISO smoke test now exercises the configuration real users get
   (Refs #218). `scripts/vm/virtualbox/smoke-iso.sh` accepts
