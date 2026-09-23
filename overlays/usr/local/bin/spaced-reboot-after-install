@@ -1,14 +1,49 @@
-#!/bin/sh
-set -eu
+#!/usr/bin/env python3
+import subprocess
 
-if command -v zenity >/dev/null 2>&1; then
-    zenity --question \
-        --title='Spaced Linux installation complete' \
-        --text='Remove the installation USB drive before restarting Spaced Linux.' \
-        --ok-label='Restart' \
-        --cancel-label='Stay here'
-    exec /sbin/reboot
-fi
+import gi
+gi.require_version("Gtk", "3.0")
+from gi.repository import Gtk
 
-printf '%s\n' 'Remove the installation USB drive before restarting Spaced Linux.' >&2
-exit 1
+MESSAGE = "Remove the installation USB drive before restarting Spaced Linux."
+
+
+def reboot():
+    subprocess.run(["/sbin/reboot"], check=False)
+
+
+def close_live_desktop():
+    for process in ("mate-panel", "cairo-dock", "compiz", "caja"):
+        subprocess.run(["pkill", "-TERM", "-x", process], timeout=3)
+
+
+def main():
+    provider = Gtk.CssProvider()
+    provider.load_data(
+        b"window { background-color: white; } "
+        b"label { color: black; font-size: 20px; padding: 32px; }"
+    )
+    Gtk.StyleContext.add_provider_global(provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+
+    window = Gtk.Window(title="Spaced Linux")
+    window.set_fullscreen(True)
+    window.set_decorations(False)
+
+    label = Gtk.Label(label=MESSAGE)
+    label.set_line_wrap(True)
+    window.add(label)
+
+    def on_key(_widget, _event):
+        reboot()
+        return True
+
+    window.connect("key_press_event", on_key)
+    window.connect("destroy", Gtk.main_quit)
+
+    close_live_desktop()
+    window.show()
+    Gtk.main()
+
+
+if __name__ == "__main__":
+    main()

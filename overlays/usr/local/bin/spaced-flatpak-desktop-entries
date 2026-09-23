@@ -1,0 +1,54 @@
+#!/bin/bash
+set -euo pipefail
+
+flatpak_cmd=${SPACED_FLATPAK_REAL:-/usr/bin/flatpak}
+
+run_flatpak() {
+    if command -v timeout >/dev/null 2>&1; then
+        timeout 20 "$flatpak_cmd" "$@" 2>/dev/null
+    else
+        "$flatpak_cmd" "$@" 2>/dev/null
+    fi
+}
+
+visible_export_dirs() {
+    local dir
+    for dir in \
+        "$HOME/.local/share/flatpak/exports/share/applications" \
+        /var/lib/flatpak/exports/share/applications \
+        /usr/share/flatpak/exports/share/applications; do
+        if [[ -d $dir ]]; then
+            printf '%s\n' "$dir"
+        fi
+    done
+}
+
+desktop_dir=${XDG_DESKTOP_DIR:-"$HOME/Desktop"}
+mkdir -p "$desktop_dir"
+
+created=false
+while IFS= read -r app_id; do
+    if [[ -z $app_id ]]; then
+        continue
+    fi
+    target="$desktop_dir/$app_id.desktop"
+    if [[ -f $target ]]; then
+        continue
+    fi
+    for source_dir in $(visible_export_dirs); do
+        source="$source_dir/$app_id.desktop"
+        if [[ -f $source ]] &&
+            grep -q '^Type=Application' "$source" 2>/dev/null &&
+            ! grep -qE '^(NoDisplay|Hidden)=true' "$source" 2>/dev/null; then
+            cp -n -- "$source" "$target"
+            chmod 0644 "$target"
+            created=true
+            break
+        fi
+    done
+done < <(run_flatpak list --app --columns=application || true)
+
+if [[ $created == true ]]; then
+    update-desktop-database "$desktop_dir" >/dev/null 2>&1 || true
+    xdg-desktop-menu forceupdate --mode user >/dev/null 2>&1 || true
+fi

@@ -47,6 +47,13 @@ changes after login. This does not force Caja to reload virtual-icon metadata
 after a live hotplug, so the five-monitor logout/login and reduced-monitor
 acceptance checks remain release gates. The fix does not reset preferences,
 create duplicate launchers, or kill Caja.
+
+9.26.4 adds `spaced-flatpak-desktop-entries`, an autostart helper that copies
+visible installed Flatpak `.desktop` files into the XDG Desktop directory. It
+skips hidden entries and never overwrites an existing Desktop shortcut, so user
+launchers remain intact. Mounted Gigolo/GVFS shares remain Caja virtual links;
+this helper addresses ordinary installed Flatpak application shortcuts, not live
+mount icons.
 [MATE 1.26.1 startup phase implementation](https://github.com/mate-desktop/mate-session-manager/blob/v1.26.1/mate-session/gsm-manager.c).
 
 ### Reproduction and validation
@@ -58,6 +65,7 @@ connecting the same share through Gigolo, collect:
 command -v gigolo
 dpkg-query -W gigolo caja gvfs gvfs-backends
 flatpak list --app --columns=application,version,installation
+ls "${XDG_DESKTOP_DIR:-$HOME/Desktop}"
 gsettings get org.mate.caja.desktop volumes-visible
 gsettings get org.mate.background show-desktop-icons
 gsettings get org.mate.background draw-background

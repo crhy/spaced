@@ -3,17 +3,17 @@ rows:
       title: "Spaced Linux Apps"
       subtitle:
         string: |
-          CRHY applications installed by **Spaced Linux Welcome** are collected
-          here. Run the suggested-app installer again at any time to fetch them
-          from the signed Spaced GitHub Flatpak repository.
+          CRHY applications published in the **Spaced Linux GitHub Apps** Flatpak
+          remote are collected here. Run the suggested-app installer again at any
+          time to fetch them from the signed Spaced GitHub Flatpak repository.
       list-type: rich
       appids:
         list:
           - io.github.crhy.SpacedBazaar
-          - io.github.crhy.voice2textai
+          - io.github.crhy.voxa
           - io.github.crhy.CardsWithCats
           - io.github.crhy.BrutalChess
-          - io.github.crhy.SpacedWelcome
+          - io.github.crhy.rhYciv
   - section:
       title: "Create"
       subtitle:

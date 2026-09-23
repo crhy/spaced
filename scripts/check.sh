@@ -442,7 +442,7 @@ for split_control in (themes_control, wallpapers_control):
         and "Replaces: spaced-mate-default-settings (<< 9.26.3-1)" in split_control, \
         "split artwork package lacks the Breaks/Replaces takeover for upgrades"
 assert f"spaced-mate-default-settings (= {package_version})" in meta_control \
-    and "spaced-welcome (>= 0.1.15)" in meta_control \
+    and "spaced-welcome (>= 0.1.16)" in meta_control \
     and "libfuse2t64" in meta_control, \
     "spaced-meta does not pull in the standalone Welcome package and desktop defaults"
 # The artwork split moves payload out of spaced-mate-default-settings. No
@@ -482,7 +482,7 @@ def artifact_default(name):
     return match.group(1)
 
 assert artifact_default("SPACED_WELCOME_REPOSITORY") == "crhy/spacedwelcome"
-assert artifact_default("SPACED_WELCOME_VERSION") == "0.1.15"
+assert artifact_default("SPACED_WELCOME_VERSION") == "0.1.16"
 assert artifact_default("SPACED_GITHUB_REMOTE_NAME") == "spaced-github"
 assert artifact_default("SPACED_GITHUB_REMOTE_DESCRIPTOR_URL") == \
     "https://crhy.github.io/spacedbazaar/spaced-github.flatpakrepo"
@@ -540,10 +540,13 @@ assert bazaar_main["start-on-curated"] is True \
     and "/run/host/etc/bazaar/config.yaml" in bazaar_main["curated-config-paths"], \
     "SpacedBazaar does not load the Spaced Linux catalog"
 bazaar_apps = bazaar_content["rows"][0]["section"]["appids"]["list"]
-assert {"io.github.crhy.SpacedBazaar", "io.github.crhy.voice2textai",
-        "io.github.crhy.CardsWithCats", "io.github.crhy.BrutalChess",
-        "io.github.crhy.SpacedWelcome"}.issubset(bazaar_apps), \
+assert set(bazaar_apps) == {"io.github.crhy.SpacedBazaar", "io.github.crhy.voxa",
+                            "io.github.crhy.CardsWithCats",
+                            "io.github.crhy.BrutalChess", "io.github.crhy.rhYciv"}, \
     "SpacedBazaar's CRHY catalog is incomplete"
+assert "io.github.crhy.voice2textai" not in bazaar_apps \
+    and "io.github.crhy.SpacedWelcome" not in bazaar_apps, \
+    "SpacedBazaar offers retired CRHY Flatpaks"
 # Spaced Update is part of the operating system and its menu entry runs the
 # native copy. Featuring the Flatpak here invited a second, separately
 # versioned install that exported an identically named launcher.
@@ -643,10 +646,13 @@ assert "/usr/local/bin/install-spaced-linux" in cleanup \
     and "/home/*/.config/cairo-dock/current_theme/launchers/04-install.desktop" in cleanup, \
     "installed system retains the Spaced Linux installer launcher"
 reboot_helper = root / "usr/local/bin/spaced-reboot-after-install"
+reboot_helper_text = reboot_helper.read_text(encoding="utf-8")
 assert reboot_helper.stat().st_mode & 0o111 \
-    and "Remove the installation USB drive" in reboot_helper.read_text(encoding="utf-8") \
-    and "zenity --question" in reboot_helper.read_text(encoding="utf-8"), \
-    "post-install reboot does not warn before the USB installer is removed (issue #192)"
+    and "Remove the installation USB drive" in reboot_helper_text \
+    and "key_press_event" in reboot_helper_text \
+    and "/sbin/reboot" in reboot_helper_text \
+    and "zenity" not in reboot_helper_text, \
+    "post-install reboot does not show a blank USB-removal screen before reboot (issue #192)"
 assert "test ! -x /usr/bin/calamares" in cleanup, \
     "Calamares cleanup lacks a hard package-removal postcondition"
 assert not {"live-config-systemd", "live-task-localisation", "live-task-recommended"}.intersection(removed_after_install), \
@@ -748,7 +754,9 @@ assert ";wobbly;" not in compiz_text and ";animation;" not in compiz_text, \
 assert ";clone;" not in compiz_text and ";expo;" not in compiz_text, \
     "Clone Output or Expo is enabled by default"
 assert "firepaint" in compiz_text, "Compiz paint-fire-on-screen plugin is not enabled"
-assert "cube;3d;focuspoll;rotate;scale;ezoom;" in compiz_text, "Compiz desktop effects regressed"
+assert "cube;3d;focuspoll;focus;rotate;scale;ezoom;" in compiz_text, "Compiz desktop effects regressed"
+assert "focus;" in compiz_text and "s0_focus_stealing_prevention = false" in compiz_text, \
+    "Compiz does not allow NetworkManager password dialogs to receive keyboard focus (issue #234)"
 assert "compiz-plugins-extra" in packages, "Compiz 3D Windows plug-in package is missing"
 assert "as_zoom_in_key = <Shift><Super>Up" in compiz_text, "Compiz enhanced zoom shortcut regressed"
 assert re.search(r"(?m)^\s*\w*button\s*=\s*<Super>Button1\s*$", compiz_text) is None, \
@@ -879,6 +887,20 @@ icon_repair_autostart = (root / "etc/xdg/autostart/spaced-desktop-icon-repair.de
 assert "spaced-desktop-icon-repair --watch" in icon_repair_autostart, \
     "Desktop icon repair does not follow monitor layout changes (issue #184)"
 
+flatpak_entries = root / "usr/local/bin/spaced-flatpak-desktop-entries"
+flatpak_entries_text = flatpak_entries.read_text(encoding="utf-8")
+assert flatpak_entries.stat().st_mode & 0o111 and \
+    "--columns=application" in flatpak_entries_text and \
+    "exports/share/applications" in flatpak_entries_text and \
+    "cp -n" in flatpak_entries_text, \
+    "Installed Flatpak apps are not placed on the desktop without overwriting shortcuts (issue #184)"
+flatpak_entries_autostart = (root / "etc/xdg/autostart/spaced-flatpak-desktop-entries.desktop").read_text(encoding="utf-8")
+assert "Exec=/usr/local/bin/spaced-flatpak-desktop-entries" in flatpak_entries_autostart \
+    and "X-MATE-Autostart-Phase=Panel" in flatpak_entries_autostart, \
+    "Flatpak desktop shortcuts do not autostart with the desktop session (issue #184)"
+assert "/usr/local/bin/spaced-flatpak-desktop-entries" in flatpak_wrapper, \
+    "Flatpak install does not refresh desktop shortcuts (issue #184)"
+
 brave_policy = json.loads(
     (root / "etc/brave/policies/managed/spaced-extensions.json").read_text(encoding="utf-8"))
 ublock = brave_policy["ExtensionSettings"]["jcokkipkhhgiakinbnnplhkdbjbgcgpe"]
@@ -913,11 +935,15 @@ for surface in ("Spaced-Menu-On-Dark", "Spaced-Menu-On-Light"):
 for surface, color in (("Spaced-Menu-On-Dark", "#b8bcc2"),
                        ("Spaced-Menu-On-Light", "#202020")):
     actions = icon_root / surface / "scalable/actions"
+    power_symbol = "M24 10v10M16 20a10 10 0 1 0 16 0"
     for icon_name in ("system-shutdown.svg", "system-shutdown-symbolic.svg",
                       "changes-allow.svg", "changes-allow-symbolic.svg"):
         icon_text = (actions / icon_name).read_text(encoding="utf-8")
         assert color in icon_text and 'viewBox="0 0 48 48"' in icon_text, \
             f"{surface}: {icon_name} is not a compact monochrome icon"
+        if icon_name.startswith("system-shutdown"):
+            assert power_symbol in icon_text and "M24 12v13" not in icon_text, \
+                f"{surface}: {icon_name} is not a canonical power symbol (issue #235)"
 for theme in themes:
     icon_metadata = (icon_root / f"Spaced-Icons-{theme['gtk_theme'].removeprefix('Spaced-')}" / "index.theme")
     menu_variant = "Spaced-Menu-On-Dark" if theme["dark"] else "Spaced-Menu-On-Light"
@@ -1130,6 +1156,9 @@ assert "idle-activation-enabled false" in live_session and "lock-enabled false" 
     and "/etc/sudoers.d/spaced-live" in live_session, \
     "the live installer session can still lock or blank"
 assert 'action.id == "org.gnome.gparted"' in live_polkit \
+    and 'action.id == "org.freedesktop.policykit.exec"' in live_polkit \
+    and 'action.lookup("org.freedesktop.policykit.exec.path")' in live_polkit \
+    and '"/usr/sbin/gparted"' in live_polkit \
     and 'subject.user == "user"' in live_polkit \
     and "subject.local && subject.active" in live_polkit, \
     "GParted still requires an undiscoverable live-user password"

@@ -124,7 +124,7 @@ updated through the Spaced APT repository and the `spaced-meta` dependency.
 - Boot the live ISO offline and confirm SpacedBazaar launches before any
   first-login downloads.
 - Boot online and confirm both user remotes appear after login.
-- Search for and install Voice2Text, Scum with Cats, Brutal Chess, and Spaced
+- Search for and install Voxa, Scum with Cats, Brutal Chess, and Spaced
   Update from SpacedBazaar and from standalone Welcome.
 - Open each Welcome Help & Apps choice and confirm SpacedBazaar navigates to
   the exact suggested application without starting an installation.

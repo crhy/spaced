@@ -182,7 +182,7 @@
 			<Filename>org.atheme.audacious.desktop</Filename>
 			<Filename>com.obsproject.Studio.desktop</Filename>
 			<Filename>org.videolan.VLC.desktop</Filename>
-			<Filename>io.github.crhy.voice2textai.desktop</Filename>
+			<Filename>io.github.crhy.voxa.desktop</Filename>
 			<Filename>org.pulseaudio.pavucontrol.desktop</Filename>
 			<Merge type="files" />
 		</Layout>
@@ -217,7 +217,7 @@
 		<Directory>mate-utility-accessibility.directory</Directory>
 		<Layout>
 			<Merge type="menus" />
-			<Filename>io.github.crhy.voice2textai.desktop</Filename>
+			<Filename>io.github.crhy.voxa.desktop</Filename>
 			<Merge type="files" />
 		</Layout>
 	</Menu>
