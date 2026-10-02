@@ -1,5 +1,43 @@
 # Changelog
 
+## 10.26 - Unreleased
+The 9.26.4 entries for issues #192, #234 and #235 did not hold on real
+hardware. Each is fixed again below with the root cause found and a test
+that exercises the real behaviour, not only the configuration text.
+
+- Fix issues #251 and #192: with "Restart now" ticked, Calamares runs
+  `spaced-reboot-after-install`, which in 9.26.4 called two methods GTK 3 does
+  not have (`set_fullscreen`, `set_decorations`) and crashed before showing
+  anything or restarting. The helper now closes the live desktop first
+  (stopping `mate-session` so nothing respawns), then covers every monitor
+  with a black screen reading "Remove the installation USB medium, then press
+  any key to restart." Any key, click or the Restart now button restarts at
+  once, and a failure in the prompt still restarts. It grabs the keyboard
+  itself because no window manager is left to give it focus, and restarts
+  through `/proc/sysrq-trigger` so nothing is read from the removed medium.
+  `tests/test_reboot_after_install.py` drives the real prompt under Xvfb with
+  no window manager; `check.sh` rejects the two missing GTK calls. Needs one
+  BIOS and one UEFI install on real hardware to confirm.
+- Fix issue #234: selecting a Wi-Fi network puts the cursor in the password
+  field. libnma 1.10 compiles out the code that did this, so its dialog
+  focused the device combo (new network) or nothing (saved network); the
+  9.26.4 Compiz `focus` plug-in does not exist in Compiz 0.8. The new
+  `spaced-nm-focus` package ships a small GTK 3 module, loaded only into
+  nm-applet through a `/usr/local/bin/nm-applet` wrapper, that focuses the
+  password entry when the dialog maps. It is compiled by `make marco` in the
+  isolated Ceres build chroot. Compiz now exempts nm-applet from
+  focus-stealing prevention, and existing accounts are migrated once
+  (`desktop-migration-10.26-v1`) to drop the non-existent plug-in.
+- Fix issue #235: the Brisk menu power button shows a power symbol instead of
+  a dot. The icon was drawn with strokes, and GTK fills every shape when it
+  recolours a symbolic icon. The power and padlock icons are now filled
+  outlines, `check.sh` rejects strokes in symbolic action icons, and the live
+  image refreshes the icon caches of every Spaced theme.
+- Fix issue #227: the first installed user gets UID and GID 1000. The live
+  account (UID 1000) is now removed before Calamares creates the user, and
+  groups Calamares may create are made system groups. Existing installs keep
+  their current IDs.
+
 ## 9.26.4 - 2026-09-23
 - `spaced-wallpapers` is republished as `2026.09-2` with unchanged content.
   Local packages now set every file timestamp to `SOURCE_DATE_EPOCH`, so a
