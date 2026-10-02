@@ -687,6 +687,9 @@ calamares_users = yaml.safe_load((root / "etc/calamares/modules/users.conf").rea
 assert any(isinstance(group, dict) and group.get("name") == "sambashare" and group.get("system") is True
            for group in calamares_users["defaultGroups"]), \
     "the installed user cannot create Samba user shares (issue #253)"
+meta_postinst = Path("packages/spaced-meta/DEBIAN/postinst").read_text(encoding="utf-8")
+assert "usermod -a -G sambashare" in meta_postinst and "sambashare-v1" in meta_postinst, \
+    "upgraded systems' users cannot create Samba user shares (issue #253)"
 # Issue #227: the first installed user must get UID and GID 1000.
 for group in calamares_users["defaultGroups"]:
     if group in ("netdev", "lpadmin", "scanner", "bluetooth", "sambashare", "autologin"):

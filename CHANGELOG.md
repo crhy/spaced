@@ -37,6 +37,23 @@ that exercises the real behaviour, not only the configuration text.
   account (UID 1000) is now removed before Calamares creates the user, and
   groups Calamares may create are made system groups. Existing installs keep
   their current IDs.
+- Fix issue #256: Preferences > Windows is hidden. It configures only Marco,
+  so under Compiz it reported "The current window manager is unsupported".
+- Fix issue #253: right-click a folder in Caja and choose Sharing Options to
+  share it with Windows computers. `samba` and `caja-share` join `wsdd`; new
+  users join the `sambashare` group, and `spaced-meta` adds existing desktop
+  users once on upgrade.
+- Fix issues #237 and #250 (Spaced Linux part): Spaced Update refreshes each
+  Flatpak remote's AppStream before listing updates, so it shows the version
+  actually being served. Two causes sit in other repositories and ship
+  separately: SpacedBazaar committed its published AppStream with the CI
+  user's file ownership, which made every system-wide AppStream refresh fail
+  with "Corrupted file object" since 8 September (crhy/spacedbazaar), and a
+  new rhYciv release waited up to a day for SpacedBazaar's scheduled rebuild
+  (crhy/rhYciv now asks SpacedBazaar to publish at once).
+- Fix issue #252 in Spaced Welcome: rhYciv is described as "Classic 2D
+  strategy game (Civ 2) reimagined in high resolution." Delivered by the next
+  Spaced Welcome release.
 
 ## 9.26.4 - 2026-09-23
 - `spaced-wallpapers` is republished as `2026.09-2` with unchanged content.
