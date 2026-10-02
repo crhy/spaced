@@ -11,19 +11,9 @@ import os
 import signal
 import subprocess
 import sys
+import time
 
 MESSAGE = "Remove the installation USB medium,\nthen press any key to restart."
-
-# Processes that pop up warnings when the live medium is pulled. mate-session
-# is stopped rather than killed so it cannot respawn them, and so the X
-# session stays up for the prompt.
-LIVE_DESKTOP = (
-    "mate-panel", "cairo-dock", "caja", "compiz", "marco",
-    "mate-notification-daemon", "mate-settings-daemon", "mate-power-manager",
-    "mate-screensaver", "nm-applet", "blueman-applet",
-    "mate-volume-control-status-icon", "gvfs-udisks2-volume-monitor",
-    "udisksd", "calamares",
-)
 
 LIBC = ctypes.CDLL(None, use_errno=True)
 LINUX_REBOOT_CMD_RESTART = 0x01234567
@@ -44,16 +34,64 @@ def reboot():
             pass
 
 
+def list_processes():
+    """Return (pid, parent pid, real uid, name) for every process."""
+    processes = []
+    for entry in os.listdir("/proc"):
+        if not entry.isdigit():
+            continue
+        try:
+            with open(f"/proc/{entry}/status", encoding="utf-8") as status:
+                fields = dict(line.split(":", 1) for line in status if ":" in line)
+            processes.append((int(entry), int(fields["PPid"]),
+                              int(fields["Uid"].split()[0]), fields["Name"].strip()))
+        except (OSError, KeyError, ValueError):
+            continue
+    return processes
+
+
+def desktop_targets(processes, own_pid):
+    """Choose what to stop and what to kill to close the live desktop.
+
+    Every live-session process belongs to the session's user, while Xorg,
+    Calamares and this helper run as root. mate-session is only stopped:
+    killing it would end the session, and LightDM would then replace the X
+    server this prompt needs. A fixed list of names would miss helpers that
+    respawn their children, such as spaced-window-manager restarting Compiz.
+    """
+    parents = {pid: ppid for pid, ppid, _uid, _name in processes}
+    keep, pid = set(), own_pid
+    while pid in parents and pid not in keep:
+        keep.add(pid)
+        pid = parents[pid]
+    sessions = [pid for pid, _ppid, uid, name in processes
+                if name == "mate-session" and uid != 0]
+    owners = {uid for pid, _ppid, uid, _name in processes if pid in sessions}
+    victims = [pid for pid, _ppid, uid, _name in processes
+               if uid in owners and pid not in keep and pid not in sessions]
+    return sessions, victims
+
+
+def signal_all(pids, signum):
+    for pid in pids:
+        try:
+            os.kill(pid, signum)
+        except OSError:
+            pass
+
+
 def close_live_desktop():
-    subprocess.run(["pkill", "-STOP", "-x", "mate-session"], check=False)
-    for process in LIVE_DESKTOP:
-        subprocess.run(["pkill", "-TERM", "-x", process], check=False)
-    subprocess.run(["sleep", "1"], check=False)
-    for process in LIVE_DESKTOP:
-        subprocess.run(["pkill", "-KILL", "-x", process], check=False)
+    sessions, victims = desktop_targets(list_processes(), os.getpid())
+    signal_all(sessions, signal.SIGSTOP)
+    signal_all(victims, signal.SIGTERM)
+    time.sleep(1)
+    _sessions, victims = desktop_targets(list_processes(), os.getpid())
+    signal_all(victims, signal.SIGKILL)
 
 
 def show_prompt(on_restart):
+    # The session bus died with the desktop; do not wait on accessibility.
+    os.environ["NO_AT_BRIDGE"] = "1"
     import gi
     gi.require_version("Gtk", "3.0")
     gi.require_version("Gdk", "3.0")

@@ -89,6 +89,46 @@ class RebootFallbackTests(unittest.TestCase):
             helper.main()
         self.assertEqual(order, ['close', 'prompt', 'reboot'])
 
+    def test_live_desktop_is_closed_by_owner_not_by_name(self):
+        helper = load_helper()
+        live, root = 1000, 0
+        processes = [
+            (1, 0, root, 'init'),
+            (400, 1, root, 'Xorg'),
+            (500, 1, root, 'lightdm'),
+            (900, 500, live, 'mate-session'),
+            (901, 900, live, 'mate-panel'),
+            # The kernel truncates names to 15 characters, which defeated
+            # `pkill -x mate-notification-daemon` and friends.
+            (902, 900, live, 'mate-notificati'),
+            (903, 900, live, 'spaced-window-m'),
+            (904, 903, live, 'compiz'),
+            (905, 900, live, 'nm-applet'),
+            (906, 900, live, 'install-spaced-'),
+            (907, 906, root, 'sudo'),
+            (908, 907, root, 'calamares'),
+            (909, 908, root, 'sh'),
+            (910, 909, root, 'python3'),
+            (920, 1, 1001, 'mate-panel'),
+        ]
+        sessions, victims = helper.desktop_targets(processes, own_pid=910)
+        self.assertEqual(sessions, [900])
+        # The installer chain above the helper survives; root and other
+        # users' processes are never touched.
+        self.assertEqual(sorted(victims), [901, 902, 903, 904, 905])
+
+    def test_no_session_means_nothing_is_killed(self):
+        helper = load_helper()
+        processes = [(1, 0, 0, 'init'), (50, 1, 1000, 'bash'), (60, 50, 0, 'python3')]
+        self.assertEqual(helper.desktop_targets(processes, own_pid=60), ([], []))
+
+    def test_process_list_includes_this_process(self):
+        helper = load_helper()
+        own = [p for p in helper.list_processes() if p[0] == os.getpid()]
+        self.assertEqual(len(own), 1)
+        self.assertEqual(own[0][1], os.getppid())
+        self.assertEqual(own[0][2], os.getuid())
+
     def test_helper_is_executable(self):
         self.assertTrue(os.access(HELPER, os.X_OK))
 
