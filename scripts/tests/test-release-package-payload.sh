@@ -14,6 +14,12 @@ dpkg-deb -e "$PACKAGES/spaced-meta_${VERSION}_all.deb" "$WORK/meta"
 dpkg-deb -x "$PACKAGES/spaced-mate-default-settings_${VERSION}_all.deb" "$WORK/settings"
 dpkg-deb -x "$PACKAGES/spaced-themes_${VERSION}_all.deb" "$WORK/themes"
 dpkg-deb -x "$PACKAGES/spaced-wallpapers_${WALLPAPERS_VERSION}_all.deb" "$WORK/wallpapers"
+NM_FOCUS_VERSION=$(sed -n 's/^Version: //p' "$ROOT/packages/spaced-nm-focus/DEBIAN/control")
+dpkg-deb -x "$PACKAGES/spaced-nm-focus_${NM_FOCUS_VERSION}_amd64.deb" "$WORK/nm-focus"
+# Issue #234: nm-applet must start through the wrapper that loads the module.
+grep -q 'GTK_MODULES=.*spaced-nm-focus' "$WORK/nm-focus/usr/local/bin/nm-applet"
+nm -D --defined-only "$WORK/nm-focus/usr/lib/x86_64-linux-gnu/gtk-3.0/modules/libspaced-nm-focus.so" \
+    | grep -qw gtk_module_init
 python3 - "$ROOT" "$WORK" <<'PY'
 from pathlib import Path
 import re

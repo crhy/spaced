@@ -65,6 +65,7 @@ for package_version in \
     "spaced-meta=$VERSION" \
     "spaced-mate-default-settings=$VERSION" \
     "spaced-themes=$VERSION" \
+    "spaced-nm-focus=$VERSION" \
     "spaced-wallpapers=$WALLPAPERS_VERSION" \
     "spaced-welcome=$SPACED_WELCOME_VERSION"; do
     package=${package_version%%=*}

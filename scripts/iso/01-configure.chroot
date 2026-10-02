@@ -92,7 +92,7 @@ rm -f /usr/share/applications/calamares-install-debian.desktop \
     /usr/bin/calamares-install-debian
 rm -rf /etc/calamares/branding/debian
 
-for icon_theme in /usr/share/icons/Spaced-Icons-*; do
+for icon_theme in /usr/share/icons/Spaced-*; do
     [ -d "$icon_theme" ] || continue
     gtk-update-icon-cache -f "$icon_theme" >/dev/null 2>&1 || true
 done

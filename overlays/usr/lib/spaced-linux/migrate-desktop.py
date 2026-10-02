@@ -145,11 +145,38 @@ def migrate_compiz(path):
         save_ini(path, parser)
 
 
+def migrate_compiz_focus(path):
+    # 9.26.4 enabled a "focus" plug-in that Compiz 0.8 does not have. The real
+    # control is core's focus-stealing prevention, which kept nm-applet's
+    # Wi-Fi password dialog from receiving keyboard focus (issue #234).
+    if not path.exists():
+        return
+    parser = read_ini(path)
+    if not parser.has_section("core"):
+        parser.add_section("core")
+    changed = parser.remove_section("focus")
+    plugins = parser["core"].get("as_active_plugins", "")
+    if "focus" in plugins.split(";"):
+        parser["core"]["as_active_plugins"] = ";".join(
+            plugin for plugin in plugins.split(";") if plugin != "focus")
+        changed = True
+    # Keep a match the user chose; "any" is Compiz's default.
+    if parser["core"].get("s0_focus_prevention_match", "any") == "any":
+        parser["core"]["s0_focus_prevention_match"] = "!(class=Nm-applet)"
+        changed = True
+    if changed:
+        save_ini(path, parser)
+
+
 def migrate(config):
     state = config / "spaced"
     state.mkdir(parents=True, exist_ok=True)
     with (state / "desktop-migration.lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
+        focus_marker = state / "desktop-migration-10.26-v1"
+        if not focus_marker.exists():
+            migrate_compiz_focus(config / "compiz/compizconfig/Default.ini")
+            atomic_write(focus_marker, "10.26\n")
         marker = state / "desktop-migration-9.26.2-v1"
         if marker.exists():
             return

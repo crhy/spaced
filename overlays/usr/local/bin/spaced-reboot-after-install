@@ -1,49 +1,126 @@
 #!/usr/bin/env python3
+# Calamares runs this as root when "Restart now" is ticked. It closes the live
+# desktop first, then shows a blank screen asking for the USB medium to be
+# removed, and reboots on any key press or click (issues #192 and #251).
+#
+# Everything the reboot needs is loaded before the prompt appears, because the
+# live filesystem disappears with the USB medium. Calamares has already
+# unmounted the installed target, so an immediate reboot loses nothing.
+import ctypes
+import os
+import signal
 import subprocess
+import sys
 
-import gi
-gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk
+MESSAGE = "Remove the installation USB medium,\nthen press any key to restart."
 
-MESSAGE = "Remove the installation USB drive before restarting Spaced Linux."
+# Processes that pop up warnings when the live medium is pulled. mate-session
+# is stopped rather than killed so it cannot respawn them, and so the X
+# session stays up for the prompt.
+LIVE_DESKTOP = (
+    "mate-panel", "cairo-dock", "caja", "compiz", "marco",
+    "mate-notification-daemon", "mate-settings-daemon", "mate-power-manager",
+    "mate-screensaver", "nm-applet", "blueman-applet",
+    "mate-volume-control-status-icon", "gvfs-udisks2-volume-monitor",
+    "udisksd", "calamares",
+)
+
+LIBC = ctypes.CDLL(None, use_errno=True)
+LINUX_REBOOT_CMD_RESTART = 0x01234567
 
 
 def reboot():
-    subprocess.run(["/sbin/reboot"], check=False)
+    os.sync()
+    try:
+        with open("/proc/sysrq-trigger", "w") as trigger:
+            trigger.write("b")
+    except OSError:
+        pass
+    LIBC.reboot(LINUX_REBOOT_CMD_RESTART)
+    for command in (["/sbin/reboot", "-f"], ["reboot", "-f"]):
+        try:
+            subprocess.run(command, check=False, timeout=10)
+        except (OSError, subprocess.SubprocessError):
+            pass
 
 
 def close_live_desktop():
-    for process in ("mate-panel", "cairo-dock", "compiz", "caja"):
-        subprocess.run(["pkill", "-TERM", "-x", process], timeout=3)
+    subprocess.run(["pkill", "-STOP", "-x", "mate-session"], check=False)
+    for process in LIVE_DESKTOP:
+        subprocess.run(["pkill", "-TERM", "-x", process], check=False)
+    subprocess.run(["sleep", "1"], check=False)
+    for process in LIVE_DESKTOP:
+        subprocess.run(["pkill", "-KILL", "-x", process], check=False)
 
 
-def main():
+def show_prompt(on_restart):
+    import gi
+    gi.require_version("Gtk", "3.0")
+    gi.require_version("Gdk", "3.0")
+    from gi.repository import Gdk, GLib, Gtk
+
     provider = Gtk.CssProvider()
-    provider.load_data(
-        b"window { background-color: white; } "
-        b"label { color: black; font-size: 20px; padding: 32px; }"
+    provider.load_from_data(
+        b"window { background-color: black; } "
+        b"label { color: white; font-size: 28px; } "
+        b"button { font-size: 20px; padding: 12px 32px; }"
     )
-    Gtk.StyleContext.add_provider_global(provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+    Gtk.StyleContext.add_provider_for_screen(
+        Gdk.Screen.get_default(), provider,
+        Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
-    window = Gtk.Window(title="Spaced Linux")
-    window.set_fullscreen(True)
-    window.set_decorations(False)
-
-    label = Gtk.Label(label=MESSAGE)
-    label.set_line_wrap(True)
-    window.add(label)
-
-    def on_key(_widget, _event):
-        reboot()
+    def restart(*_args):
+        on_restart()
         return True
 
-    window.connect("key_press_event", on_key)
-    window.connect("destroy", Gtk.main_quit)
+    # With no window manager left, fullscreen requests are ignored and new
+    # windows get no focus. Popup windows sized to each monitor and an
+    # explicit seat grab work without one.
+    display = Gdk.Display.get_default()
+    windows = []
+    for index in range(display.get_n_monitors()):
+        geometry = display.get_monitor(index).get_geometry()
+        window = Gtk.Window(type=Gtk.WindowType.POPUP)
+        window.move(geometry.x, geometry.y)
+        window.set_default_size(geometry.width, geometry.height)
+        window.add_events(Gdk.EventMask.KEY_PRESS_MASK | Gdk.EventMask.BUTTON_PRESS_MASK)
+        window.connect("key-press-event", restart)
+        window.connect("button-press-event", restart)
 
-    close_live_desktop()
-    window.show()
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=32)
+        box.set_halign(Gtk.Align.CENTER)
+        box.set_valign(Gtk.Align.CENTER)
+        label = Gtk.Label(label=MESSAGE)
+        label.set_justify(Gtk.Justification.CENTER)
+        box.pack_start(label, False, False, 0)
+        button = Gtk.Button(label="Restart now")
+        button.set_halign(Gtk.Align.CENTER)
+        button.connect("clicked", restart)
+        box.pack_start(button, False, False, 0)
+        window.add(box)
+        window.show_all()
+        windows.append(window)
+
+    def grab():
+        gdk_window = windows[0].get_window()
+        gdk_window.focus(Gdk.CURRENT_TIME)
+        status = display.get_default_seat().grab(
+            gdk_window, Gdk.SeatCapabilities.ALL, True, None, None, None)
+        return status != Gdk.GrabStatus.SUCCESS
+
+    GLib.timeout_add(200, grab)
     Gtk.main()
 
 
+def main():
+    close_live_desktop()
+    try:
+        show_prompt(reboot)
+    except Exception as error:  # Any failure must still restart the machine.
+        print(f"spaced-reboot-after-install: {error}", file=sys.stderr)
+    reboot()
+
+
 if __name__ == "__main__":
+    signal.signal(signal.SIGTERM, signal.SIG_IGN)
     main()

@@ -1,0 +1,5 @@
+#!/bin/sh
+# Load the Spaced Wi-Fi password focus module into nm-applet only (issue #234).
+GTK_MODULES="${GTK_MODULES:+$GTK_MODULES:}spaced-nm-focus"
+export GTK_MODULES
+exec /usr/bin/nm-applet "$@"
