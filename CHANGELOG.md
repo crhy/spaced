@@ -1,6 +1,6 @@
 # Changelog
 
-## 10.26 - Unreleased
+## 10.26 - 2026-10-02
 The 9.26.4 entries for issues #192, #234 and #235 did not hold on real
 hardware. Each is fixed again below with the root cause found and a test
 that exercises the real behaviour, not only the configuration text.

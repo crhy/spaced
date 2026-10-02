@@ -66,7 +66,7 @@ These are real Spaced Linux desktop sessions—not wallpaper mockups. Click any 
     </td>
     <td width="50%" align="center">
       <a href="website/assets/screenshots/desktop-welcome.webp?v=10.26"><img src="website/assets/screenshots/desktop-welcome.webp?v=10.26" alt="Welcome to Spaced Linux first-run application"></a><br>
-      <sub><strong>Friendly first run</strong> — Start installing software or open the browser from one clear welcome screen.</sub>
+      <sub><strong>Friendly first run</strong> — Install the suggested apps, or just the ones you want, from one clear welcome screen.</sub>
     </td>
   </tr>
   <tr>
@@ -150,7 +150,7 @@ Spaced Linux combines a modern system with visual ideas from the best desktop er
 
 ## Download Spaced Linux
 
-**Spaced Linux 10.26** is available now. Download the ISO and matching checksum from the [Spaced Linux 10.26 release page](https://github.com/crhy/spaced/releases).
+**Spaced Linux 10.26** is available now. Download the ISO and matching checksum from the [Spaced Linux 10.26 release page](https://github.com/crhy/spaced/releases/tag/v10.26).
 
 10.26 is the October 2026 release. What it fixes, and what still needs confirmation on real hardware, is recorded in the [10.26 issue audit](CHANGELOG.md).
 
