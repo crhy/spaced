@@ -101,7 +101,10 @@ def show_prompt(on_restart):
     provider.load_from_data(
         b"window { background-color: black; } "
         b"label { color: white; font-size: 28px; } "
-        b"button { font-size: 20px; padding: 12px 32px; }"
+        b"button { background-image: none; background-color: #2e2e2e; "
+        b"border: 1px solid #a0a0a0; border-radius: 6px; padding: 12px 32px; } "
+        b"button:hover { background-color: #444444; } "
+        b"button label { color: white; font-size: 20px; }"
     )
     Gtk.StyleContext.add_provider_for_screen(
         Gdk.Screen.get_default(), provider,
