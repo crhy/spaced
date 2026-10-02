@@ -690,6 +690,10 @@ assert any(isinstance(group, dict) and group.get("name") == "sambashare" and gro
 meta_postinst = Path("packages/spaced-meta/DEBIAN/postinst").read_text(encoding="utf-8")
 assert "usermod -a -G sambashare" in meta_postinst and "sambashare-v1" in meta_postinst, \
     "upgraded systems' users cannot create Samba user shares (issue #253)"
+assert "usershare max shares = 100" in meta_postinst, \
+    "Samba user shares stay disabled, so Caja Sharing Options fails (issue #253)"
+assert "sambashare user" in Path("scripts/iso/01-configure.chroot").read_text(encoding="utf-8"), \
+    "the live user cannot share folders (issue #253)"
 # Issue #227: the first installed user must get UID and GID 1000.
 for group in calamares_users["defaultGroups"]:
     if group in ("netdev", "lpadmin", "scanner", "bluetooth", "sambashare", "autologin"):

@@ -21,12 +21,16 @@ LINUX_REBOOT_CMD_RESTART = 0x01234567
 
 def reboot():
     os.sync()
+    # The reboot system call shuts devices down before restarting. The sysrq
+    # emergency restart skips that, and on some laptops the firmware then
+    # finds no boot disk until the machine is power-cycled. Neither needs any
+    # file from the removed medium.
+    LIBC.reboot(LINUX_REBOOT_CMD_RESTART)
     try:
         with open("/proc/sysrq-trigger", "w") as trigger:
             trigger.write("b")
     except OSError:
         pass
-    LIBC.reboot(LINUX_REBOOT_CMD_RESTART)
     for command in (["/sbin/reboot", "-f"], ["reboot", "-f"]):
         try:
             subprocess.run(command, check=False, timeout=10)

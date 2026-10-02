@@ -63,7 +63,7 @@ done
 id -u user >/dev/null 2>&1 || useradd -m -s /bin/bash user
 echo "user:1" | chpasswd
 echo "root:spaced" | chpasswd
-usermod -aG sudo,audio,video,plugdev,netdev user
+usermod -aG sudo,audio,video,plugdev,netdev,sambashare user
 printf 'user ALL=(ALL:ALL) NOPASSWD: ALL\n' > /etc/sudoers.d/spaced-live
 chmod 0440 /etc/sudoers.d/spaced-live
 

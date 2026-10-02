@@ -129,6 +129,21 @@ class RebootFallbackTests(unittest.TestCase):
         self.assertEqual(own[0][1], os.getppid())
         self.assertEqual(own[0][2], os.getuid())
 
+    def test_clean_restart_comes_before_emergency_restart(self):
+        # A sysrq restart skips device shutdown; a laptop then reported "No
+        # bootable device" until it was power-cycled.
+        helper = load_helper()
+        calls = []
+        with mock.patch.object(helper.os, 'sync', lambda: calls.append('sync')), \
+                mock.patch.object(helper, 'LIBC') as libc, \
+                mock.patch('builtins.open', mock.mock_open()) as sysrq, \
+                mock.patch.object(helper.subprocess, 'run'):
+            libc.reboot.side_effect = lambda _cmd: calls.append('reboot syscall')
+            sysrq.side_effect = lambda *_args, **_kwargs: calls.append('sysrq') or mock.mock_open()()
+            helper.reboot()
+        self.assertEqual(calls[:3], ['sync', 'reboot syscall', 'sysrq'])
+        libc.reboot.assert_called_once_with(0x01234567)
+
     def test_helper_is_executable(self):
         self.assertTrue(os.access(HELPER, os.X_OK))
 

@@ -14,7 +14,10 @@ that exercises the real behaviour, not only the configuration text.
   any key to restart." Any key, click or the Restart now button restarts at
   once, and a failure in the prompt still restarts. It grabs the keyboard
   itself because no window manager is left to give it focus, and restarts
-  through `/proc/sysrq-trigger` so nothing is read from the removed medium.
+  through the `reboot()` system call, which shuts devices down cleanly and
+  reads nothing from the removed medium; `/proc/sysrq-trigger` is only a
+  fallback, because its emergency restart left one laptop reporting "No
+  bootable device" until it was power-cycled.
   `tests/test_reboot_after_install.py` drives the real prompt under Xvfb with
   no window manager; `check.sh` rejects the two missing GTK calls. Needs one
   BIOS and one UEFI install on real hardware to confirm.
@@ -42,7 +45,9 @@ that exercises the real behaviour, not only the configuration text.
 - Fix issue #253: right-click a folder in Caja and choose Sharing Options to
   share it with Windows computers. `samba` and `caja-share` join `wsdd`; new
   users join the `sambashare` group, and `spaced-meta` adds existing desktop
-  users once on upgrade.
+  users once on upgrade. Samba disables user shares unless `usershare max
+  shares` is set, and Debian's `smb.conf` leaves it commented out, so
+  `spaced-meta` sets it to 100 unless an administrator chose a value.
 - Fix issues #237 and #250 (Spaced Linux part): Spaced Update refreshes each
   Flatpak remote's AppStream before listing updates, so it shows the version
   actually being served. Two causes sit in other repositories and ship
@@ -51,9 +56,11 @@ that exercises the real behaviour, not only the configuration text.
   with "Corrupted file object" since 8 September (crhy/spacedbazaar), and a
   new rhYciv release waited up to a day for SpacedBazaar's scheduled rebuild
   (crhy/rhYciv now asks SpacedBazaar to publish at once).
-- Fix issue #252 in Spaced Welcome: rhYciv is described as "Classic 2D
-  strategy game (Civ 2) reimagined in high resolution." Delivered by the next
-  Spaced Welcome release.
+- Require Spaced Welcome 0.1.18 (`crhy/spacedwelcome`). It fixes issue #252
+  (rhYciv is described as "Classic 2D strategy game (Civ 2) reimagined in
+  high resolution."), gives every suggested app its own Install button
+  (crhy/spacedwelcome#10), and offers to install Brave when a web link is
+  clicked with no browser installed, instead of opening it in Pluma.
 
 ## 9.26.4 - 2026-09-23
 - `spaced-wallpapers` is republished as `2026.09-2` with unchanged content.
