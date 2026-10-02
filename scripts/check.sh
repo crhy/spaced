@@ -675,6 +675,8 @@ assert {"locales", "console-setup"}.issubset(packages), \
 assert {"util-linux-extra", "grub-pc-bin", "grub-efi-amd64-bin", "efibootmgr", "dosfstools"}.issubset(packages), \
     "Calamares offline BIOS/UEFI install dependencies are incomplete"
 assert "os-prober" in packages, "GRUB cannot detect other operating systems without os-prober"
+assert {"samba", "caja-share", "wsdd"}.issubset(packages), \
+    "Caja cannot share folders with Windows computers (issue #253)"
 assert "util-linux" in packages, "the testing-channel bootstrap must find runuser from util-linux"
 default_grub = (root / "etc/default/grub").read_text(encoding="utf-8")
 assert "GRUB_DISABLE_OS_PROBER=false" in default_grub and "#GRUB_DISABLE_OS_PROBER=false" not in default_grub, \
@@ -682,6 +684,9 @@ assert "GRUB_DISABLE_OS_PROBER=false" in default_grub and "#GRUB_DISABLE_OS_PROB
 assert "qml6-module-qtquick-window" in packages, "Calamares slideshow QML dependency is missing"
 assert "squashfs-tools" in packages, "Calamares cannot unpack the live filesystem without unsquashfs"
 calamares_users = yaml.safe_load((root / "etc/calamares/modules/users.conf").read_text(encoding="utf-8"))
+assert any(isinstance(group, dict) and group.get("name") == "sambashare" and group.get("system") is True
+           for group in calamares_users["defaultGroups"]), \
+    "the installed user cannot create Samba user shares (issue #253)"
 # Issue #227: the first installed user must get UID and GID 1000.
 for group in calamares_users["defaultGroups"]:
     if group in ("netdev", "lpadmin", "scanner", "bluetooth", "sambashare", "autologin"):
