@@ -37,6 +37,8 @@ network:
   - libnss-mdns
   - smbclient
   - wsdd
+  - samba
+  - caja-share
 bluetooth:
   - bluez
   - bluez-tools

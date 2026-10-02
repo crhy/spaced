@@ -6,7 +6,7 @@ OUTPUT="${LOCAL_PACKAGE_OUTPUT:-$ROOT/build/local-packages}"
 VERSION="$(cat "$ROOT/VERSION")"
 # Use the package revision date, so later documentation/test commits cannot
 # change the bytes of an already-published native package.
-export SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH:-$(git -C "$ROOT" log -1 --format=%ct -- packages/spaced-meta/DEBIAN/control packages/spaced-mate-default-settings/DEBIAN/control packages/spaced-themes/DEBIAN/control)}
+export SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH:-$(git -C "$ROOT" log -1 --format=%ct -- packages/spaced-meta/DEBIAN/control packages/spaced-mate-default-settings/DEBIAN/control packages/spaced-themes/DEBIAN/control packages/spaced-nm-focus/DEBIAN/control)}
 # spaced-wallpapers keeps its version across OS revisions, so its bytes must
 # depend only on its own revision; otherwise an unchanged version would get
 # new bytes and build-apt-repo.sh would refuse to republish it.
@@ -63,6 +63,7 @@ SETTINGS_PATHS=(
     usr/local/bin
     usr/local/sbin
     usr/local/share/applications/mate-about.desktop
+    usr/local/share/applications/mate-window-properties.desktop
     usr/local/share/applications/spaced-help.desktop
     usr/share/applications/mimeapps.list
     usr/share/applications/spaced-nvidia-installer.desktop
@@ -87,12 +88,14 @@ build() {
     if grep -q '^Version:' "$control"; then
         ver="$(awk -F': ' '/^Version:/{print $2; exit}' "$control")"
     fi
-    local out="$OUTPUT/${pkg}_${ver}_all.deb"
+    local arch
+    arch="$(awk -F': ' '/^Architecture:/{print $2; exit}' "$control")"
+    local out="$OUTPUT/${pkg}_${ver}_${arch}.deb"
     # prepare copies every .deb in this directory into live-build. Remove only
     # stale versions of the package being rebuilt so an old release cannot be
     # staged beside the current one after an incremental build.
-    find "$OUTPUT" -maxdepth 1 -type f -name "${pkg}_*_all.deb" \
-        ! -name "${pkg}_${ver}_all.deb" -delete
+    find "$OUTPUT" -maxdepth 1 -type f -name "${pkg}_*_${arch}.deb" \
+        ! -name "${pkg}_${ver}_${arch}.deb" -delete
     rm -f "$out"
     # dpkg-deb only clamps timestamps newer than SOURCE_DATE_EPOCH, so older
     # checkout times would otherwise leak into the archive and a rebuild from
@@ -224,6 +227,18 @@ stage_desktop_defaults() {
     rm -rf -- "$stage"
 }
 
+# The module is compiled by `make marco` in the isolated Ceres chroot, so a
+# rebuild of the same version reuses the same bytes (issue #234).
+stage_nm_focus() {
+    local stage module=${SPACED_NM_FOCUS_MODULE:-$ROOT/build/nm-focus/libspaced-nm-focus.so}
+    [[ -f $module ]] || { echo "Missing nm-applet focus module: $module. Run make marco first." >&2; exit 1; }
+    stage=$(new_stage spaced-nm-focus)
+    install -Dm0644 "$module" "$stage/usr/lib/x86_64-linux-gnu/gtk-3.0/modules/libspaced-nm-focus.so"
+    fix_perms "$stage"
+    build spaced-nm-focus "$stage"
+    rm -rf -- "$stage"
+}
+
 stage_meta() {
     local stage
     stage=$(mktemp -d)
@@ -255,6 +270,7 @@ PY
 stage_wallpapers
 stage_themes
 stage_desktop_defaults
+stage_nm_focus
 stage_meta
 "$ROOT/scripts/iso/stage-amdgpu-top.sh"
 "$ROOT/scripts/iso/stage-marco.sh"

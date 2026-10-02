@@ -1,5 +1,6 @@
 #!/bin/bash
-# Isolate the Marco build dependencies from the developer's operating system.
+# Isolate the Marco and nm-applet focus module build dependencies from the
+# developer's operating system.
 set -euo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 CHROOT="$ROOT/build/marco/chroot"
@@ -43,11 +44,15 @@ cp -L /etc/resolv.conf "$CHROOT/etc/resolv.conf"
 chroot "$CHROOT" /usr/bin/env DEBIAN_FRONTEND=noninteractive \
     apt-get -o APT::Update::Error-Mode=any update
 chroot "$CHROOT" /usr/bin/env DEBIAN_FRONTEND=noninteractive \
-    apt-get install -y --no-install-recommends build-essential ca-certificates curl dpkg-dev
+    apt-get install -y --no-install-recommends build-essential ca-certificates curl dpkg-dev \
+        pkg-config libgtk-3-dev
 chroot "$CHROOT" /usr/bin/env DEBIAN_FRONTEND=noninteractive \
     apt-get build-dep -y --no-install-recommends marco
-chroot "$CHROOT" /usr/bin/env DEB_BUILD_OPTIONS=parallel=2 \
-    bash /workspace/scripts/iso/build-marco.sh --build /workspace/build/marco
+if ! "$ROOT/scripts/iso/stage-marco.sh" --check 2>/dev/null; then
+    chroot "$CHROOT" /usr/bin/env DEB_BUILD_OPTIONS=parallel=2 \
+        bash /workspace/scripts/iso/build-marco.sh --build /workspace/build/marco
+fi
+chroot "$CHROOT" bash /workspace/scripts/iso/build-nm-focus.sh /workspace/build/nm-focus
 if [ -n "${PKEXEC_UID:-}" ]; then
-    chown -R "$PKEXEC_UID" "$ROOT/build/marco/artifacts"
+    chown -R "$PKEXEC_UID" "$ROOT/build/marco/artifacts" "$ROOT/build/nm-focus"
 fi

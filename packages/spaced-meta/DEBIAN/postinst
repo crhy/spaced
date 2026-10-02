@@ -42,4 +42,28 @@ EOF
 printf 'Spaced Linux %s \\n \\l\n' "$VERSION" > /etc/issue
 printf 'Spaced Linux %s\n' "$VERSION" > /etc/issue.net
 
+# Samba disables user shares unless "usershare max shares" is non-zero, and
+# Debian's smb.conf leaves that line commented out, so Caja's Sharing Options
+# failed with "usershares are currently disabled" (issue #253). Keep any value
+# an administrator has set.
+smb_conf=/etc/samba/smb.conf
+if [ "$1" = configure ] && [ -f "$smb_conf" ] \
+    && ! grep -Eq '^[[:space:]]*usershare max shares[[:space:]]*=' "$smb_conf"; then
+    sed -i '/^\[global\]/a\   usershare max shares = 100' "$smb_conf"
+fi
+
+# Caja's Sharing Options need sambashare membership (issue #253). Calamares
+# grants it to new users; give it once to existing desktop users, meaning
+# sudo members with ordinary UIDs, without undoing a later removal.
+marker=/var/lib/spaced-linux/sambashare-v1
+if [ "$1" = configure ] && [ ! -e "$marker" ] && getent group sambashare >/dev/null; then
+    for member in $(getent group sudo | cut -d: -f4 | tr ',' ' '); do
+        uid=$(id -u "$member" 2>/dev/null) || continue
+        [ "$uid" -ge 1000 ] && [ "$uid" -lt 60000 ] || continue
+        usermod -a -G sambashare "$member" || true
+    done
+    install -d -m 0755 /var/lib/spaced-linux
+    : > "$marker"
+fi
+
 exit 0

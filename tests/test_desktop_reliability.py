@@ -101,6 +101,39 @@ class MigrationTests(unittest.TestCase):
         self.assertNotIn('image/png', defaults)
         self.assertNotIn('text/x-python', defaults)
 
+    def test_compiz_focus_plugin_is_replaced_by_core_prevention_match(self):
+        # Issue #234: 9.26.4 profiles enabled a "focus" plug-in Compiz 0.8 lacks.
+        profile = self.config / 'compiz/compizconfig/Default.ini'
+        profile.parent.mkdir(parents=True)
+        profile.write_text('[core]\nas_active_plugins=core;ccp;focuspoll;focus;rotate;\n'
+                           '[focus]\ns0_focus_stealing_prevention=false\n')
+        state = self.config / 'spaced'
+        state.mkdir()
+        (state / 'desktop-migration-9.26.2-v1').write_text('9.26.2\n')
+        migration.migrate(self.config)
+        updated = migration.read_ini(profile)
+        self.assertEqual(updated['core']['as_active_plugins'], 'core;ccp;focuspoll;rotate;')
+        self.assertFalse(updated.has_section('focus'))
+        self.assertEqual(updated['core']['s0_focus_prevention_match'], '!(class=Nm-applet)')
+        before = profile.read_bytes()
+        migration.migrate(self.config)
+        self.assertEqual(profile.read_bytes(), before)
+
+    def test_custom_compiz_focus_prevention_match_survives(self):
+        profile = self.config / 'compiz/compizconfig/Default.ini'
+        profile.parent.mkdir(parents=True)
+        profile.write_text('[core]\nas_active_plugins=core;ccp;\ns0_focus_prevention_match=class=Firefox\n')
+        original = profile.read_text()
+        migration.migrate_compiz_focus(profile)
+        self.assertEqual(profile.read_text(), original)
+
+    def test_skel_compiz_profile_needs_no_focus_migration(self):
+        skel = ROOT / 'overlays/etc/skel/.config/compiz/compizconfig/Default.ini'
+        profile = self.config / 'Default.ini'
+        profile.write_bytes(skel.read_bytes())
+        migration.migrate_compiz_focus(profile)
+        self.assertEqual(profile.read_bytes(), skel.read_bytes())
+
     def test_v1_inserted_mate_defaults_are_removed(self):
         generic = self.config / 'mimeapps.list'
         generic.write_text('[Default Applications]\nimage/png=gimp.desktop\ntext/x-python=custom-ide.desktop\n')

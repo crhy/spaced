@@ -342,6 +342,24 @@ def enumerate_flatpak(warnings=None, stats=None):
         for remote in remotes:
             if stats is not None:
                 stats["remotes_total"] += 1
+            # Installed systems otherwise keep the appstream data from when
+            # the remote was added, so Spaced Update and SpacedBazaar show a
+            # version older than the one being served (issues #237, #250).
+            # A refresh failure must not hide the remote's updates.
+            try:
+                run_capture(
+                    [
+                        "flatpak",
+                        "update",
+                        "--appstream",
+                        "--noninteractive",
+                        flatpak_scope(scope),
+                        remote,
+                    ],
+                    timeout=90,
+                )
+            except (OSError, RuntimeError, subprocess.TimeoutExpired):
+                pass
             try:
                 updates = run_capture(
                     [

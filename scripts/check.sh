@@ -133,6 +133,8 @@ for path in ("website/index.html", "website/themes.html", "website/help.html"):
     assert "https://github.com/crhy/spaced/releases" in website_page, \
         f"{path} does not link to published releases"
 
+window_properties = Path("overlays/usr/local/share/applications/mate-window-properties.desktop").read_text(encoding="utf-8")
+assert "NoDisplay=true" in window_properties, "Preferences > Windows only configures Marco, but Spaced runs Compiz (issue #256)"
 package_groups = loaded_yaml["config/packages.yaml"]
 packages = [package for group in package_groups.values() for package in group]
 duplicates = sorted(package for package, count in Counter(packages).items() if count > 1)
@@ -196,7 +198,7 @@ assert "spaced-audio-restore.desktop" in local_package_builder \
 assert "spaced-first-boot-snapshot" in local_package_builder \
     and "usr/local/share/applications/mate-about.desktop" in local_package_builder, \
     "installed-system update package omits snapshot or system-info integration"
-assert '-name "${pkg}_*_all.deb"' in local_package_builder and "-delete" in local_package_builder, \
+assert '-name "${pkg}_*_${arch}.deb"' in local_package_builder and "-delete" in local_package_builder, \
     "local package builds can leave stale release versions in ISO staging"
 
 live_build_config = Path("live-build/auto/config").read_text(encoding="utf-8")
@@ -421,6 +423,11 @@ assert not [path for path in embedded_welcome_paths if path.exists()], \
     "the standalone Welcome implementation is still duplicated in the distro overlay"
 meta_control = Path("packages/spaced-meta/DEBIAN/control").read_text(encoding="utf-8")
 package_version = re.search(r"^Version: (.+)$", meta_control, re.M).group(1)
+nm_focus_control = Path("packages/spaced-nm-focus/DEBIAN/control").read_text(encoding="utf-8")
+assert f"Version: {package_version}\n" in nm_focus_control \
+    and "Architecture: amd64" in nm_focus_control \
+    and f"spaced-nm-focus (= {package_version})" in meta_control, \
+    "spaced-meta does not deliver the matching spaced-nm-focus package (issue #234)"
 assert package_version.split("-", 1)[0] == version, "Native package version does not match OS release"
 assert f"Version: {package_version}\n" in defaults_control
 themes_control = (Path("packages/spaced-themes/DEBIAN/control")
@@ -442,7 +449,7 @@ for split_control in (themes_control, wallpapers_control):
         and "Replaces: spaced-mate-default-settings (<< 9.26.3-1)" in split_control, \
         "split artwork package lacks the Breaks/Replaces takeover for upgrades"
 assert f"spaced-mate-default-settings (= {package_version})" in meta_control \
-    and "spaced-welcome (>= 0.1.16)" in meta_control \
+    and "spaced-welcome (>= 0.1.18)" in meta_control \
     and "libfuse2t64" in meta_control, \
     "spaced-meta does not pull in the standalone Welcome package and desktop defaults"
 # The artwork split moves payload out of spaced-mate-default-settings. No
@@ -482,7 +489,7 @@ def artifact_default(name):
     return match.group(1)
 
 assert artifact_default("SPACED_WELCOME_REPOSITORY") == "crhy/spacedwelcome"
-assert artifact_default("SPACED_WELCOME_VERSION") == "0.1.16"
+assert artifact_default("SPACED_WELCOME_VERSION") == "0.1.18"
 assert artifact_default("SPACED_GITHUB_REMOTE_NAME") == "spaced-github"
 assert artifact_default("SPACED_GITHUB_REMOTE_DESCRIPTOR_URL") == \
     "https://crhy.github.io/spacedbazaar/spaced-github.flatpakrepo"
@@ -648,11 +655,17 @@ assert "/usr/local/bin/install-spaced-linux" in cleanup \
 reboot_helper = root / "usr/local/bin/spaced-reboot-after-install"
 reboot_helper_text = reboot_helper.read_text(encoding="utf-8")
 assert reboot_helper.stat().st_mode & 0o111 \
-    and "Remove the installation USB drive" in reboot_helper_text \
-    and "key_press_event" in reboot_helper_text \
-    and "/sbin/reboot" in reboot_helper_text \
+    and "Remove the installation USB medium" in reboot_helper_text \
+    and "key-press-event" in reboot_helper_text \
+    and "button-press-event" in reboot_helper_text \
+    and "/proc/sysrq-trigger" in reboot_helper_text \
     and "zenity" not in reboot_helper_text, \
     "post-install reboot does not show a blank USB-removal screen before reboot (issue #192)"
+# GTK 3 has neither call; either one crashed the 9.26.4 helper before it could
+# show the prompt or reboot (issue #251). tests/test_reboot_after_install.py
+# runs the real prompt under Xvfb.
+assert not re.search(r"\bset_(fullscreen|decorations)\s*\(", reboot_helper_text), \
+    "post-install reboot helper calls GTK methods that do not exist (issue #251)"
 assert "test ! -x /usr/bin/calamares" in cleanup, \
     "Calamares cleanup lacks a hard package-removal postcondition"
 assert not {"live-config-systemd", "live-task-localisation", "live-task-recommended"}.intersection(removed_after_install), \
@@ -662,6 +675,8 @@ assert {"locales", "console-setup"}.issubset(packages), \
 assert {"util-linux-extra", "grub-pc-bin", "grub-efi-amd64-bin", "efibootmgr", "dosfstools"}.issubset(packages), \
     "Calamares offline BIOS/UEFI install dependencies are incomplete"
 assert "os-prober" in packages, "GRUB cannot detect other operating systems without os-prober"
+assert {"samba", "caja-share", "wsdd"}.issubset(packages), \
+    "Caja cannot share folders with Windows computers (issue #253)"
 assert "util-linux" in packages, "the testing-channel bootstrap must find runuser from util-linux"
 default_grub = (root / "etc/default/grub").read_text(encoding="utf-8")
 assert "GRUB_DISABLE_OS_PROBER=false" in default_grub and "#GRUB_DISABLE_OS_PROBER=false" not in default_grub, \
@@ -669,6 +684,38 @@ assert "GRUB_DISABLE_OS_PROBER=false" in default_grub and "#GRUB_DISABLE_OS_PROB
 assert "qml6-module-qtquick-window" in packages, "Calamares slideshow QML dependency is missing"
 assert "squashfs-tools" in packages, "Calamares cannot unpack the live filesystem without unsquashfs"
 calamares_users = yaml.safe_load((root / "etc/calamares/modules/users.conf").read_text(encoding="utf-8"))
+assert any(isinstance(group, dict) and group.get("name") == "sambashare" and group.get("system") is True
+           for group in calamares_users["defaultGroups"]), \
+    "the installed user cannot create Samba user shares (issue #253)"
+meta_postinst = Path("packages/spaced-meta/DEBIAN/postinst").read_text(encoding="utf-8")
+assert "usermod -a -G sambashare" in meta_postinst and "sambashare-v1" in meta_postinst, \
+    "upgraded systems' users cannot create Samba user shares (issue #253)"
+assert "usershare max shares = 100" in meta_postinst, \
+    "Samba user shares stay disabled, so Caja Sharing Options fails (issue #253)"
+assert "sambashare user" in Path("scripts/iso/01-configure.chroot").read_text(encoding="utf-8"), \
+    "the live user cannot share folders (issue #253)"
+# Issue #227: the first installed user must get UID and GID 1000.
+for group in calamares_users["defaultGroups"]:
+    if group in ("netdev", "lpadmin", "scanner", "bluetooth", "sambashare", "autologin"):
+        raise AssertionError(f"Calamares would create {group} with an ordinary GID (issue #227)")
+    if isinstance(group, dict):
+        assert group.get("system") is True, \
+            f"Calamares would create {group['name']} with an ordinary GID (issue #227)"
+calamares_settings_text = (root / "etc/calamares/settings.conf").read_text(encoding="utf-8")
+exec_steps = [step for phase in yaml.safe_load(calamares_settings_text)["sequence"]
+              for step in phase.get("exec", [])]
+assert exec_steps.index("shellprocess@spaced-remove-live-user") < exec_steps.index("users"), \
+    "the live account still holds UID 1000 when Calamares creates the user (issue #227)"
+remove_live_user = (root / "etc/calamares/modules/shellprocess@spaced-remove-live-user.conf").read_text(encoding="utf-8")
+assert "userdel -r user" in remove_live_user and "groupdel user" in remove_live_user, \
+    "Calamares does not remove the live account before creating the user (issue #227)"
+assert "userdel" not in cleanup, \
+    "Calamares cleanup deletes an account after the installed user was created"
+configure_chroot = Path("scripts/iso/01-configure.chroot").read_text(encoding="utf-8")
+assert "for group in autologin bluetooth lpadmin netdev scanner; do" in configure_chroot \
+    and 'groupadd --system "$group"' in configure_chroot \
+    and configure_chroot.index("groupadd --system") < configure_chroot.index("useradd -m -s /bin/bash user"), \
+    "the live image does not pre-create Calamares' groups as system groups (issue #227)"
 assert calamares_users["passwordRequirements"]["minLength"] == 1, \
     "Calamares does not permit single-character passwords"
 machineid = (root / "etc/calamares/modules/shellprocess@spaced-machineid.conf").read_text(encoding="utf-8")
@@ -754,9 +801,28 @@ assert ";wobbly;" not in compiz_text and ";animation;" not in compiz_text, \
 assert ";clone;" not in compiz_text and ";expo;" not in compiz_text, \
     "Clone Output or Expo is enabled by default"
 assert "firepaint" in compiz_text, "Compiz paint-fire-on-screen plugin is not enabled"
-assert "cube;3d;focuspoll;focus;rotate;scale;ezoom;" in compiz_text, "Compiz desktop effects regressed"
-assert "focus;" in compiz_text and "s0_focus_stealing_prevention = false" in compiz_text, \
-    "Compiz does not allow NetworkManager password dialogs to receive keyboard focus (issue #234)"
+assert "cube;3d;focuspoll;rotate;scale;ezoom;" in compiz_text, "Compiz desktop effects regressed"
+# Compiz 0.8 has no "focus" plug-in; 9.26.4's setting for issue #234 did nothing.
+assert "focus" not in compiz_text.split("as_active_plugins = ", 1)[1].split("\n", 1)[0].split(";") \
+    and "[focus]" not in compiz_text, "Compiz profile enables a plug-in Compiz 0.8 does not have"
+assert "s0_focus_prevention_match = !(class=Nm-applet)" in compiz_text, \
+    "Compiz focus-stealing prevention blocks nm-applet's Wi-Fi password dialog (issue #234)"
+# libnma 1.10 no longer focuses the password field itself. The module, its
+# nm-applet wrapper and the package that delivers them must stay together.
+nm_focus_source = Path("src/spaced-nm-focus/spaced-nm-focus.c").read_text(encoding="utf-8")
+nm_focus_wrapper = Path("packages/spaced-nm-focus/usr/local/bin/nm-applet")
+assert "gtk_module_init" in nm_focus_source and '"nm-applet"' in nm_focus_source \
+    and "g_type_class_ref" in nm_focus_source, \
+    "nm-applet password focus module is incomplete (issue #234)"
+assert nm_focus_wrapper.stat().st_mode & 0o111 \
+    and "spaced-nm-focus" in nm_focus_wrapper.read_text(encoding="utf-8") \
+    and "exec /usr/bin/nm-applet" in nm_focus_wrapper.read_text(encoding="utf-8"), \
+    "nm-applet does not start with the password focus module (issue #234)"
+assert not (root / "usr/local/bin/nm-applet").exists(), \
+    "the nm-applet wrapper belongs to spaced-nm-focus, not the settings overlay"
+assert "stage_nm_focus" in Path("scripts/iso/build-local-packages.sh").read_text(encoding="utf-8") \
+    and "build-nm-focus.sh" in Path("scripts/iso/build-marco-chroot.sh").read_text(encoding="utf-8"), \
+    "spaced-nm-focus is not built for the ISO and APT repository (issue #234)"
 assert "compiz-plugins-extra" in packages, "Compiz 3D Windows plug-in package is missing"
 assert "as_zoom_in_key = <Shift><Super>Up" in compiz_text, "Compiz enhanced zoom shortcut regressed"
 assert re.search(r"(?m)^\s*\w*button\s*=\s*<Super>Button1\s*$", compiz_text) is None, \
@@ -935,15 +1001,17 @@ for surface in ("Spaced-Menu-On-Dark", "Spaced-Menu-On-Light"):
 for surface, color in (("Spaced-Menu-On-Dark", "#b8bcc2"),
                        ("Spaced-Menu-On-Light", "#202020")):
     actions = icon_root / surface / "scalable/actions"
-    power_symbol = "M24 10v10M16 20a10 10 0 1 0 16 0"
     for icon_name in ("system-shutdown.svg", "system-shutdown-symbolic.svg",
                       "changes-allow.svg", "changes-allow-symbolic.svg"):
         icon_text = (actions / icon_name).read_text(encoding="utf-8")
-        assert color in icon_text and 'viewBox="0 0 48 48"' in icon_text, \
+        assert f'fill="{color}"' in icon_text and 'viewBox="0 0 48 48"' in icon_text, \
             f"{surface}: {icon_name} is not a compact monochrome icon"
-        if icon_name.startswith("system-shutdown"):
-            assert power_symbol in icon_text and "M24 12v13" not in icon_text, \
-                f"{surface}: {icon_name} is not a canonical power symbol (issue #235)"
+    # GTK fills every shape when it recolours a symbolic icon, so an outline
+    # drawn with a stroke renders as a solid blob (issue #235).
+    for icon in actions.glob("*-symbolic.svg"):
+        icon_text = icon.read_text(encoding="utf-8")
+        assert "stroke" not in icon_text and 'fill="none"' not in icon_text, \
+            f"{surface}: {icon.name} uses strokes, which GTK symbolic recolouring fills in (issue #235)"
 for theme in themes:
     icon_metadata = (icon_root / f"Spaced-Icons-{theme['gtk_theme'].removeprefix('Spaced-')}" / "index.theme")
     menu_variant = "Spaced-Menu-On-Dark" if theme["dark"] else "Spaced-Menu-On-Light"

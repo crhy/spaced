@@ -1,0 +1,11 @@
+Package: spaced-nm-focus
+Version: 10.26-1
+Section: x11
+Priority: optional
+Architecture: amd64
+Maintainer: Spaced Linux Team
+Depends: libc6, libgtk-3-0t64, network-manager-applet
+Description: Focus the password field in nm-applet's Wi-Fi dialogs
+ A GTK 3 module, loaded only into nm-applet, that puts the cursor in the
+ password field when a Wi-Fi network asks for one. libnma 1.10 no longer
+ focuses that field itself.
