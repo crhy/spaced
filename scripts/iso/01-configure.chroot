@@ -52,6 +52,13 @@ done
 # Upstream binaries remain package managed. Source-level fixes are built as
 # versioned Debian packages, so installed systems receive the same changes.
 
+# Groups Calamares adds the installed user to must already exist as system
+# groups. Calamares creates a missing one with an ordinary GID, which pushed
+# the first user's own group past 1000 (issue #227).
+for group in autologin bluetooth lpadmin netdev scanner; do
+    getent group "$group" >/dev/null || groupadd --system "$group"
+done
+
 # Create the live user if live-config has not already done so.
 id -u user >/dev/null 2>&1 || useradd -m -s /bin/bash user
 echo "user:1" | chpasswd

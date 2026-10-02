@@ -680,6 +680,28 @@ assert "GRUB_DISABLE_OS_PROBER=false" in default_grub and "#GRUB_DISABLE_OS_PROB
 assert "qml6-module-qtquick-window" in packages, "Calamares slideshow QML dependency is missing"
 assert "squashfs-tools" in packages, "Calamares cannot unpack the live filesystem without unsquashfs"
 calamares_users = yaml.safe_load((root / "etc/calamares/modules/users.conf").read_text(encoding="utf-8"))
+# Issue #227: the first installed user must get UID and GID 1000.
+for group in calamares_users["defaultGroups"]:
+    if group in ("netdev", "lpadmin", "scanner", "bluetooth", "sambashare", "autologin"):
+        raise AssertionError(f"Calamares would create {group} with an ordinary GID (issue #227)")
+    if isinstance(group, dict):
+        assert group.get("system") is True, \
+            f"Calamares would create {group['name']} with an ordinary GID (issue #227)"
+calamares_settings_text = (root / "etc/calamares/settings.conf").read_text(encoding="utf-8")
+exec_steps = [step for phase in yaml.safe_load(calamares_settings_text)["sequence"]
+              for step in phase.get("exec", [])]
+assert exec_steps.index("shellprocess@spaced-remove-live-user") < exec_steps.index("users"), \
+    "the live account still holds UID 1000 when Calamares creates the user (issue #227)"
+remove_live_user = (root / "etc/calamares/modules/shellprocess@spaced-remove-live-user.conf").read_text(encoding="utf-8")
+assert "userdel -r user" in remove_live_user and "groupdel user" in remove_live_user, \
+    "Calamares does not remove the live account before creating the user (issue #227)"
+assert "userdel" not in cleanup, \
+    "Calamares cleanup deletes an account after the installed user was created"
+configure_chroot = Path("scripts/iso/01-configure.chroot").read_text(encoding="utf-8")
+assert "for group in autologin bluetooth lpadmin netdev scanner; do" in configure_chroot \
+    and 'groupadd --system "$group"' in configure_chroot \
+    and configure_chroot.index("groupadd --system") < configure_chroot.index("useradd -m -s /bin/bash user"), \
+    "the live image does not pre-create Calamares' groups as system groups (issue #227)"
 assert calamares_users["passwordRequirements"]["minLength"] == 1, \
     "Calamares does not permit single-character passwords"
 machineid = (root / "etc/calamares/modules/shellprocess@spaced-machineid.conf").read_text(encoding="utf-8")
