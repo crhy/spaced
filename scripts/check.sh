@@ -133,6 +133,8 @@ for path in ("website/index.html", "website/themes.html", "website/help.html"):
     assert "https://github.com/crhy/spaced/releases" in website_page, \
         f"{path} does not link to published releases"
 
+window_properties = Path("overlays/usr/local/share/applications/mate-window-properties.desktop").read_text(encoding="utf-8")
+assert "NoDisplay=true" in window_properties, "Preferences > Windows only configures Marco, but Spaced runs Compiz (issue #256)"
 package_groups = loaded_yaml["config/packages.yaml"]
 packages = [package for group in package_groups.values() for package in group]
 duplicates = sorted(package for package, count in Counter(packages).items() if count > 1)

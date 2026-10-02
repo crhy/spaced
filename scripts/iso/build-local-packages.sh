@@ -63,6 +63,7 @@ SETTINGS_PATHS=(
     usr/local/bin
     usr/local/sbin
     usr/local/share/applications/mate-about.desktop
+    usr/local/share/applications/mate-window-properties.desktop
     usr/local/share/applications/spaced-help.desktop
     usr/share/applications/mimeapps.list
     usr/share/applications/spaced-nvidia-installer.desktop
