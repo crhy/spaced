@@ -63,6 +63,7 @@ SETTINGS_PATHS=(
     usr/local/bin
     usr/local/sbin
     usr/local/share/applications/mate-about.desktop
+    usr/local/share/applications/mate-system-info.desktop
     usr/local/share/applications/mate-window-properties.desktop
     usr/local/share/applications/spaced-help.desktop
     usr/share/applications/mimeapps.list
@@ -76,6 +77,7 @@ SETTINGS_PATHS=(
     usr/share/keyrings/spaced-archive-keyring.gpg
     usr/share/mate-panel/layouts
     usr/share/pixmaps
+    usr/share/spaced-xsessions
     usr/share/polkit-1/actions/com.spacedlinux.nvidia.policy
     usr/share/polkit-1/actions/com.spacedlinux.update.policy
 )

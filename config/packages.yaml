@@ -11,6 +11,7 @@ desktop:
   - mate-power-manager
   - mate-settings-daemon
   - mate-terminal
+  - xdg-user-dirs
 display_manager:
   - lightdm
   - lightdm-gtk-greeter
@@ -84,6 +85,7 @@ applications:
 flatpak:
   - flatpak
   - gnome-keyring
+  - libpam-gnome-keyring
   - libcanberra-gtk3-module
   - xdg-desktop-portal-gtk
   - xdg-desktop-portal

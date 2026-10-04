@@ -79,3 +79,19 @@ sudo dpkg -i build/local-packages/spaced-themes_*_all.deb \
 ```
 
 A resolution in this file should be updated when the implementation changes. Do not preserve obsolete paths or helper names merely as historical context; use Git history for superseded implementations.
+
+## 10.26.1
+
+- A global Flatpak `GTK_THEME` override forces GTK3 CSS into GTK4 applications.
+  Remove it once per profile, retain theme filesystem access, and let GTK3
+  XSettings / GTK4 color-scheme select supported styling. Do not recreate the
+  override when switching desktop themes.
+- Compiz screenshots use `xdg-user-dir DESKTOP`; a visible Caja desktop alone
+  does not establish that this command exists or returns a valid directory.
+  Ship `xdg-user-dirs` and test an actual captured image.
+- APT autoclean removes only obsolete downloads. A user-requested full cache
+  cleanup needs `apt clean`; report cached file bytes, excluding lock files,
+  rather than directory inode sizes.
+- Samba usershare permission resolution needs smbd running. Updating only
+  Spaced's configuration does not rerun Samba's service startup; a one-time
+  upgrade migration starts it through invoke-rc.d and respects service policy.

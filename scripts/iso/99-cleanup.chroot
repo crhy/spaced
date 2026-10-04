@@ -1,0 +1,21 @@
+#!/bin/bash
+# Remove build-only/redundant data from the image, not the host build cache.
+set -euo pipefail
+
+# An explicit root also allows verification against a disposable image tree.
+image_root=${1:-/}
+[[ -d "$image_root/usr/share/doc" && -f "$image_root/var/lib/dpkg/status" ]] || {
+    echo "Expected a populated image root: $image_root" >&2
+    exit 1
+}
+
+# Package history is available from the repositories. Keep copyright/license
+# files, NEWS upgrade instructions, manuals, examples, help and translations.
+# Do not follow documentation-directory symlinks outside this tree.
+find "$image_root/usr/share/doc" \( -type f -o -type l \) \
+    -iname 'changelog*' -delete
+
+# APT regenerates these binary indexes. The rootfs excludes also omit any
+# indexes live-build recreates after this hook during the binary stage.
+rm -f "$image_root/var/cache/apt/pkgcache.bin" \
+    "$image_root/var/cache/apt/srcpkgcache.bin"

@@ -66,4 +66,15 @@ if [ "$1" = configure ] && [ ! -e "$marker" ] && getent group sambashare >/dev/n
     : > "$marker"
 fi
 
+# An upgrade which only changes usershare configuration does not run Samba's
+# postinst. Start the service once so Caja can resolve Everyone to its SID.
+# Respect policy-rc.d (including image builds) and keep failed starts retryable.
+marker=/var/lib/spaced-linux/smbd-10.26.1
+if [ "$1" = configure ] && [ ! -e "$marker" ] && [ -x /etc/init.d/smbd ]; then
+    if invoke-rc.d --disclose-deny smbd start; then
+        install -d -m 0755 /var/lib/spaced-linux
+        : > "$marker"
+    fi
+fi
+
 exit 0

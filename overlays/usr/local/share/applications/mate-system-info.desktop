@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Spaced System Info
+Comment=View the Spaced Linux version and computer details
+Exec=spaced-system-info --details
+Icon=/usr/share/pixmaps/spaced-medallion.png
+Terminal=false
+Categories=GTK;Settings;HardwareSettings;
+OnlyShowIn=MATE;
+StartupNotify=true

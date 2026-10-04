@@ -10,6 +10,7 @@ expander so a bug report can still quote them without cluttering the window.
 import html
 import os
 import platform
+import sys
 from pathlib import Path
 
 import gi
@@ -65,8 +66,9 @@ def memory_total():
 
 
 class SystemInfo(Gtk.Window):
-    def __init__(self):
-        super().__init__(title="About Spaced Linux")
+    def __init__(self, details=False):
+        self.details = details
+        super().__init__(title="Spaced System Info" if details else "About Spaced Linux")
         self.set_icon_name("spaced-linux")
         self.set_default_size(520, 480)
         self.set_resizable(False)
@@ -140,6 +142,7 @@ class SystemInfo(Gtk.Window):
     def build_details(self, release):
         """Collapsed hardware summary, kept for pasting into bug reports."""
         expander = Gtk.Expander(label="System details")
+        expander.set_expanded(self.details)
         expander.set_halign(Gtk.Align.CENTER)
         details = Gtk.Grid(column_spacing=20, row_spacing=6, margin_top=10)
         details.set_halign(Gtk.Align.CENTER)
@@ -168,7 +171,7 @@ class SystemInfo(Gtk.Window):
 
 if __name__ == "__main__":
     Gdk.set_program_class("Spaced System Info")
-    window = SystemInfo()
+    window = SystemInfo(details="--details" in sys.argv)
     window.connect("destroy", Gtk.main_quit)
     window.show_all()
     Gtk.main()

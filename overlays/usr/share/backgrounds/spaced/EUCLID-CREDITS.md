@@ -7,7 +7,7 @@ ESA and the image creators do not endorse Spaced Linux.
 
 ## Euclid Galaxy Garland
 
-File: `euclid-galaxy-garland.png`
+File: `euclid-galaxy-garland.jpg`
 
 Credit: ESA/Euclid/Euclid Consortium/NASA, image processing by the Euclid
 Science Ground Segment and M. Schirmer (MPIA).

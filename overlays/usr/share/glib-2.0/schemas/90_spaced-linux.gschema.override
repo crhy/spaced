@@ -19,6 +19,10 @@ show-date=false
 [org.mate.peripherals-mouse]
 cursor-theme='Adwaita'
 
+[org.mate.peripherals-keyboard]
+numlock-state='on'
+remember-numlock-state=true
+
 [org.mate.Marco.general]
 theme='Spaced-Linux-Dark'
 
@@ -49,7 +53,7 @@ primary-color='#1a1a1a'
 default-layout='spaced-linux'
 
 [org.mate.caja.preferences]
-show-hidden-files=true
+show-hidden-files=false
 # Double-clicking a .sh or .py file opens it in the default text editor rather
 # than asking whether to execute it (issue #182). Users who want to run a
 # script still have the terminal and Caja's own Behavior preference.

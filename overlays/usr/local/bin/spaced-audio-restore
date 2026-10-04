@@ -60,9 +60,9 @@ if { read -r saved_volume saved_mute saved_sink < "$state_file"; } 2>/dev/null \
     fi
 else
     read -r current_volume current_mute current_sink < <(read_current) || exit 0
-    # Only correct the broken first-boot state. A healthy device's existing
-    # volume is preserved, and intentional later mute/0% choices are saved.
-    if [ "$current_volume" -eq 0 ]; then
+    # Start a new profile at 50%. Later logins restore the saved choice,
+    # including intentional mute and zero volume.
+    if [ "$current_volume" -ne 50 ]; then
         pactl set-sink-volume @DEFAULT_SINK@ 50% >/dev/null 2>&1 || true
     fi
     if [ "$current_mute" = yes ]; then

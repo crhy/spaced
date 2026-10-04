@@ -109,7 +109,10 @@ cleanup_compute_plan() {
   if [[ ${SPACED_UPDATE_TEST:-} == 1 && -n ${SPACED_UPDATE_TEST_CACHE_DIR:-} ]]; then
     cache_dir=$SPACED_UPDATE_TEST_CACHE_DIR
   fi
-  CLEANUP_CACHE_BYTES=$(du -sb "$cache_dir" 2>/dev/null | cut -f1 || true)
+  # apt clean removes downloaded files, not the lock or directory metadata.
+  # Include partial downloads, which apt also removes.
+  CLEANUP_CACHE_BYTES=$(find "$cache_dir" -type f ! -name lock -printf '%s\n' \
+    2>/dev/null | awk '{total += $1} END {printf "%.0f\n", total}' || true)
   if [[ ! $CLEANUP_CACHE_BYTES =~ ^[0-9]+$ ]]; then
     CLEANUP_CACHE_BYTES=0
   fi
@@ -231,14 +234,14 @@ if [[ $MODE == cleanup-apply ]]; then
       log "Blocked package: ${ENTRY%%|*} (${ENTRY#*|})"
     done
     step 40 'Cleaning the package cache'
-    apt_run -y autoclean
+    apt_run -y clean
     log 'Package cache cleaned. The blocked packages were left installed.'
     exit "$CLEANUP_CACHE_ONLY_STATUS"
   fi
   step 40 'Cleaning the package cache'
-  apt_run -y autoclean
+  apt_run -y clean
   if (( ${#CLEANUP_SAFE[@]} == 0 )); then
-    step 100 'Nothing to clean up'
+    step 100 'Package cache cleaned'
     exit 0
   fi
   step 70 'Removing unused packages'

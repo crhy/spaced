@@ -888,10 +888,12 @@ gschema = (root / "usr/share/glib-2.0/schemas/90_spaced-linux.gschema.override")
 assert "text-scaling-factor=1.2" in gschema, "HiDPI text scaling is not configured (issue #6/#64)"
 wallpaper_catalog = (root / "usr/share/mate-background-properties/spaced-linux.xml").read_text(encoding="utf-8")
 assert "SimpleBackb.png" in wallpaper_catalog, "GRUB background is missing from MATE wallpapers"
-assert "spaced-orbit-4k.png" in wallpaper_catalog, "4K Spaced Orbit wallpaper is missing from MATE wallpapers"
-orbit_wallpaper = wallpaper_root / "spaced-orbit-4k.png"
-assert orbit_wallpaper.is_file() and orbit_wallpaper.read_bytes()[16:24] == bytes.fromhex("00000f0000000870"), \
-    "Spaced Orbit wallpaper is not a 3840x2160 PNG"
+assert "spaced-orbit-4k.jpg" in wallpaper_catalog, "Spaced Orbit wallpaper is missing"
+orbit_wallpaper = wallpaper_root / "spaced-orbit-4k.jpg"
+assert orbit_wallpaper.is_file() and orbit_wallpaper.read_bytes()[:2] == b"\xff\xd8", \
+    "Spaced Orbit wallpaper is not a JPEG"
+assert (wallpaper_root / "spaced-orbit-4k.png").resolve() == orbit_wallpaper.resolve(), \
+    "existing Orbit wallpaper selections lost compatibility"
 themes_by_id = {theme["id"]: theme for theme in themes}
 assert "spaced-dark" not in themes_by_id, "duplicate Spaced Dark theme is still selectable"
 assert themes_by_id["win11-dark"]["panel_color"] == "#17243b", \
@@ -935,7 +937,7 @@ assert "Hidden=true" in tray_volume_text, "mate-media tray volume icon still aut
 schema_override = (root / "usr/share/glib-2.0/schemas/90_spaced-linux.gschema.override").read_text(encoding="utf-8")
 assert "format='12-hour'" in schema_override and "show-date=false" in schema_override, \
     "clock does not default to 12-hour time without the date"
-assert "[org.mate.caja.preferences]" in schema_override and "show-hidden-files=true" in schema_override, \
+assert "[org.mate.caja.preferences]" in schema_override and "show-hidden-files=false" in schema_override, \
     "Caja does not retain the requested hidden-file default"
 assert "executable-text-activation='display'" in schema_override, \
     "Double-clicking a script does not open the text editor (issue #182)"
@@ -955,17 +957,12 @@ assert "spaced-desktop-icon-repair --watch" in icon_repair_autostart, \
 
 flatpak_entries = root / "usr/local/bin/spaced-flatpak-desktop-entries"
 flatpak_entries_text = flatpak_entries.read_text(encoding="utf-8")
-assert flatpak_entries.stat().st_mode & 0o111 and \
-    "--columns=application" in flatpak_entries_text and \
-    "exports/share/applications" in flatpak_entries_text and \
-    "cp -n" in flatpak_entries_text, \
-    "Installed Flatpak apps are not placed on the desktop without overwriting shortcuts (issue #184)"
+assert flatpak_entries.stat().st_mode & 0o111 and "cp " not in flatpak_entries_text, \
+    "Retired Flatpak helper still creates desktop shortcuts (issue #263)"
 flatpak_entries_autostart = (root / "etc/xdg/autostart/spaced-flatpak-desktop-entries.desktop").read_text(encoding="utf-8")
-assert "Exec=/usr/local/bin/spaced-flatpak-desktop-entries" in flatpak_entries_autostart \
-    and "X-MATE-Autostart-Phase=Panel" in flatpak_entries_autostart, \
-    "Flatpak desktop shortcuts do not autostart with the desktop session (issue #184)"
-assert "/usr/local/bin/spaced-flatpak-desktop-entries" in flatpak_wrapper, \
-    "Flatpak install does not refresh desktop shortcuts (issue #184)"
+assert "Hidden=true" in flatpak_entries_autostart, "Automatic desktop shortcuts still enabled"
+assert "/usr/local/bin/spaced-flatpak-desktop-entries" not in flatpak_wrapper, \
+    "Flatpak install still creates desktop shortcuts (issue #263)"
 
 brave_policy = json.loads(
     (root / "etc/brave/policies/managed/spaced-extensions.json").read_text(encoding="utf-8"))
@@ -1093,7 +1090,7 @@ assert "window-scaling-factor" not in first_login_repair and "xdpyinfo" not in f
     "first-login repair overrides MATE's automatic or user-selected scaling"
 assert "text/x-shellscript" in first_login_repair and "pluma.desktop" in first_login_repair, \
     "upgraded profiles do not receive the Pluma shell-script association"
-assert "org.mate.caja.preferences show-hidden-files true" in first_login_repair, \
+assert "org.mate.caja.preferences show-hidden-files false" in first_login_repair, \
     "upgraded Caja profiles do not receive the hidden-file persistence migration"
 for object_id in ("brisk-menu", "window-list", "notification-area",
                   "volume-control-applet", "clock", "show-desktop"):
