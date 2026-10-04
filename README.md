@@ -26,8 +26,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/crhy/spaced/releases"><strong>Download Spaced Linux 10.26</strong></a> ·
-  <a href="CHANGELOG.md"><strong>10.26 release status</strong></a>
+  <a href="https://github.com/crhy/spaced/releases"><strong>Download Spaced Linux 10.26.1</strong></a> ·
+  <a href="CHANGELOG.md"><strong>10.26.1 release status</strong></a>
 </p>
 
 <p align="center">
@@ -36,7 +36,7 @@
   <img alt="Compiz" src="https://img.shields.io/badge/window%20manager-Compiz-5b5bd6">
   <img alt="Init system" src="https://img.shields.io/badge/init-sysvinit-555555">
   <img alt="Architecture" src="https://img.shields.io/badge/architecture-amd64-2563eb">
-  <img alt="Release" src="https://img.shields.io/badge/release-10.26-0ea5e9">
+  <img alt="Release" src="https://img.shields.io/badge/release-10.26.1-0ea5e9">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-black">
 </p>
 
@@ -150,14 +150,14 @@ Spaced Linux combines a modern system with visual ideas from the best desktop er
 
 ## Download Spaced Linux
 
-**Spaced Linux 10.26** is available now. Download the ISO and matching checksum from the [Spaced Linux 10.26 release page](https://github.com/crhy/spaced/releases/tag/v10.26).
+**Spaced Linux 10.26.1** is available now. Download the ISO and matching checksum from the [Spaced Linux 10.26.1 release page](https://github.com/crhy/spaced/releases/tag/v10.26.1).
 
-10.26 is the October 2026 release. What it fixes, and what still needs confirmation on real hardware, is recorded in the [10.26 issue audit](CHANGELOG.md).
+10.26.1 is a patch to the October 2026 release. Fixes and verification limits are recorded in the [10.26.1 issue audit](docs/10.26.1-ISSUE-STATUS.md).
 
 Verify the download on Linux:
 
 ```bash
-sha256sum -c spaced-linux-10.26-amd64.iso.sha256
+sha256sum -c spaced-linux-10.26.1-amd64.iso.sha256
 ```
 
 Test release images in a virtual machine or on non-critical hardware before adopting them for daily use.

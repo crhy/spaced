@@ -1,8 +1,8 @@
 # Changelog
 
-## 10.26.1 - Unreleased
+## 10.26.1 - 2026-10-04
 
-Planned delivery through the 10.26.1 ISO and `10.26.1-1` APT packages; wallpapers
+Delivered through the 10.26.1 ISO and `10.26.1-1` APT packages; wallpapers
 use package revision `2026.09-3`.
 
 - Remove the forced GTK3 theme from Flatpak's user-wide environment so GTK4

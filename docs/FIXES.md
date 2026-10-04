@@ -80,7 +80,7 @@ sudo dpkg -i build/local-packages/spaced-themes_*_all.deb \
 
 A resolution in this file should be updated when the implementation changes. Do not preserve obsolete paths or helper names merely as historical context; use Git history for superseded implementations.
 
-## 10.26.1 (pending release)
+## 10.26.1
 
 - A global Flatpak `GTK_THEME` override forces GTK3 CSS into GTK4 applications.
   Remove it once per profile, retain theme filesystem access, and let GTK3
