@@ -45,7 +45,7 @@
   <div class="grid">
     <article><h3>Move between workspaces</h3><p>Hold <strong>Ctrl+Alt</strong> and drag with the left mouse button to rotate the Compiz desktop cube.</p></article>
     <article><h3>Zoom the desktop</h3><p>Hold <strong>Shift+Super</strong> and use the mouse wheel, or press <strong>Shift+Super+Up/Down</strong>.</p></article>
-    <article><h3>Capture an area in 9.26</h3><p>Press <strong>Shift+Print</strong>, then select an area for MATE Screenshot. <strong>Ctrl+Shift+left-drag</strong> is the Compiz capture alternative. Super+left-drag can conflict with the menu in older releases.</p></article>
+    <article><h3>Capture a screenshot</h3><p>Hold <strong>Ctrl+Shift</strong>, drag the left mouse button around an area, then release it. Compiz saves the image on your Desktop. Alternatively, press <strong>Shift+Print Screen</strong> (the key often labeled PrtSc or PrtScn) and select an area in MATE Screenshot. You can also open Screenshot from the menu.</p></article>
     <article><h3>Open a terminal</h3><p>Press <strong>Ctrl+Alt+T</strong>. The menu also has MATE Terminal and the system tools you use most often.</p></article>
     <article><h3>Change the look</h3><p>Use Appearance Preferences to choose a <a href="/themes.html">Spaced theme</a>. You can also choose your own wallpaper and icons.</p></article>
     <article><h3>Find an application</h3><p>Welcome's Help &amp; Apps tab suggests applications by task. Each suggestion opens its page in SpacedBazaar.</p></article>
@@ -86,6 +86,7 @@
   <div class="grid">
     <article><h3>Displays and graphics</h3><p>Include the GPU model, driver, monitor connections, resolution, and refresh rate. In 9.26, run <code>spaced-graphics-report</code> in a terminal to collect display and driver details. Review the output before sharing it.</p></article>
     <article><h3>Virtual machines</h3><p>Include the VM application and version, BIOS or UEFI firmware, assigned RAM and CPUs, display adapter, and whether hardware acceleration is enabled.</p></article>
+    <article><h3>GIMP freezes when changing size units</h3><p>If GIMP freezes when switching from pixels to percent, close it and try <code>flatpak run --env=NO_AT_BRIDGE=1 org.gimp.GIMP</code> in a terminal. This optional workaround disables GIMP’s screen-reader accessibility for that launch; do not use it if you need that support. Starting GIMP normally restores its usual behavior. The underlying bug remains under investigation.</p></article>
     <article><h3>Updates and applications</h3><p>Include the failing application or package name and the error message. Describe whether it came from SpacedUpdate, SpacedBazaar, or a terminal command.</p></article>
   </div>
 </section>

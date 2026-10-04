@@ -166,13 +166,9 @@ if command -v flatpak >/dev/null 2>&1; then
         flatpak override --user --filesystem=xdg-data/themes:ro >/dev/null 2>&1 || true
         printf '%s\n' "$stamp" >"$stamp_file" 2>/dev/null || true
     fi
-    # `flatpak override` rewrites every application's override file, so skip it
-    # unless the theme name a sandbox would see has actually changed.
-    theme_stamp="$theme_export/.spaced-gtk-theme"
-    if [ "$gtk_theme" != "$(cat "$theme_stamp" 2>/dev/null || true)" ]; then
-        flatpak override --user --env="GTK_THEME=$gtk_theme" >/dev/null 2>&1 || true
-        printf '%s\n' "$gtk_theme" >"$theme_stamp" 2>/dev/null || true
-    fi
+    # GTK3 follows XSettings; GTK4/libadwaita follows color-scheme. Forcing a
+    # GTK3 theme through GTK_THEME breaks GTK4 CSS and must not be recreated.
+    /usr/local/bin/spaced-flatpak-theme-migration || true
 fi
 
 logger -t spaced-switch-theme "Applied desktop extras for $name"

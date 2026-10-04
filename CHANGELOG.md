@@ -1,5 +1,28 @@
 # Changelog
 
+## 10.26.1 - Unreleased
+
+Planned delivery through the 10.26.1 ISO and `10.26.1-1` APT packages; wallpapers
+use package revision `2026.09-3`.
+
+- Remove the forced GTK3 theme from Flatpak's user-wide environment so GTK4
+  applications can use their supported styling (#270). Existing profiles migrate
+  once; GTK3 theme files remain available.
+- Start new audio profiles at 50%, unmuted, while preserving saved levels (#271).
+- Use a graphics-driver authentication description for both AMD and NVIDIA (#269).
+- Show the supported Spaced session in LightDM. Retain live graphics fallbacks
+  and label the GRUB fallback “Safe Graphics Because Nvidia Sucks” (#268).
+- Start Samba once during upgrade so Caja can resolve share permissions (#266).
+- Point the System Info menu entry to Spaced's expanded hardware details (#265).
+- Default Num Lock to on (#264), stop generating Flatpak desktop shortcuts
+  (#263), and default Caja to hiding hidden files with a one-time migration (#259).
+- Make Clean System remove downloaded APT packages, and count cached file bytes
+  rather than directory metadata (#262).
+- Include the GNOME keyring PAM module for password-login unlocking (#260).
+- Reduce shipped wallpapers from 55 MB to 13 MB, retaining compatibility paths.
+  Include xdg-user-dirs so Compiz's screenshot gesture has a Desktop directory,
+  and document the screenshot shortcuts (#261, #158).
+
 ## 10.26 - 2026-10-02
 The 9.26.4 entries for issues #192, #234 and #235 did not hold on real
 hardware. Each is fixed again below with the root cause found and a test

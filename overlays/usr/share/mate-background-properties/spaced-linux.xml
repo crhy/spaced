@@ -3,7 +3,7 @@
 <wallpapers>
   <wallpaper deleted="false">
     <name>Euclid Galaxy Garland</name>
-    <filename>/usr/share/backgrounds/spaced/euclid-galaxy-garland.png</filename>
+    <filename>/usr/share/backgrounds/spaced/euclid-galaxy-garland.jpg</filename>
     <options>zoom</options>
     <pcolor>#080b10</pcolor>
     <scolor>#080b10</scolor>
@@ -42,8 +42,8 @@
     <shade_type>solid</shade_type>
   </wallpaper>
   <wallpaper deleted="false">
-    <name>Spaced Orbit 4K</name>
-    <filename>/usr/share/backgrounds/spaced/spaced-orbit-4k.png</filename>
+    <name>Spaced Orbit</name>
+    <filename>/usr/share/backgrounds/spaced/spaced-orbit-4k.jpg</filename>
     <options>zoom</options>
     <pcolor>#050912</pcolor>
     <scolor>#050912</scolor>

@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=Spaced Linux
+Comment=The Spaced Linux desktop
+Exec=mate-session
+TryExec=mate-session
+Type=Application
+X-LightDM-DesktopName=MATE

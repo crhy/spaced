@@ -4,7 +4,7 @@ Runs overlays/usr/lib/spaced-linux/spaced-update-helper against fake
 apt-get/uname/dpkg-query on PATH. No root access or real APT state needed:
 SPACED_UPDATE_TEST=1 skips the system transaction lock (pkexec strips test
 variables in production, so the hook cannot affect privileged runs) and
-SPACED_UPDATE_TEST_CACHE_DIR points du at a scratch cache directory.
+SPACED_UPDATE_TEST_CACHE_DIR points the helper at a scratch cache directory.
 """
 import os
 from pathlib import Path
@@ -32,6 +32,9 @@ except Exception:
 
 APT_GET = """#!/bin/bash
 echo "$@" >> "$FAKE_APT_LOG"
+if [[ " $* " == *" clean "* || "${!#}" == clean ]]; then
+    find "$SPACED_UPDATE_TEST_CACHE_DIR" -type f ! -name lock -delete
+fi
 if [[ " $* " == *" -s "* && " $* " == *" autoremove"* ]]; then
     printf 'Reading package lists... Done\\n'
     printf 'Building dependency tree... Done\\n'
@@ -125,7 +128,7 @@ class CleanupHelperTests(unittest.TestCase):
         self.assertEqual(removes, [('libfoo1', '1.2.3-test'),
                                   ('libbar2', '1.2.3-test')])
         self.assertEqual(blocked, [])
-        self.assertGreaterEqual(cache, 4096)
+        self.assertEqual(cache, 4096)
         self.assertFalse(any('Pre-Install-Pkgs' in invocation
                              for invocation in self.apt_invocations()),
                          self.apt_invocations())
@@ -184,26 +187,39 @@ class CleanupHelperTests(unittest.TestCase):
                             for invocation in self.apt_invocations()),
                         self.apt_invocations())
 
-    def test_apply_with_blocked_plan_runs_only_autoclean(self):
+    def test_cache_only_cleanup_reclaims_reported_bytes(self):
+        (self.cache / 'lock').write_bytes(b'lock metadata')
+        partial = self.cache / 'partial'
+        partial.mkdir()
+        (partial / 'download.deb').write_bytes(b'x' * 1024)
+        before = self.run_helper('cleanup-plan')
+        self.assertEqual(self.plan_lines(before.stdout)[2], 5120)
+        applied = self.run_helper('cleanup-apply')
+        self.assertEqual(applied.returncode, 0, applied.stderr)
+        after = self.run_helper('cleanup-plan')
+        self.assertEqual(self.plan_lines(after.stdout)[2], 0)
+        self.assertTrue((self.cache / 'lock').exists())
+
+    def test_apply_with_blocked_plan_runs_only_clean(self):
         result = self.run_helper('cleanup-apply', 'mate-panel libfoo1')
         self.assertEqual(result.returncode, 3, result.stderr)
         self.assertIn('mate-panel', result.stdout)
         self.assertIn('Package cache cleaned', result.stdout)
         self.assertNotIn('Update stopped', result.stdout)
         invocations = self.apt_invocations()
-        self.assertTrue(any('autoclean' in invocation
+        self.assertTrue(any('clean' in invocation.split()
                             for invocation in invocations),
                         invocations)
         self.assert_autoremove_never_applied()
 
-    def test_apply_with_clean_plan_runs_autoclean_and_autoremove(self):
+    def test_apply_with_clean_plan_runs_clean_and_autoremove(self):
         result = self.run_helper('cleanup-apply', 'libfoo1 libbar2')
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('Cleanup complete', result.stdout)
         invocations = self.apt_invocations()
         applied = [invocation for invocation in invocations
                    if '-y' in invocation.split()]
-        self.assertTrue(any('autoclean' in invocation for invocation in applied),
+        self.assertTrue(any('clean' in invocation.split() for invocation in applied),
                         applied)
         self.assertTrue(any('autoremove' in invocation for invocation in applied),
                         applied)

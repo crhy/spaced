@@ -1,0 +1,9 @@
+#!/bin/bash
+# Remove the global GTK3 override once, without erasing later user choices.
+set -euo pipefail
+marker="${XDG_CONFIG_HOME:-$HOME/.config}/spaced/flatpak-theme-10.26.1"
+[ ! -e "$marker" ] || exit 0
+flatpak override --user --unset-env=GTK_THEME
+rm -f "${XDG_DATA_HOME:-$HOME/.local/share}/themes/.spaced-gtk-theme"
+mkdir -p "$(dirname "$marker")"
+touch "$marker"

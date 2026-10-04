@@ -732,7 +732,7 @@ class FlatpakDesktopEntryTests(unittest.TestCase):
             timeout=5,
         )
 
-    def test_installed_visible_entries_are_added_without_overwriting_shortcuts(self):
+    def test_installed_apps_do_not_create_or_overwrite_shortcuts(self):
         visible = self.exports / 'org.example.Visible.desktop'
         visible.write_text('[Desktop Entry]\nType=Application\nName=Visible App\nExec=visible\n')
         hidden = self.exports / 'org.example.Hidden.desktop'
@@ -744,7 +744,7 @@ class FlatpakDesktopEntryTests(unittest.TestCase):
 
         result = self.run_helper()
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual((self.desktop / 'org.example.Visible.desktop').read_text(), visible.read_text())
+        self.assertFalse((self.desktop / 'org.example.Visible.desktop').exists())
         self.assertFalse((self.desktop / 'org.example.Hidden.desktop').exists())
         self.assertEqual(existing_target.read_text(), '[Desktop Entry]\nType=Application\nName=User Shortcut\nExec=custom\n')
         self.assertFalse((self.desktop / 'org.example.Missing.desktop').exists())

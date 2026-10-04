@@ -73,6 +73,12 @@ esac
         self.assertEqual(self.default.read_text(), 'headphones\n')
         self.assertEqual(self.state.read_text(), '50 no headphones\n')
 
+    def test_first_login_starts_at_half_volume(self):
+        self.env.update(VOLUME='100', MUTE='yes')
+        self.assertEqual(self.run_helper(), [
+            'set-sink-volume @DEFAULT_SINK@ 50%',
+            'set-sink-mute @DEFAULT_SINK@ 0'])
+
     def test_legacy_volume_and_mute_are_migrated_without_changing_output(self):
         self.state.write_text('0 yes\n')
         self.assertEqual(self.run_helper(), [
