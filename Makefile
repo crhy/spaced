@@ -111,15 +111,20 @@ prepare: marco ## Stage authored live-build configuration
 		$(LB_DIR)/config/packages.chroot \
 		$(LB_DIR)/config/includes.chroot \
 		$(LB_DIR)/config/hooks/live \
+		$(LB_DIR)/config/rootfs \
 		$(LB_DIR)/config/bootloaders
 	cp -a overlays/. $(LB_DIR)/config/includes.chroot/
 	cp -a live-build/config/bootloaders/. $(LB_DIR)/config/bootloaders/
+	cp live-build/config/rootfs/excludes $(LB_DIR)/config/rootfs/excludes
 	$(HOST_RUN) install -Dm644 /usr/share/grub/unicode.pf2 $(LB_DIR)/config/bootloaders/grub-pc/fonts/unicode.pf2
 	$(HOST_RUN) scripts/iso/package-list.sh > \
 		$(LB_DIR)/config/package-lists/spaced.list.chroot
 	cp scripts/iso/01-configure.chroot \
 		$(LB_DIR)/config/hooks/live/01-configure.chroot
 	chmod +x $(LB_DIR)/config/hooks/live/01-configure.chroot
+	cp scripts/iso/99-cleanup.chroot \
+		$(LB_DIR)/config/hooks/live/99-cleanup.chroot
+	chmod +x $(LB_DIR)/config/hooks/live/99-cleanup.chroot
 	$(HOST_RUN) env \
 		SPACED_TARGET_ARCH="$(ARCH)" \
 		SPACED_IMAGE_ROOT="$(abspath $(LB_DIR)/config/includes.chroot)" \

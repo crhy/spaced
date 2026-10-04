@@ -22,6 +22,8 @@ use package revision `2026.09-3`.
 - Reduce shipped wallpapers from 55 MB to 13 MB, retaining compatibility paths.
   Include xdg-user-dirs so Compiz's screenshot gesture has a Desktop directory,
   and document the screenshot shortcuts (#261, #158).
+- Omit package changelogs and generated APT binary indexes from the ISO.
+  Keep licenses, upgrade notes, manuals, translations and hardware support.
 
 ## 10.26 - 2026-10-02
 The 9.26.4 entries for issues #192, #234 and #235 did not hold on real
