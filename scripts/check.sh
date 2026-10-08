@@ -884,6 +884,29 @@ assert "x-scheme-handler/http=com.brave.Browser.desktop" in skel_mimeapps \
     and "x-scheme-handler/https=com.brave.Browser.desktop" in skel_mimeapps \
     and "text/html=com.brave.Browser.desktop" in skel_mimeapps, \
     "new user profiles do not preserve Brave as the web handler (issue #35)"
+suggest_app_path = root / "usr/local/bin/spaced-suggest-app"
+assert suggest_app_path.is_file() and suggest_app_path.stat().st_mode & 0o111, \
+    "magnet/torrent fallback suggester is missing or not executable (issue #290)"
+suggest_app = suggest_app_path.read_text(encoding="utf-8")
+assert "zenity --question" in suggest_app and "io.github.crhy.SpacedBazaar" in suggest_app \
+    and "exit 0" in suggest_app, \
+    "spaced-suggest-app does not ask with zenity and open Spaced Bazaar (issue #290)"
+suggest_desktop = (root / "usr/share/applications/spaced-suggest-qbittorrent.desktop").read_text(encoding="utf-8")
+assert "Type=Application" in suggest_desktop and "Name=" in suggest_desktop \
+    and "Exec=spaced-suggest-app org.qbittorrent.qBittorrent qBittorrent %u" in suggest_desktop, \
+    "qBittorrent suggester desktop file is missing required keys (issue #290)"
+assert "MimeType=x-scheme-handler/magnet;application/x-bittorrent;" in suggest_desktop \
+    and "NoDisplay=true" in suggest_desktop, \
+    "qBittorrent suggester desktop file does not claim magnet and torrent links (issue #290)"
+for mimeapps_path, mimeapps_text in (
+    ("usr/share/applications/mimeapps.list", mimeapps),
+    ("etc/skel/.config/mimeapps.list", skel_mimeapps),
+):
+    default_part, _, added_part = mimeapps_text.partition("[Added Associations]")
+    assert "x-scheme-handler/magnet=spaced-suggest-qbittorrent.desktop;" in added_part \
+        and "application/x-bittorrent=spaced-suggest-qbittorrent.desktop;" in added_part \
+        and "spaced-suggest-qbittorrent" not in default_part, \
+        f"{mimeapps_path} does not associate magnet and torrent links with the suggester as an added association (issue #290)"
 gschema = (root / "usr/share/glib-2.0/schemas/90_spaced-linux.gschema.override").read_text(encoding="utf-8")
 assert "text-scaling-factor=1.2" in gschema, "HiDPI text scaling is not configured (issue #6/#64)"
 wallpaper_catalog = (root / "usr/share/mate-background-properties/spaced-linux.xml").read_text(encoding="utf-8")

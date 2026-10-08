@@ -54,3 +54,5 @@ text/x-sh=pluma.desktop;
 application/x-sh=pluma.desktop;
 text/x-perl=pluma.desktop;
 application/x-perl=pluma.desktop;
+x-scheme-handler/magnet=spaced-suggest-qbittorrent.desktop;
+application/x-bittorrent=spaced-suggest-qbittorrent.desktop;

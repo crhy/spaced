@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Spaced Suggest qBittorrent
+Comment=Recommend qBittorrent for magnet and torrent links
+Exec=spaced-suggest-app org.qbittorrent.qBittorrent qBittorrent %u
+MimeType=x-scheme-handler/magnet;application/x-bittorrent;
+NoDisplay=true

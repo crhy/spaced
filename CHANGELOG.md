@@ -20,6 +20,9 @@
   visible in every theme: each theme's desktop-selection rule now keeps its
   hue but scales its shade so the highlight clears mid-grey and the label
   clears the highlight (#275).
+- Clicking a magnet or torrent link with no app to open it now asks "qBittorrent
+  is needed to open this link. Install it now?" and opens Spaced Bazaar on
+  qBittorrent's page when you choose Install (#290).
 
 ## 10.26.1 - 2026-10-04
 
