@@ -6,6 +6,10 @@
   five separate links. Each link inside carries a symbol, and the folder adds
   Voxa (voxaai.me) and Voat (voat.xyz/v/linux) (#278). Existing profiles are
   not changed.
+- Turn the remaining Brave reporting off by policy — Safe Browsing, extended
+  reporting, metrics, URL-keyed data collection, search suggestions, alternate
+  error pages, background mode, default-browser setting, promotional tabs,
+  feedback surveys and AI chat — and disable Wallet, VPN, Tor and Talk (#282).
 
 ## 10.26.1 - 2026-10-04
 

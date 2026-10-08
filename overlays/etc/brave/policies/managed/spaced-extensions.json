@@ -1,9 +1,16 @@
 {
+  "AlternateErrorPagesEnabled": false,
+  "BackgroundModeEnabled": false,
+  "BraveAIChatEnabled": false,
   "BraveNewsDisabled": true,
   "BraveP3AEnabled": false,
   "BraveRewardsDisabled": true,
   "BraveStatsPingEnabled": false,
+  "BraveTalkDisabled": true,
+  "BraveVPNDisabled": true,
+  "BraveWalletDisabled": true,
   "BraveWebDiscoveryEnabled": false,
+  "DefaultBrowserSettingEnabled": false,
   "ExtensionManifestV2Availability": 2,
   "ExtensionSettings": {
     "jcokkipkhhgiakinbnnplhkdbjbgcgpe": {
@@ -11,5 +18,13 @@
       "update_url": "https://clients2.google.com/service/update2/crx",
       "toolbar_pin": "force_pinned"
     }
-  }
+  },
+  "FeedbackSurveysEnabled": false,
+  "MetricsReportingEnabled": false,
+  "PromotionalTabsEnabled": false,
+  "SafeBrowsingExtendedReportingEnabled": false,
+  "SafeBrowsingProtectionLevel": 0,
+  "SearchSuggestEnabled": false,
+  "TorDisabled": true,
+  "UrlKeyedAnonymizedDataCollectionEnabled": false
 }
