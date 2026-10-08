@@ -2,8 +2,10 @@
 
 ## 10.26.2 - unreleased
 
-- Shorten the Brave bookmark-bar names for new profiles (Spaced, AirShips) and
-  add a Voat link to voat.xyz/v/linux (#278). Existing profiles are not changed.
+- New Brave profiles get one “🚀 Spaced” folder on the bookmark bar instead of
+  five separate links. Each link inside carries a symbol, and the folder adds
+  Voxa (voxaai.me) and Voat (voat.xyz/v/linux) (#278). Existing profiles are
+  not changed.
 
 ## 10.26.1 - 2026-10-04
 

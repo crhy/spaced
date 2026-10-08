@@ -1,66 +1,86 @@
 {
-  "checksum": "a007fc0a3db9531a2e7a3b4ed032aa83",
+  "checksum": "eb7f8a171b21cca3d8cbb8efb0a461f7",
   "roots": {
     "bookmark_bar": {
       "children": [
         {
-          "date_added": "13401120000000000",
+          "children": [
+            {
+              "date_added": "13401120000000000",
+              "date_last_used": "0",
+              "guid": "09dd44f3-7b08-41df-af53-df47c1b508bf",
+              "id": "3",
+              "name": "🚀 Spaced Linux",
+              "type": "url",
+              "url": "https://spacedlinux.com/"
+            },
+            {
+              "date_added": "13401120000000021",
+              "date_last_used": "0",
+              "guid": "80fdd2c4-ee39-5dd2-a3f5-53826b1d5803",
+              "id": "10",
+              "name": "🗣 Voxa",
+              "type": "url",
+              "url": "https://voxaai.me/"
+            },
+            {
+              "date_added": "13401120000000002",
+              "date_last_used": "0",
+              "guid": "f538e3df-9219-4825-ab04-e8ee68c9bc37",
+              "id": "5",
+              "name": "🏛 rhYciv",
+              "type": "url",
+              "url": "https://rhyciv.org/"
+            },
+            {
+              "date_added": "13401120000000003",
+              "date_last_used": "0",
+              "guid": "7dbbb924-e783-4332-854d-3113e869003d",
+              "id": "6",
+              "name": "🐱 Cards With Cats",
+              "type": "url",
+              "url": "https://crhy.github.io/CardsWithCats/"
+            },
+            {
+              "date_added": "13401120000000001",
+              "date_last_used": "0",
+              "guid": "ae14aa02-70e8-4eb5-9ed1-53ac74ea2d92",
+              "id": "2",
+              "name": "🎈 Open AirShips",
+              "type": "url",
+              "url": "https://openairships.com/"
+            },
+            {
+              "date_added": "13401120000000004",
+              "date_last_used": "0",
+              "guid": "52902d4d-f86a-43d6-a6dd-a4582a3b75cd",
+              "id": "4",
+              "name": "🐧 Devuan",
+              "type": "url",
+              "url": "https://www.devuan.org/"
+            },
+            {
+              "date_added": "13401120000000005",
+              "date_last_used": "0",
+              "guid": "c2d5848b-124e-5817-9b65-35cdde088b10",
+              "id": "9",
+              "name": "💬 Voat",
+              "type": "url",
+              "url": "https://voat.xyz/v/linux"
+            }
+          ],
+          "date_added": "13401120000000010",
           "date_last_used": "0",
-          "guid": "09dd44f3-7b08-41df-af53-df47c1b508bf",
-          "id": "3",
-          "name": "Spaced",
-          "type": "url",
-          "url": "https://spacedlinux.com/"
-        },
-        {
-          "date_added": "13401120000000001",
-          "date_last_used": "0",
-          "guid": "ae14aa02-70e8-4eb5-9ed1-53ac74ea2d92",
-          "id": "2",
-          "name": "AirShips",
-          "type": "url",
-          "url": "https://openairships.com/"
-        },
-        {
-          "date_added": "13401120000000002",
-          "date_last_used": "0",
-          "guid": "f538e3df-9219-4825-ab04-e8ee68c9bc37",
-          "id": "5",
-          "name": "rhYciv",
-          "type": "url",
-          "url": "https://rhyciv.org/"
-        },
-        {
-          "date_added": "13401120000000003",
-          "date_last_used": "0",
-          "guid": "7dbbb924-e783-4332-854d-3113e869003d",
-          "id": "6",
-          "name": "Cards",
-          "type": "url",
-          "url": "https://crhy.github.io/CardsWithCats/"
-        },
-        {
-          "date_added": "13401120000000004",
-          "date_last_used": "0",
-          "guid": "52902d4d-f86a-43d6-a6dd-a4582a3b75cd",
-          "id": "4",
-          "name": "Devuan",
-          "type": "url",
-          "url": "https://www.devuan.org/"
-        },
-        {
-          "date_added": "13401120000000005",
-          "date_last_used": "0",
-          "guid": "c2d5848b-124e-5817-9b65-35cdde088b10",
-          "id": "9",
-          "name": "Voat",
-          "type": "url",
-          "url": "https://voat.xyz/v/linux"
+          "date_modified": "13401120000000030",
+          "guid": "7457ac3a-5ff7-5d0d-a2b8-1764287ad04e",
+          "id": "11",
+          "name": "🚀 Spaced",
+          "type": "folder"
         }
       ],
       "date_added": "13401120000000000",
       "date_last_used": "0",
-      "date_modified": "13401120000000005",
+      "date_modified": "13401120000000030",
       "guid": "00000000-0000-4000-a000-000000000002",
       "id": "1",
       "name": "Bookmarks bar",

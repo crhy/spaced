@@ -1141,16 +1141,23 @@ for permanent_root in ("bookmark_bar", "other", "synced"):
     checksum_bookmark(brave_bookmarks["roots"][permanent_root])
 assert brave_bookmarks["checksum"] == bookmark_checksum.hexdigest(), \
     "Brave bookmarks do not carry a Chromium-compatible integrity checksum"
-assert ["Spaced", "AirShips", "rhYciv", "Cards", "Devuan", "Voat"] == \
-    [bookmark["name"] for bookmark in bookmark_bar["children"]], \
-    "fresh Brave profiles do not receive the requested bookmark-bar links (issues #211, #278)"
-assert ["https://spacedlinux.com/", "https://openairships.com/", "https://rhyciv.org/", "https://crhy.github.io/CardsWithCats/", "https://www.devuan.org/", "https://voat.xyz/v/linux"] == \
-    [bookmark["url"] for bookmark in bookmark_bar["children"]], \
-    "Brave bookmark-bar links do not point at the requested pages (issues #211, #278)"
-assert max(len(bookmark["name"]) for bookmark in bookmark_bar["children"]) <= 8, \
-    "a Brave bookmark-bar name is longer than eight characters and crowds the bar"
-assert len({bookmark["id"] for bookmark in bookmark_bar["children"]}) == len(bookmark_bar["children"]), \
-    "Brave bookmark ids are not unique"
+assert [("folder", "🚀 Spaced")] == [(node["type"], node["name"]) for node in bookmark_bar["children"]], \
+    "the Brave bookmark bar is not the single Spaced folder (issues #211, #278)"
+spaced_links = bookmark_bar["children"][0]["children"]
+assert ["🚀 Spaced Linux", "🗣 Voxa", "🏛 rhYciv", "🐱 Cards With Cats", "🎈 Open AirShips", "🐧 Devuan", "💬 Voat"] == \
+    [bookmark["name"] for bookmark in spaced_links], \
+    "fresh Brave profiles do not receive the requested bookmarks (issues #211, #278)"
+assert ["https://spacedlinux.com/", "https://voxaai.me/", "https://rhyciv.org/", "https://crhy.github.io/CardsWithCats/", "https://openairships.com/", "https://www.devuan.org/", "https://voat.xyz/v/linux"] == \
+    [bookmark["url"] for bookmark in spaced_links], \
+    "Brave bookmarks do not point at the requested pages (issues #211, #278)"
+bookmark_ids = []
+def collect_bookmark_ids(node):
+    bookmark_ids.append(node["id"])
+    for child in node.get("children", []):
+        collect_bookmark_ids(child)
+for permanent_root in ("bookmark_bar", "other", "synced"):
+    collect_bookmark_ids(brave_bookmarks["roots"][permanent_root])
+assert len(set(bookmark_ids)) == len(bookmark_ids), "Brave bookmark ids are not unique"
 assert brave_preferences["bookmark_bar"]["show_on_all_tabs"] is True, \
     "Brave's seeded bookmarks are hidden by default"
 assert brave_preferences["brave"]["new_tab_page"]["show_background_image"] is False, \
