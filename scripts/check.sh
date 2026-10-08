@@ -1175,6 +1175,17 @@ for theme_file in sorted((root / "usr/share/themes").glob("*/metacity-1/metacity
     assert '<border name="button_border" left="0" right="0" top="0" bottom="0"/>' in normal_geometry, \
         f"{theme_file.parent.parent.name}: dead pixels between or above the title-bar buttons (issue #279)"
 
+compiz_patch = Path("patches/compiz/0001-gwd-button-click-area.patch").read_text(encoding="utf-8")
+assert "-        *y = *y + fgeom.borders.invisible.top;" in compiz_patch, \
+    "the Compiz decorator patch no longer removes the displaced button click area (issue #279)"
+assert len(Path("patches/compiz/sources.sha256").read_text(encoding="utf-8").split()) == 6, \
+    "the Compiz source archives are not pinned by SHA-256"
+for compiz_script, needle in (("scripts/iso/build-marco-chroot.sh", "build-compiz.sh"),
+                              ("scripts/iso/build-local-packages.sh", "stage-compiz.sh"),
+                              ("scripts/build-apt-repo.sh", "compiz_artifacts")):
+    assert needle in Path(compiz_script).read_text(encoding="utf-8"), \
+        f"{compiz_script} does not build, stage or publish the rebuilt Compiz (issue #279)"
+
 brave_profile = root / "etc/skel/.var/app/com.brave.Browser/config/BraveSoftware/Brave-Browser/Default"
 brave_bookmarks = json.loads((brave_profile / "Bookmarks").read_text(encoding="utf-8"))
 brave_preferences = json.loads((brave_profile / "Preferences").read_text(encoding="utf-8"))

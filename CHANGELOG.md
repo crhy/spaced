@@ -12,6 +12,11 @@
   between them and the 3 px dead strip above them are gone, and the icons and
   the title bar keep their size. `scripts/tests/titlebar-hit-test.sh` measures
   the boxes on a virtual screen (#279).
+- Rebuild Compiz as `2:0.8.18-9+spaced10.26.2` with a fix to its window
+  decorator: the click area of each title-bar button was displaced 10 px left
+  of and 10 px below the drawn button, so only the lower-left part of minimize,
+  maximize and close responded. Source and patch are under `patches/compiz/`
+  (#279).
 - Turn the remaining Brave reporting off by policy — Safe Browsing, extended
   reporting, metrics, URL-keyed data collection, search suggestions, alternate
   error pages, background mode, default-browser setting, promotional tabs,

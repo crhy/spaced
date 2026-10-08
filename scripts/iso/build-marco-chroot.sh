@@ -53,6 +53,13 @@ if ! "$ROOT/scripts/iso/stage-marco.sh" --check 2>/dev/null; then
         bash /workspace/scripts/iso/build-marco.sh --build /workspace/build/marco
 fi
 chroot "$CHROOT" bash /workspace/scripts/iso/build-nm-focus.sh /workspace/build/nm-focus
+# The Compiz decorator fix (issue #279) is built in the same chroot.
+if ! "$ROOT/scripts/iso/stage-compiz.sh" --check 2>/dev/null; then
+    chroot "$CHROOT" /usr/bin/env DEBIAN_FRONTEND=noninteractive \
+        apt-get build-dep -y --no-install-recommends compiz
+    chroot "$CHROOT" /usr/bin/env DEB_BUILD_OPTIONS=parallel=2 \
+        bash /workspace/scripts/iso/build-compiz.sh --build /workspace/build/compiz
+fi
 if [ -n "${PKEXEC_UID:-}" ]; then
-    chown -R "$PKEXEC_UID" "$ROOT/build/marco/artifacts" "$ROOT/build/nm-focus"
+    chown -R "$PKEXEC_UID" "$ROOT/build/marco/artifacts" "$ROOT/build/nm-focus" "$ROOT/build/compiz"
 fi
