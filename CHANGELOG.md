@@ -2,10 +2,16 @@
 
 ## 10.26.2 - unreleased
 
-- New Brave profiles get one “🚀 Spaced” folder on the bookmark bar instead of
-  five separate links. Each link inside carries a symbol, and the folder adds
-  Voxa (voxaai.me) and Voat (voat.xyz/v/linux) (#278). Existing profiles are
-  not changed.
+- New Brave profiles get two folders on the bookmark bar instead of five
+  separate links: “🚀 Spaced” (project links, each with a symbol, now with
+  Voxa at voxaai.me) and “📰 News” (Voat first, then ten news sites ordered by
+  how quickly their front pages load) (#278, #289). Existing profiles are not
+  changed.
+- Make the minimize, maximize and close buttons easier to hit in all eleven
+  themes: each clickable box grows from 24x24 to 32x27 px, the 4 px dead gaps
+  between them and the 3 px dead strip above them are gone, and the icons and
+  the title bar keep their size. `scripts/tests/titlebar-hit-test.sh` measures
+  the boxes on a virtual screen (#279).
 - Turn the remaining Brave reporting off by policy — Safe Browsing, extended
   reporting, metrics, URL-keyed data collection, search suggestions, alternate
   error pages, background mode, default-browser setting, promotional tabs,

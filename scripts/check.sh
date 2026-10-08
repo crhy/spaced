@@ -347,12 +347,12 @@ for theme in themes:
             f"{name} v{metacity_version}: normal titlebar click target is too small"
         assert '<distance name="title_vertical_pad" value="4"/>' in metacity, \
             f"{name} v{metacity_version}: utility titlebar click target is too small"
-        assert '<distance name="button_width" value="24"/>' in metacity \
-            and '<distance name="button_height" value="24"/>' in metacity, \
-            f"{name} v{metacity_version}: normal titlebar buttons lack the 24px hitbox"
-        assert '<distance name="button_width" value="22"/>' in metacity \
+        assert '<distance name="button_width" value="32"/>' in metacity \
+            and '<distance name="button_height" value="27"/>' in metacity, \
+            f"{name} v{metacity_version}: normal titlebar buttons lack the 32x27px hitbox (issue #279)"
+        assert '<distance name="button_width" value="28"/>' in metacity \
             and '<distance name="button_height" value="22"/>' in metacity, \
-            f"{name} v{metacity_version}: utility titlebar buttons lack the 22px hitbox"
+            f"{name} v{metacity_version}: utility titlebar buttons lack the 28x22px hitbox (issue #279)"
         assert '<aspect_ratio name="button"' not in metacity, \
             f"{name} v{metacity_version}: Marco rejects aspect ratio with explicit button dimensions"
         assert 'width="width" height="19"' not in metacity, \
@@ -1142,6 +1142,16 @@ assert 'VERSION_ID' in system_info and 'https://spacedlinux.com/#donate' in syst
 assert not (root / "usr/share/applications/mate-about.desktop").exists(), \
     "Spaced System Info collides with mate-desktop instead of using the /usr/local override"
 
+for theme_file in sorted((root / "usr/share/themes").glob("*/metacity-1/metacity-theme-*.xml")):
+    normal_geometry = re.search(r'<frame_geometry name="normal"[^>]*>(.*?)</frame_geometry>',
+                                theme_file.read_text(encoding="utf-8"), re.S).group(1)
+    button_width = int(re.search(r'name="button_width" value="(\d+)"', normal_geometry).group(1))
+    button_height = int(re.search(r'name="button_height" value="(\d+)"', normal_geometry).group(1))
+    assert button_width >= 30 and button_height >= 26, \
+        f"{theme_file.parent.parent.name}: title-bar buttons are smaller than 30x26 px to click (issue #279)"
+    assert '<border name="button_border" left="0" right="0" top="0" bottom="0"/>' in normal_geometry, \
+        f"{theme_file.parent.parent.name}: dead pixels between or above the title-bar buttons (issue #279)"
+
 brave_profile = root / "etc/skel/.var/app/com.brave.Browser/config/BraveSoftware/Brave-Browser/Default"
 brave_bookmarks = json.loads((brave_profile / "Bookmarks").read_text(encoding="utf-8"))
 brave_preferences = json.loads((brave_profile / "Preferences").read_text(encoding="utf-8"))
@@ -1160,13 +1170,16 @@ for permanent_root in ("bookmark_bar", "other", "synced"):
     checksum_bookmark(brave_bookmarks["roots"][permanent_root])
 assert brave_bookmarks["checksum"] == bookmark_checksum.hexdigest(), \
     "Brave bookmarks do not carry a Chromium-compatible integrity checksum"
-assert [("folder", "🚀 Spaced")] == [(node["type"], node["name"]) for node in bookmark_bar["children"]], \
-    "the Brave bookmark bar is not the single Spaced folder (issues #211, #278)"
+assert [("folder", "🚀 Spaced"), ("folder", "📰 News")] == [(node["type"], node["name"]) for node in bookmark_bar["children"]], \
+    "the Brave bookmark bar is not the Spaced and News folders (issues #211, #278, #289)"
+news_links = bookmark_bar["children"][1]["children"]
+assert news_links[0]["url"] == "https://voat.xyz/v/linux" and len(news_links) == 11, \
+    "the News folder does not start with Voat or does not hold the eleven requested links (issue #289)"
 spaced_links = bookmark_bar["children"][0]["children"]
-assert ["🚀 Spaced Linux", "🗣 Voxa", "🏛 rhYciv", "🐱 Cards With Cats", "🎈 Open AirShips", "🐧 Devuan", "💬 Voat"] == \
+assert ["🚀 Spaced Linux", "🗣 Voxa", "🏛 rhYciv", "🐱 Cards With Cats", "🎈 Open AirShips", "🐧 Devuan"] == \
     [bookmark["name"] for bookmark in spaced_links], \
     "fresh Brave profiles do not receive the requested bookmarks (issues #211, #278)"
-assert ["https://spacedlinux.com/", "https://voxaai.me/", "https://rhyciv.org/", "https://crhy.github.io/CardsWithCats/", "https://openairships.com/", "https://www.devuan.org/", "https://voat.xyz/v/linux"] == \
+assert ["https://spacedlinux.com/", "https://voxaai.me/", "https://rhyciv.org/", "https://crhy.github.io/CardsWithCats/", "https://openairships.com/", "https://www.devuan.org/"] == \
     [bookmark["url"] for bookmark in spaced_links], \
     "Brave bookmarks do not point at the requested pages (issues #211, #278)"
 bookmark_ids = []

@@ -24,10 +24,10 @@
 	<distance name="left_titlebar_edge" value="6"/>
 	<distance name="right_titlebar_edge" value="6"/>
 	<distance name="title_vertical_pad" value="6"/>
-	<distance name="button_width" value="24"/>
-	<distance name="button_height" value="24"/>
+	<distance name="button_width" value="32"/>
+	<distance name="button_height" value="27"/>
 	<border name="title_border" left="2" right="2" top="5" bottom="0"/>
-	<border name="button_border" left="2" right="2" top="3" bottom="0"/>
+	<border name="button_border" left="0" right="0" top="0" bottom="0"/>
 </frame_geometry>
 
 <frame_geometry name="normal_unfocused" title_scale="medium" rounded_top_left="5" rounded_top_right="5" parent="normal" />
@@ -48,7 +48,7 @@
 
 <frame_geometry name="small" title_scale="small" parent="normal" rounded_top_left="false" rounded_top_right="false">
 	<distance name="title_vertical_pad" value="4"/>
-	<distance name="button_width" value="22"/>
+	<distance name="button_width" value="28"/>
 	<distance name="button_height" value="22"/>
 	<border name="title_border" left="10" right="10" top="0" bottom="1"/>
 	<border name="button_border" left="0" right="0" top="0" bottom="2"/>

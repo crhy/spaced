@@ -78,6 +78,7 @@ def main():
     mid = fy + title_h // 2
     for x in range(fx + fw - 130, fx + fw + 1):  # one row through the middle of the title bar
         click(x, mid)
+        time.sleep(0.45)  # two quick clicks on the title would count as a double-click and maximize
     for what in list(hits):  # one column through the middle of each button
         xs = [x for x, _ in hits[what]]
         cx = fx + (min(xs) + max(xs)) // 2
