@@ -73,11 +73,3 @@ radio:indeterminate {
     border-color: #00766c;
     color: #ffffff;
 }
-
-/* issue #275: desktop selection contrast (hue-preserving) */
-GtkIconView.view.cell:selected,
-GtkIconView.view.cell:selected:focus {
-    background-image: none;
-    background-color: #a5edf9;
-    color: #000000;
-}

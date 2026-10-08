@@ -21,10 +21,12 @@
   reporting, metrics, URL-keyed data collection, search suggestions, alternate
   error pages, background mode, default-browser setting, promotional tabs,
   feedback surveys and AI chat — and disable Wallet, VPN, Tor and Talk (#282).
-- Fix the Caja desktop selection highlight so a selected folder icon stays
-  visible in every theme: each theme's desktop-selection rule now keeps its
-  hue but scales its shade so the highlight clears mid-grey and the label
-  clears the highlight (#275).
+- Make a selected folder or icon on the desktop easy to see in every theme. A
+  rule that keeps the desktop window transparent also erased the selection
+  colour, so the selected icon was tinted almost black and its label box
+  nearly vanished. Selected desktop items now use the theme's selection colour,
+  darkened enough for the white label text, both while the desktop has the
+  keyboard and after another window takes it (#275).
 - Clicking a magnet or torrent link with no app to open it now asks "qBittorrent
   is needed to open this link. Install it now?" and opens Spaced Bazaar on
   qBittorrent's page when you choose Install (#290).

@@ -298,3 +298,41 @@ window.caja-desktop-window,
     background-color: transparent;
     box-shadow: none;
 }
+
+/* The rule above also erased the colour behind a selected desktop icon, so the
+ * icon was tinted almost black and its label box nearly vanished (issue #275).
+ * Caja draws a selected item as :selected while the desktop has the keyboard
+ * and as :active when another window has it, and always writes desktop labels
+ * in white, so the box uses the theme's selection colour darkened enough for
+ * white text in every theme. */
+/* Several themes end with a catch-all for `.view:selected:focus`; the :focus and
+ * window-qualified forms below outrank it. */
+.caja-desktop-window .caja-desktop.caja-canvas-item:selected,
+.caja-desktop-window .caja-desktop.caja-canvas-item:selected:focus,
+.caja-desktop-window .caja-desktop.caja-canvas-item:selected:backdrop,
+.caja-desktop-window .caja-desktop.caja-canvas-item:selected:focus:backdrop,
+.caja-desktop.caja-canvas-item:selected,
+.caja-desktop.caja-canvas-item:selected:focus,
+.caja-desktop.caja-canvas-item:selected:backdrop,
+.caja-desktop.caja-canvas-item:selected:focus:backdrop {
+    background-image: none;
+    background-color: mix(@theme_selected_bg_color, #000000, 0.35);
+    color: #ffffff;
+    border-radius: 3px;
+    text-shadow: none;
+}
+
+.caja-desktop-window .caja-desktop.caja-canvas-item:active,
+.caja-desktop-window .caja-desktop.caja-canvas-item:active:focus,
+.caja-desktop-window .caja-desktop.caja-canvas-item:active:backdrop,
+.caja-desktop-window .caja-desktop.caja-canvas-item:active:focus:backdrop,
+.caja-desktop.caja-canvas-item:active,
+.caja-desktop.caja-canvas-item:active:focus,
+.caja-desktop.caja-canvas-item:active:backdrop,
+.caja-desktop.caja-canvas-item:active:focus:backdrop {
+    background-image: none;
+    background-color: mix(@theme_selected_bg_color, #000000, 0.5);
+    color: #ffffff;
+    border-radius: 3px;
+    text-shadow: none;
+}

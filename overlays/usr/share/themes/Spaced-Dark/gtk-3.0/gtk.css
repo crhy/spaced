@@ -292,11 +292,3 @@ radio:checked {
     border-radius: 50%;
     color: #000000;
 }
-
-/* issue #275: desktop selection contrast (hue-preserving) */
-GtkIconView.view.cell:selected,
-GtkIconView.view.cell:selected:focus {
-    background-image: none;
-    background-color: #22365f;
-    color: #ffffff;
-}
