@@ -10,6 +10,10 @@
   reporting, metrics, URL-keyed data collection, search suggestions, alternate
   error pages, background mode, default-browser setting, promotional tabs,
   feedback surveys and AI chat — and disable Wallet, VPN, Tor and Talk (#282).
+- Fix the Caja desktop selection highlight so a selected folder icon stays
+  visible in every theme: each theme's desktop-selection rule now keeps its
+  hue but scales its shade so the highlight clears mid-grey and the label
+  clears the highlight (#275).
 
 ## 10.26.1 - 2026-10-04
 

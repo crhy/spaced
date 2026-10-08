@@ -30,9 +30,12 @@ def open_window():
 
 
 def frame(wid):
-    info = sh("xwininfo", "-frame", "-id", wid)
+    """(x, y, width, title-bar height) of the window's frame, from the extents the window manager publishes."""
+    info = sh("xwininfo", "-id", wid)
     get = lambda key: int(info.split(key)[1].split()[0])  # noqa: E731
-    return get("Absolute upper-left X:"), get("Absolute upper-left Y:"), get("Width:"), get("Height:")
+    extents = sh("xprop", "-id", wid, "_NET_FRAME_EXTENTS").split("=")[-1].split(",")
+    left, right, top, _bottom = (int(v) for v in extents)
+    return get("Absolute upper-left X:") - left, get("Absolute upper-left Y:") - top, get("Width:") + left + right, top
 
 
 def state(wid):
@@ -50,9 +53,7 @@ def main():
     marco = subprocess.Popen(["marco", "--sm-disable"], stderr=subprocess.DEVNULL)
     time.sleep(1.5)
     proc, wid = open_window()
-    fx, fy, fw, _fh = frame(wid)
-    client_y = int(sh("xwininfo", "-id", wid).split("Absolute upper-left Y:")[1].split()[0])
-    title_h = client_y - fy
+    fx, fy, fw, title_h = frame(wid)
     hits = {}
 
     def click(x, y):
