@@ -1,5 +1,10 @@
 # Changelog
 
+## 10.26.2 - unreleased
+
+- Shorten the Brave bookmark-bar names for new profiles (Spaced, AirShips) and
+  add a Voat link to voat.xyz/v/linux (#278). Existing profiles are not changed.
+
 ## 10.26.1 - 2026-10-04
 
 Delivered through the 10.26.1 ISO and `10.26.1-1` APT packages; wallpapers
