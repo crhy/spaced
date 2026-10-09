@@ -18,6 +18,7 @@ GITHUB_API = "https://api.github.com/repos/crhy/spaced/releases/latest"
 # Keep this application version in sync with the repository VERSION file.
 APP_VERSION = "0.2.2"
 HELPER = "/usr/lib/spaced-linux/spaced-update-helper"
+REFRESH_HELPER = "/usr/lib/spaced-linux/spaced-update-refresh"
 APT_RE = re.compile(
     r"^(\S+?)/\S+\s+(\S+)\s+(\S+)\s+\[upgradable from:\s+(.+)\]$"
 )
@@ -176,6 +177,81 @@ def version_key(version):
     return (year, month, *patch)
 
 
+def inline_markup(text):
+    # Escape first so user text can never open Pango tags, then re-open
+    # only the inline shapes the release notes use. Link addresses stay
+    # plain text in brackets because a Label has no clickable links.
+    escaped = GLib.markup_escape_text(text)
+    escaped = re.sub(r"\[([^\]]+)\]\(([^)\s]*)\)", r"\1 [\2]", escaped)
+    escaped = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", escaped)
+    escaped = re.sub(r"`([^`]*)`", r"<tt>\1</tt>", escaped)
+    return escaped
+
+
+def render_notes_line(line):
+    text = line.strip()
+    if not text:
+        return ""
+    heading = re.match(r"(#{1,6})\s+(.*)", text)
+    if heading:
+        size = "x-large" if len(heading.group(1)) <= 2 else "large"
+        return (
+            f'<span size="{size}" weight="bold">'
+            + inline_markup(heading.group(2))
+            + "</span>"
+        )
+    if text.startswith("- "):
+        # A real bullet followed by a fixed-width space: the text hangs
+        # one space in from the bullet that sticks out beside it.
+        return "\u2022\u2007" + inline_markup(text[2:])
+    return inline_markup(text)
+
+
+def notes_to_markup(markdown):
+    # Release bodies are GitHub markdown and a Gtk.Label only speaks Pango.
+    # Malformed markdown must never leave the dialog empty: a Label shows
+    # nothing at all for markup Pango rejects (for example bold and code
+    # spans that overlap), so check it and fall back to escaped plain text.
+    try:
+        markup = "\n".join(render_notes_line(line) for line in markdown.splitlines())
+        Pango.parse_markup(markup, -1, "\0")
+        return markup
+    except Exception:
+        return GLib.markup_escape_text(markdown)
+
+
+def changelog_section(version):
+    # Fallback notes source: the repository changelog sits next to the
+    # program's own source when run from the repository, but an installed
+    # copy under /usr/lib has none, and the caller then reports that no
+    # notes were published.
+    try:
+        with open(
+            os.path.join(
+                os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                "CHANGELOG.md",
+            ),
+            encoding="utf-8",
+        ) as source:
+            text = source.read()
+    except OSError:
+        return None
+    wanted = (version or "").lstrip("vV")
+    if not wanted:
+        return None
+    section = []
+    inside = False
+    for line in text.splitlines():
+        if line.startswith("## "):
+            if inside:
+                break
+            inside = line[3:].split(" - ")[0].strip().lstrip("vV") == wanted
+            continue
+        if inside:
+            section.append(line)
+    return "\n".join(section).strip() or None
+
+
 def read_installed_version():
     # Inside a Flatpak the sandbox sees the runtime's /etc/os-release, so read
     # the host release marker instead.
@@ -254,6 +330,29 @@ def cleanup_apply_outcome(returncode):
     if returncode == CLEANUP_CACHE_ONLY_STATUS:
         return "cache-only"
     return "failed"
+
+
+def parse_apt_status(line):
+    """Turn one APT Status-Fd line into (percent, human text) or None.
+
+    dlstatus lines carry a progress id, a percent and a fetch message; pmstatus
+    lines carry a package id, a percent and an action message whose trailing
+    "(arch)" bracket is noise for readers. Anything else is not progress.
+    """
+    match = re.match(r"(dlstatus|pmstatus):([^:]*):([-+]?\d+(?:\.\d+)?):(.*)", line)
+    if not match:
+        return None
+    kind, _, percent, message = match.groups()
+    percent = max(0.0, min(100.0, float(percent)))
+    if kind == "dlstatus":
+        count = re.match(r"Retrieving (?:file|Package) (\d+) of (\d+)", message)
+        if count:
+            text = f"Downloading {count.group(1)} of {count.group(2)}"
+        else:
+            text = message
+    else:
+        text = re.sub(r"\s*\((?:[a-zA-Z0-9_.+-]+)\)\s*$", "", message).strip()
+    return (percent, text)
 
 
 def enumerate_apt():
@@ -534,6 +633,9 @@ class App(Gtk.Window):
         self._fp_rows = []
         self._busy = False
         self._update_warnings = []
+        self._autocheck_scheduled = False
+        self._autocheck_count = 0
+        self._release_check_ran = False
 
         provider = Gtk.CssProvider()
         provider.load_from_data(APP_CSS)
@@ -586,6 +688,7 @@ class App(Gtk.Window):
         self.tabs.add_titled(self._build_updates_page(), "updates", "Updates")
         self.os_tab = OsUpdateTab(self)
         self.tabs.add_titled(self.os_tab, "os", "OS Release")
+        self.tabs.set_visible_child_name("os")
 
         self.connect("destroy", Gtk.main_quit)
         self.connect("delete-event", self._on_close)
@@ -730,6 +833,13 @@ class App(Gtk.Window):
     def logline(self, text):
         self.details.append(text)
 
+    def setpulse(self, message):
+        # A negative fraction makes the bar pulse: flatpak reports no
+        # machine-readable progress, only which app it is touching.
+        self.pstatus.set_text(message)
+        self.pbar.set_fraction(-1)
+        self.pbar.set_text("")
+
     def setstep(self, percent, message):
         percent = max(0, min(100, percent))
         self.pstatus.set_text(message)
@@ -792,6 +902,22 @@ class App(Gtk.Window):
             )
         return self._busy
 
+    def schedule_autocheck(self):
+        if os.environ.get("SPACED_UPDATE_NO_AUTOCHECK") == "1":
+            return
+        if self._autocheck_scheduled or self._release_check_ran:
+            return
+        self._autocheck_scheduled = True
+        self._autocheck_count += 1
+        GLib.timeout_add(1500, self._autocheck_now)
+
+    def _autocheck_now(self):
+        if self._release_check_ran or self._busy:
+            return False
+        self._release_check_ran = True
+        self.os_tab.check()
+        return False
+
     def do_check(self, *_):
         if self._busy:
             return
@@ -830,7 +956,7 @@ class App(Gtk.Window):
         try:
             # A successful check must use freshly fetched indexes; an offline
             # APT update must not fall back to stale lists and claim success.
-            run_capture(["pkexec", HELPER, "apt-refresh"], timeout=300)
+            run_capture(["pkexec", REFRESH_HELPER], timeout=300)
             apt = enumerate_apt()
             apt_checked = True
         except Exception as error:
@@ -1050,7 +1176,11 @@ class App(Gtk.Window):
             env={**os.environ, "LC_ALL": "C"},
         )
         for line in process.stdout:
-            GLib.idle_add(self.logline, line.rstrip())
+            line = line.rstrip()
+            GLib.idle_add(self.logline, line)
+            match = re.match(r"Updating (?:app|runtime)/([^/\s]+)/", line)
+            if match:
+                GLib.idle_add(self.setpulse, f"Updating {match.group(1).split('.')[-1]}")
         return process.wait()
 
     def run_cmd(self, command, log_callback, step_callback, progress_range=(0, 100)):
@@ -1070,6 +1200,12 @@ class App(Gtk.Window):
                 source_percent = int(match.group(1))
                 mapped = start + round((end - start) * source_percent / 100)
                 GLib.idle_add(step_callback, mapped, match.group(2))
+            elif line.startswith("STATUS "):
+                status = parse_apt_status(line[len("STATUS "):])
+                if status:
+                    percent, message = status
+                    mapped = start + round((end - start) * percent / 100)
+                    GLib.idle_add(step_callback, mapped, message)
             else:
                 if line.startswith("SPACED_WARNING:"):
                     self._update_warnings.append(line.split(":", 1)[1])
@@ -1384,6 +1520,7 @@ class OsUpdateTab(Gtk.Box):
         self.app = app
         self.installed = read_installed_version()
         self.latest_release = None
+        self.release_notes = None
 
         hero = add_style(Gtk.Box(spacing=14), "spaced-card")
         self.message_icon = add_style(
@@ -1438,8 +1575,13 @@ class OsUpdateTab(Gtk.Box):
         )
         self.updatebtn.set_sensitive(True)
         self.updatebtn.connect("clicked", self.app.do_os_update)
+        self.notesbtn = add_style(Gtk.Button(label="What's new"), "spaced-action")
+        self.notesbtn.hide()
+        self.notesbtn.set_no_show_all(True)
+        self.notesbtn.connect("clicked", self.show_release_notes)
         actions.pack_end(self.updatebtn, False, False, 0)
         actions.pack_end(self.checkbtn, False, False, 0)
+        actions.pack_end(self.notesbtn, False, False, 0)
         self.pack_end(actions, False, False, 0)
 
     def set_message(self, icon, title, detail):
@@ -1501,6 +1643,7 @@ class OsUpdateTab(Gtk.Box):
     def check(self, *_):
         if self.app._busy:
             return
+        self.app._release_check_ran = True
         self.checkbtn.set_sensitive(False)
         self.set_message(
             "content-loading-symbolic",
@@ -1524,11 +1667,14 @@ class OsUpdateTab(Gtk.Box):
                 release = json.load(response)
             if release.get("draft") or not release.get("tag_name"):
                 raise RuntimeError("No published release was returned.")
-            GLib.idle_add(self._check_done, release["tag_name"], None, installed)
+            GLib.idle_add(
+                self._check_done, release["tag_name"], None, installed,
+                release.get("body") or None,
+            )
         except Exception as error:
             GLib.idle_add(self._check_done, None, error, installed)
 
-    def _check_done(self, latest, error, installed=None):
+    def _check_done(self, latest, error, installed=None, notes=None):
         if installed:
             self.installed = installed
             self.inst.set_text(installed)
@@ -1539,6 +1685,8 @@ class OsUpdateTab(Gtk.Box):
             if latest:
                 self.latest.set_text(latest)
                 self.latest_release = latest
+                self.release_notes = notes
+                self.offer_notes_button(latest)
             elif error:
                 self.logline(f"Release feed: {error}")
             return
@@ -1554,6 +1702,8 @@ class OsUpdateTab(Gtk.Box):
 
         self.latest.set_text(latest)
         self.latest_release = latest
+        self.release_notes = notes
+        self.offer_notes_button(latest)
         if self.installed and version_key(latest) > version_key(self.installed):
             self.set_message(
                 "software-update-available-symbolic",
@@ -1577,9 +1727,46 @@ class OsUpdateTab(Gtk.Box):
             )
             self.updatebtn.set_sensitive(not self.app._busy)
 
+    def offer_notes_button(self, version):
+        self.notesbtn.set_label(f"What's new in {version}")
+        self.notesbtn.show()
+
+    def show_release_notes(self, *_):
+        if self.latest_release:
+            self.build_notes_dialog().show()
+
+    def build_notes_dialog(self):
+        # The notes come from the release body the check already downloaded;
+        # an empty body falls back to the repository changelog section, and
+        # a changelog the program cannot read leaves the caller with nothing
+        # to show but the honest notice.
+        version = self.latest_release
+        notes = (
+            self.release_notes
+            or changelog_section(version)
+            or "No notes were published for this release."
+        )
+        dialog = Gtk.Window(transient_for=self.app)
+        dialog.set_title(f"What's new in {version}")
+        dialog.set_default_size(640, 520)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        dialog.add(box)
+        box.pack_start(
+            make_label(f"What's new in {version}", "spaced-title"), False, False, 0
+        )
+        label = make_label("", wrap=True)
+        label.set_selectable(True)
+        label.set_markup(notes_to_markup(notes))
+        box.pack_start(make_scroller(label), True, True, 0)
+        close = Gtk.Button(label="Close")
+        close.connect("clicked", lambda *_: dialog.destroy())
+        box.pack_start(close, False, False, 0)
+        return dialog
+
 
 if __name__ == "__main__":
     application = App()
     application.show_all()
     application.os_tab.progress.hide()
+    application.schedule_autocheck()
     Gtk.main()

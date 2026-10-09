@@ -276,3 +276,4 @@ stage_nm_focus
 stage_meta
 "$ROOT/scripts/iso/stage-amdgpu-top.sh"
 "$ROOT/scripts/iso/stage-marco.sh"
+"$ROOT/scripts/iso/stage-compiz.sh"

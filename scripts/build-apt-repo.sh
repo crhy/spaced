@@ -80,6 +80,16 @@ for source in "$marco_artifacts"/marco_*.dsc "$marco_artifacts"/marco_*.orig.tar
     fi
     cp "$source" "$destination"
 done
+# The rebuilt Compiz (decorator click-area fix, issue #279) is published with its source the same way.
+compiz_artifacts=${SPACED_COMPIZ_ARTIFACT_DIR:-$ROOT/build/compiz/artifacts}
+for source in "$compiz_artifacts"/compiz_*.dsc "$compiz_artifacts"/compiz_*.orig.tar.* "$compiz_artifacts"/compiz_*.debian.tar.*; do
+    [[ -f "$source" ]] || { echo "Missing corresponding Compiz source: $source" >&2; exit 1; }
+    destination="$source_dir/${source##*/}"
+    if [[ -e "$destination" ]] && ! cmp -s "$source" "$destination"; then
+        echo "Refusing to replace published source bytes: $destination" >&2; exit 1
+    fi
+    cp "$source" "$destination"
+done
 (cd "$source_dir" && apt-ftparchive sources .) > "$metadata/$COMP/source/Sources"
 sed -i "s|^Directory: \.$|Directory: dists/$DIST/$COMP/source|" "$metadata/$COMP/source/Sources"
 gzip -n9c "$metadata/$COMP/source/Sources" > "$metadata/$COMP/source/Sources.gz"

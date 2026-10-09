@@ -24,10 +24,10 @@
 	<distance name="left_titlebar_edge" value="6"/>
 	<distance name="right_titlebar_edge" value="6"/>
 	<distance name="title_vertical_pad" value="6"/>
-	<distance name="button_width" value="24"/>
-	<distance name="button_height" value="24"/>
+	<distance name="button_width" value="32"/>
+	<distance name="button_height" value="27"/>
 	<border name="title_border" left="2" right="2" top="5" bottom="0"/>
-	<border name="button_border" left="2" right="2" top="3" bottom="0"/>
+	<border name="button_border" left="0" right="0" top="0" bottom="0"/>
 </frame_geometry>
 
 <frame_geometry name="normal_unfocused" title_scale="medium" rounded_top_left="5" rounded_top_right="5" parent="normal" />
@@ -48,7 +48,7 @@
 
 <frame_geometry name="small" title_scale="small" parent="normal" rounded_top_left="false" rounded_top_right="false">
 	<distance name="title_vertical_pad" value="4"/>
-	<distance name="button_width" value="22"/>
+	<distance name="button_width" value="28"/>
 	<distance name="button_height" value="22"/>
 	<border name="title_border" left="10" right="10" top="0" bottom="1"/>
 	<border name="button_border" left="0" right="0" top="0" bottom="2"/>
@@ -227,19 +227,19 @@
 <!-- note: negative values in x or y causes gnome-shell to crash -->
 <!-- close icon -->
 <draw_ops name="close_focused">
-	<image filename="close_focused_normal.png" x="0" y="1" width="object_width" height="object_height"/>
+	<image filename="close_focused_normal.png" x="(width - object_width) / 2" y="4" width="object_width" height="object_height"/>
 </draw_ops>
 
 <draw_ops name="close_focused_prelight">
-	<image filename="close_focused_prelight.png" x="0" y="1" width="object_width" height="object_height"/>
+	<image filename="close_focused_prelight.png" x="(width - object_width) / 2" y="4" width="object_width" height="object_height"/>
 </draw_ops>
 
 <draw_ops name="close_focused_pressed">
-	<image filename="close_focused_pressed.png" x="0" y="1" width="object_width" height="object_height"/>
+	<image filename="close_focused_pressed.png" x="(width - object_width) / 2" y="4" width="object_width" height="object_height"/>
 </draw_ops>
 
 <draw_ops name="close_unfocused">
-	<image filename="close_unfocused.png" x="0" y="1" width="object_width" height="object_height"/>
+	<image filename="close_unfocused.png" x="(width - object_width) / 2" y="4" width="object_width" height="object_height"/>
 </draw_ops>
 
 <draw_ops name="close_unfocused_prelight">
@@ -252,19 +252,19 @@
 
 <!-- maximize icon -->
 <draw_ops name="maximize_focused">
-	<image filename="maximize_focused_normal.png" x="0" y="1" width="object_width" height="object_height"/>
+	<image filename="maximize_focused_normal.png" x="(width - object_width) / 2" y="4" width="object_width" height="object_height"/>
 </draw_ops>
 
 <draw_ops name="maximize_focused_prelight">
-	<image filename="maximize_focused_prelight.png" x="0" y="1" width="object_width" height="object_height"/>
+	<image filename="maximize_focused_prelight.png" x="(width - object_width) / 2" y="4" width="object_width" height="object_height"/>
 </draw_ops>
 
 <draw_ops name="maximize_focused_pressed">
-	<image filename="maximize_focused_pressed.png" x="0" y="1" width="object_width" height="object_height"/>
+	<image filename="maximize_focused_pressed.png" x="(width - object_width) / 2" y="4" width="object_width" height="object_height"/>
 </draw_ops>
 
 <draw_ops name="maximize_unfocused">
-	<image filename="maximize_unfocused.png" x="0" y="1" width="object_width" height="object_height"/>
+	<image filename="maximize_unfocused.png" x="(width - object_width) / 2" y="4" width="object_width" height="object_height"/>
 </draw_ops>
 
 <draw_ops name="maximize_unfocused_prelight">
@@ -277,19 +277,19 @@
 
 <!-- unmaximize icon -->
 <draw_ops name="unmaximize_focused">
-	<image filename="unmaximize_focused_normal.png" x="0" y="1" width="object_width" height="object_height"/>
+	<image filename="unmaximize_focused_normal.png" x="(width - object_width) / 2" y="4" width="object_width" height="object_height"/>
 </draw_ops>
 
 <draw_ops name="unmaximize_focused_prelight">
-	<image filename="unmaximize_focused_prelight.png" x="0" y="1" width="object_width" height="object_height"/>
+	<image filename="unmaximize_focused_prelight.png" x="(width - object_width) / 2" y="4" width="object_width" height="object_height"/>
 </draw_ops>
 
 <draw_ops name="unmaximize_focused_pressed">
-	<image filename="unmaximize_focused_pressed.png" x="0" y="1" width="object_width" height="object_height"/>
+	<image filename="unmaximize_focused_pressed.png" x="(width - object_width) / 2" y="4" width="object_width" height="object_height"/>
 </draw_ops>
 
 <draw_ops name="unmaximize_unfocused">
-	<image filename="unmaximize_unfocused.png" x="0" y="1" width="object_width" height="object_height"/>
+	<image filename="unmaximize_unfocused.png" x="(width - object_width) / 2" y="4" width="object_width" height="object_height"/>
 </draw_ops>
 
 <draw_ops name="unmaximize_unfocused_prelight">
@@ -302,19 +302,19 @@
 
 <!-- minimize icon -->
 <draw_ops name="minimize_focused">
-	<image filename="minimize_focused_normal.png" x="0" y="1" width="object_width" height="object_height"/>
+	<image filename="minimize_focused_normal.png" x="(width - object_width) / 2" y="4" width="object_width" height="object_height"/>
 </draw_ops>
 
 <draw_ops name="minimize_focused_prelight">
-	<image filename="minimize_focused_prelight.png" x="0" y="1" width="object_width" height="object_height"/>
+	<image filename="minimize_focused_prelight.png" x="(width - object_width) / 2" y="4" width="object_width" height="object_height"/>
 </draw_ops>
 
 <draw_ops name="minimize_focused_pressed">
-	<image filename="minimize_focused_pressed.png" x="0" y="1" width="object_width" height="object_height"/>
+	<image filename="minimize_focused_pressed.png" x="(width - object_width) / 2" y="4" width="object_width" height="object_height"/>
 </draw_ops>
 
 <draw_ops name="minimize_unfocused">
-	<image filename="minimize_unfocused.png" x="0" y="1" width="object_width" height="object_height"/>
+	<image filename="minimize_unfocused.png" x="(width - object_width) / 2" y="4" width="object_width" height="object_height"/>
 </draw_ops>
 
 <draw_ops name="minimize_unfocused_prelight">
@@ -340,19 +340,19 @@
 
 <!-- shade icon -->
 <draw_ops name="shade_focused">
-	<image filename="shade_focused_normal.png" x="0" y="1" width="object_width" height="object_height"/>
+	<image filename="shade_focused_normal.png" x="(width - object_width) / 2" y="4" width="object_width" height="object_height"/>
 </draw_ops>
 
 <draw_ops name="shade_focused_prelight">
-	<image filename="shade_focused_prelight.png" x="0" y="1" width="object_width" height="object_height"/>
+	<image filename="shade_focused_prelight.png" x="(width - object_width) / 2" y="4" width="object_width" height="object_height"/>
 </draw_ops>
 
 <draw_ops name="shade_focused_pressed">
-	<image filename="shade_focused_pressed.png" x="0" y="1" width="object_width" height="object_height"/>
+	<image filename="shade_focused_pressed.png" x="(width - object_width) / 2" y="4" width="object_width" height="object_height"/>
 </draw_ops>
 
 <draw_ops name="shade_unfocused">
-	<image filename="shade_unfocused.png" x="0" y="1" width="object_width" height="object_height"/>
+	<image filename="shade_unfocused.png" x="(width - object_width) / 2" y="4" width="object_width" height="object_height"/>
 </draw_ops>
 
 <draw_ops name="shade_unfocused_prelight">
@@ -365,19 +365,19 @@
 
 <!-- unshade icon -->
 <draw_ops name="unshade_focused">
-	<image filename="unshade_focused_normal.png" x="0" y="1" width="object_width" height="object_height"/>
+	<image filename="unshade_focused_normal.png" x="(width - object_width) / 2" y="4" width="object_width" height="object_height"/>
 </draw_ops>
 
 <draw_ops name="unshade_focused_prelight">
-	<image filename="unshade_focused_prelight.png" x="0" y="1" width="object_width" height="object_height"/>
+	<image filename="unshade_focused_prelight.png" x="(width - object_width) / 2" y="4" width="object_width" height="object_height"/>
 </draw_ops>
 
 <draw_ops name="unshade_focused_pressed">
-	<image filename="unshade_focused_pressed.png" x="0" y="1" width="object_width" height="object_height"/>
+	<image filename="unshade_focused_pressed.png" x="(width - object_width) / 2" y="4" width="object_width" height="object_height"/>
 </draw_ops>
 
 <draw_ops name="unshade_unfocused">
-	<image filename="unshade_unfocused.png" x="0" y="1" width="object_width" height="object_height"/>
+	<image filename="unshade_unfocused.png" x="(width - object_width) / 2" y="4" width="object_width" height="object_height"/>
 </draw_ops>
 
 <draw_ops name="unshade_unfocused_prelight">

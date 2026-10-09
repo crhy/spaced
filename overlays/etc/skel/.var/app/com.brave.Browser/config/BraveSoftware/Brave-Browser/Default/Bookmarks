@@ -1,57 +1,196 @@
 {
-  "checksum": "dedbf1dbb2ac125036a928c82a7d8255",
+  "checksum": "2827e1640e5c2f6da82f68515ce4e709",
   "roots": {
     "bookmark_bar": {
       "children": [
         {
-          "date_added": "13401120000000000",
+          "children": [
+            {
+              "date_added": "13401120000000000",
+              "date_last_used": "0",
+              "guid": "09dd44f3-7b08-41df-af53-df47c1b508bf",
+              "id": "3",
+              "name": "🚀 Spaced Linux",
+              "type": "url",
+              "url": "https://spacedlinux.com/"
+            },
+            {
+              "date_added": "13401120000000021",
+              "date_last_used": "0",
+              "guid": "80fdd2c4-ee39-5dd2-a3f5-53826b1d5803",
+              "id": "10",
+              "name": "🗣 Voxa",
+              "type": "url",
+              "url": "https://voxaai.me/"
+            },
+            {
+              "date_added": "13401120000000002",
+              "date_last_used": "0",
+              "guid": "f538e3df-9219-4825-ab04-e8ee68c9bc37",
+              "id": "5",
+              "name": "🏛 rhYciv",
+              "type": "url",
+              "url": "https://rhyciv.org/"
+            },
+            {
+              "date_added": "13401120000000003",
+              "date_last_used": "0",
+              "guid": "7dbbb924-e783-4332-854d-3113e869003d",
+              "id": "6",
+              "name": "🐱 Cards With Cats",
+              "type": "url",
+              "url": "https://crhy.github.io/CardsWithCats/"
+            },
+            {
+              "date_added": "13401120000000001",
+              "date_last_used": "0",
+              "guid": "ae14aa02-70e8-4eb5-9ed1-53ac74ea2d92",
+              "id": "2",
+              "name": "🎈 Open AirShips",
+              "type": "url",
+              "url": "https://openairships.com/"
+            },
+            {
+              "date_added": "13401120000000004",
+              "date_last_used": "0",
+              "guid": "52902d4d-f86a-43d6-a6dd-a4582a3b75cd",
+              "id": "4",
+              "name": "🐧 Devuan",
+              "type": "url",
+              "url": "https://www.devuan.org/"
+            },
+            {
+              "date_added": "13401120000000071",
+              "date_last_used": "0",
+              "guid": "d4df0087-d25a-56fa-9f5c-288539dd4818",
+              "id": "23",
+              "name": "📊 DistroWatch",
+              "type": "url",
+              "url": "https://distrowatch.com/table.php?distribution=spaced"
+            }
+          ],
+          "date_added": "13401120000000010",
           "date_last_used": "0",
-          "guid": "09dd44f3-7b08-41df-af53-df47c1b508bf",
-          "id": "3",
-          "name": "SpacedLinux",
-          "type": "url",
-          "url": "https://spacedlinux.com/"
+          "date_modified": "13401120000000071",
+          "guid": "7457ac3a-5ff7-5d0d-a2b8-1764287ad04e",
+          "id": "11",
+          "name": "🚀 Spaced",
+          "type": "folder"
         },
         {
-          "date_added": "13401120000000001",
+          "children": [
+            {
+              "date_added": "13401120000000005",
+              "date_last_used": "0",
+              "guid": "c2d5848b-124e-5817-9b65-35cdde088b10",
+              "id": "9",
+              "name": "Voat",
+              "type": "url",
+              "url": "https://voat.xyz/v/linux"
+            },
+            {
+              "date_added": "13401120000000041",
+              "date_last_used": "0",
+              "guid": "30e20f7e-9012-57ae-94f4-701944a5c23b",
+              "id": "12",
+              "name": "openDemocracy",
+              "type": "url",
+              "url": "https://www.opendemocracy.net/"
+            },
+            {
+              "date_added": "13401120000000042",
+              "date_last_used": "0",
+              "guid": "8df44bbf-2849-5b39-98dc-70b2cc121e70",
+              "id": "13",
+              "name": "Drop Site News",
+              "type": "url",
+              "url": "https://www.dropsitenews.com/"
+            },
+            {
+              "date_added": "13401120000000043",
+              "date_last_used": "0",
+              "guid": "413c24e4-25d3-5bc0-8ed4-6061752867b2",
+              "id": "14",
+              "name": "Breitbart",
+              "type": "url",
+              "url": "https://www.breitbart.com/"
+            },
+            {
+              "date_added": "13401120000000044",
+              "date_last_used": "0",
+              "guid": "3e4c9ca0-9ced-5dfd-ae7b-32706a176a3d",
+              "id": "15",
+              "name": "Natural News",
+              "type": "url",
+              "url": "https://naturalnews.com/"
+            },
+            {
+              "date_added": "13401120000000045",
+              "date_last_used": "0",
+              "guid": "0953323f-788d-586d-9fe6-81685c82f6da",
+              "id": "16",
+              "name": "Cryptogon",
+              "type": "url",
+              "url": "https://www.cryptogon.com/"
+            },
+            {
+              "date_added": "13401120000000046",
+              "date_last_used": "0",
+              "guid": "170fd713-e1d5-5d4f-99b5-b571c363b50a",
+              "id": "17",
+              "name": "ZeroHedge",
+              "type": "url",
+              "url": "https://www.zerohedge.com/"
+            },
+            {
+              "date_added": "13401120000000047",
+              "date_last_used": "0",
+              "guid": "eaf5a8f7-6f1b-5f06-ac51-b5753884ff28",
+              "id": "18",
+              "name": "Consortium News",
+              "type": "url",
+              "url": "https://consortiumnews.com/"
+            },
+            {
+              "date_added": "13401120000000048",
+              "date_last_used": "0",
+              "guid": "dfc83ca5-99d6-5808-94e0-6ea6c4d28e06",
+              "id": "19",
+              "name": "Vaccine Impact",
+              "type": "url",
+              "url": "https://vaccineimpact.com/"
+            },
+            {
+              "date_added": "13401120000000049",
+              "date_last_used": "0",
+              "guid": "a73eb354-20c2-5857-9b3e-e3efe1053882",
+              "id": "20",
+              "name": "Rense",
+              "type": "url",
+              "url": "https://rense.com/"
+            },
+            {
+              "date_added": "13401120000000050",
+              "date_last_used": "0",
+              "guid": "620a4f1c-f61b-5cba-8dc8-c90247b40ed7",
+              "id": "21",
+              "name": "reallygraceful",
+              "type": "url",
+              "url": "https://www.youtube.com/@reallygraceful"
+            }
+          ],
+          "date_added": "13401120000000039",
           "date_last_used": "0",
-          "guid": "ae14aa02-70e8-4eb5-9ed1-53ac74ea2d92",
-          "id": "2",
-          "name": "OpenAirShips",
-          "type": "url",
-          "url": "https://openairships.com/"
-        },
-        {
-          "date_added": "13401120000000002",
-          "date_last_used": "0",
-          "guid": "f538e3df-9219-4825-ab04-e8ee68c9bc37",
-          "id": "5",
-          "name": "rhYciv",
-          "type": "url",
-          "url": "https://rhyciv.org/"
-        },
-        {
-          "date_added": "13401120000000003",
-          "date_last_used": "0",
-          "guid": "7dbbb924-e783-4332-854d-3113e869003d",
-          "id": "6",
-          "name": "Cards",
-          "type": "url",
-          "url": "https://crhy.github.io/CardsWithCats/"
-        },
-        {
-          "date_added": "13401120000000004",
-          "date_last_used": "0",
-          "guid": "52902d4d-f86a-43d6-a6dd-a4582a3b75cd",
-          "id": "4",
-          "name": "Devuan",
-          "type": "url",
-          "url": "https://www.devuan.org/"
+          "date_modified": "13401120000000060",
+          "guid": "0738b7c7-8c04-55d4-995d-ae06eef0f9dc",
+          "id": "22",
+          "name": "📰 News",
+          "type": "folder"
         }
       ],
       "date_added": "13401120000000000",
       "date_last_used": "0",
-      "date_modified": "13401120000000004",
+      "date_modified": "13401120000000060",
       "guid": "00000000-0000-4000-a000-000000000002",
       "id": "1",
       "name": "Bookmarks bar",

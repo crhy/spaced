@@ -1,0 +1,43 @@
+#!/bin/bash
+# Fallback MIME handler for links no installed app can open (issue #290):
+# a magnet or .torrent link asks in one small dialog whether to install the
+# app that handles it, and on Install opens Spaced Bazaar on that app's page.
+# The URI is only ever handed to an installed handler; it is never shown, so
+# arbitrary link text cannot reach the dialog.
+# Usage: spaced-suggest-app <flatpak app id> <friendly name> [uri]
+
+app_id="${1:-}"
+name="${2:-}"
+uri="${3:-}"
+
+[ -n "$app_id" ] && [ -n "$name" ] || exit 0
+
+# This handler stays in mimeapps.list after the app is installed and outranks
+# it there, so once any real handler exists the link goes straight to it.
+case "$uri" in
+    magnet:*) mime_type=x-scheme-handler/magnet ;;
+    *) mime_type=application/x-bittorrent ;;
+esac
+if [ -n "$uri" ] && python3 - "$mime_type" "$uri" 2>/dev/null <<'PY'
+import sys
+from gi.repository import Gio
+for app in Gio.AppInfo.get_all_for_type(sys.argv[1]):
+    if not app.get_id().startswith("spaced-suggest-"):
+        sys.exit(0 if app.launch_uris([sys.argv[2]], None) else 1)
+sys.exit(1)
+PY
+then
+    exit 0
+fi
+
+if command -v zenity >/dev/null 2>&1; then
+    zenity --question --no-wrap \
+        --title="Install $name?" \
+        --text="$name is needed to open this link. Install it now?" \
+        --ok-label=Install \
+        --cancel-label=Cancel
+    if [ $? -eq 0 ] && command -v flatpak >/dev/null 2>&1; then
+        flatpak run io.github.crhy.SpacedBazaar "appstream://$app_id" >/dev/null 2>&1 &
+    fi
+fi
+exit 0

@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Spaced Linux — Devuan Desktop · 10.26.1</title>
-  <meta name="description" content="Spaced Linux is a polished, beginner-friendly and power-user-ready Devuan desktop with MATE, Compiz, sysvinit, Flatpak, and Calamares.">
+  <title>Spaced Linux — Devuan Desktop · 10.26.2</title>
+  <meta name="description" content="Spaced Linux is a free desktop you can talk to. Familiar to Windows users, private by design, and easy to try from a USB stick without installing anything.">
   <meta name="theme-color" content="#080a0f">
-  <meta property="og:title" content="Spaced Linux — 10.26.1">
-  <meta property="og:description" content="Linux that feels familiar. Freedom that goes deeper.">
+  <meta property="og:title" content="Spaced Linux — 10.26.2">
+  <meta property="og:description" content="Talk to your computer. Keep it yours. A free, familiar desktop you can try from a USB stick.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://spacedlinux.com/">
   <meta property="og:image" content="https://spacedlinux.com/assets/screenshots/desktop-compiz.webp">
@@ -26,6 +26,8 @@
   </a>
   <button class="menu" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
   <nav id="site-nav">
+    <a href="#install">Install</a>
+    <a href="#voxa">Voxa</a>
     <a href="#why">Why Spaced</a>
     <a href="/themes.html">Themes</a>
     <a href="#desktop">Desktop</a>
@@ -33,7 +35,7 @@
     <a href="#advanced">Advanced</a>
     <a href="#donate">Donate</a>
     <a href="#build">Build</a>
-    <a class="download" href="https://github.com/crhy/spaced/releases">Download</a>
+    <a class="download" href="#install">Download</a>
   </nav>
 </header>
 
@@ -43,20 +45,64 @@
   <div class="hero-overlay"></div>
   <div class="hero-content">
     <div class="hero-copy">
-      <p class="kicker">SPACED LINUX · 10.26.1</p>
-      <h1>Linux that feels familiar.<br><span>Freedom that goes deeper.</span></h1>
-      <p class="lead">A beautiful, systemd-free desktop that combines MATE, Compiz, Devuan, and modern application delivery into one polished experience.</p>
+      <p class="kicker">SPACED LINUX · 10.26.2</p>
+      <h1>Talk to your computer.<br><span>Keep it yours.</span></h1>
+      <p class="lead">Spaced Linux is a free desktop that looks the way you are used to, comes with a voice assistant that runs on your own hardware, and never asks you to sign in to use your own PC.</p>
       <div class="actions">
-        <a class="button primary" href="https://github.com/crhy/spaced/releases/tag/v10.26.1">Download Spaced Linux 10.26.1</a>
-        <a class="button" href="/help.html#testing">Explore Spaced Linux 10.26.1</a>
+        <a class="button primary" href="#install">Download Spaced Linux 10.26.2</a>
+        <a class="button" href="#install">Try it without installing</a>
       </div>
-      <div class="pills"><span>Devuan Ceres</span><span>sysvinit</span><span>MATE</span><span>Compiz</span><span>Flatpak</span><span>Calamares</span></div>
+      <div class="pills"><span>Free and open source</span><span>No account</span><span>No systemd</span><span>MATE + Compiz</span><span>Devuan</span><span><a href="https://distrowatch.com/table.php?distribution=spaced">On DistroWatch</a></span></div>
     </div>
     <button class="hero-preview screenshot-button" type="button" data-image="/assets/screenshots/desktop-compiz.webp" data-title="Spaced Linux Compiz workspace cube" aria-label="Open Spaced Linux desktop screenshot">
-      <img src="/assets/screenshots/desktop-compiz.webp" alt="Spaced Linux Compiz workspace cube with a terminal">
+      <img src="/assets/screenshots/desktop-compiz.webp" alt="Spaced Linux Compiz workspace cube with a browser and terminals">
       <span><b>Compiz is the workspace</b><small>From a published Spaced desktop.</small></span>
     </button>
   </div>
+</section>
+
+<section id="install" class="section">
+  <div class="heading">
+    <p class="kicker">THREE STEPS</p>
+    <h2>Try it today. Install it when you are sure.</h2>
+    <p>Spaced Linux runs straight from a USB stick. Nothing on your computer changes until you choose to install.</p>
+  </div>
+  <div class="grid steps">
+    <article><small>1</small><h3>Download</h3><p>One file, 1.6 GB, for any 64-bit PC.</p>
+      <p><a class="button primary" href="https://github.com/crhy/spaced/releases/download/v10.26.2/spaced-linux-10.26.2-amd64.iso">Download the ISO</a></p>
+      <p class="checksum">SHA-256 <code>eb963fe2d4b75c5e6eedbdfe92cd687df44b8b2c85bec5977bbf5cc3d0590d45</code></p>
+      <p><a href="https://github.com/crhy/spaced/releases/tag/v10.26.2">All files and release notes →</a></p></article>
+    <article><small>2</small><h3>Put it on a USB stick</h3><p>Any stick of 4 GB or more. Everything on the stick is erased.</p>
+      <p>On Windows use <a href="https://rufus.ie/">Rufus</a>; on Windows, Mac or Linux use <a href="https://etcher.balena.io/">balenaEtcher</a>. Choose the file you downloaded, choose the stick, press start.</p></article>
+    <article><small>3</small><h3>Start your PC from the stick</h3><p>Restart with the stick plugged in and pick it from the boot menu (often F12, F9 or Esc as the PC starts). Spaced Linux opens as a complete desktop you can use straight away.</p>
+      <p>When you like it, the Install icon on the desktop puts it on your disk. <a href="/help.html">Help with each step →</a></p></article>
+  </div>
+</section>
+
+<section id="voxa" class="feature feature-shot">
+  <button class="screenshot-button" type="button" data-image="/assets/screenshots/voxa-grace.webp" data-title="Voxa, the voice assistant for Spaced Linux">
+    <img src="/assets/screenshots/voxa-grace.webp" loading="lazy" alt="Voxa, the Spaced Linux voice assistant, with its Active, Pause and Offline controls">
+  </button>
+  <div>
+    <p class="kicker">VOXA, THE VOICE OF SPACED LINUX</p>
+    <h2>Say it. It happens.</h2>
+    <p>“Voxa, open LibreOffice.” “Start dictation.” “Play some jazz.” “What time is it?” Voxa opens apps, types what you say, plays music, sets reminders and looks things up, and she hears you over your own speakers.</p>
+    <p>Speech recognition and the AI model run on your computer. No account, no subscription, and you choose the model.</p>
+    <a href="https://voxaai.me">See everything Voxa can do →</a>
+  </div>
+</section>
+
+<section id="windows" class="feature feature-shot reverse">
+  <div>
+    <p class="kicker">COMING FROM WINDOWS?</p>
+    <h2>Your PC still works. Keep using it.</h2>
+    <p>Windows 10 is no longer supported, and many good computers are not allowed to run Windows 11. Spaced Linux runs on them, costs nothing, and can look like the desktop you already know: there are ten complete themes, including Windows XP and Windows 11 styles.</p>
+    <p>Your files stay yours, updates never restart your PC without asking, and there is no advertising in the desktop.</p>
+    <a href="/themes.html">See the themes →</a>
+  </div>
+  <button class="screenshot-button" type="button" data-image="/assets/screenshots/desktop-themes-six-tall.webp" data-title="Six of the ten Spaced Linux themes">
+    <img src="/assets/screenshots/desktop-themes-six-tall.webp" loading="lazy" alt="Six Spaced Linux themes: Spaced Dark, Spaced Light, macOS, Windows 11, Windows XP and Android styles">
+  </button>
 </section>
 
 <section id="why" class="section">
@@ -100,7 +146,7 @@
     </figure>
     <figure class="shot">
       <button class="screenshot-button" type="button" data-image="/assets/screenshots/desktop-compiz.webp" data-title="Compiz workspace cube">
-        <img src="/assets/screenshots/desktop-compiz.webp" loading="lazy" alt="Spaced Linux Compiz workspace cube with a terminal">
+        <img src="/assets/screenshots/desktop-compiz.webp" loading="lazy" alt="Spaced Linux Compiz workspace cube with a browser and terminals">
       </button>
       <figcaption><b>Compiz-first</b><span>Real workspace organization, visual positioning, and accessibility—not a decorative afterthought.</span></figcaption>
     </figure>
@@ -122,9 +168,9 @@
       </button>
       <figcaption><b>One coordinated identity</b><span>GTK, icons, wallpaper, panels, and Compiz presentation change together.</span></figcaption>
     </figure>
-    <figure class="shot">
-      <button class="screenshot-button" type="button" data-image="/assets/screenshots/desktop-themes-current.webp" data-title="Coordinated Spaced Linux themes">
-        <img src="/assets/screenshots/desktop-themes-current.webp" loading="lazy" alt="Spaced Linux theme chooser displayed across the Compiz workspace cube">
+    <figure class="shot shot-wide shot-natural">
+      <button class="screenshot-button" type="button" data-image="/assets/screenshots/desktop-themes-six.webp" data-title="Six of the ten Spaced Linux themes">
+        <img src="/assets/screenshots/desktop-themes-six.webp" loading="lazy" alt="Six Spaced Linux themes: Spaced Dark, Spaced Light, macOS, Windows 11, Windows XP and Android styles">
       </button>
       <figcaption><b>A desktop with range</b><span>Coordinated themes change the complete environment while preserving familiar behavior.</span></figcaption>
     </figure>
@@ -138,7 +184,7 @@
       <button class="screenshot-button" type="button" data-image="/assets/screenshots/desktop-ai-tools.webp" data-title="Voxa local speech recognition">
         <img src="/assets/screenshots/desktop-ai-tools.webp" loading="lazy" alt="Spaced Linux running the Voxa local speech-to-text application">
       </button>
-      <figcaption><b>Private AI on your desktop</b><span>Voxa transcribes speech locally, keeping audio on-device with the rest of the flatpak workflow.</span></figcaption>
+      <figcaption><b>Private AI on your desktop</b><span>Voxa recognises speech on your own hardware and carries out what you ask.</span></figcaption>
     </figure>
   </div>
 </section>
@@ -156,7 +202,7 @@
 <section id="help" class="section">
   <div class="heading"><p class="kicker">HELP WHEN YOU NEED IT</p><h2>Learn the desktop. Find the right app.</h2><p>Spaced Welcome includes a concise Compiz quick start and task-based app suggestions. Each suggestion opens the exact app page in SpacedBazaar, ready to install.</p></div>
   <div class="grid">
-    <article><h3>Compiz quick start</h3><p>Rotate the cube with Ctrl+Alt+left-drag and zoom with Shift+Super+mouse wheel. In 9.26, use Shift+Print to capture an area.</p></article>
+    <article><h3>Compiz quick start</h3><p>Rotate the cube with Ctrl+Alt+left-drag and zoom with Shift+Super+mouse wheel. Use Shift+Print to capture an area.</p></article>
     <article><h3>Choose by task</h3><p>Start with what you want to do—edit video, create graphics, record audio, play games, communicate, or write code.</p></article>
     <article><h3>Safe experimentation</h3><p>After setup, check Timeshift for the “Fresh install” restore point and confirm snapshots work on your disk layout. Keep a separate backup of personal files.</p></article>
   </div>
@@ -219,7 +265,7 @@
   <div>
     <p class="kicker">READY FOR MORE SPACE?</p>
     <h2>Try a desktop built around your freedom and the true spirit of Linux: modular, transparent, and free of systemd.</h2>
-    <div class="actions"><a class="button primary" href="https://github.com/crhy/spaced/releases/tag/v10.26.1">Download Spaced Linux 10.26.1</a><a class="button" href="https://github.com/crhy/spaced/issues">Join the project</a></div>
+    <div class="actions"><a class="button primary" href="#install">Download Spaced Linux 10.26.2</a><a class="button" href="https://distrowatch.com/table.php?distribution=spaced">Spaced Linux on DistroWatch</a><a class="button" href="https://github.com/crhy/spaced/issues">Join the project</a></div>
   </div>
 </section>
 </main>
@@ -227,7 +273,7 @@
 <footer>
   <div class="brand"><img src="/assets/spaced-icon-fancy.png" alt=""><span>SPACED <b>LINUX</b></span></div>
   <p>Spaced. Polished. Agile. Compiz. Efficient. Devuan.</p>
-  <div><a href="https://github.com/crhy/spaced">GitHub</a> · <a href="/themes.html">Themes</a> · <a href="https://github.com/crhy/spaced/releases">Releases</a> · <a href="#donate">Donate</a> · <a href="https://github.com/crhy/spaced/issues">Issues</a> · <a href="/help.html">Help</a> · <a href="https://discord.gg/BMW9Y6NB3y">Discord</a> · <a href="https://t.me/+pjmFzHo-i9A2ZWY5">Telegram</a></div>
+  <div><a href="https://github.com/crhy/spaced">GitHub</a> · <a href="/themes.html">Themes</a> · <a href="https://github.com/crhy/spaced/releases">Releases</a> · <a href="https://distrowatch.com/table.php?distribution=spaced">DistroWatch</a> · <a href="https://voxaai.me">Voxa</a> · <a href="#donate">Donate</a> · <a href="https://github.com/crhy/spaced/issues">Issues</a> · <a href="/help.html">Help</a> · <a href="https://discord.gg/BMW9Y6NB3y">Discord</a> · <a href="https://t.me/+pjmFzHo-i9A2ZWY5">Telegram</a></div>
 </footer>
 
 <dialog class="lightbox" id="lightbox" aria-label="Screenshot viewer">

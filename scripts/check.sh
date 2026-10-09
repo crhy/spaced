@@ -128,6 +128,12 @@ for path in (
 # image. Do not require an unpublished ISO URL merely to match VERSION.
 assert version in Path("website/index.html").read_text(encoding="utf-8"), \
     "website/index.html does not identify the current development line"
+website_home = Path("website/index.html").read_text(encoding="utf-8")
+assert f"spaced-linux-{version}-amd64.iso" in website_home or "releases/download/" in website_home, \
+    "the website's install steps do not link the ISO directly"
+assert "distrowatch.com/table.php?distribution=spaced" in website_home \
+    and "distrowatch.com/table.php?distribution=spaced" in Path("README.md").read_text(encoding="utf-8"), \
+    "the website and README do not link Spaced Linux on DistroWatch"
 for path in ("website/index.html", "website/themes.html", "website/help.html"):
     website_page = Path(path).read_text(encoding="utf-8")
     assert "https://github.com/crhy/spaced/releases" in website_page, \
@@ -347,12 +353,12 @@ for theme in themes:
             f"{name} v{metacity_version}: normal titlebar click target is too small"
         assert '<distance name="title_vertical_pad" value="4"/>' in metacity, \
             f"{name} v{metacity_version}: utility titlebar click target is too small"
-        assert '<distance name="button_width" value="24"/>' in metacity \
-            and '<distance name="button_height" value="24"/>' in metacity, \
-            f"{name} v{metacity_version}: normal titlebar buttons lack the 24px hitbox"
-        assert '<distance name="button_width" value="22"/>' in metacity \
+        assert '<distance name="button_width" value="32"/>' in metacity \
+            and '<distance name="button_height" value="27"/>' in metacity, \
+            f"{name} v{metacity_version}: normal titlebar buttons lack the 32x27px hitbox (issue #279)"
+        assert '<distance name="button_width" value="28"/>' in metacity \
             and '<distance name="button_height" value="22"/>' in metacity, \
-            f"{name} v{metacity_version}: utility titlebar buttons lack the 22px hitbox"
+            f"{name} v{metacity_version}: utility titlebar buttons lack the 28x22px hitbox (issue #279)"
         assert '<aspect_ratio name="button"' not in metacity, \
             f"{name} v{metacity_version}: Marco rejects aspect ratio with explicit button dimensions"
         assert 'width="width" height="19"' not in metacity, \
@@ -449,7 +455,7 @@ for split_control in (themes_control, wallpapers_control):
         and "Replaces: spaced-mate-default-settings (<< 9.26.3-1)" in split_control, \
         "split artwork package lacks the Breaks/Replaces takeover for upgrades"
 assert f"spaced-mate-default-settings (= {package_version})" in meta_control \
-    and "spaced-welcome (>= 0.1.18)" in meta_control \
+    and "spaced-welcome (>= 0.1.19)" in meta_control \
     and "libfuse2t64" in meta_control, \
     "spaced-meta does not pull in the standalone Welcome package and desktop defaults"
 # The artwork split moves payload out of spaced-mate-default-settings. No
@@ -489,7 +495,7 @@ def artifact_default(name):
     return match.group(1)
 
 assert artifact_default("SPACED_WELCOME_REPOSITORY") == "crhy/spacedwelcome"
-assert artifact_default("SPACED_WELCOME_VERSION") == "0.1.18"
+assert artifact_default("SPACED_WELCOME_VERSION") == "0.1.19"
 assert artifact_default("SPACED_GITHUB_REMOTE_NAME") == "spaced-github"
 assert artifact_default("SPACED_GITHUB_REMOTE_DESCRIPTOR_URL") == \
     "https://crhy.github.io/spacedbazaar/spaced-github.flatpakrepo"
@@ -884,8 +890,44 @@ assert "x-scheme-handler/http=com.brave.Browser.desktop" in skel_mimeapps \
     and "x-scheme-handler/https=com.brave.Browser.desktop" in skel_mimeapps \
     and "text/html=com.brave.Browser.desktop" in skel_mimeapps, \
     "new user profiles do not preserve Brave as the web handler (issue #35)"
+suggest_app_path = root / "usr/local/bin/spaced-suggest-app"
+assert suggest_app_path.is_file() and suggest_app_path.stat().st_mode & 0o111, \
+    "magnet/torrent fallback suggester is missing or not executable (issue #290)"
+suggest_app = suggest_app_path.read_text(encoding="utf-8")
+assert "zenity --question" in suggest_app and "io.github.crhy.SpacedBazaar" in suggest_app \
+    and "exit 0" in suggest_app, \
+    "spaced-suggest-app does not ask with zenity and open Spaced Bazaar (issue #290)"
+assert "get_all_for_type" in suggest_app and "launch_uris" in suggest_app, \
+    "spaced-suggest-app does not hand links to an installed handler, so it would keep asking (issue #290)"
+software_stub_path = root / "usr/local/bin/gnome-software"
+assert software_stub_path.is_file() and software_stub_path.stat().st_mode & 0o111, \
+    "gnome-software stand-in for the portal's Find More in Software is missing or not executable (issue #290)"
+software_stub = software_stub_path.read_text(encoding="utf-8")
+assert "io.github.crhy.SpacedBazaar" in software_stub and "--search-for" in software_stub \
+    and "appstream://" in software_stub, \
+    "gnome-software stand-in does not open Spaced Bazaar on a search or an app page (issue #290)"
+suggest_desktop = (root / "usr/share/applications/spaced-suggest-qbittorrent.desktop").read_text(encoding="utf-8")
+assert "Type=Application" in suggest_desktop and "Name=" in suggest_desktop \
+    and "Exec=spaced-suggest-app org.qbittorrent.qBittorrent qBittorrent %u" in suggest_desktop, \
+    "qBittorrent suggester desktop file is missing required keys (issue #290)"
+assert "MimeType=x-scheme-handler/magnet;application/x-bittorrent;" in suggest_desktop \
+    and "NoDisplay=true" in suggest_desktop, \
+    "qBittorrent suggester desktop file does not claim magnet and torrent links (issue #290)"
+for mimeapps_path, mimeapps_text in (
+    ("usr/share/applications/mimeapps.list", mimeapps),
+    ("etc/skel/.config/mimeapps.list", skel_mimeapps),
+):
+    default_part, _, added_part = mimeapps_text.partition("[Added Associations]")
+    assert "x-scheme-handler/magnet=spaced-suggest-qbittorrent.desktop;" in added_part \
+        and "application/x-bittorrent=spaced-suggest-qbittorrent.desktop;" in added_part \
+        and "spaced-suggest-qbittorrent" not in default_part, \
+        f"{mimeapps_path} does not associate magnet and torrent links with the suggester as an added association (issue #290)"
 gschema = (root / "usr/share/glib-2.0/schemas/90_spaced-linux.gschema.override").read_text(encoding="utf-8")
 assert "text-scaling-factor=1.2" in gschema, "HiDPI text scaling is not configured (issue #6/#64)"
+assert gschema.count("font-name='Roboto 10'") == 4 and "titlebar-font='Roboto Bold 10'" in gschema \
+    and "\nfont='Roboto 10'" in gschema and "fonts-roboto-unhinted" in packages \
+    and "fonts-roboto-unhinted" in Path("packages/spaced-mate-default-settings/DEBIAN/control").read_text(encoding="utf-8"), \
+    "Roboto is not the default interface, document, desktop and title-bar font, or its package is not shipped (issue #286)"
 wallpaper_catalog = (root / "usr/share/mate-background-properties/spaced-linux.xml").read_text(encoding="utf-8")
 assert "SimpleBackb.png" in wallpaper_catalog, "GRUB background is missing from MATE wallpapers"
 assert "spaced-orbit-4k.jpg" in wallpaper_catalog, "Spaced Orbit wallpaper is missing"
@@ -976,6 +1018,26 @@ assert brave_policy["BraveP3AEnabled"] is False \
     and brave_policy["BraveNewsDisabled"] is True \
     and brave_policy["BraveRewardsDisabled"] is True, \
     "Brave privacy, search, news, and rewards defaults are not disabled (issue #196)"
+for policy_key, policy_value in (
+    ("SafeBrowsingProtectionLevel", 0),
+    ("SafeBrowsingExtendedReportingEnabled", False),
+    ("MetricsReportingEnabled", False),
+    ("UrlKeyedAnonymizedDataCollectionEnabled", False),
+    ("SearchSuggestEnabled", False),
+    ("AlternateErrorPagesEnabled", False),
+    ("BackgroundModeEnabled", False),
+    ("DefaultBrowserSettingEnabled", False),
+    ("PromotionalTabsEnabled", False),
+    ("FeedbackSurveysEnabled", False),
+    ("BraveAIChatEnabled", False),
+    ("BraveWalletDisabled", True),
+    ("BraveVPNDisabled", True),
+    ("BraveTalkDisabled", True),
+):
+    assert policy_key in brave_policy and brave_policy[policy_key] == policy_value, \
+        f"Brave policy {policy_key} is not set as requested (issue #282)"
+assert brave_policy.get("TorDisabled") is not True, \
+    "Brave's private windows with Tor must stay available (issue #282)"
 menu_on_dark = icon_root / "Spaced-Menu-On-Dark/scalable/places"
 menu_on_light = icon_root / "Spaced-Menu-On-Light/scalable/places"
 for menu_directory, color in ((menu_on_dark, "#b8bcc2"), (menu_on_light, "#202020")):
@@ -1123,6 +1185,27 @@ assert 'VERSION_ID' in system_info and 'https://spacedlinux.com/#donate' in syst
 assert not (root / "usr/share/applications/mate-about.desktop").exists(), \
     "Spaced System Info collides with mate-desktop instead of using the /usr/local override"
 
+for theme_file in sorted((root / "usr/share/themes").glob("*/metacity-1/metacity-theme-*.xml")):
+    normal_geometry = re.search(r'<frame_geometry name="normal"[^>]*>(.*?)</frame_geometry>',
+                                theme_file.read_text(encoding="utf-8"), re.S).group(1)
+    button_width = int(re.search(r'name="button_width" value="(\d+)"', normal_geometry).group(1))
+    button_height = int(re.search(r'name="button_height" value="(\d+)"', normal_geometry).group(1))
+    assert button_width >= 30 and button_height >= 26, \
+        f"{theme_file.parent.parent.name}: title-bar buttons are smaller than 30x26 px to click (issue #279)"
+    assert '<border name="button_border" left="0" right="0" top="0" bottom="0"/>' in normal_geometry, \
+        f"{theme_file.parent.parent.name}: dead pixels between or above the title-bar buttons (issue #279)"
+
+compiz_patch = Path("patches/compiz/0001-gwd-button-click-area.patch").read_text(encoding="utf-8")
+assert "-        *y = *y + fgeom.borders.invisible.top;" in compiz_patch, \
+    "the Compiz decorator patch no longer removes the displaced button click area (issue #279)"
+assert len(Path("patches/compiz/sources.sha256").read_text(encoding="utf-8").split()) == 6, \
+    "the Compiz source archives are not pinned by SHA-256"
+for compiz_script, needle in (("scripts/iso/build-marco-chroot.sh", "build-compiz.sh"),
+                              ("scripts/iso/build-local-packages.sh", "stage-compiz.sh"),
+                              ("scripts/build-apt-repo.sh", "compiz_artifacts")):
+    assert needle in Path(compiz_script).read_text(encoding="utf-8"), \
+        f"{compiz_script} does not build, stage or publish the rebuilt Compiz (issue #279)"
+
 brave_profile = root / "etc/skel/.var/app/com.brave.Browser/config/BraveSoftware/Brave-Browser/Default"
 brave_bookmarks = json.loads((brave_profile / "Bookmarks").read_text(encoding="utf-8"))
 brave_preferences = json.loads((brave_profile / "Preferences").read_text(encoding="utf-8"))
@@ -1141,12 +1224,26 @@ for permanent_root in ("bookmark_bar", "other", "synced"):
     checksum_bookmark(brave_bookmarks["roots"][permanent_root])
 assert brave_bookmarks["checksum"] == bookmark_checksum.hexdigest(), \
     "Brave bookmarks do not carry a Chromium-compatible integrity checksum"
-assert ["SpacedLinux", "OpenAirShips", "rhYciv", "Cards", "Devuan"] == \
-    [bookmark["name"] for bookmark in bookmark_bar["children"]], \
-    "fresh Brave profiles do not receive the requested bookmark-bar links (issue #211)"
-assert ["https://spacedlinux.com/", "https://openairships.com/", "https://rhyciv.org/", "https://crhy.github.io/CardsWithCats/", "https://www.devuan.org/"] == \
-    [bookmark["url"] for bookmark in bookmark_bar["children"]], \
-    "Brave bookmark-bar links do not point at the requested pages (issue #211)"
+assert [("folder", "🚀 Spaced"), ("folder", "📰 News")] == [(node["type"], node["name"]) for node in bookmark_bar["children"]], \
+    "the Brave bookmark bar is not the Spaced and News folders (issues #211, #278, #289)"
+news_links = bookmark_bar["children"][1]["children"]
+assert news_links[0]["url"] == "https://voat.xyz/v/linux" and len(news_links) == 11, \
+    "the News folder does not start with Voat or does not hold the eleven requested links (issue #289)"
+spaced_links = bookmark_bar["children"][0]["children"]
+assert ["🚀 Spaced Linux", "🗣 Voxa", "🏛 rhYciv", "🐱 Cards With Cats", "🎈 Open AirShips", "🐧 Devuan", "📊 DistroWatch"] == \
+    [bookmark["name"] for bookmark in spaced_links], \
+    "fresh Brave profiles do not receive the requested bookmarks (issues #211, #278)"
+assert ["https://spacedlinux.com/", "https://voxaai.me/", "https://rhyciv.org/", "https://crhy.github.io/CardsWithCats/", "https://openairships.com/", "https://www.devuan.org/", "https://distrowatch.com/table.php?distribution=spaced"] == \
+    [bookmark["url"] for bookmark in spaced_links], \
+    "Brave bookmarks do not point at the requested pages (issues #211, #278)"
+bookmark_ids = []
+def collect_bookmark_ids(node):
+    bookmark_ids.append(node["id"])
+    for child in node.get("children", []):
+        collect_bookmark_ids(child)
+for permanent_root in ("bookmark_bar", "other", "synced"):
+    collect_bookmark_ids(brave_bookmarks["roots"][permanent_root])
+assert len(set(bookmark_ids)) == len(bookmark_ids), "Brave bookmark ids are not unique"
 assert brave_preferences["bookmark_bar"]["show_on_all_tabs"] is True, \
     "Brave's seeded bookmarks are hidden by default"
 assert brave_preferences["brave"]["new_tab_page"]["show_background_image"] is False, \
@@ -1254,6 +1351,18 @@ assert 'wm_name.lower() != "compiz"' in nvidia_postboot \
 
 update_app = (root / "usr/lib/spaced-linux/spaced-update.py").read_text(encoding="utf-8")
 update_helper = (root / "usr/lib/spaced-linux/spaced-update-helper").read_text(encoding="utf-8")
+update_refresh_path = root / "usr/lib/spaced-linux/spaced-update-refresh"
+assert update_refresh_path.is_file() and update_refresh_path.stat().st_mode & 0o111, \
+    "password-free refresh helper is missing or not executable (issue #277)"
+update_refresh = update_refresh_path.read_text(encoding="utf-8")
+update_policy = (root / "usr/share/polkit-1/actions/com.spacedlinux.update.policy").read_text(encoding="utf-8")
+assert '[ "$#" -eq 0 ]' in update_refresh and update_refresh.count("apt_run ") == 1 \
+    and "apt_run update" in update_refresh, \
+    "the password-free refresh helper must take no arguments and only refresh package lists (issue #277)"
+assert update_policy.count("<allow_active>yes</allow_active>") == 1 \
+    and "/usr/lib/spaced-linux/spaced-update-refresh" in update_policy \
+    and 'run_capture(["pkexec", REFRESH_HELPER]' in update_app, \
+    "only the package-list refresh may run without a password (issue #277)"
 assert "Technical details" in update_app and "Gtk.ComboBox" not in update_app, \
     "Spaced Update regressed to the Progress / CLI mode selector"
 assert "spaced-primary-action" in update_app and "spaced-update-list" in update_app, \
@@ -1271,7 +1380,7 @@ assert 'apt-refresh' in update_helper and 'flock -n' in update_helper \
     "Spaced Update must serialize transactions and reject incomplete APT indexes"
 assert "dpkg --force-confdef --force-confold --configure --pending" in update_helper \
     and "dpkg --triggers-only --pending" in update_helper \
-    and update_helper.index("apt_run -y \"${TRANSACTION[@]}\"") < \
+    and update_helper.index("apt_run_status -y \"${TRANSACTION[@]}\"") < \
         update_helper.index("dpkg --triggers-only --pending"), \
     "Spaced Update must finalize package scripts and release triggers after APT"
 assert "cleanup-plan" in update_helper and "cleanup-apply" in update_helper, \

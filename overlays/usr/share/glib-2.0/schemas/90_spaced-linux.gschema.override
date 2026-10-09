@@ -1,12 +1,16 @@
 [org.mate.interface]
 gtk-theme='Spaced-Linux-Dark'
 icon-theme='Spaced-Icons-Linux-Dark'
+font-name='Roboto 10'
+document-font-name='Roboto 10'
 monospace-font-name='DejaVu Sans Mono 10'
 
 [org.gnome.desktop.interface]
 gtk-theme='Spaced-Linux-Dark'
 icon-theme='Spaced-Icons-Linux-Dark'
 color-scheme='prefer-dark'
+font-name='Roboto 10'
+document-font-name='Roboto 10'
 clock-format='12h'
 clock-show-date=false
 text-scaling-factor=1.2
@@ -25,6 +29,7 @@ remember-numlock-state=true
 
 [org.mate.Marco.general]
 theme='Spaced-Linux-Dark'
+titlebar-font='Roboto Bold 10'
 
 [org.mate.session.required-components]
 windowmanager='spaced-window-manager'
@@ -64,6 +69,7 @@ executable-text-activation='display'
 # mounted volumes so connecting a share puts its icon back (issue #184).
 volumes-visible=true
 network-icon-visible=true
+font='Roboto 10'
 
 [org.mate.screensaver]
 idle-activation-enabled=true

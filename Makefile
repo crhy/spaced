@@ -51,7 +51,7 @@ deps: ## Install host build and test dependencies
 	$(ROOT_RUN) apt-get update
 	$(ROOT_RUN) apt-get install -y \
 		live-build debootstrap xorriso squashfs-tools grub-common \
-		qemu-system-x86 qemu-utils ovmf rsync curl gnupg sshpass \
+		qemu-system-x86 qemu-utils qemu-system-gui ovmf rsync curl gnupg sshpass \
 		python3-yaml desktop-file-utils apt-utils python3-gi gir1.2-gtk-3.0 xvfb bubblewrap
 
 check: ## Validate configuration, scripts, themes, and desktop entries
@@ -69,9 +69,9 @@ clean: ## Remove generated build data for the current release
 cache-clean: ## Remove cached live-build packages and bootstrap data
 	$(ROOT_RUN) rm -rf "$(abspath $(CACHE_DIR))" "$(abspath $(EXTERNAL_CACHE_DIR))"
 
-marco: ## Build the upstream Marco fixes and nm-applet focus module in an isolated Devuan chroot
+marco: ## Build the Marco fixes, the Compiz decorator fix and the nm-applet focus module in an isolated Devuan chroot
 	mkdir -p $(BUILD_DIR)
-	if ! $(HOST_RUN) scripts/iso/stage-marco.sh --check || [ ! -f $(BUILD_DIR)/nm-focus/libspaced-nm-focus.so ]; then
+	if ! $(HOST_RUN) scripts/iso/stage-marco.sh --check || ! $(HOST_RUN) scripts/iso/stage-compiz.sh --check || [ ! -f $(BUILD_DIR)/nm-focus/libspaced-nm-focus.so ]; then
 		$(ROOT_RUN) bash "$(abspath scripts/iso/build-marco-chroot.sh)"
 	fi
 

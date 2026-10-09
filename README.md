@@ -4,7 +4,7 @@
   </a>
 </p>
 
-<h1 align="center">Spaced Linux 10.26.1</h1>
+<h1 align="center">Spaced Linux 10.26.2</h1>
 
 <p align="center"><strong>Spaced. Polished. Agile. Compiz. Efficient. Devuan.</strong></p>
 
@@ -19,6 +19,7 @@
   <a href="https://discord.gg/BMW9Y6NB3y"><strong>Discord</strong></a> ·
   <a href="https://t.me/+pjmFzHo-i9A2ZWY5"><strong>Telegram</strong></a> ·
   <a href="https://github.com/crhy/spaced/releases"><strong>Download releases</strong></a> ·
+  <a href="https://distrowatch.com/table.php?distribution=spaced"><strong>DistroWatch</strong></a> ·
   <a href="https://github.com/crhy/spaced/issues"><strong>Issues</strong></a> ·
   <a href="docs/DESIGN.md"><strong>Design</strong></a> ·
   <a href="docs/MATE-theming.md"><strong>Themes</strong></a> ·
@@ -26,8 +27,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/crhy/spaced/releases"><strong>Download Spaced Linux 10.26.1</strong></a> ·
-  <a href="CHANGELOG.md"><strong>10.26.1 release status</strong></a>
+  <a href="https://github.com/crhy/spaced/releases"><strong>Download Spaced Linux 10.26.2</strong></a> ·
+  <a href="CHANGELOG.md"><strong>10.26.2 release status</strong></a>
 </p>
 
 <p align="center">
@@ -36,13 +37,13 @@
   <img alt="Compiz" src="https://img.shields.io/badge/window%20manager-Compiz-5b5bd6">
   <img alt="Init system" src="https://img.shields.io/badge/init-sysvinit-555555">
   <img alt="Architecture" src="https://img.shields.io/badge/architecture-amd64-2563eb">
-  <img alt="Release" src="https://img.shields.io/badge/release-10.26.1-0ea5e9">
+  <img alt="Release" src="https://img.shields.io/badge/release-10.26.2-0ea5e9">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-black">
 </p>
 
 <p align="center">
-  <a href="website/assets/screenshots/desktop-hero.webp">
-    <img src="website/assets/screenshots/desktop-hero.webp" alt="Spaced Linux desktop" width="100%">
+  <a href="website/assets/screenshots/desktop-compiz.webp">
+    <img src="website/assets/screenshots/desktop-compiz.webp" alt="Spaced Linux Compiz workspace cube with a browser and terminals" width="100%">
   </a>
 </p>
 
@@ -61,7 +62,7 @@ These are real Spaced Linux desktop sessions—not wallpaper mockups. Click any 
 <table>
   <tr>
     <td width="50%" align="center">
-      <a href="website/assets/screenshots/desktop-compiz.webp"><img src="website/assets/screenshots/desktop-compiz.webp" alt="Spaced Linux Compiz workspace cube with a terminal"></a><br>
+      <a href="website/assets/screenshots/desktop-compiz.webp"><img src="website/assets/screenshots/desktop-compiz.webp" alt="Spaced Linux Compiz workspace cube with a browser and terminals"></a><br>
       <sub><strong>Compiz-first desktop</strong> — Workspaces, accessibility, motion, and organization are part of the core experience.</sub>
     </td>
     <td width="50%" align="center">
@@ -85,8 +86,8 @@ These are real Spaced Linux desktop sessions—not wallpaper mockups. Click any 
       <sub><strong>A familiar favorite</strong> — The macOS-inspired theme is one of the many coordinated Spaced Linux desktop looks.</sub>
     </td>
     <td width="50%" align="center">
-      <a href="website/assets/screenshots/desktop-ai-tools.webp"><img src="website/assets/screenshots/desktop-ai-tools.webp" alt="Spaced Linux running the Voxa local speech-to-text application"></a><br>
-      <sub><strong>Private AI</strong> — Voxa transcribes speech locally on-device, part of the flatpak-driven AI workflow.</sub>
+      <a href="website/assets/screenshots/voxa-grace.webp"><img src="website/assets/screenshots/voxa-grace.webp" alt="Voxa, the Spaced Linux voice assistant, with Grace, the default character"></a><br>
+      <sub><strong>Private AI</strong> — <a href="https://voxaai.me">Voxa</a> hears you on this computer and opens apps, takes dictation and answers questions by voice.</sub>
     </td>
   </tr>
   <tr>
@@ -127,8 +128,8 @@ These are real Spaced Linux desktop sessions—not wallpaper mockups. Click any 
 Spaced Linux combines a modern system with visual ideas from the best desktop eras. Its theme collection can evoke classic Windows, macOS, Android, Linux Mint, GeoWorks, or the distinctive monochrome Spaced identity without becoming a fragile pile of unrelated tweaks.
 
 <p align="center">
-  <a href="website/assets/screenshots/desktop-themes-current.webp">
-    <img src="website/assets/screenshots/desktop-themes-current.webp" alt="Spaced Linux coordinated theme collection" width="100%">
+  <a href="website/assets/screenshots/desktop-themes-six.webp">
+    <img src="website/assets/screenshots/desktop-themes-six.webp" alt="Six Spaced Linux themes: Spaced Dark, Spaced Light, macOS, Windows 11, Windows XP and Android styles" width="100%">
   </a>
 </p>
 
@@ -150,14 +151,14 @@ Spaced Linux combines a modern system with visual ideas from the best desktop er
 
 ## Download Spaced Linux
 
-**Spaced Linux 10.26.1** is available now. Download the ISO and matching checksum from the [Spaced Linux 10.26.1 release page](https://github.com/crhy/spaced/releases/tag/v10.26.1).
+**Spaced Linux 10.26.2** is available now. Download the ISO and matching checksum from the [Spaced Linux 10.26.2 release page](https://github.com/crhy/spaced/releases/tag/v10.26.2).
 
-10.26.1 is a patch to the October 2026 release. Fixes and verification limits are recorded in the [10.26.1 issue audit](docs/10.26.1-ISSUE-STATUS.md).
+10.26.2 is the second patch to the October 2026 release. Its changes are listed in the [changelog](CHANGELOG.md).
 
 Verify the download on Linux:
 
 ```bash
-sha256sum -c spaced-linux-10.26.1-amd64.iso.sha256
+sha256sum -c spaced-linux-10.26.2-amd64.iso.sha256
 ```
 
 Test release images in a virtual machine or on non-critical hardware before adopting them for daily use.

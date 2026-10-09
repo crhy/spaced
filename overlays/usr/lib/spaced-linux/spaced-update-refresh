@@ -1,0 +1,34 @@
+#!/bin/bash
+# Invoked through pkexec for the "Check for Updates" refresh only; the
+# com.spacedlinux.update.refresh polkit action allows active users without
+# authentication. Takes no arguments and only refreshes APT package lists.
+set -Eeuo pipefail
+export DEBIAN_FRONTEND=noninteractive LC_ALL=C
+step() { printf 'SPACED_STEP:%s:%s\n' "$1" "$2"; }
+log() { printf '%s\n' "$*"; }
+update_failed() {
+  local status=$?
+  log "Update stopped (status $status). Review the preceding error and retry; completed package transactions are preserved."
+  exit "$status"
+}
+trap update_failed ERR
+
+[ "$#" -eq 0 ] || { log 'Unexpected update arguments.'; exit 2; }
+
+# Serialize privileged operations across windows and the native/Flatpak app.
+# APT also takes its own locks, including against unrelated package managers.
+exec 9>/run/lock/spaced-update.lock
+if ! flock -n 9; then
+  log 'Another Spaced Update transaction is running. Wait for it to finish and retry.'
+  exit 75
+fi
+
+APT_OPTIONS=(-o DPkg::Lock::Timeout=120 -o Acquire::Retries=3
+             -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30
+             -o APT::Update::Error-Mode=any -o Dpkg::Use-Pty=0
+             -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold)
+apt_run() { apt-get "${APT_OPTIONS[@]}" "$@"; }
+
+step 5 'Refreshing APT package lists'
+apt_run update
+step 100 'Package lists refreshed'

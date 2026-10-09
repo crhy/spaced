@@ -1,5 +1,65 @@
 # Changelog
 
+## 10.26.2 - 2026-10-08
+
+Delivered through the 10.26.2 ISO and `10.26.2-1` APT packages, with Compiz
+`2:0.8.18-9+spaced10.26.2` and Spaced Welcome 0.1.19.
+
+- New Brave profiles get two folders on the bookmark bar instead of five
+  separate links: “🚀 Spaced” (project links, each with a symbol, now with
+  Voxa at voxaai.me) and “📰 News” (Voat first, then ten news sites ordered by
+  how quickly their front pages load) (#278, #289). Existing profiles are not
+  changed.
+- Link Spaced Linux's DistroWatch page from the Brave bookmarks, the website
+  and the README.
+- Website: the home page now leads with what a newcomer gets (a desktop you
+  can talk to, no account), adds a three-step install section with a direct
+  ISO link and checksum, a section for people coming from Windows, and a Voxa
+  section.
+- Make the minimize, maximize and close buttons easier to hit in all eleven
+  themes: each clickable box grows from 24x24 to 32x27 px, the 4 px dead gaps
+  between them and the 3 px dead strip above them are gone, and the icons and
+  the title bar keep their size. `scripts/tests/titlebar-hit-test.sh` measures
+  the boxes on a virtual screen (#279).
+- Rebuild Compiz as `2:0.8.18-9+spaced10.26.2` with a fix to its window
+  decorator: the click area of each title-bar button was displaced 10 px left
+  of and 10 px below the drawn button, so only the lower-left part of minimize,
+  maximize and close responded. Source and patch are under `patches/compiz/`
+  (#279).
+- Turn the remaining Brave reporting off by policy — Safe Browsing, extended
+  reporting, metrics, URL-keyed data collection, search suggestions, alternate
+  error pages, background mode, default-browser setting, promotional tabs,
+  feedback surveys and AI chat — and disable Wallet, VPN and Talk. Private
+  windows with Tor stay available (#282).
+- Make a selected folder or icon on the desktop easy to see in every theme. A
+  rule that keeps the desktop window transparent also erased the selection
+  colour, so the selected icon was tinted almost black and its label box
+  nearly vanished. Selected desktop items now use the theme's selection colour,
+  darkened enough for the white label text, both while the desktop has the
+  keyboard and after another window takes it (#275).
+- Clicking a magnet or torrent link with no app to open it now asks "qBittorrent
+  is needed to open this link. Install it now?" and opens Spaced Bazaar on
+  qBittorrent's page when you choose Install. Once qBittorrent or any other
+  torrent app is installed, the link goes straight to it (#290).
+- "Find More in Software" in the "Open With" window now opens Spaced Bazaar;
+  it used to do nothing, because it starts GNOME Software, which Spaced does
+  not ship (#290).
+- Spaced Update opens on the OS Release page and checks for a new release by
+  itself. Checking for updates no longer asks for a password; installing still
+  does. The progress bar follows APT's real download and install progress and
+  names what it is working on, and "What's new" shows the release notes of the
+  version found inside the app (#277).
+- Spaced Welcome 0.1.19: buttons say "Open" for an application that is already
+  installed and start it, and "Install" for one that is not, on both the Set Up
+  and Help & Apps pages, including SpacedBazaar. A red notice at the top warns
+  that closing Welcome without installing anything leaves no browser or media
+  player (#285). Delivered by the Spaced Welcome release.
+- Roboto replaces DejaVu Sans as the default font for applications,
+  documents, the desktop and window titles (Roboto Bold). It fits about 12%
+  more text on a line at the same line height. Fonts you chose yourself in
+  Appearance are kept. `docs/font-comparison/` compares the fourteen
+  candidates as the desktop renders them (#286).
+
 ## 10.26.1 - 2026-10-04
 
 Delivered through the 10.26.1 ISO and `10.26.1-1` APT packages; wallpapers

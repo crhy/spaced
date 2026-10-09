@@ -16,10 +16,10 @@
 	<distance name="left_titlebar_edge" value="6"/>
 	<distance name="right_titlebar_edge" value="6"/>
 	<distance name="title_vertical_pad" value="6"/>
-	<distance name="button_width" value="24"/>
-	<distance name="button_height" value="24"/>
+	<distance name="button_width" value="32"/>
+	<distance name="button_height" value="27"/>
 	<border name="title_border" left="2" right="2" top="5" bottom="0"/>
-	<border name="button_border" left="2" right="2" top="3" bottom="0"/>
+	<border name="button_border" left="0" right="0" top="0" bottom="0"/>
 </frame_geometry>
 
 <frame_geometry name="shaded" parent="normal" rounded_top_left="true" rounded_top_right="true" rounded_bottom_left="false" rounded_bottom_right="false"/>
@@ -40,7 +40,7 @@
 	<distance name="title_vertical_pad" value="4"/>
 	<border name="title_border" left="2" right="2" top="4" bottom="3"/>
 	<border name="button_border" left="0" right="0" top="2" bottom="2"/>
-	<distance name="button_width" value="22"/>
+	<distance name="button_width" value="28"/>
 	<distance name="button_height" value="22"/>
 </frame_geometry>
 
@@ -174,7 +174,7 @@
 <draw_ops name="close_button_normal">
 	<image filename="close_focused_normal.png"
 		x="(width - object_width) / 2"
-		y="(height - object_height) / 2"
+		y="(height - object_height) / 2 + 1"
 		width="object_width"
 		height="object_height"/>
 </draw_ops>
@@ -182,7 +182,7 @@
 <draw_ops name="close_button_prelight">
 	<image filename="close_focused_prelight.png"
 		x="(width - object_width) / 2"
-		y="(height - object_height) / 2"
+		y="(height - object_height) / 2 + 1"
 		width="object_width"
 		height="object_height"/>
 </draw_ops>
@@ -190,7 +190,7 @@
 <draw_ops name="close_button_pressed">
 	<image filename="close_focused_pressed.png"
 		x="(width - object_width) / 2"
-		y="(height - object_height) / 2"
+		y="(height - object_height) / 2 + 1"
 		width="object_width"
 		height="object_height"/>
 </draw_ops>
@@ -198,7 +198,7 @@
 <draw_ops name="close_button_unfocused">
         <image filename="close_unfocused.png"
 		x="(width - object_width) / 2"
-		y="(height - object_height) / 2"
+		y="(height - object_height) / 2 + 1"
 		width="object_width"
 		height="object_height"/>
 </draw_ops>
@@ -207,7 +207,7 @@
 <draw_ops name="maximize_button_normal">
 	<image filename="maximize_focused_normal.png"
 		x="(width - object_width) / 2"
-		y="(height - object_height) / 2"
+		y="(height - object_height) / 2 + 1"
 		width="object_width"
 		height="object_height"/>
 </draw_ops>
@@ -215,7 +215,7 @@
 <draw_ops name="maximize_button_prelight">
 	<image filename="maximize_focused_prelight.png"
 		x="(width - object_width) / 2"
-		y="(height - object_height) / 2"
+		y="(height - object_height) / 2 + 1"
 		width="object_width"
 		height="object_height"/>
 </draw_ops>
@@ -223,7 +223,7 @@
 <draw_ops name="maximize_button_pressed">
 	<image filename="maximize_focused_pressed.png"
 		x="(width - object_width) / 2"
-		y="(height - object_height) / 2"
+		y="(height - object_height) / 2 + 1"
 		width="object_width"
 		height="object_height"/>
 </draw_ops>
@@ -231,7 +231,7 @@
 <draw_ops name="maximize_button_unfocused">
         <image filename="maximize_unfocused.png"
 		x="(width - object_width) / 2"
-		y="(height - object_height) / 2"
+		y="(height - object_height) / 2 + 1"
 		width="object_width"
 		height="object_height"/>
 </draw_ops>
@@ -240,7 +240,7 @@
 <draw_ops name="unmaximize_button_normal">
 	<image filename="unmaximize_focused_normal.png"
 		x="(width - object_width) / 2"
-		y="(height - object_height) / 2"
+		y="(height - object_height) / 2 + 1"
 		width="object_width"
 		height="object_height"/>
 </draw_ops>
@@ -248,7 +248,7 @@
 <draw_ops name="unmaximize_button_prelight">
 	<image filename="unmaximize_focused_prelight.png"
 		x="(width - object_width) / 2"
-		y="(height - object_height) / 2"
+		y="(height - object_height) / 2 + 1"
 		width="object_width"
 		height="object_height"/>
 </draw_ops>
@@ -256,7 +256,7 @@
 <draw_ops name="unmaximize_button_pressed">
 	<image filename="unmaximize_focused_pressed.png"
 		x="(width - object_width) / 2"
-		y="(height - object_height) / 2"
+		y="(height - object_height) / 2 + 1"
 		width="object_width"
 		height="object_height"/>
 </draw_ops>
@@ -264,7 +264,7 @@
 <draw_ops name="unmaximize_button_unfocused">
 	<image filename="unmaximize_unfocused.png"
 		x="(width - object_width) / 2"
-		y="(height - object_height) / 2"
+		y="(height - object_height) / 2 + 1"
 		width="object_width"
 		height="object_height"/>
 </draw_ops>
@@ -273,7 +273,7 @@
 <draw_ops name="minimize_button_normal">
 	<image filename="minimize_focused_normal.png"
 		x="(width - object_width) / 2"
-		y="(height - object_height) / 2"
+		y="(height - object_height) / 2 + 1"
 		width="object_width"
 		height="object_height"/>
 </draw_ops>
@@ -281,7 +281,7 @@
 <draw_ops name="minimize_button_prelight">
 	<image filename="minimize_focused_prelight.png"
 		x="(width - object_width) / 2"
-		y="(height - object_height) / 2"
+		y="(height - object_height) / 2 + 1"
 		width="object_width"
 		height="object_height"/>
 </draw_ops>
@@ -289,7 +289,7 @@
 <draw_ops name="minimize_button_pressed">
 	<image filename="minimize_focused_pressed.png"
 		x="(width - object_width) / 2"
-		y="(height - object_height) / 2"
+		y="(height - object_height) / 2 + 1"
 		width="object_width"
 		height="object_height"/>
 </draw_ops>
@@ -297,7 +297,7 @@
 <draw_ops name="minimize_button_unfocused">
 	<image filename="minimize_unfocused.png"
 		x="(width - object_width) / 2"
-		y="(height - object_height) / 2"
+		y="(height - object_height) / 2 + 1"
 		width="object_width"
 		height="object_height"/>
 </draw_ops>

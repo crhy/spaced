@@ -1,0 +1,38 @@
+#!/bin/bash
+# Stand-in for gnome-software (issue #290). The desktop portal's "Open With"
+# window runs `gnome-software` for its "Find More in Software" button; Spaced
+# has no GNOME Software, so the button opens Spaced Bazaar instead.
+# Accepts --search=<term>, --details=<app id>, --local-filename=<file>, or no
+# arguments. Never blocks: Bazaar starts in the background.
+
+bazaar=io.github.crhy.SpacedBazaar
+welcome=io.github.crhy.SpacedWelcome
+target=()
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --search=*) term="${1#--search=}" ;;
+        --search) term="${2:-}"; shift ;;
+        --details=*) target=("appstream://${1#--details=}") ;;
+        --details) target=("appstream://${2:-}"); shift ;;
+        --local-filename=*) target=("${1#--local-filename=}") ;;
+        --local-filename) target=("${2:-}"); shift ;;
+    esac
+    shift
+done
+
+# The portal searches for the link's type, not for words a person would type.
+case "${term:-}" in
+    '') ;;
+    x-scheme-handler/magnet|application/x-bittorrent) target=("appstream://org.qbittorrent.qBittorrent") ;;
+    */*) ;;
+    *) target=(--search-for "$term") ;;
+esac
+
+command -v flatpak >/dev/null 2>&1 || exit 0
+if flatpak info "$bazaar" >/dev/null 2>&1; then
+    flatpak run "$bazaar" "${target[@]}" >/dev/null 2>&1 &
+else
+    flatpak run "$welcome" >/dev/null 2>&1 &
+fi
+exit 0

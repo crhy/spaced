@@ -1,0 +1,35 @@
+Description: Put the title-bar button click areas where the buttons are drawn
+ With a Marco theme the decorator shifted the click area of every right-hand
+ button left and down by the width of the invisible resize border (10 px), so
+ the upper and right parts of minimize, maximize and close did not respond.
+ The geometry returned by libmarco already includes that border.
+Author: Spaced Linux Developers <dev@spacedlinux.com>
+Bug: https://github.com/crhy/spaced/issues/279
+Forwarded: no
+---
+--- a/gtk-window-decorator/gtk-window-decorator.c
++++ b/gtk-window-decorator/gtk-window-decorator.c
+@@ -3428,17 +3428,13 @@
+     *y = space->clickable.y;
+     *w = space->clickable.width;
+     *h = space->clickable.height;
+-#ifdef HAVE_MARCO_1_22_2
+-    /*compensate for offset caused by invisible borders
+-     *taken straight from compiz 0.9
+-     *but exclude left side buttons so resize border isn't blocked
++    /* The clickable rectangle is already in frame coordinates, and the frame
++     * the button windows live in includes Marco's invisible resize border
++     * (see the frame extents in update_window_decoration_...).  An extra
++     * "compensation" here moved every right-hand button's click area left by
++     * the invisible border and DOWN by it, away from the drawn button, so only
++     * the lower-left part of each button responded.
+      */
+-    if (*x >= 20)
+-    {
+-        *x = *x - fgeom.borders.invisible.left;
+-        *y = *y + fgeom.borders.invisible.top;
+-    }
+-#endif
+     return TRUE;
+ }
+ 
