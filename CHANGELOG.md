@@ -46,8 +46,11 @@
   does. The progress bar follows APT's real download and install progress and
   names what it is working on, and "What's new" shows the release notes of the
   version found inside the app (#277).
-- `docs/font-comparison/` compares fourteen candidate default fonts as the
-  desktop renders them; no default is changed yet (#286).
+- Roboto replaces DejaVu Sans as the default font for applications,
+  documents, the desktop and window titles (Roboto Bold). It fits about 12%
+  more text on a line at the same line height. Fonts you chose yourself in
+  Appearance are kept. `docs/font-comparison/` compares the fourteen
+  candidates as the desktop renders them (#286).
 
 ## 10.26.1 - 2026-10-04
 

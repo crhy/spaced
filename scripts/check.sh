@@ -924,6 +924,10 @@ for mimeapps_path, mimeapps_text in (
         f"{mimeapps_path} does not associate magnet and torrent links with the suggester as an added association (issue #290)"
 gschema = (root / "usr/share/glib-2.0/schemas/90_spaced-linux.gschema.override").read_text(encoding="utf-8")
 assert "text-scaling-factor=1.2" in gschema, "HiDPI text scaling is not configured (issue #6/#64)"
+assert gschema.count("font-name='Roboto 10'") == 4 and "titlebar-font='Roboto Bold 10'" in gschema \
+    and "\nfont='Roboto 10'" in gschema and "fonts-roboto-unhinted" in packages \
+    and "fonts-roboto-unhinted" in Path("packages/spaced-mate-default-settings/DEBIAN/control").read_text(encoding="utf-8"), \
+    "Roboto is not the default interface, document, desktop and title-bar font, or its package is not shipped (issue #286)"
 wallpaper_catalog = (root / "usr/share/mate-background-properties/spaced-linux.xml").read_text(encoding="utf-8")
 assert "SimpleBackb.png" in wallpaper_catalog, "GRUB background is missing from MATE wallpapers"
 assert "spaced-orbit-4k.jpg" in wallpaper_catalog, "Spaced Orbit wallpaper is missing"

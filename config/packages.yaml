@@ -50,6 +50,7 @@ audio:
 themes:
   - papirus-icon-theme
   - fonts-dejavu-core
+  - fonts-roboto-unhinted
 dock:
   - cairo-dock-core
 graphics:
