@@ -1,6 +1,9 @@
 # Changelog
 
-## 10.26.2 - unreleased
+## 10.26.2 - 2026-10-08
+
+Delivered through the 10.26.2 ISO and `10.26.2-1` APT packages, with Compiz
+`2:0.8.18-9+spaced10.26.2` and Spaced Welcome 0.1.19.
 
 - New Brave profiles get two folders on the bookmark bar instead of five
   separate links: “🚀 Spaced” (project links, each with a symbol, now with
