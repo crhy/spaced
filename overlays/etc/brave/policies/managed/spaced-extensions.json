@@ -25,6 +25,5 @@
   "SafeBrowsingExtendedReportingEnabled": false,
   "SafeBrowsingProtectionLevel": 0,
   "SearchSuggestEnabled": false,
-  "TorDisabled": true,
   "UrlKeyedAnonymizedDataCollectionEnabled": false
 }

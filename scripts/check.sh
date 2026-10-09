@@ -1028,11 +1028,12 @@ for policy_key, policy_value in (
     ("BraveAIChatEnabled", False),
     ("BraveWalletDisabled", True),
     ("BraveVPNDisabled", True),
-    ("TorDisabled", True),
     ("BraveTalkDisabled", True),
 ):
     assert policy_key in brave_policy and brave_policy[policy_key] == policy_value, \
         f"Brave policy {policy_key} is not set as requested (issue #282)"
+assert brave_policy.get("TorDisabled") is not True, \
+    "Brave's private windows with Tor must stay available (issue #282)"
 menu_on_dark = icon_root / "Spaced-Menu-On-Dark/scalable/places"
 menu_on_light = icon_root / "Spaced-Menu-On-Light/scalable/places"
 for menu_directory, color in ((menu_on_dark, "#b8bcc2"), (menu_on_light, "#202020")):

@@ -26,7 +26,8 @@
 - Turn the remaining Brave reporting off by policy — Safe Browsing, extended
   reporting, metrics, URL-keyed data collection, search suggestions, alternate
   error pages, background mode, default-browser setting, promotional tabs,
-  feedback surveys and AI chat — and disable Wallet, VPN, Tor and Talk (#282).
+  feedback surveys and AI chat — and disable Wallet, VPN and Talk. Private
+  windows with Tor stay available (#282).
 - Make a selected folder or icon on the desktop easy to see in every theme. A
   rule that keeps the desktop window transparent also erased the selection
   colour, so the selected icon was tinted almost black and its label box
