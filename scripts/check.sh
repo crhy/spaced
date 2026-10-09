@@ -897,6 +897,15 @@ suggest_app = suggest_app_path.read_text(encoding="utf-8")
 assert "zenity --question" in suggest_app and "io.github.crhy.SpacedBazaar" in suggest_app \
     and "exit 0" in suggest_app, \
     "spaced-suggest-app does not ask with zenity and open Spaced Bazaar (issue #290)"
+assert "get_all_for_type" in suggest_app and "launch_uris" in suggest_app, \
+    "spaced-suggest-app does not hand links to an installed handler, so it would keep asking (issue #290)"
+software_stub_path = root / "usr/local/bin/gnome-software"
+assert software_stub_path.is_file() and software_stub_path.stat().st_mode & 0o111, \
+    "gnome-software stand-in for the portal's Find More in Software is missing or not executable (issue #290)"
+software_stub = software_stub_path.read_text(encoding="utf-8")
+assert "io.github.crhy.SpacedBazaar" in software_stub and "--search-for" in software_stub \
+    and "appstream://" in software_stub, \
+    "gnome-software stand-in does not open Spaced Bazaar on a search or an app page (issue #290)"
 suggest_desktop = (root / "usr/share/applications/spaced-suggest-qbittorrent.desktop").read_text(encoding="utf-8")
 assert "Type=Application" in suggest_desktop and "Name=" in suggest_desktop \
     and "Exec=spaced-suggest-app org.qbittorrent.qBittorrent qBittorrent %u" in suggest_desktop, \
@@ -1337,6 +1346,18 @@ assert 'wm_name.lower() != "compiz"' in nvidia_postboot \
 
 update_app = (root / "usr/lib/spaced-linux/spaced-update.py").read_text(encoding="utf-8")
 update_helper = (root / "usr/lib/spaced-linux/spaced-update-helper").read_text(encoding="utf-8")
+update_refresh_path = root / "usr/lib/spaced-linux/spaced-update-refresh"
+assert update_refresh_path.is_file() and update_refresh_path.stat().st_mode & 0o111, \
+    "password-free refresh helper is missing or not executable (issue #277)"
+update_refresh = update_refresh_path.read_text(encoding="utf-8")
+update_policy = (root / "usr/share/polkit-1/actions/com.spacedlinux.update.policy").read_text(encoding="utf-8")
+assert '[ "$#" -eq 0 ]' in update_refresh and update_refresh.count("apt_run ") == 1 \
+    and "apt_run update" in update_refresh, \
+    "the password-free refresh helper must take no arguments and only refresh package lists (issue #277)"
+assert update_policy.count("<allow_active>yes</allow_active>") == 1 \
+    and "/usr/lib/spaced-linux/spaced-update-refresh" in update_policy \
+    and 'run_capture(["pkexec", REFRESH_HELPER]' in update_app, \
+    "only the package-list refresh may run without a password (issue #277)"
 assert "Technical details" in update_app and "Gtk.ComboBox" not in update_app, \
     "Spaced Update regressed to the Progress / CLI mode selector"
 assert "spaced-primary-action" in update_app and "spaced-update-list" in update_app, \
@@ -1354,7 +1375,7 @@ assert 'apt-refresh' in update_helper and 'flock -n' in update_helper \
     "Spaced Update must serialize transactions and reject incomplete APT indexes"
 assert "dpkg --force-confdef --force-confold --configure --pending" in update_helper \
     and "dpkg --triggers-only --pending" in update_helper \
-    and update_helper.index("apt_run -y \"${TRANSACTION[@]}\"") < \
+    and update_helper.index("apt_run_status -y \"${TRANSACTION[@]}\"") < \
         update_helper.index("dpkg --triggers-only --pending"), \
     "Spaced Update must finalize package scripts and release triggers after APT"
 assert "cleanup-plan" in update_helper and "cleanup-apply" in update_helper, \

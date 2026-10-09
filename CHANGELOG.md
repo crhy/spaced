@@ -35,7 +35,18 @@
   keyboard and after another window takes it (#275).
 - Clicking a magnet or torrent link with no app to open it now asks "qBittorrent
   is needed to open this link. Install it now?" and opens Spaced Bazaar on
-  qBittorrent's page when you choose Install (#290).
+  qBittorrent's page when you choose Install. Once qBittorrent or any other
+  torrent app is installed, the link goes straight to it (#290).
+- "Find More in Software" in the "Open With" window now opens Spaced Bazaar;
+  it used to do nothing, because it starts GNOME Software, which Spaced does
+  not ship (#290).
+- Spaced Update opens on the OS Release page and checks for a new release by
+  itself. Checking for updates no longer asks for a password; installing still
+  does. The progress bar follows APT's real download and install progress and
+  names what it is working on, and "What's new" shows the release notes of the
+  version found inside the app (#277).
+- `docs/font-comparison/` compares fourteen candidate default fonts as the
+  desktop renders them; no default is changed yet (#286).
 
 ## 10.26.1 - 2026-10-04
 
