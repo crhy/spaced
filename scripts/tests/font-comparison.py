@@ -1,122 +1,135 @@
 #!/usr/bin/env python3
-# Render one 900x420 card per installed font family and measure text width + x-height (issue #286).
-# Cairo (cairo-gobject) is not available on this machine, so cards are rendered with Pillow and
-# measured with Pillow's textbbox; the numbers therefore match the pictures exactly.
+# Render one card per font family and measure text width, x-height and line height (issue #286).
+# Text is laid out with Pango and drawn with Cairo, the same stack GTK uses on the desktop, at
+# the size the desktop really shows: "Sans 10" times the shipped text-scaling-factor of 1.2.
 import sys
-from PIL import Image, ImageDraw, ImageFont
+
+import cairo
+import gi
+
+gi.require_version("Pango", "1.0")
+gi.require_version("PangoCairo", "1.0")
+from gi.repository import Pango, PangoCairo  # noqa: E402
 
 SENTENCE = "The quick brown fox jumps over the lazy dog near a big barn!"  # 60 chars
-MENU = "File  Edit  View  Bookmarks  Help"
-LOOKALIKE = "Il1 O0 rn m"
 TITLE = "Spaced Linux - File Manager"
-PARA = ("A window title and menu labels at the default size, then the same paragraph "
-        "one point larger, so the reader can compare how much text fits on a line.")
+MENU = "File   Edit   View   Go   Bookmarks   Help"
+PARA = ("Spaced Linux is a free desktop that looks the way you are used to, comes with a voice "
+        "assistant that runs on your own hardware, and never asks you to sign in.")
+LOOKALIKE = "Il1| O0o rn m cl d 5S 8B 2Z  0123456789  .,;:!?  ()[]{}"
 
-W, H = 900, 420
+POINT_SIZE = 10
+SCALE = 1.2  # text-scaling-factor in 90_spaced-linux.gschema.override
 DPI = 96.0
+W, PAD, COLS = 900, 14, 3
+BASELINE = "DejaVu Sans"  # what "Sans" resolves to on a stock install
+HALVES = (((0.94, 0.94, 0.94), (0.08, 0.08, 0.08)), ((0.13, 0.13, 0.13), (0.92, 0.92, 0.92)))
 
 
-def pt2px(pt):
-    return int(round(pt * DPI / 72.0))
+def make_layout(ctx, family, text, bold=False, size=POINT_SIZE, width=None):
+    layout = PangoCairo.create_layout(ctx)
+    PangoCairo.context_set_resolution(layout.get_context(), DPI * SCALE)
+    desc = Pango.FontDescription()
+    desc.set_family(family)
+    desc.set_size(int(size * Pango.SCALE))
+    desc.set_weight(Pango.Weight.BOLD if bold else Pango.Weight.NORMAL)
+    layout.set_font_description(desc)
+    if width:
+        layout.set_width(width * Pango.SCALE)
+        layout.set_wrap(Pango.WrapMode.WORD)
+    layout.set_text(text, -1)
+    return layout
 
 
-def resolve(reg, bold):
-    import subprocess
-    def match(spec):
-        out = subprocess.run(["fc-match", "-f", "%{file}", spec],
-                             capture_output=True, text=True)
-        return out.stdout.strip()
-    return match(reg), match(bold)
+def resolved_family(ctx, family):
+    layout = make_layout(ctx, family, "x")
+    font = layout.get_context().load_font(layout.get_font_description())
+    return font.describe().get_family()
 
 
-def measure(font_file, size_px):
-    f = ImageFont.truetype(font_file, size_px)
-    x0, y0, x1, y1 = f.getbbox(SENTENCE)
-    width = x1 - x0
-    ax0, ay0, ax1, ay1 = f.getbbox("x")
-    return width, (ay1 - ay0)
+def rows(family):
+    return ((family, True, 14), (TITLE, True, POINT_SIZE), (MENU, False, POINT_SIZE),
+            (PARA, False, POINT_SIZE), (LOOKALIKE, False, POINT_SIZE))
 
 
-def wrap(draw, font, text, x, y, maxw, lh):
-    words = text.split()
-    line = ""
-    for word in words:
-        trial = (line + " " + word).strip()
-        if draw.textbbox((0, 0), trial, font=font)[2] > maxw:
-            if line:
-                draw.text((x, y), line, font=font)
-                y += lh
-                line = word
-            else:
-                draw.text((x, y), word, font=font)
-                y += lh
-                line = ""
-        else:
-            line = trial
-    if line:
-        draw.text((x, y), line, font=font)
-        y += lh
-    return y
+def draw_half(ctx, family, top, bg, fg, paint=True):
+    y = top + PAD
+    height = 0
+    for text, bold, size in rows(family):
+        layout = make_layout(ctx, family, text, bold, size, W - 2 * PAD)
+        if paint:
+            ctx.set_source_rgb(*fg)
+            ctx.move_to(PAD, y)
+            PangoCairo.show_layout(ctx, layout)
+        y += layout.get_pixel_size()[1] + 8
+    height = y - top + PAD - 8
+    return height
 
 
-def card(reg_file, bold_file):
-    img = Image.new("RGB", (W, H), (240, 240, 240))
-    img.paste((32, 32, 32), (0, H // 2, W, H))
-    d = ImageDraw.Draw(img)
-    s10 = pt2px(10)
-    s11 = pt2px(11)
-    for half, bg, fg in (("light", (240, 240, 240), (20, 20, 20)),
-                        ("dark", (32, 32, 32), (235, 235, 235))):
-        top = 0 if half == "light" else H // 2
-        d.rectangle([0, top, W, top + H // 2], fill=bg)
-        y = top + 12
-        d.text((8, y), FAMILY, font=ImageFont.truetype(bold_file, pt2px(14)), fill=fg)
-        y += pt2px(14) + 8
-        d.text((8, y), TITLE, font=ImageFont.truetype(bold_file, s10), fill=fg)
-        y += s10 + 8
-        d.text((8, y), MENU, font=ImageFont.truetype(reg_file, s10), fill=fg)
-        y += s10 + 10
-        y = wrap(d, ImageFont.truetype(reg_file, s10), PARA, 8, y, W - 16, s10 + 4)
-        y += 6
-        y = wrap(d, ImageFont.truetype(reg_file, s11), PARA, 8, y, W - 16, s11 + 4)
-        y += 8
-        d.text((8, y), LOOKALIKE, font=ImageFont.truetype(reg_file, s10), fill=fg)
-    return img
+def card(family, half_height):
+    surface = cairo.ImageSurface(cairo.FORMAT_RGB24, W, 2 * half_height)
+    ctx = cairo.Context(surface)
+    for i, (bg, fg) in enumerate(HALVES):
+        ctx.set_source_rgb(*bg)
+        ctx.rectangle(0, i * half_height, W, half_height)
+        ctx.fill()
+        draw_half(ctx, family, i * half_height, bg, fg)
+    return surface
+
+
+def measure(ctx, family):
+    width = make_layout(ctx, family, SENTENCE).get_pixel_size()[0]
+    ink, _ = make_layout(ctx, family, "x").get_pixel_extents()
+    line = make_layout(ctx, family, "x").get_pixel_size()[1]
+    return width, ink.height, line
 
 
 def main(outdir, families):
-    global FAMILY
-    rows = []
-    cards = []
-    for fam in families:
-        FAMILY = fam
-        reg, bold = resolve(fam, f"{fam}:bold")
-        width, xh = measure(reg, pt2px(10))
-        img = card(reg, bold)
-        path = f"{outdir}/{'_'.join(fam.split())}.png"
-        img.save(path)
-        cards.append((path, img))
-        rows.append((fam, width, xh, reg))
-    rows.sort(key=lambda r: r[1])
-    cols = len(cards)
-    sheet = Image.new("RGB", (cols * W, 2 * H), (255, 255, 255))
-    for i, (_, img) in enumerate(cards):
-        sheet.paste(img, ((i % 3) * W, (i // 3) * H))
-    sheet.save(f"{outdir}/contact-sheet.png")
+    probe = cairo.Context(cairo.ImageSurface(cairo.FORMAT_RGB24, 8, 8))
+    present = [f for f in families if resolved_family(probe, f) == f]
+    missing = [f for f in families if f not in present]
+    half = max(draw_half(probe, f, 0, None, None, paint=False) for f in present)
+
+    results = []
+    for family in present:
+        surface = card(family, half)
+        surface.write_to_png(f"{outdir}/{family.replace(' ', '_')}.png")
+        results.append((family, *measure(probe, family), surface))
+    results.sort(key=lambda r: r[1])
+
+    # Contact sheet in the same narrow-to-wide order as the table.
+    grid_rows = -(-len(results) // COLS)
+    sheet = cairo.ImageSurface(cairo.FORMAT_RGB24, COLS * W, grid_rows * 2 * half)
+    ctx = cairo.Context(sheet)
+    ctx.set_source_rgb(1, 1, 1)
+    ctx.paint()
+    for i, result in enumerate(results):
+        ctx.set_source_surface(result[4], (i % COLS) * W, (i // COLS) * 2 * half)
+        ctx.paint()
+    sheet.write_to_png(f"{outdir}/contact-sheet.png")
+
+    base = next((r[1] for r in results if r[0] == BASELINE), None)
     with open(f"{outdir}/README.md", "w") as fh:
         fh.write("# Default font comparison (issue #286)\n\n")
-        fh.write("Width = pixels of the 60-character sentence at 10 pt (narrower fits more text). "
-                 "x-height = pixels of the lowercase 'x' at 10 pt.\n\n")
-        fh.write("| Family | Width (px) | x-height (px) | File |\n")
-        fh.write("|---|---|---|---|\n")
-        for fam, width, xh, reg in rows:
-            fh.write(f"| {fam} | {width} | {xh} | {reg} |\n")
+        fh.write(f"Rendered with Pango and Cairo at {POINT_SIZE} pt with the shipped text scaling "
+                 f"of {SCALE}, which is what a stock desktop shows. Width is the pixel width of a "
+                 "60-character sentence, so a smaller number fits more text on a line. x-height is "
+                 "the pixel height of a lowercase x, and line height is the pixel height of one "
+                 f"line. The last column compares the width with {BASELINE}, the current default.\n\n")
+        fh.write(f"| Family | Width (px) | x-height (px) | Line height (px) | Width vs {BASELINE} |\n")
+        fh.write("|---|---|---|---|---|\n")
+        for family, width, xh, line, _ in results:
+            rel = f"{(width / base - 1) * 100:+.0f}%" if base else "n/a"
+            fh.write(f"| [{family}]({family.replace(' ', '_')}.png) | {width} | {xh} | {line} | {rel} |\n")
+        if missing:
+            fh.write(f"\nNot available when this was generated, so not compared: {', '.join(missing)}.\n")
         fh.write("\n![contact sheet](contact-sheet.png)\n")
-    for fam, width, xh, reg in rows:
-        print(f"{fam}\twidth={width}px\tx-height={xh}px")
+
+    for family, width, xh, line, _ in results:
+        print(f"{family}\twidth={width}px\tx-height={xh}px\tline={line}px")
+    if missing:
+        print("not available (not compared): " + ", ".join(missing))
 
 
 if __name__ == "__main__":
-    outdir = sys.argv[1]
-    fams = sys.argv[2:]
-    main(outdir, fams)
+    main(sys.argv[1], sys.argv[2:])
