@@ -31,7 +31,7 @@
 </section>
 
 <section class="section" id="testing">
-  <div class="heading"><p class="kicker">SPACED LINUX 10.26</p><h2>The October 2026 release.</h2><p>Spaced Linux 10.26 is available now. Download the ISO and matching checksum from the <a href="https://github.com/crhy/spaced/releases/tag/v10.26">Spaced Linux 10.26 release page</a>.</p></div>
+  <div class="heading"><p class="kicker">SPACED LINUX 10.26</p><h2>The October 2026 release.</h2><p>Spaced Linux 10.26 is available now. Download the newest ISO and matching checksum from the <a href="https://github.com/crhy/spaced/releases/latest">latest release page</a>.</p></div>
   <div class="grid">
     <article><h3>What is changing</h3><p>Work focuses on complete system and application updates, display settings, graphics-driver recovery, desktop stability, and clearer help. Larger new applications and partitioning features are tracked separately.</p></article>
     <article><h3>What still needs testing</h3><p>Physical NVIDIA and AMD GPUs, 4K displays, five-monitor arrangements, Wi-Fi cold starts, and suspend/resume need results from the affected hardware. A VM boot cannot confirm those fixes.</p></article>
@@ -63,10 +63,10 @@
 </section>
 
 <section class="section" id="graphics">
-  <div class="heading"><p class="kicker">GRAPHICS AND DISPLAYS</p><h2>Start with the detected hardware.</h2><p>In 9.26, open <strong>Spaced Video Drivers</strong> from the menu. Record your current GPU and display setup before a driver change, then keep the result and any error log.</p></div>
+  <div class="heading"><p class="kicker">GRAPHICS AND DISPLAYS</p><h2>Start with the detected hardware.</h2><p>Open <strong>Spaced Video Drivers</strong> from the menu. Record your current GPU and display setup before a driver change, then keep the result and any error log.</p></div>
   <div class="grid">
     <article><h3>NVIDIA</h3><p>Let Spaced Video Drivers check which packaged driver supports the exact GPU. Names such as “GT 730” cover different hardware variants. If the tool reports no supported package, keep the working driver and share the diagnostic report before attempting a replacement.</p></article>
-    <article><h3>AMD</h3><p>9.26 includes the AMDGPU TearFree setting reported to fix RX 7600 scrolling artifacts in <a href="https://github.com/crhy/spaced/issues/177">issue #177</a>. It applies to AMDGPU devices. Use the driver tool to check updates, reboot when requested, and test scrolling, video, games, and resume on your display.</p></article>
+    <article><h3>AMD</h3><p>Spaced Linux includes the AMDGPU TearFree setting reported to fix RX 7600 scrolling artifacts in <a href="https://github.com/crhy/spaced/issues/177">issue #177</a>. It applies to AMDGPU devices. Use the driver tool to check updates, reboot when requested, and test scrolling, video, games, and resume on your display.</p></article>
     <article><h3>Multiple monitors and 4K</h3><p>Use <strong>Monitor Preferences</strong> to set resolution and arrange displays to match your desk. Check one display at a time, then the complete layout. If a mode is absent or the arrangement will not save, include monitor connections and <code>spaced-graphics-report</code> output with the report.</p></article>
   </div>
   <p>If a driver change fails, keep the recovery result and log. Reboot after the tool confirms a completed change or successful recovery. An incomplete recovery needs attention before another driver change.</p>
@@ -84,7 +84,7 @@
 <section class="section" id="troubleshooting">
   <div class="heading"><p class="kicker">HELP US REPRODUCE IT</p><h2>Useful details make fixes easier.</h2><p>Include your Spaced version, whether you are using the live USB or an installed system, and the steps that trigger the problem. Tell us what you expected and what happened instead.</p></div>
   <div class="grid">
-    <article><h3>Displays and graphics</h3><p>Include the GPU model, driver, monitor connections, resolution, and refresh rate. In 9.26, run <code>spaced-graphics-report</code> in a terminal to collect display and driver details. Review the output before sharing it.</p></article>
+    <article><h3>Displays and graphics</h3><p>Include the GPU model, driver, monitor connections, resolution, and refresh rate. Run <code>spaced-graphics-report</code> in a terminal to collect display and driver details. Review the output before sharing it.</p></article>
     <article><h3>Virtual machines</h3><p>Include the VM application and version, BIOS or UEFI firmware, assigned RAM and CPUs, display adapter, and whether hardware acceleration is enabled.</p></article>
     <article><h3>GIMP freezes when changing size units</h3><p>If GIMP freezes when switching from pixels to percent, close it and try <code>flatpak run --env=NO_AT_BRIDGE=1 org.gimp.GIMP</code> in a terminal. This optional workaround disables GIMP’s screen-reader accessibility for that launch; do not use it if you need that support. Starting GIMP normally restores its usual behavior. The underlying bug remains under investigation.</p></article>
     <article><h3>Updates and applications</h3><p>Include the failing application or package name and the error message. Describe whether it came from SpacedUpdate, SpacedBazaar, or a terminal command.</p></article>
