@@ -46,6 +46,11 @@
   does. The progress bar follows APT's real download and install progress and
   names what it is working on, and "What's new" shows the release notes of the
   version found inside the app (#277).
+- Spaced Welcome 0.1.19: buttons say "Open" for an application that is already
+  installed and start it, and "Install" for one that is not, on both the Set Up
+  and Help & Apps pages, including SpacedBazaar. A red notice at the top warns
+  that closing Welcome without installing anything leaves no browser or media
+  player (#285). Delivered by the Spaced Welcome release.
 - Roboto replaces DejaVu Sans as the default font for applications,
   documents, the desktop and window titles (Roboto Bold). It fits about 12%
   more text on a line at the same line height. Fonts you chose yourself in
