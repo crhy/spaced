@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Spaced Linux 9.26: A Devuan Ceres-based distribution with a MATE desktop, Flatpak-primary application model, and Windows XP-style desktop layout.
+Spaced Linux: a Devuan Ceres-based distribution with a MATE desktop, Flatpak-primary application model, and Windows XP-style desktop layout.
 
 ## Key Architecture
 
@@ -65,6 +65,10 @@ Two components sit below the line name:
   apt-repo-publish` to `crhy/spaced-apt`. Spaced Update offers any newer GitHub
   release tag, so a tag without APT packages makes every system loop on the
   upgrade (issue #209).
+- Spaced Update ships from `overlays/usr/lib/spaced-linux/` in this repository
+  (`spaced-update.py`, `spaced-update-helper`, `spaced-update-refresh`), with
+  its tests under `tests/`. The separate `crhy/spacedupdate` tree is not what
+  the distribution installs; work done only there does not ship (issue #277).
 - Close an issue only after its fix is merged to `main` (and released, for
   component repositories), not when a branch is pushed.
 - Any background process started from a script that holds a `flock` must close
