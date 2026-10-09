@@ -42,8 +42,8 @@
 </p>
 
 <p align="center">
-  <a href="website/assets/screenshots/desktop-hero.webp">
-    <img src="website/assets/screenshots/desktop-hero.webp" alt="Spaced Linux desktop" width="100%">
+  <a href="website/assets/screenshots/desktop-compiz.webp">
+    <img src="website/assets/screenshots/desktop-compiz.webp" alt="Spaced Linux Compiz workspace cube with a browser and terminals" width="100%">
   </a>
 </p>
 
@@ -62,7 +62,7 @@ These are real Spaced Linux desktop sessions—not wallpaper mockups. Click any 
 <table>
   <tr>
     <td width="50%" align="center">
-      <a href="website/assets/screenshots/desktop-compiz.webp"><img src="website/assets/screenshots/desktop-compiz.webp" alt="Spaced Linux Compiz workspace cube with a terminal"></a><br>
+      <a href="website/assets/screenshots/desktop-compiz.webp"><img src="website/assets/screenshots/desktop-compiz.webp" alt="Spaced Linux Compiz workspace cube with a browser and terminals"></a><br>
       <sub><strong>Compiz-first desktop</strong> — Workspaces, accessibility, motion, and organization are part of the core experience.</sub>
     </td>
     <td width="50%" align="center">
@@ -86,8 +86,8 @@ These are real Spaced Linux desktop sessions—not wallpaper mockups. Click any 
       <sub><strong>A familiar favorite</strong> — The macOS-inspired theme is one of the many coordinated Spaced Linux desktop looks.</sub>
     </td>
     <td width="50%" align="center">
-      <a href="website/assets/screenshots/desktop-ai-tools.webp"><img src="website/assets/screenshots/desktop-ai-tools.webp" alt="Spaced Linux running the Voxa local speech-to-text application"></a><br>
-      <sub><strong>Private AI</strong> — Voxa transcribes speech locally on-device, part of the flatpak-driven AI workflow.</sub>
+      <a href="website/assets/screenshots/voxa-grace.webp"><img src="website/assets/screenshots/voxa-grace.webp" alt="Voxa, the Spaced Linux voice assistant, with Grace, the default character"></a><br>
+      <sub><strong>Private AI</strong> — <a href="https://voxaai.me">Voxa</a> hears you on this computer and opens apps, takes dictation and answers questions by voice.</sub>
     </td>
   </tr>
   <tr>
@@ -128,8 +128,8 @@ These are real Spaced Linux desktop sessions—not wallpaper mockups. Click any 
 Spaced Linux combines a modern system with visual ideas from the best desktop eras. Its theme collection can evoke classic Windows, macOS, Android, Linux Mint, GeoWorks, or the distinctive monochrome Spaced identity without becoming a fragile pile of unrelated tweaks.
 
 <p align="center">
-  <a href="website/assets/screenshots/desktop-themes-current.webp">
-    <img src="website/assets/screenshots/desktop-themes-current.webp" alt="Spaced Linux coordinated theme collection" width="100%">
+  <a href="website/assets/screenshots/desktop-themes-six.webp">
+    <img src="website/assets/screenshots/desktop-themes-six.webp" alt="Six Spaced Linux themes: Spaced Dark, Spaced Light, macOS, Windows 11, Windows XP and Android styles" width="100%">
   </a>
 </p>
 

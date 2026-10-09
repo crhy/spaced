@@ -8,3 +8,4 @@
 .feature-shot .screenshot-button{padding:0;border:0;background:none;cursor:zoom-in;border-radius:18px;overflow:hidden;border:1px solid var(--line)}.feature-shot .screenshot-button img{width:100%;height:auto}.feature-shot p+p{margin-top:.8em}
 .feature-shot{align-items:center}.feature-shot .screenshot-button{margin:clamp(18px,3vw,40px)}.feature-shot .screenshot-button img{min-height:0;height:auto;object-fit:contain}.feature.reverse{grid-template-columns:.85fr 1.15fr}.feature+.feature{margin-top:28px}
 @media (max-width:900px){.feature.reverse{grid-template-columns:1fr}.feature.reverse>div{order:2}}
+.shot-natural img{aspect-ratio:auto;object-fit:contain}
