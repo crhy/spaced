@@ -1,5 +1,5 @@
 {
-  "checksum": "bb59707dbc1b8bda3fe71b7e6acf0e2d",
+  "checksum": "2827e1640e5c2f6da82f68515ce4e709",
   "roots": {
     "bookmark_bar": {
       "children": [
@@ -58,11 +58,20 @@
               "name": "🐧 Devuan",
               "type": "url",
               "url": "https://www.devuan.org/"
+            },
+            {
+              "date_added": "13401120000000071",
+              "date_last_used": "0",
+              "guid": "d4df0087-d25a-56fa-9f5c-288539dd4818",
+              "id": "23",
+              "name": "📊 DistroWatch",
+              "type": "url",
+              "url": "https://distrowatch.com/table.php?distribution=spaced"
             }
           ],
           "date_added": "13401120000000010",
           "date_last_used": "0",
-          "date_modified": "13401120000000030",
+          "date_modified": "13401120000000071",
           "guid": "7457ac3a-5ff7-5d0d-a2b8-1764287ad04e",
           "id": "11",
           "name": "🚀 Spaced",

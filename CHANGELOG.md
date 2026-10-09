@@ -7,6 +7,12 @@
   Voxa at voxaai.me) and “📰 News” (Voat first, then ten news sites ordered by
   how quickly their front pages load) (#278, #289). Existing profiles are not
   changed.
+- Link Spaced Linux's DistroWatch page from the Brave bookmarks, the website
+  and the README.
+- Website: the home page now leads with what a newcomer gets (a desktop you
+  can talk to, no account), adds a three-step install section with a direct
+  ISO link and checksum, a section for people coming from Windows, and a Voxa
+  section.
 - Make the minimize, maximize and close buttons easier to hit in all eleven
   themes: each clickable box grows from 24x24 to 32x27 px, the 4 px dead gaps
   between them and the 3 px dead strip above them are gone, and the icons and

@@ -128,6 +128,12 @@ for path in (
 # image. Do not require an unpublished ISO URL merely to match VERSION.
 assert version in Path("website/index.html").read_text(encoding="utf-8"), \
     "website/index.html does not identify the current development line"
+website_home = Path("website/index.html").read_text(encoding="utf-8")
+assert f"spaced-linux-{version}-amd64.iso" in website_home or "releases/download/" in website_home, \
+    "the website's install steps do not link the ISO directly"
+assert "distrowatch.com/table.php?distribution=spaced" in website_home \
+    and "distrowatch.com/table.php?distribution=spaced" in Path("README.md").read_text(encoding="utf-8"), \
+    "the website and README do not link Spaced Linux on DistroWatch"
 for path in ("website/index.html", "website/themes.html", "website/help.html"):
     website_page = Path(path).read_text(encoding="utf-8")
     assert "https://github.com/crhy/spaced/releases" in website_page, \
@@ -1210,10 +1216,10 @@ news_links = bookmark_bar["children"][1]["children"]
 assert news_links[0]["url"] == "https://voat.xyz/v/linux" and len(news_links) == 11, \
     "the News folder does not start with Voat or does not hold the eleven requested links (issue #289)"
 spaced_links = bookmark_bar["children"][0]["children"]
-assert ["🚀 Spaced Linux", "🗣 Voxa", "🏛 rhYciv", "🐱 Cards With Cats", "🎈 Open AirShips", "🐧 Devuan"] == \
+assert ["🚀 Spaced Linux", "🗣 Voxa", "🏛 rhYciv", "🐱 Cards With Cats", "🎈 Open AirShips", "🐧 Devuan", "📊 DistroWatch"] == \
     [bookmark["name"] for bookmark in spaced_links], \
     "fresh Brave profiles do not receive the requested bookmarks (issues #211, #278)"
-assert ["https://spacedlinux.com/", "https://voxaai.me/", "https://rhyciv.org/", "https://crhy.github.io/CardsWithCats/", "https://openairships.com/", "https://www.devuan.org/"] == \
+assert ["https://spacedlinux.com/", "https://voxaai.me/", "https://rhyciv.org/", "https://crhy.github.io/CardsWithCats/", "https://openairships.com/", "https://www.devuan.org/", "https://distrowatch.com/table.php?distribution=spaced"] == \
     [bookmark["url"] for bookmark in spaced_links], \
     "Brave bookmarks do not point at the requested pages (issues #211, #278)"
 bookmark_ids = []

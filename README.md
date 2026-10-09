@@ -19,6 +19,7 @@
   <a href="https://discord.gg/BMW9Y6NB3y"><strong>Discord</strong></a> ·
   <a href="https://t.me/+pjmFzHo-i9A2ZWY5"><strong>Telegram</strong></a> ·
   <a href="https://github.com/crhy/spaced/releases"><strong>Download releases</strong></a> ·
+  <a href="https://distrowatch.com/table.php?distribution=spaced"><strong>DistroWatch</strong></a> ·
   <a href="https://github.com/crhy/spaced/issues"><strong>Issues</strong></a> ·
   <a href="docs/DESIGN.md"><strong>Design</strong></a> ·
   <a href="docs/MATE-theming.md"><strong>Themes</strong></a> ·
