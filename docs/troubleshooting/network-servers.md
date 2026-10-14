@@ -49,9 +49,12 @@ network (same Wi-Fi or same router; no VPN in between).
      **not** appear. That list has been empty on modern networks for
      years; it is not a Spaced bug. Use the direct connection in step 3
      instead.
-4. One-way street: Spaced Linux finds other computers, but other computers
-   do **not** see the Spaced machine in their network browser. Spaced ships
-   no file-sharing server, only the tools to open other computers' shares.
+4. Spaced Linux finds other computers, but Windows PCs do **not** list the
+   Spaced machine in their Network folder, because nothing announces it over
+   WS-Discovery. Folders you share from Caja (right-click a folder >
+   **Sharing Options**) are still reachable from Windows by typing
+   `\\IP-ADDRESS\share` in File Explorer. Sharing needs the Samba service
+   running: check it with `/etc/init.d/smbd status`.
 
 ## 3. Connect directly (works even when browsing finds nothing)
 

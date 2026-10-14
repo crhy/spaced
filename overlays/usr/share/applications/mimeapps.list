@@ -1,4 +1,6 @@
 [Default Applications]
+# Folders open in Caja, not in an editor that also claims them (issue #297).
+inode/directory=caja-folder-handler.desktop
 x-scheme-handler/http=com.brave.Browser.desktop
 x-scheme-handler/https=com.brave.Browser.desktop
 x-scheme-handler/ftp=com.brave.Browser.desktop

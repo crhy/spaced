@@ -92,6 +92,11 @@ A resolution in this file should be updated when the implementation changes. Do 
 - APT autoclean removes only obsolete downloads. A user-requested full cache
   cleanup needs `apt clean`; report cached file bytes, excluding lock files,
   rather than directory inode sizes.
-- Samba usershare permission resolution needs smbd running. Updating only
-  Spaced's configuration does not rerun Samba's service startup; a one-time
-  upgrade migration starts it through invoke-rc.d and respects service policy.
+- Samba usershare permission resolution needs smbd running, and a share
+  needs smbd running after every boot. Updating only Spaced's configuration
+  does not rerun Samba's service startup or restore missing or disabled boot
+  links; a one-time upgrade migration enables smbd with update-rc.d and starts
+  it through invoke-rc.d, respecting service policy (issue #297).
+- `inode/directory` must name `caja-folder-handler.desktop` in the shipped
+  `mimeapps.list`. Otherwise any Flatpak that claims folders (VSCodium does)
+  becomes the default, and Gigolo's "Open" launches it (issue #297).

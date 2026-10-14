@@ -68,10 +68,16 @@ fi
 
 # An upgrade which only changes usershare configuration does not run Samba's
 # postinst. Start the service once so Caja can resolve Everyone to its SID.
+# Starting it was not enough: systems whose smbd boot links were missing or
+# disabled lost the share again at the next boot, and other computers got
+# "connection refused" (issue #297). Enable it at boot once as well.
 # Respect policy-rc.d (including image builds) and keep failed starts retryable.
-marker=/var/lib/spaced-linux/smbd-10.26.1
+marker=/var/lib/spaced-linux/smbd-boot-10.26.3
 if [ "$1" = configure ] && [ ! -e "$marker" ] && [ -x /etc/init.d/smbd ]; then
-    if invoke-rc.d --disclose-deny smbd start; then
+    update-rc.d smbd defaults >/dev/null 2>&1 || true
+    update-rc.d smbd enable >/dev/null 2>&1 || true
+    if /etc/init.d/smbd status >/dev/null 2>&1 \
+        || invoke-rc.d --disclose-deny smbd start; then
         install -d -m 0755 /var/lib/spaced-linux
         : > "$marker"
     fi

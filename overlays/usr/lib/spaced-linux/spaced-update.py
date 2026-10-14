@@ -1732,8 +1732,10 @@ class OsUpdateTab(Gtk.Box):
         self.notesbtn.show()
 
     def show_release_notes(self, *_):
+        # show_all: the dialog is built after the main window was shown, so
+        # show() alone maps an empty window (issue #295).
         if self.latest_release:
-            self.build_notes_dialog().show()
+            self.build_notes_dialog().show_all()
 
     def build_notes_dialog(self):
         # The notes come from the release body the check already downloaded;

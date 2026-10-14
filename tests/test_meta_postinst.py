@@ -80,5 +80,38 @@ class SambashareGroupTests(unittest.TestCase):
                              ['-a -G sambashare rhy', '-a -G sambashare alice'])
 
 
+class SmbdBootTests(unittest.TestCase):
+    def run_block(self, temp, status_ok):
+        bin_dir = temp / 'bin'
+        bin_dir.mkdir(exist_ok=True)
+        init = temp / 'smbd'
+        init.write_text(f'#!/bin/sh\necho "init $*" >> "$LOG"\nexit {0 if status_ok else 3}\n')
+        init.chmod(0o755)
+        for name in ('update-rc.d', 'invoke-rc.d'):
+            stub = bin_dir / name
+            stub.write_text(f'#!/bin/sh\necho "{name} $*" >> "$LOG"\n')
+            stub.chmod(0o755)
+        script = (block('marker=/var/lib/spaced-linux/smbd-boot')
+                  .replace('/var/lib/spaced-linux', str(temp / 'state'))
+                  .replace('/etc/init.d/smbd', str(init)))
+        env = dict(os.environ, PATH=f'{bin_dir}:{os.environ["PATH"]}', LOG=str(temp / 'log'))
+        for _ in range(2):
+            subprocess.run(['sh', '-c', script, 'sh', 'configure'], check=True, env=env)
+        return (temp / 'log').read_text().splitlines()
+
+    def test_stopped_smbd_is_enabled_at_boot_and_started_once(self):
+        # Issue #297: a started but boot-disabled smbd refused connections
+        # after the next reboot.
+        with tempfile.TemporaryDirectory() as temp:
+            self.assertEqual(self.run_block(Path(temp), status_ok=False), [
+                'update-rc.d smbd defaults', 'update-rc.d smbd enable',
+                'init status', 'invoke-rc.d --disclose-deny smbd start'])
+
+    def test_running_smbd_is_enabled_without_a_restart(self):
+        with tempfile.TemporaryDirectory() as temp:
+            self.assertEqual(self.run_block(Path(temp), status_ok=True), [
+                'update-rc.d smbd defaults', 'update-rc.d smbd enable', 'init status'])
+
+
 if __name__ == '__main__':
     unittest.main()
