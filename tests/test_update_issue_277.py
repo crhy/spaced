@@ -5,6 +5,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import types
 import unittest
 import xml.etree.ElementTree as ET
 
@@ -124,6 +125,40 @@ class AppTests(unittest.TestCase):
         # dialog must show the text instead of an empty label.
         broken = '- **bold `code** tail`'
         self.assertEqual(to_markup(broken), spaced_update.GLib.markup_escape_text(broken))
+
+
+class ReleaseNotesDialogTests(unittest.TestCase):
+    @unittest.skipIf(spaced_update is None or not os.environ.get('DISPLAY'),
+                     'requires GTK and an X display (run under xvfb-run)')
+    def test_whats_new_dialog_shows_the_notes(self):
+        # Issue #295: show() mapped only the window, so the notes never drew.
+        tab = types.SimpleNamespace(
+            app=None, latest_release='10.26.2',
+            release_notes='- **Title-bar buttons:** fixed')
+        tab.build_notes_dialog = types.MethodType(
+            spaced_update.OsUpdateTab.build_notes_dialog, tab)
+        shown = []
+        original = tab.build_notes_dialog
+
+        def build():
+            dialog = original()
+            shown.append(dialog)
+            return dialog
+        tab.build_notes_dialog = build
+        spaced_update.OsUpdateTab.show_release_notes(tab)
+        dialog = shown[0]
+        self.addCleanup(dialog.destroy)
+        labels = []
+
+        def walk(widget):
+            if isinstance(widget, spaced_update.Gtk.Label):
+                labels.append(widget)
+            if isinstance(widget, spaced_update.Gtk.Container):
+                widget.foreach(walk)
+        walk(dialog)
+        notes = [label for label in labels if 'Title-bar' in label.get_text()]
+        self.assertTrue(notes)
+        self.assertTrue(all(label.is_visible() for label in labels))
 
 
 if __name__ == '__main__':

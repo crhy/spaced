@@ -700,6 +700,12 @@ assert "usershare max shares = 100" in meta_postinst, \
     "Samba user shares stay disabled, so Caja Sharing Options fails (issue #253)"
 assert "sambashare user" in Path("scripts/iso/01-configure.chroot").read_text(encoding="utf-8"), \
     "the live user cannot share folders (issue #253)"
+assert "update-rc.d smbd defaults" in Path("scripts/iso/01-configure.chroot").read_text(encoding="utf-8") \
+    and "update-rc.d smbd enable" in meta_postinst, \
+    "smbd does not start at boot, so shared folders refuse connections (issue #297)"
+assert "inode/directory=caja-folder-handler.desktop" in \
+    (root / "usr/share/applications/mimeapps.list").read_text(encoding="utf-8"), \
+    "folders can open in another application that claims inode/directory (issue #297)"
 # Issue #227: the first installed user must get UID and GID 1000.
 for group in calamares_users["defaultGroups"]:
     if group in ("netdev", "lpadmin", "scanner", "bluetooth", "sambashare", "autologin"):
