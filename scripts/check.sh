@@ -708,6 +708,11 @@ for path in ("etc/init.d/spaced-wsdd", "usr/share/applications/spaced-sharing-pa
              "usr/share/polkit-1/actions/com.spacedlinux.sharing.policy"):
     assert (root / path).exists() and path in local_packages, \
         f"{path} is not shipped, so Windows cannot find or sign in to Spaced shares (issue #297)"
+ollama_helper = (root / "usr/lib/spaced-linux/spaced-ollama-install").read_text(encoding="utf-8")
+assert re.search(r"ollama-linux-amd64\.tar\.zst [0-9a-f]{64} \d+", ollama_helper) \
+    and "sha256sum --check" in ollama_helper \
+    and "usr/share/polkit-1/actions/com.spacedlinux.ollama.policy" in local_packages, \
+    "the Voxa Welcome cannot install a pinned, checksummed Ollama (issue #283)"
 assert "update-rc.d spaced-wsdd defaults" in Path("scripts/iso/01-configure.chroot").read_text(encoding="utf-8") \
     and "update-rc.d spaced-wsdd defaults" in \
     Path("packages/spaced-mate-default-settings/DEBIAN/postinst").read_text(encoding="utf-8"), \
