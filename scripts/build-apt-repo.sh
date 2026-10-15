@@ -90,6 +90,16 @@ for source in "$compiz_artifacts"/compiz_*.dsc "$compiz_artifacts"/compiz_*.orig
     fi
     cp "$source" "$destination"
 done
+# The rebuilt X server (amdgpu ABI fix, issue #298) is a format 1.0 source.
+xorg_artifacts=${SPACED_XORG_ARTIFACT_DIR:-$ROOT/build/xorg-server/artifacts}
+for source in "$xorg_artifacts"/xorg-server_*.dsc "$xorg_artifacts"/xorg-server_*.orig.tar.* "$xorg_artifacts"/xorg-server_*.diff.gz; do
+    [[ -f "$source" ]] || { echo "Missing corresponding xorg-server source: $source" >&2; exit 1; }
+    destination="$source_dir/${source##*/}"
+    if [[ -e "$destination" ]] && ! cmp -s "$source" "$destination"; then
+        echo "Refusing to replace published source bytes: $destination" >&2; exit 1
+    fi
+    cp "$source" "$destination"
+done
 (cd "$source_dir" && apt-ftparchive sources .) > "$metadata/$COMP/source/Sources"
 sed -i "s|^Directory: \.$|Directory: dists/$DIST/$COMP/source|" "$metadata/$COMP/source/Sources"
 gzip -n9c "$metadata/$COMP/source/Sources" > "$metadata/$COMP/source/Sources.gz"

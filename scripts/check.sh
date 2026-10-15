@@ -703,6 +703,19 @@ assert "sambashare user" in Path("scripts/iso/01-configure.chroot").read_text(en
 assert "update-rc.d smbd defaults" in Path("scripts/iso/01-configure.chroot").read_text(encoding="utf-8") \
     and "update-rc.d smbd enable" in meta_postinst, \
     "smbd does not start at boot, so shared folders refuse connections (issue #297)"
+local_packages = Path("scripts/iso/build-local-packages.sh").read_text(encoding="utf-8")
+for path in ("etc/init.d/spaced-wsdd", "usr/share/applications/spaced-sharing-password.desktop",
+             "usr/share/polkit-1/actions/com.spacedlinux.sharing.policy"):
+    assert (root / path).exists() and path in local_packages, \
+        f"{path} is not shipped, so Windows cannot find or sign in to Spaced shares (issue #297)"
+assert "update-rc.d spaced-wsdd defaults" in Path("scripts/iso/01-configure.chroot").read_text(encoding="utf-8") \
+    and "update-rc.d spaced-wsdd defaults" in \
+    Path("packages/spaced-mate-default-settings/DEBIAN/postinst").read_text(encoding="utf-8"), \
+    "spaced-wsdd does not start at boot, so Windows does not list Spaced computers (issue #297)"
+assert "spaced-home-traverse" in (root / "etc/calamares/modules/shellprocess@spaced-postinstall.conf").read_text(encoding="utf-8") \
+    and "spaced-home-traverse" in meta_postinst \
+    and "chmod 0711 /home/user" in Path("scripts/iso/01-configure.chroot").read_text(encoding="utf-8"), \
+    "guests cannot reach folders shared from a 0700 home (issue #297)"
 assert "inode/directory=caja-folder-handler.desktop" in \
     (root / "usr/share/applications/mimeapps.list").read_text(encoding="utf-8"), \
     "folders can open in another application that claims inode/directory (issue #297)"
@@ -1211,6 +1224,18 @@ for compiz_script, needle in (("scripts/iso/build-marco-chroot.sh", "build-compi
                               ("scripts/build-apt-repo.sh", "compiz_artifacts")):
     assert needle in Path(compiz_script).read_text(encoding="utf-8"), \
         f"{compiz_script} does not build, stage or publish the rebuilt Compiz (issue #279)"
+
+xorg_patch = Path("patches/xorg-server/0001-revert-damage-abi-break.patch").read_text(encoding="utf-8")
+assert "-    DamagePtr *pListHead;" in xorg_patch, \
+    "the Xorg patch no longer restores the 21.1.24 DamageRec layout the amdgpu driver needs (issue #298)"
+assert len(Path("patches/xorg-server/sources.sha256").read_text(encoding="utf-8").split()) == 6, \
+    "the xorg-server source archives are not pinned by SHA-256"
+for xorg_script, needle in (("scripts/iso/build-marco-chroot.sh", "build-xorg-server.sh"),
+                            ("scripts/iso/build-local-packages.sh", "stage-xorg-server.sh"),
+                            ("scripts/build-apt-repo.sh", "xorg_artifacts"),
+                            ("Makefile", "stage-xorg-server.sh --check")):
+    assert needle in Path(xorg_script).read_text(encoding="utf-8"), \
+        f"{xorg_script} does not build, stage or publish the rebuilt X server (issue #298)"
 
 brave_profile = root / "etc/skel/.var/app/com.brave.Browser/config/BraveSoftware/Brave-Browser/Default"
 brave_bookmarks = json.loads((brave_profile / "Bookmarks").read_text(encoding="utf-8"))

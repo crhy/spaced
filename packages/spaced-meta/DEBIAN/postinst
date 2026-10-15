@@ -83,4 +83,14 @@ if [ "$1" = configure ] && [ ! -e "$marker" ] && [ -x /etc/init.d/smbd ]; then
     fi
 fi
 
+# Guest ("Everyone") shares inside a 0700 home were listed but every open
+# was denied, because guests run as nobody (issue #297). Open existing
+# desktop homes to traversal once; never undo a later change.
+marker=/var/lib/spaced-linux/home-traverse-10.26.3
+if [ "$1" = configure ] && [ ! -e "$marker" ] && [ -x /usr/lib/spaced-linux/spaced-home-traverse ]; then
+    /usr/lib/spaced-linux/spaced-home-traverse || true
+    install -d -m 0755 /var/lib/spaced-linux
+    : > "$marker"
+fi
+
 exit 0

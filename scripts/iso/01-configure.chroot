@@ -64,6 +64,8 @@ id -u user >/dev/null 2>&1 || useradd -m -s /bin/bash user
 echo "user:1" | chpasswd
 echo "root:spaced" | chpasswd
 usermod -aG sudo,audio,video,plugdev,netdev,sambashare user
+# Guests must reach folders the live user shares (issue #297).
+chmod 0711 /home/user
 printf 'user ALL=(ALL:ALL) NOPASSWD: ALL\n' > /etc/sudoers.d/spaced-live
 chmod 0440 /etc/sudoers.d/spaced-live
 
@@ -115,6 +117,8 @@ rm -f /etc/modprobe.d/nvidia-installer-disable-nouveau.conf 2>/dev/null || true
 [ ! -e /etc/init.d/avahi-daemon ] || update-rc.d avahi-daemon defaults
 # Serve Caja folder shares at boot; usershares need smbd (issue #297).
 [ ! -e /etc/init.d/smbd ] || update-rc.d smbd defaults
+# Let Windows list this computer under Network (issue #297).
+[ ! -e /etc/init.d/spaced-wsdd ] || update-rc.d spaced-wsdd defaults
 [ ! -e /etc/init.d/spaced-first-boot-snapshot ] || \
   update-rc.d spaced-first-boot-snapshot defaults 98
 # Let GRUB discover other installed operating systems.

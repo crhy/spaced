@@ -60,6 +60,14 @@ if ! "$ROOT/scripts/iso/stage-compiz.sh" --check 2>/dev/null; then
     chroot "$CHROOT" /usr/bin/env DEB_BUILD_OPTIONS=parallel=2 \
         bash /workspace/scripts/iso/build-compiz.sh --build /workspace/build/compiz
 fi
+# The X server with the amdgpu ABI fix (issue #298) is built here as well.
+if ! "$ROOT/scripts/iso/stage-xorg-server.sh" --check 2>/dev/null; then
+    chroot "$CHROOT" /usr/bin/env DEBIAN_FRONTEND=noninteractive \
+        apt-get build-dep -y --no-install-recommends xorg-server
+    chroot "$CHROOT" /usr/bin/env DEB_BUILD_OPTIONS=parallel=4 \
+        bash /workspace/scripts/iso/build-xorg-server.sh --build /workspace/build/xorg-server
+fi
 if [ -n "${PKEXEC_UID:-}" ]; then
-    chown -R "$PKEXEC_UID" "$ROOT/build/marco/artifacts" "$ROOT/build/nm-focus" "$ROOT/build/compiz"
+    chown -R "$PKEXEC_UID" "$ROOT/build/marco/artifacts" "$ROOT/build/nm-focus" "$ROOT/build/compiz" \
+        "$ROOT/build/xorg-server"
 fi
