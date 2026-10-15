@@ -1,5 +1,13 @@
 # Changelog
 
+## 10.26.3-2 - 2026-10-15
+
+- Spaced Update (0.2.3) no longer reports "System update failed" when the
+  system update succeeded but one of your Flatpak apps could not update, for
+  example a locally built app whose source is older than the installed copy.
+  It now finishes with a warning and names the app in Technical details.
+  Delivered through Spaced Update (APT packages `10.26.3-2`); no new ISO.
+
 ## 10.26.3 - 2026-10-14
 
 Delivered through the 10.26.3 ISO and `10.26.3-1` APT packages, with the X
