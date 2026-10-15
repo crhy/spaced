@@ -1,0 +1,4 @@
+Getting things set up.
+I'm installing myself, my AI engine, and a small language model.
+Depending on your internet connection, this takes a few minutes.
+When I'm ready, I'll come back to life, and we'll test your microphone together.

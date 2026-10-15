@@ -1,0 +1,4 @@
+I'm Voxa, your voice assistant.
+To get the most out of Spaced Linux, we need to install me and a small AI model.
+Choose Voxa Welcome, and I'll set everything up and show you around.
+Or choose Spaced Welcome to pick your own apps.
