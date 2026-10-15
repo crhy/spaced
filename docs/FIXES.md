@@ -113,6 +113,12 @@ A resolution in this file should be updated when the implementation changes. Do 
   issue #298) is fixed by rebuilding that source with the upstream revert
   under `patches/<source>/`, versioned to sort below the distribution's own
   fix, plus an APT pin and a Spaced Update guard for the broken version.
+- Package bytes depend on `SOURCE_DATE_EPOCH`, which comes from the commit
+  that last touched a control file. A squash merge rewrites that commit's
+  time, so rebuilding an unchanged package from `main` can differ from what
+  was published from the PR branch, and `build-apt-repo.sh` refuses it. Pin
+  the published timestamp (for example `WALLPAPERS_SOURCE_DATE_EPOCH`, read
+  from the published `.deb`) instead of bumping an unchanged package.
 - `inode/directory` must name `caja-folder-handler.desktop` in the shipped
   `mimeapps.list`. Otherwise any Flatpak that claims folders (VSCodium does)
   becomes the default, and Gigolo's "Open" launches it (issue #297).
