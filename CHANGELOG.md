@@ -1,5 +1,40 @@
 # Changelog
 
+## 10.26.3 - 2026-10-14
+
+Delivered through the 10.26.3 ISO and `10.26.3-1` APT packages, with the X
+server rebuilt as `2:21.1.25-1devuan1+spaced10.26.3`.
+
+- Fix the desktop not starting on AMD graphics after updating. X server
+  21.1.25 changed an internal structure without telling drivers, so the
+  amdgpu driver crashed the X server at startup and only a text login
+  appeared. Spaced now ships 21.1.25 with the upstream fix (the same change
+  as Debian's `2:21.1.25-2`), keeping all of 21.1.25's security fixes, and
+  refuses to install the broken `2:21.1.25-1devuan1` from Spaced Update or
+  `apt`. If you held the X server packages, run
+  `sudo apt-mark unhold xserver-common xserver-xorg-core xvfb` and update;
+  remove any `modesetting` workaround file you added afterwards so TearFree
+  returns (#298).
+- Fix folder sharing with "Everyone" (#297):
+  - The Samba service now starts at every boot; before, a reboot could leave
+    shared folders refusing connections.
+  - Guests can open folders shared from inside your home folder. Home folders
+    change from 0700 to 0711: others can pass through to a shared folder but
+    cannot list your home.
+  - New **Windows Sharing Password** (System > Preferences): Windows 10 and 11
+    refuse guest access, so they sign in to your shares with your user name
+    and this password.
+  - Windows PCs now list Spaced computers under **Network**.
+  - Gigolo's Open, and anything else opening a folder, uses Caja again instead
+    of VSCodium.
+- Spaced Update's "What's new" window now shows the release notes; it was
+  empty (#295).
+- Website: the ISO fits on a 2 GB USB stick, and the install steps mention F2
+  or Delete for the BIOS setup (#296).
+- New test tools: `scripts/tests/samba-network-test.sh` checks file sharing
+  between real machines, and `scripts/tests/xorg-amdgpu-headless-test.sh`
+  checks the X server on an AMD GPU.
+
 ## 10.26.2 - 2026-10-08
 
 Delivered through the 10.26.2 ISO and `10.26.2-1` APT packages, with Compiz
