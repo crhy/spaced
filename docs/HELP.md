@@ -20,3 +20,6 @@ session, and the steps that reproduce the problem.
   real-network test checklist for mDNS/DNS-SD and WS-Discovery browsing,
   direct `smb://` connections, diagnostics, and what to include in a bug
   report.
+- [Only a text login after updating (AMD graphics)](troubleshooting/amd-text-login.md):
+  fix for the amdgpu crash of X server `2:21.1.25-1devuan1`, diagnosis, and
+  what to include in a bug report.
