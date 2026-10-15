@@ -39,5 +39,10 @@ while IFS= read -r line || [ -n "$line" ]; do
             systemd|systemd-sysv|runit-init|openrc)
                 fail "Refusing an upgrade that changes the sysvinit system: $package" ;;
         esac
+        # This server crashes the amdgpu driver at startup (issue #298).
+        # The APT pin cannot protect the transaction that installs it.
+        if [ "$package" = xserver-xorg-core ] && [ "${new#2:}" = 21.1.25-1devuan1 ]; then
+            fail "Refusing xserver-xorg-core $new: it stops the desktop starting on AMD graphics. Try again once the fixed X server is available."
+        fi
     fi
 done

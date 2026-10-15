@@ -1,0 +1,17 @@
+#!/bin/bash
+# Let Samba guests reach folders shared from inside a home directory
+# (issue #297). Guests run as nobody, which a 0700 home stops at the door.
+# 0711 lets others pass through to a shared folder without listing the
+# home itself. Homes an administrator set to any other mode are left alone.
+set -euo pipefail
+HOME_ROOT=${SPACED_HOME_ROOT:-/home}
+getent passwd | while IFS=: read -r name _ uid _ _ home shell; do
+    [ "$uid" -ge 1000 ] && [ "$uid" -lt 60000 ] || continue
+    case $shell in */nologin|*/false) continue ;; esac
+    case $home in "$HOME_ROOT"/*) ;; *) continue ;; esac
+    [ -d "$home" ] && [ ! -L "$home" ] || continue
+    if [ "$(stat -c %a "$home")" = 700 ]; then
+        chmod 0711 "$home"
+        printf 'Spaced: %s home %s is now 0711 for shared folders\n' "$name" "$home"
+    fi
+done

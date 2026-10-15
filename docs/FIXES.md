@@ -97,6 +97,22 @@ A resolution in this file should be updated when the implementation changes. Do 
   does not rerun Samba's service startup or restore missing or disabled boot
   links; a one-time upgrade migration enables smbd with update-rc.d and starts
   it through invoke-rc.d, respecting service policy (issue #297).
+- Samba guests run as `nobody`, which needs search (`x`) permission on every
+  parent of a shared folder. Debian's `HOME_MODE 0700` blocks every guest
+  share inside a home, which looks like a working share whose every open is
+  denied. `spaced-home-traverse` makes desktop homes 0711 at install and once
+  on upgrade (issue #297).
+- Windows 10/11 refuse guest shares and require signing, so a guest-only
+  share is useless to them. They sign in with a Samba password, set by
+  Windows Sharing Password (`spaced-samba-password-helper` via pkexec). Test
+  sign-in with `--client-protection=sign`: `map to guest = Bad User` turns a
+  wrong password into a guest session that otherwise looks successful.
+- Debian's `wsdd` package has no sysvinit script; `spaced-wsdd` runs it in
+  host mode as `nobody` so Windows lists Spaced computers under Network.
+- A driver-ABI break in a rolling base package (xorg-server 21.1.25,
+  issue #298) is fixed by rebuilding that source with the upstream revert
+  under `patches/<source>/`, versioned to sort below the distribution's own
+  fix, plus an APT pin and a Spaced Update guard for the broken version.
 - `inode/directory` must name `caja-folder-handler.desktop` in the shipped
   `mimeapps.list`. Otherwise any Flatpak that claims folders (VSCodium does)
   becomes the default, and Gigolo's "Open" launches it (issue #297).

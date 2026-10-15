@@ -92,10 +92,10 @@ check_local() {
         fail "avahi-daemon is not running"
     fi
     info "nmbd (NetBIOS names, optional): $(/etc/init.d/nmbd status 2>&1 | head -1)"
-    if pgrep -x wsdd >/dev/null || pgrep -f 'wsdd(\.py)? ' >/dev/null; then
-        info "a wsdd process is running: $(pgrep -af wsdd | head -2 | tr '\n' ' ')"
+    if [ -x /etc/init.d/spaced-wsdd ] && /etc/init.d/spaced-wsdd status >/dev/null 2>&1; then
+        pass "spaced-wsdd announces this computer to Windows Network browsing"
     else
-        warn "no wsdd announcer: Windows will not list this machine under Network (direct \\\\IP\\share still works)"
+        fail "spaced-wsdd is not running: Windows will not list this computer under Network (sudo /etc/init.d/spaced-wsdd start)"
     fi
 
     if have ss; then
@@ -125,10 +125,17 @@ check_local() {
     else
         fail "$(id -un) is not in group sambashare (log out and in after: sudo usermod -aG sambashare $(id -un))"
     fi
-    if have pdbedit && pdbedit -L 2>/dev/null | grep -q "^$(id -un):"; then
-        info "$(id -un) has a Samba password (authenticated access possible)"
+    if [ -n "${SPACED_SMB_PASSWORD:-}" ]; then
+        # Signed, like Windows 11: map to guest = Bad User would otherwise
+        # turn a wrong password into a guest session that seems to succeed.
+        if smbclient //127.0.0.1/IPC\$ -U "$(id -un)%$SPACED_SMB_PASSWORD" --client-protection=sign \
+            -c quit >/dev/null 2>&1; then
+            pass "$(id -un) can sign in to Samba (what Windows 10/11 need)"
+        else
+            fail "$(id -un) cannot sign in to Samba with SPACED_SMB_PASSWORD; set it with Windows Sharing Password"
+        fi
     else
-        warn "$(id -un) has no Samba password: Windows 11 refuses guest access, so it can only open this machine's shares after: sudo smbpasswd -a $(id -un)"
+        warn "SPACED_SMB_PASSWORD not set: Windows 10/11 sign-in not tested (they refuse guest access)"
     fi
 
     local folders
@@ -154,7 +161,7 @@ check_local() {
     if [ $(( 0$(stat -c %a "$HOME") & 01 )) -eq 1 ]; then
         pass "home $HOME (mode $(stat -c %a "$HOME")) lets guests reach shared folders inside it"
     else
-        fail "home $HOME is mode $(stat -c %a "$HOME"): guests (Everyone) cannot reach any folder shared from inside it"
+        fail "home $HOME is mode $(stat -c %a "$HOME"): guests (Everyone) cannot reach any folder shared from inside it (sudo /usr/lib/spaced-linux/spaced-home-traverse)"
     fi
 
     # The same calls Caja's Sharing Options makes for "Everyone" access.
@@ -168,7 +175,8 @@ check_local() {
         round_trip "guest on localhost" "//127.0.0.1/$name" -N
         local user_password=${SPACED_SMB_PASSWORD:-}
         if [ -n "$user_password" ]; then
-            round_trip "user $(id -un) on localhost" "//127.0.0.1/$name" -U "$(id -un)%$user_password"
+            round_trip "user $(id -un) on localhost (signed)" "//127.0.0.1/$name" -U "$(id -un)%$user_password" \
+                --client-protection=sign
         else
             info "set SPACED_SMB_PASSWORD to also test authenticated access to this share"
         fi
@@ -258,7 +266,8 @@ check_peer() {
             read -r -s -p "Password for $user on $host: " password
             echo
         fi
-        round_trip "user $user" "//$address/$share" -U "$user%$password"
+        round_trip "user $user (signed, as Windows 11 requires)" "//$address/$share" -U "$user%$password" \
+            --client-protection=sign
         smbclient "//$address/$share" -U "$user%$password" -c 'quit' -m SMB3 >/dev/null 2>&1 \
             && pass "SMB3 negotiated with $address" || warn "SMB3 not negotiated with $address"
     fi

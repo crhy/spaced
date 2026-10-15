@@ -49,12 +49,9 @@ network (same Wi-Fi or same router; no VPN in between).
      **not** appear. That list has been empty on modern networks for
      years; it is not a Spaced bug. Use the direct connection in step 3
      instead.
-4. Spaced Linux finds other computers, but Windows PCs do **not** list the
-   Spaced machine in their Network folder, because nothing announces it over
-   WS-Discovery. Folders you share from Caja (right-click a folder >
-   **Sharing Options**) are still reachable from Windows by typing
-   `\\IP-ADDRESS\share` in File Explorer. Sharing needs the Samba service
-   running: check it with `/etc/init.d/smbd status`.
+4. Windows 10/11 PCs list the Spaced computer under **Network** too: the
+   `spaced-wsdd` service announces it over WS-Discovery (10.26.3 and
+   later). To share folders with them, see step 6.
 
 ## 3. Connect directly (works even when browsing finds nothing)
 
@@ -156,7 +153,7 @@ It prints every mDNS announcement on the network: computers
 else publishing. Let it run for 30 seconds, then stop it with Ctrl+C.
 
 - Your Windows PC, NAS or Mac shows up here but not in Caja: report it,
-  including this output (see step 6).
+  including this output (see step 7).
 - Nothing shows up here at all: the announcements never reach this
   machine. Suspect Wi-Fi client isolation, a VPN, or the Windows
   firewall (step 5).
@@ -217,7 +214,29 @@ log out and back in and try again.
   from seeing each other. Nothing can fix that except joining the main
   network.
 
-## 6. What to include in a bug report
+## 6. Share a folder with Windows PCs (10.26.3 and later)
+
+1. Open **System > Preferences > Windows Sharing Password** once and choose a
+   password. Windows 10 and 11 refuse guest ("Everyone") access, so they
+   sign in with your Spaced user name and this password.
+2. In Caja, right-click the folder > **Sharing Options**, tick **Share this
+   folder**, and tick **Allow others to create and delete files** if Windows
+   should be able to write.
+3. On the Windows PC, type `\\IP-ADDRESS` (or open **Network** and
+   double-click the Spaced computer), open the share, and sign in with your
+   Spaced user name and the sharing password.
+
+Checks, in MATE Terminal:
+
+- `/etc/init.d/smbd status` and `/etc/init.d/spaced-wsdd status` should
+  both say running. Start either with `sudo /etc/init.d/NAME start`.
+- `stat -c %a ~` should print `711`. With `700`, guests on other Linux
+  machines cannot reach folders inside your home; run
+  `sudo /usr/lib/spaced-linux/spaced-home-traverse` once.
+- `scripts/tests/samba-network-test.sh local` from the Spaced source
+  repository checks all of this at once.
+
+## 7. What to include in a bug report
 
 Report reproducible issues at
 <https://github.com/crhy/spaced/issues> with:

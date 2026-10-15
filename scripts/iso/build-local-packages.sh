@@ -39,6 +39,7 @@ SETTINGS_PATHS=(
     etc/default/spaced-first-boot-snapshot
     etc/fastfetch
     etc/init.d/spaced-first-boot-snapshot
+    etc/init.d/spaced-wsdd
     etc/lightdm/lightdm.conf.d/60-spaced-installed.conf
     etc/profile.d/spaced-application-theming.sh
     etc/profile.d/spaced-flatpak-exports.sh
@@ -68,6 +69,7 @@ SETTINGS_PATHS=(
     usr/local/share/applications/spaced-help.desktop
     usr/share/applications/mimeapps.list
     usr/share/applications/spaced-nvidia-installer.desktop
+    usr/share/applications/spaced-sharing-password.desktop
     usr/share/applications/spaced-update.desktop
     usr/share/applications/spaced-window-manager.desktop
     usr/share/fastfetch/logos/spaced-linux.txt
@@ -79,6 +81,7 @@ SETTINGS_PATHS=(
     usr/share/pixmaps
     usr/share/spaced-xsessions
     usr/share/polkit-1/actions/com.spacedlinux.nvidia.policy
+    usr/share/polkit-1/actions/com.spacedlinux.sharing.policy
     usr/share/polkit-1/actions/com.spacedlinux.update.policy
 )
 
@@ -277,3 +280,4 @@ stage_meta
 "$ROOT/scripts/iso/stage-amdgpu-top.sh"
 "$ROOT/scripts/iso/stage-marco.sh"
 "$ROOT/scripts/iso/stage-compiz.sh"
+"$ROOT/scripts/iso/stage-xorg-server.sh"

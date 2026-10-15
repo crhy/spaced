@@ -26,6 +26,13 @@ if [ -x /etc/init.d/spaced-first-boot-snapshot ]; then
     update-rc.d spaced-first-boot-snapshot defaults 98 >/dev/null 2>&1 || true
 fi
 
+# Announce this computer to Windows Network browsing (issue #297).
+# Respect policy-rc.d, including image builds.
+if [ "$1" = configure ] && [ -x /etc/init.d/spaced-wsdd ]; then
+    update-rc.d spaced-wsdd defaults >/dev/null 2>&1 || true
+    invoke-rc.d spaced-wsdd start || true
+fi
+
 # Existing installations do not run the live-image hook again. Register any
 # newly packaged signed sources here as well; a later login retries user-scope
 # registration if networking is not ready during an APT upgrade.

@@ -1,0 +1,6 @@
+Explanation: xorg-server 2:21.1.25-1devuan1 changed DamageRec without a driver
+Explanation: ABI bump and crashes the amdgpu driver at startup (Spaced #298).
+Explanation: Spaced APT publishes +spaced10.26.3 with the upstream revert.
+Package: xserver-common xserver-xorg-core xserver-xorg-dev xserver-xorg-legacy xvfb xnest xserver-xephyr xorg-server-source
+Pin: version 2:21.1.25-1devuan1
+Pin-Priority: -1

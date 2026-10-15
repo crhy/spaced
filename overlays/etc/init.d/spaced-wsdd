@@ -1,0 +1,53 @@
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          spaced-wsdd
+# Required-Start:    $network $remote_fs $syslog
+# Required-Stop:     $network $remote_fs $syslog
+# Should-Start:      smbd
+# Should-Stop:       smbd
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Announce this computer to Windows Network browsing
+# Description:       Runs wsdd in host mode so Windows 10/11 list this
+#                    computer and its shared folders under Network (#297).
+### END INIT INFO
+
+PATH=/sbin:/usr/sbin:/bin:/usr/bin
+DAEMON=/usr/bin/wsdd
+PIDFILE=/run/spaced-wsdd.pid
+[ -x "$DAEMON" ] || exit 0
+
+workgroup() {
+    name=$(testparm -s --parameter-name=workgroup 2>/dev/null)
+    printf '%s\n' "${name:-WORKGROUP}"
+}
+
+case "${1:-}" in
+    start)
+        # wsdd's ports are unprivileged, so it never needs root.
+        start-stop-daemon --start --quiet --oknodo --background --make-pidfile \
+            --pidfile "$PIDFILE" --chuid nobody:nogroup --exec /usr/bin/python3 \
+            --startas "$DAEMON" -- --shortlog --workgroup "$(workgroup)" || exit 1
+        ;;
+    stop)
+        start-stop-daemon --stop --quiet --oknodo --retry TERM/5/KILL/2 --pidfile "$PIDFILE" || exit 1
+        rm -f "$PIDFILE"
+        ;;
+    restart|force-reload)
+        "$0" stop
+        "$0" start
+        ;;
+    status)
+        if start-stop-daemon --status --pidfile "$PIDFILE"; then
+            echo "spaced-wsdd is running."
+        else
+            echo "spaced-wsdd is not running."
+            exit 3
+        fi
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart|force-reload|status}" >&2
+        exit 2
+        ;;
+esac
+exit 0
