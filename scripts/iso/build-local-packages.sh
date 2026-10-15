@@ -81,6 +81,7 @@ SETTINGS_PATHS=(
     usr/share/pixmaps
     usr/share/spaced-xsessions
     usr/share/polkit-1/actions/com.spacedlinux.nvidia.policy
+    usr/share/polkit-1/actions/com.spacedlinux.ollama.policy
     usr/share/polkit-1/actions/com.spacedlinux.sharing.policy
     usr/share/polkit-1/actions/com.spacedlinux.update.policy
 )
