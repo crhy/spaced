@@ -16,7 +16,7 @@ from gi.repository import Gdk, GLib, Gtk, Pango
 
 GITHUB_API = "https://api.github.com/repos/crhy/spaced/releases/latest"
 # Keep this application version in sync with the repository VERSION file.
-APP_VERSION = "0.2.2"
+APP_VERSION = "0.2.3"
 HELPER = "/usr/lib/spaced-linux/spaced-update-helper"
 REFRESH_HELPER = "/usr/lib/spaced-linux/spaced-update-refresh"
 APT_RE = re.compile(
@@ -1486,7 +1486,14 @@ class App(Gtk.Window):
                     ["flatpak", "update", "--noninteractive", "-y", "--user"],
                     tab.logline, tab.setstep, (85, 98),
                 )
-                check_status(status)
+                # The system is already updated; one Flatpak that cannot
+                # update (for example a locally built app whose source is
+                # older) must not report the system update as failed.
+                if status:
+                    self._update_warnings.append(
+                        "The system is updated, but some of your Flatpak apps could not "
+                        "be updated. Technical details names them and the reason."
+                    )
             remaining = enumerate_apt()
             if remaining:
                 self._update_warnings.append(
@@ -1597,7 +1604,7 @@ class OsUpdateTab(Gtk.Box):
 
         if warnings:
             self.set_message(
-                "dialog-warning-symbolic", "Update finished with pending packages",
+                "dialog-warning-symbolic", "Update finished with warnings",
                 " ".join(warnings),
             )
             self.details.set_expanded(True)

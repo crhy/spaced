@@ -161,5 +161,43 @@ class ReleaseNotesDialogTests(unittest.TestCase):
         self.assertTrue(all(label.is_visible() for label in labels))
 
 
+class OsUpdateFlatpakTests(unittest.TestCase):
+    @unittest.skipIf(spaced_update is None, 'requires GTK')
+    def test_failed_user_flatpak_is_a_warning_after_a_good_system_update(self):
+        # 10.26.3 on bigboy: APT succeeded, then a locally built Flatpak
+        # refused to "update" to an older build, and the window said
+        # "System update failed".
+        calls, finished, errors = [], [], []
+        tab = types.SimpleNamespace(
+            logline=lambda line: errors.append(line) if line.startswith('ERROR') else None,
+            setstep=lambda *_: None, set_message=lambda *args: errors.append(args),
+            details=types.SimpleNamespace(set_expanded=lambda *_: None),
+            finish_update=lambda installed, warnings: finished.append((installed, list(warnings))))
+
+        def run_cmd(command, *_):
+            calls.append(command)
+            return 1 if command[0] == 'flatpak' else 0
+        app = types.SimpleNamespace(os_tab=tab, run_cmd=run_cmd, _set_busy=lambda *_: None)
+        patches = {'flatpak_available': lambda: True, 'enumerate_apt': lambda: [],
+                   'read_installed_version': lambda: '10.26.3'}
+        originals = {name: getattr(spaced_update, name) for name in patches}
+        original_idle = spaced_update.GLib.idle_add
+        try:
+            for name, value in patches.items():
+                setattr(spaced_update, name, value)
+            spaced_update.GLib.idle_add = lambda function, *args: function(*args)
+            spaced_update.App._os_update_worker(app)
+        finally:
+            for name, value in originals.items():
+                setattr(spaced_update, name, value)
+            spaced_update.GLib.idle_add = original_idle
+        self.assertEqual([command[0] for command in calls], ['pkexec', 'flatpak'])
+        self.assertEqual(errors, [])
+        self.assertEqual(len(finished), 1)
+        installed, warnings = finished[0]
+        self.assertEqual(installed, '10.26.3')
+        self.assertTrue(any('Flatpak' in warning for warning in warnings))
+
+
 if __name__ == '__main__':
     unittest.main()
