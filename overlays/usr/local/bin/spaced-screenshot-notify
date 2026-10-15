@@ -1,0 +1,32 @@
+#!/bin/bash
+# Confirm each Compiz screenshot with a notification (issue #305).
+# Compiz's screenshot plugin runs this as launch_app after every capture.
+
+path="${1:-}"
+
+if [[ ! -f "$path" ]]; then
+    path=""
+    desktop="$(xdg-user-dir DESKTOP 2>/dev/null)"
+    if [[ -n "$desktop" && -d "$desktop" ]]; then
+        for candidate in "$desktop"/*.png; do
+            [[ -f "$candidate" ]] || continue
+            if [[ -z "$path" || "$candidate" -nt "$path" ]]; then
+                path="$candidate"
+            fi
+        done
+    fi
+fi
+
+if [[ ! -f "$path" ]]; then
+    exit 0
+fi
+
+if command -v notify-send >/dev/null 2>&1; then
+    notify-send --app-name=Screenshot --icon="$path" "Screenshot saved" "$(basename "$path")" 2>/dev/null
+fi
+
+if command -v canberra-gtk-play >/dev/null 2>&1; then
+    canberra-gtk-play -i screen-capture >/dev/null 2>&1 &
+fi
+
+exit 0
