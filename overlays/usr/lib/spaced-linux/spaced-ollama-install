@@ -1,0 +1,100 @@
+#!/bin/bash
+# Install Ollama for Voxa from a release pinned by Spaced (issue #283).
+# Spaced does not ship Ollama; the Voxa Welcome runs this through pkexec.
+# Every archive is checked against a pinned SHA-256 before anything is
+# extracted. Progress lines "SPACED_PROGRESS:<0-100>" drive the Welcome's ring.
+# Exit status: 0 installed or already present, 1 failed, 2 bad usage.
+set -euo pipefail
+export LC_ALL=C
+
+VERSION=v0.40.4
+BASE_URL=https://github.com/ollama/ollama/releases/download/$VERSION
+# name sha256 size
+ARCHIVES="
+ollama-linux-amd64.tar.zst 15f31e9576d15a481e099b4145dba6e9f8c1f295927d6b8895300ae30ed3740a 1436408810
+ollama-linux-amd64-rocm.tar.zst 8551a05ee3fc3793da6c3ec8e5a6f265e3ca8a17436cc9a01bf5db67ca2e7973 1052269421
+"
+PREFIX=/usr/local
+CACHE=/var/cache/spaced-ollama
+LOCK=/run/lock/spaced-ollama-install.lock
+DRM=/sys/class/drm
+
+# Test mode (unit tests only): run without root against local fakes.
+if [ "${SPACED_OLLAMA_TEST:-}" = 1 ]; then
+    BASE_URL=${SPACED_OLLAMA_TEST_URL:?}
+    ARCHIVES=${SPACED_OLLAMA_TEST_ARCHIVES:?}
+    PREFIX=${SPACED_OLLAMA_TEST_PREFIX:?}
+    CACHE=${SPACED_OLLAMA_TEST_CACHE:?}
+    LOCK=$CACHE.lock
+    DRM=${SPACED_OLLAMA_TEST_DRM:?}
+else
+    [ "$(id -u)" -eq 0 ] || { echo 'Run this through pkexec.' >&2; exit 1; }
+fi
+[ $# -eq 0 ] || { echo 'This helper accepts no arguments.' >&2; exit 2; }
+
+fail() { printf 'Spaced: %s\n' "$*" >&2; exit 1; }
+
+if [ -x "$PREFIX/bin/ollama" ]; then
+    echo "Ollama is already installed."
+    echo "SPACED_PROGRESS:100"
+    exit 0
+fi
+
+exec 7>"$LOCK"
+flock -n 7 || fail 'Another Ollama installation is running.'
+
+amd_gpu() {
+    local vendor
+    for vendor in "$DRM"/card*/device/vendor; do
+        [ -r "$vendor" ] && [ "$(cat "$vendor")" = 0x1002 ] && return 0
+    done
+    return 1
+}
+
+wanted=()
+total=0
+while read -r name sha size; do
+    [ -n "$name" ] || continue
+    case $name in *-rocm.*) amd_gpu || continue ;; esac
+    wanted+=("$name $sha $size")
+    total=$((total + size))
+done <<< "$ARCHIVES"
+
+install -d -m 0755 "$CACHE"
+done_bytes=0
+for entry in "${wanted[@]}"; do
+    read -r name sha size <<< "$entry"
+    file=$CACHE/$name
+    if ! { [ -f "$file" ] && printf '%s  %s\n' "$sha" "$file" | sha256sum --check --status; }; then
+        echo "Downloading $name"
+        # The lock descriptor must not outlive this helper in curl (AGENTS.md).
+        curl --fail --silent --show-error --location --retry 3 --connect-timeout 30 \
+            --continue-at - --output "$file" "$BASE_URL/$name" 7>&- &
+        pid=$!
+        while kill -0 "$pid" 2>/dev/null; do
+            have=$(stat -c %s "$file" 2>/dev/null || echo 0)
+            echo "SPACED_PROGRESS:$(( (done_bytes + have) * 95 / total ))"
+            sleep 1
+        done
+        wait "$pid" || fail "Could not download $name."
+        printf '%s  %s\n' "$sha" "$file" | sha256sum --check --status || {
+            rm -f "$file"
+            fail "$name does not match the checksum Spaced pinned; it was deleted."
+        }
+    fi
+    done_bytes=$((done_bytes + size))
+    echo "SPACED_PROGRESS:$(( done_bytes * 95 / total ))"
+done
+
+echo "Installing Ollama $VERSION"
+# Ollama's own installer replaces the whole library directory.
+rm -rf "$PREFIX/lib/ollama"
+install -d -m 0755 "$PREFIX"
+for entry in "${wanted[@]}"; do
+    read -r name _ _ <<< "$entry"
+    tar --zstd -xf "$CACHE/$name" -C "$PREFIX" --no-same-owner
+done
+[ -x "$PREFIX/bin/ollama" ] || fail 'The archive did not contain bin/ollama.'
+for entry in "${wanted[@]}"; do read -r name _ _ <<< "$entry"; rm -f "$CACHE/$name"; done
+echo "SPACED_PROGRESS:100"
+echo "Ollama $VERSION installed."
