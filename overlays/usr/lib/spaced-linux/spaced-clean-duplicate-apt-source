@@ -1,0 +1,69 @@
+#!/bin/sh
+# Remove the obsolete deb822 Spaced source only when it is an exact semantic
+# duplicate of the package-owned one-line source. Preserve every customized
+# source so an upgrade never discards an administrator's repository policy.
+set -eu
+
+sources_dir=/etc/apt/sources.list.d
+if [ "$#" -ne 0 ]; then
+    if [ "$#" -ne 2 ] || [ "$1" != "--sources-dir" ]; then
+        echo "Usage: $0 [--sources-dir DIRECTORY]" >&2
+        exit 2
+    fi
+    sources_dir=$2
+fi
+
+list=$sources_dir/spaced-apt.list
+deb822=$sources_dir/spaced-apt.sources
+[ -f "$list" ] && [ -f "$deb822" ] || exit 0
+
+# Do not remove anything unless the active package-owned source is present.
+awk '
+    /^[[:space:]]*#/ || /^[[:space:]]*$/ { next }
+    {
+        line = $0
+        sub(/^[[:space:]]*/, "", line)
+        sub(/[[:space:]]*$/, "", line)
+        if (line == "deb [signed-by=/usr/share/keyrings/spaced-archive-keyring.gpg] https://crhy.github.io/spaced-apt spaced main" ||
+            line == "deb [signed-by=/usr/share/keyrings/spaced-archive-keyring.gpg] https://crhy.github.io/spaced-apt/ spaced main")
+            found = 1
+    }
+    END { exit !found }
+' "$list" || exit 0
+
+# Accept field order and capitalization differences, but reject extra fields,
+# repeated fields, multiple stanzas, inline keys, architecture restrictions,
+# or any other customization.
+if awk '
+    BEGIN { stanza = 1 }
+    /^[[:space:]]*#/ { next }
+    /^[[:space:]]*$/ { if (seen) ended = 1; next }
+    {
+        if (ended || $0 ~ /^[[:space:]]/) exit 1
+        colon = index($0, ":")
+        if (!colon) exit 1
+        name = tolower(substr($0, 1, colon - 1))
+        value = substr($0, colon + 1)
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+        if (++count[name] > 1) exit 1
+        seen = 1
+        if (name == "types") types = value
+        else if (name == "uris") uris = value
+        else if (name == "suites") suites = value
+        else if (name == "components") components = value
+        else if (name == "signed-by") signed_by = value
+        else if (name == "enabled") enabled = tolower(value)
+        else exit 1
+    }
+    END {
+        sub(/\/$/, "", uris)
+        if (!seen || types != "deb" ||
+            uris != "https://crhy.github.io/spaced-apt" ||
+            suites != "spaced" || components != "main" ||
+            signed_by != "/usr/share/keyrings/spaced-archive-keyring.gpg" ||
+            (enabled != "" && enabled != "yes")) exit 1
+    }
+' "$deb822"
+then
+    rm -f -- "$deb822"
+fi

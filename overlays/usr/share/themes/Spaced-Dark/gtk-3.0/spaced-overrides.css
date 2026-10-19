@@ -146,6 +146,8 @@ searchentry,
 spinbutton > entry {
     background-color: @theme_base_color;
     color: @theme_text_color;
+    caret-color: @theme_text_color;
+    -gtk-secondary-caret-color: @theme_text_color;
 }
 
 /* GtkTextView applies text-node padding inside the editor's scrollable
@@ -297,6 +299,19 @@ window.caja-desktop-window,
     background: none;
     background-color: transparent;
     box-shadow: none;
+}
+
+/* The desktop transparency rule must not erase Caja's inline rename editor.
+ * Use a fixed dark editing surface because desktop labels are white in every
+ * Spaced theme, and give its insertion caret the same high contrast. */
+.caja-desktop-window entry,
+.caja-desktop-window .entry {
+    background: #111111;
+    background-color: #111111;
+    color: #ffffff;
+    caret-color: #ffffff;
+    -gtk-secondary-caret-color: #ffffff;
+    text-shadow: none;
 }
 
 /* The rule above also erased the colour behind a selected desktop icon, so the
