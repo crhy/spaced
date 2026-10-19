@@ -4,7 +4,7 @@
   </a>
 </p>
 
-<h1 align="center">Spaced Linux 10.26.3</h1>
+<h1 align="center">Spaced Linux 10.26.4</h1>
 
 <p align="center"><strong>Spaced. Polished. Agile. Compiz. Efficient. Devuan.</strong></p>
 
@@ -27,8 +27,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/crhy/spaced/releases"><strong>Download Spaced Linux 10.26.3</strong></a> ·
-  <a href="CHANGELOG.md"><strong>10.26.3 release status</strong></a>
+  <a href="https://github.com/crhy/spaced/releases"><strong>Download Spaced Linux 10.26.4</strong></a> ·
+  <a href="CHANGELOG.md"><strong>10.26.4 release status</strong></a>
 </p>
 
 <p align="center">
@@ -37,7 +37,7 @@
   <img alt="Compiz" src="https://img.shields.io/badge/window%20manager-Compiz-5b5bd6">
   <img alt="Init system" src="https://img.shields.io/badge/init-sysvinit-555555">
   <img alt="Architecture" src="https://img.shields.io/badge/architecture-amd64-2563eb">
-  <img alt="Release" src="https://img.shields.io/badge/release-10.26.3-0ea5e9">
+  <img alt="Release" src="https://img.shields.io/badge/release-10.26.4-0ea5e9">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-black">
 </p>
 
@@ -151,14 +151,14 @@ Spaced Linux combines a modern system with visual ideas from the best desktop er
 
 ## Download Spaced Linux
 
-**Spaced Linux 10.26.3** is available now. Download the ISO and matching checksum from the [Spaced Linux 10.26.3 release page](https://github.com/crhy/spaced/releases/tag/v10.26.3).
+**Spaced Linux 10.26.4** is available now. Download the ISO and matching checksum from the [Spaced Linux 10.26.4 release page](https://github.com/crhy/spaced/releases/tag/v10.26.4).
 
-10.26.3 is the third patch to the October 2026 release. Its changes are listed in the [changelog](CHANGELOG.md).
+10.26.4 is the fourth patch to the October 2026 release. Its changes are listed in the [changelog](CHANGELOG.md).
 
 Verify the download on Linux:
 
 ```bash
-sha256sum -c spaced-linux-10.26.3-amd64.iso.sha256
+sha256sum -c spaced-linux-10.26.4-amd64.iso.sha256
 ```
 
 Test release images in a virtual machine or on non-critical hardware before adopting them for daily use.

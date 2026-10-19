@@ -17,6 +17,12 @@ if command -v glib-compile-schemas >/dev/null 2>&1; then
     glib-compile-schemas /usr/share/glib-2.0/schemas
 fi
 
+# Early installers also wrote a deb822 copy of the repository. Remove it only
+# when it is an exact duplicate; customized sources belong to the administrator.
+if [ -x /usr/lib/spaced-linux/spaced-clean-duplicate-apt-source ]; then
+    /usr/lib/spaced-linux/spaced-clean-duplicate-apt-source
+fi
+
 if command -v update-desktop-database >/dev/null 2>&1; then
     update-desktop-database -q /usr/share/applications || true
     update-desktop-database -q /usr/local/share/applications || true

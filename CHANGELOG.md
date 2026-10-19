@@ -1,5 +1,20 @@
 # Changelog
 
+## 10.26.4 - 2026-10-18
+
+Delivered through the 10.26.4 ISO and `10.26.4-1` APT packages.
+
+- Remove the obsolete deb822 Spaced repository entry after an upgrade only
+  when it exactly duplicates the signed package-owned source. Customized
+  repository entries are preserved (#316).
+- Make Help buttons in Screenshot and the MATE control-center tools open the
+  installed MATE manual by including Yelp and `mate-user-guide` (#315).
+- Give Caja's inline rename field an explicit dark surface, white text and a
+  white insertion caret on the desktop, and use the theme text color for
+  rename carets in ordinary Caja windows (#313, #318).
+- Exclude Marco's transparent resize area from window screenshots by default,
+  removing the unwanted border around captures (#301).
+
 ## 10.26.3-2 - 2026-10-15
 
 - Spaced Update (0.2.3) no longer reports "System update failed" when the

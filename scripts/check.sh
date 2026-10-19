@@ -884,6 +884,10 @@ assert "background-color: alpha(@theme_selected_bg_color, 0.18)" in widget_gtk \
     "GTK drag-selection rubber bands are not translucent (issue #101)"
 assert "textview text selection" in shared_gtk and "entry selection" in shared_gtk, \
     "GTK text selection is not visibly highlighted"
+assert ".caja-desktop-window entry" in shared_gtk \
+    and "caret-color: #ffffff" in shared_gtk \
+    and "caret-color: @theme_text_color" in shared_gtk, \
+    "Caja rename fields do not have an explicit contrasting surface and caret"
 assert "#PanelApplet #showdesktop-button" in shared_gtk, \
     "panel applet buttons do not inherit each theme's panel color"
 assert "#PanelPlug" in shared_gtk and "NaTrayApplet" in shared_gtk, \
@@ -1374,6 +1378,15 @@ apt_source = (root / "etc/apt/sources.list.d/spaced-apt.list").read_text(encodin
 assert "trusted=yes" not in apt_source \
     and "signed-by=/usr/share/keyrings/spaced-archive-keyring.gpg" in apt_source, \
     "Spaced APT must authenticate its own signed archive"
+apt_cleanup = root / "usr/lib/spaced-linux/spaced-clean-duplicate-apt-source"
+assert apt_cleanup.is_file() and apt_cleanup.stat().st_mode & 0o111 \
+    and "spaced-apt.sources" in apt_cleanup.read_text(encoding="utf-8"), \
+    "Spaced APT duplicate-source cleanup is missing"
+assert "yelp" in packages and "mate-user-guide" in packages, \
+    "MATE Help buttons lack their viewer or installed manual (issue #315)"
+schema_defaults = (root / "usr/share/glib-2.0/schemas/90_spaced-linux.gschema.override").read_text(encoding="utf-8")
+assert "[org.mate.screenshot]" in schema_defaults and "include-border=false" in schema_defaults, \
+    "Window screenshots still include Marco's invisible resize border (issue #301)"
 
 nvidia_postboot = (root / "usr/lib/spaced-linux/spaced-nvidia-postboot.py").read_text(encoding="utf-8")
 assert 'wm_name.lower() != "compiz"' in nvidia_postboot \

@@ -75,6 +75,11 @@ font='Roboto 10'
 idle-activation-enabled=true
 lock-enabled=true
 
+# Marco's resize area is transparent but mate-screenshot includes it as a
+# visible strip around window captures when this upstream default is true.
+[org.mate.screenshot]
+include-border=false
+
 
 [org.mate.terminal.profile:/org/mate/terminal/profiles/default]
 font='DejaVu Sans Mono 10'
