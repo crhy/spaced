@@ -127,13 +127,19 @@ for path in (
     assert f"Spaced Linux {version}" in Path(path).read_text(encoding="utf-8"), \
         f"{path} does not identify the current release"
 
-# The website can announce a testing line while linking the last published
-# image. Do not require an unpublished ISO URL merely to match VERSION.
+# The website can announce a preview line while linking the last published
+# image. Once the preview label is removed, require every release link to
+# match VERSION so a release cannot ship with stale downloads.
 assert version in Path("website/index.html").read_text(encoding="utf-8"), \
     "website/index.html does not identify the current development line"
 website_home = Path("website/index.html").read_text(encoding="utf-8")
 assert f"spaced-linux-{version}-amd64.iso" in website_home or "releases/download/" in website_home, \
     "the website's install steps do not link the ISO directly"
+if f"{version} PREVIEW" not in website_home.upper():
+    assert f"releases/download/v{version}/spaced-linux-{version}-amd64.iso" in website_home, \
+        "the released website ISO link does not match VERSION"
+    assert f"releases/tag/v{version}" in website_home, \
+        "the released website notes link does not match VERSION"
 assert "distrowatch.com/table.php?distribution=spaced" in website_home \
     and "distrowatch.com/table.php?distribution=spaced" in Path("README.md").read_text(encoding="utf-8"), \
     "the website and README do not link Spaced Linux on DistroWatch"

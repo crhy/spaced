@@ -151,14 +151,14 @@ Spaced Linux combines a modern system with visual ideas from the best desktop er
 
 ## Download Spaced Linux
 
-**Spaced Linux 10.26.5 is being prepared.** Until its ISO passes release testing, download the current stable ISO and matching checksum from the [Spaced Linux 10.26.4 release page](https://github.com/crhy/spaced/releases/tag/v10.26.4).
+**Spaced Linux 10.26.5 is available now.** Download the current stable ISO and matching checksum from the [Spaced Linux 10.26.5 release page](https://github.com/crhy/spaced/releases/tag/v10.26.5).
 
 10.26.5 is the fifth patch to the October 2026 release. Its changes are listed in the [changelog](CHANGELOG.md).
 
 Verify the download on Linux:
 
 ```bash
-sha256sum -c spaced-linux-10.26.4-amd64.iso.sha256
+sha256sum -c spaced-linux-10.26.5-amd64.iso.sha256
 ```
 
 Test release images in a virtual machine or on non-critical hardware before adopting them for daily use.
