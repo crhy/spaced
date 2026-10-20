@@ -82,6 +82,30 @@
     <shade_type>solid</shade_type>
   </wallpaper>
   <wallpaper deleted="false">
+    <name>Spaced Windows 7</name>
+    <filename>/usr/share/backgrounds/spaced/win7.jpg</filename>
+    <options>zoom</options>
+    <pcolor>#183b60</pcolor>
+    <scolor>#183b60</scolor>
+    <shade_type>solid</shade_type>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>Spaced Win7Aero Dark</name>
+    <filename>/usr/share/backgrounds/spaced/win7aero-dark.jpg</filename>
+    <options>zoom</options>
+    <pcolor>#101a27</pcolor>
+    <scolor>#101a27</scolor>
+    <shade_type>solid</shade_type>
+  </wallpaper>
+  <wallpaper deleted="false">
+    <name>Spaced Ubuntu</name>
+    <filename>/usr/share/backgrounds/spaced/ubuntu.jpg</filename>
+    <options>zoom</options>
+    <pcolor>#2c2528</pcolor>
+    <scolor>#2c2528</scolor>
+    <shade_type>solid</shade_type>
+  </wallpaper>
+  <wallpaper deleted="false">
     <name>Spaced Windows 11 Light</name>
     <filename>/usr/share/backgrounds/spaced/win11light.jpg</filename>
     <options>zoom</options>

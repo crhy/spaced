@@ -1,8 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=Spaced Video Drivers
-Comment=Check graphics, update AMD drivers, and install or recover NVIDIA drivers
-Exec=spaced-nvidia-installer
-Icon=video-display
-Terminal=false
-Categories=Settings;HardwareSettings;

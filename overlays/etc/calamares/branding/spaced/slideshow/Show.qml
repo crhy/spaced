@@ -26,7 +26,7 @@ Presentation {
             height: 94; color: "#e817191d"
             Text {
                 anchors.centerIn: parent
-                text: "Welcome to Spaced Linux 10.26.4\nFast, familiar, and free from systemd."
+                text: "Welcome to Spaced Linux 10.26.5\nFast, familiar, and free from systemd."
                 color: "#f4f5f7"; font.pixelSize: 20; font.bold: true
                 horizontalAlignment: Text.AlignHCenter
             }
@@ -46,7 +46,7 @@ Presentation {
             height: 100; color: "#e817191d"
             Text {
                 anchors.centerIn: parent
-                text: "Make the desktop yours\nChoose from ten complete layouts inspired by classic and modern desktops."
+                text: "Make the desktop yours\nChoose from thirteen complete themes inspired by classic and modern desktops."
                 color: "#f4f5f7"; font.pixelSize: 17; font.bold: true
                 horizontalAlignment: Text.AlignHCenter
             }

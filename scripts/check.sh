@@ -33,6 +33,9 @@ for required_package in \
     pulseaudio-utils \
     tzdata \
     firmware-nvidia-graphics \
+    xserver-xorg-video-amdgpu \
+    xserver-xorg-video-ati \
+    xserver-xorg-video-radeon \
     xserver-xorg-video-nouveau \
     wmctrl
 do
@@ -318,7 +321,7 @@ assert welcome["requirements"]["requiredStorage"] == 5, "Calamares storage minim
 with open(root / "usr/share/spaced-themes/themes.json", encoding="utf-8") as source:
     themes = json.load(source)["themes"]
 
-assert len(themes) == 10, f"expected 10 supported themes, found {len(themes)}"
+assert len(themes) == 13, f"expected 13 supported themes, found {len(themes)}"
 assert len({t['id'] for t in themes}) == len(themes), "duplicate theme id"
 assert len({t['gtk_theme'] for t in themes}) == len(themes), "duplicate GTK theme mapping"
 
@@ -967,12 +970,27 @@ assert themes_by_id["android"]["panel_color"] == "#263238", \
     "Android panel is not Material blue-gray"
 assert themes_by_id["linux-dark"]["panel_color"] == "#2f2f2f", \
     "Spaced Linux Dark panel is not the darker neutral gray"
+assert themes_by_id["win7"]["panel_position"] == "bottom" \
+    and themes_by_id["win7"]["panel_size"] == 40 \
+    and themes_by_id["win7"]["panel_opacity"] == 44500, \
+    "Windows 7 does not use its translucent 40 px Aero taskbar"
+assert themes_by_id["win7-aero-dark"]["panel_position"] == "bottom" \
+    and themes_by_id["win7-aero-dark"]["panel_size"] == 40 \
+    and themes_by_id["win7-aero-dark"]["panel_opacity"] == 44500 \
+    and themes_by_id["win7-aero-dark"]["dark"] is True, \
+    "Win7Aero Dark does not use its dark translucent Aero taskbar"
+assert themes_by_id["ubuntu"]["panel_position"] == "left" \
+    and themes_by_id["ubuntu"]["panel_size"] == 72 \
+    and themes_by_id["ubuntu"]["panel_opacity"] == 56000, \
+    "Ubuntu does not use its translucent 72 px left launcher"
+assert all(0 <= theme.get("panel_opacity", 65535) <= 65535 for theme in themes), \
+    "theme panel opacity is outside MATE's 0-65535 range"
 android_layout = (root / "usr/share/mate-panel/layouts/spaced-android.layout").read_text(encoding="utf-8")
 assert "BriskMenuFactory::BriskMenu" in android_layout, "Android layout is missing the Brisk menu"
 
 # Validate all themed panel layouts have consistent applet composition
 panel_layouts = [p for p in (root / "usr/share/mate-panel/layouts").glob("spaced-*.layout")]
-assert len(panel_layouts) >= 9, f"expected at least 9 panel layouts, found {len(panel_layouts)}"
+assert len(panel_layouts) >= 11, f"expected at least 11 panel layouts, found {len(panel_layouts)}"
 required_applets = {"BriskMenuFactory::BriskMenu", "WnckletFactory::WindowListApplet",
                     "NotificationAreaAppletFactory::NotificationArea",
                     "GvcAppletFactory::GvcApplet", "ClockAppletFactory::ClockApplet",
@@ -983,15 +1001,19 @@ for layout_path in panel_layouts:
     assert not missing, f"{layout_path.name}: missing applets {missing}"
     assert "locked=true" in text, f"{layout_path.name}: panel applets are not locked"
 
-# Every theme shares the same single-panel layout; only the orientation changes.
+# Every theme shares the same single-panel applet composition. A theme may
+# change only panel geometry (orientation and size).
 canonical_layout = (root / "usr/share/mate-panel/layouts/spaced-linux.layout").read_text(encoding="utf-8")
+def without_panel_geometry(layout):
+    return [line for line in layout.splitlines()
+            if line and not line.startswith(("orientation=", "size="))]
+
 for layout_path in panel_layouts:
     if layout_path.name == "spaced-linux.layout":
         continue
     text = layout_path.read_text(encoding="utf-8")
-    diff = [ln for ln in text.splitlines() if ln not in canonical_layout.splitlines()]
-    assert diff == [] or diff == ["orientation=top"], \
-        f"{layout_path.name} diverges from the single-panel layout: {diff}"
+    assert without_panel_geometry(text) == without_panel_geometry(canonical_layout), \
+        f"{layout_path.name} diverges from the single-panel applet layout"
 
 # The panel GvcApplet is the single volume control; mate-media's tray icon must
 # not autostart on top of it or every login shows two volume icons.
@@ -1080,6 +1102,11 @@ for surface in ("Spaced-Menu-On-Dark", "Spaced-Menu-On-Light"):
     assert (raster_dir / "start-here.png").read_bytes() == \
         (raster_dir / "start-here-symbolic.png").read_bytes(), \
         f"{surface}: regular and symbolic Brisk marks differ"
+    # A transparent PNG header alone does not prove the launcher is visible.
+    # The checked-in mark must contain enough opaque foreground for both the
+    # enclosing ring and the Spaced S instead of degenerating to a blank icon.
+    png = (raster_dir / "start-here.png").read_bytes()
+    assert len(png) > 500, f"{surface}: Brisk raster mark is unexpectedly empty"
 for surface, color in (("Spaced-Menu-On-Dark", "#b8bcc2"),
                        ("Spaced-Menu-On-Light", "#202020")):
     actions = icon_root / surface / "scalable/actions"
@@ -1096,7 +1123,7 @@ for surface, color in (("Spaced-Menu-On-Dark", "#b8bcc2"),
             f"{surface}: {icon.name} uses strokes, which GTK symbolic recolouring fills in (issue #235)"
 for theme in themes:
     icon_metadata = (icon_root / f"Spaced-Icons-{theme['gtk_theme'].removeprefix('Spaced-')}" / "index.theme")
-    menu_variant = "Spaced-Menu-On-Dark" if theme["dark"] else "Spaced-Menu-On-Light"
+    menu_variant = "Spaced-Menu-On-Dark" if theme.get("panel_dark", theme["dark"]) else "Spaced-Menu-On-Light"
     icon_metadata_text = icon_metadata.read_text(encoding="utf-8")
     assert icon_metadata.is_file() and f"Inherits={menu_variant},Papirus-Dark,hicolor" in icon_metadata_text, \
         f"{theme['name']}: scalable Papirus icons do not precede low-resolution hicolor fallbacks"
@@ -1115,12 +1142,24 @@ for theme_name, panel_color in (("Spaced-Win11-Dark", "#17243b"),
 
 win311_gtk = (theme_root / "Spaced-Win311/gtk-3.0/gtk.css").read_text(encoding="utf-8")
 assert "@define-color panel_bg_color #c0c0c0" in win311_gtk, "Windows 3.11 panel is not gray"
-assert all(theme["panel_size"] == 30 for theme in themes), \
-    "all themes must use the Spaced Linux Dark 30 px panel size"
+assert all(theme["panel_size"] == 30 for theme in themes
+           if theme["id"] not in {"win7", "win7-aero-dark", "ubuntu"}), \
+    "standard themes must use the Spaced Linux Dark 30 px panel size"
 winxp_gtk = (theme_root / "Spaced-WinXP/gtk-3.0/gtk.css").read_text(encoding="utf-8")
 assert "#PanelApplet button.brisk-button" in winxp_gtk, "Windows XP Brisk button is not themed"
 assert ".brisk-menu .categories-list" in winxp_gtk, "Windows XP Brisk popup lacks Luna surfaces"
 assert "notebook > stack:not(:only-child)" in winxp_gtk, "Windows XP notebook clients are not Luna colored"
+win7_gtk = (theme_root / "Spaced-Win7/gtk-3.0/gtk.css").read_text(encoding="utf-8")
+ubuntu_gtk = (theme_root / "Spaced-Ubuntu/gtk-3.0/gtk.css").read_text(encoding="utf-8")
+for theme_name, gtk3 in (("Windows 7", win7_gtk), ("Ubuntu", ubuntu_gtk)):
+    assert "#PanelPlug" in gtk3 and "background-color: transparent" in gtk3, \
+        f"{theme_name}: opaque applet hosts cover the translucent panel"
+    assert "window.brisk-menu .categories-list" in gtk3, \
+        f"{theme_name}: Brisk category pane escapes the themed popup"
+    assert "window.brisk-menu .apps-list" in gtk3, \
+        f"{theme_name}: Brisk application pane escapes the themed popup"
+assert "background-color: rgba(44,37,40,0.92)" in ubuntu_gtk, \
+    "Ubuntu Brisk menu does not match the aubergine launcher"
 geoworks_gtk = (theme_root / "Spaced-Geoworks/gtk-3.0/gtk.css").read_text(encoding="utf-8")
 assert "#PanelApplet button" in geoworks_gtk, "GeoWorks applet surfaces are not themed"
 winxp_folder = (icon_root / "Spaced-Icons-WinXP/scalable/places/folder.svg").read_text(encoding="utf-8")
@@ -1140,27 +1179,64 @@ vm_install = Path("scripts/vm/qemu/install.sh").read_text(encoding="utf-8")
 assert "-boot order=c,once=d" in vm_install, "installer KVM does not boot the installed disk after reboot"
 
 switcher = (root / "usr/local/bin/spaced-switch-theme").read_text(encoding="utf-8")
+opacity_helper_path = root / "usr/local/bin/spaced-theme-opacity"
+opacity_helper = opacity_helper_path.read_text(encoding="utf-8")
 theme_monitor = (root / "usr/local/bin/spaced-theme-monitor").read_text(encoding="utf-8")
-assert "background_schema" in switcher and "panel_color" in switcher, \
-    "theme switcher does not apply explicit panel colors"
+assert "org.mate.panel.toplevel.background:/org/mate/panel/toplevels/$id/background/" in switcher \
+    and "panel_color" in switcher \
+    and "panel_opacity" in switcher, \
+    "theme switcher does not apply explicit panel colors and transparency"
+assert 'case "$panel_position"' in switcher and "left)" in switcher \
+    and "x-right" in switcher, \
+    "theme switcher does not place vertical panels"
+assert 'brisk_dark=${panel_dark:-$dark}' in switcher, \
+    "theme switcher cannot keep a light application theme readable on a dark panel"
+assert '/usr/local/bin/spaced-theme-opacity "$THEME_ID"' in switcher, \
+    "theme switching does not apply theme-owned compositor opacity"
+assert opacity_helper_path.stat().st_mode & 0o111, \
+    "theme compositor opacity helper is not executable"
+assert 'WIN7_RULES = (("class=Brisk-menu", 90), ("type=Dock", 78))' in opacity_helper \
+    and '"class=Brisk-menu", "type=Dock"' in opacity_helper \
+    and 'if match not in OWNED_MATCHES' in opacity_helper, \
+    "Windows 7 compositor glass rules are missing or overwrite user rules"
+assert 'marco-theme-active-opacity", 0.64' in opacity_helper \
+    and 'marco-theme-opacity", 0.54' in opacity_helper \
+    and 'marco-theme-active-opacity", 1.0' in opacity_helper, \
+    "Windows 7 decoration glass or its opaque fallback is missing"
+assert "background-color: #f7f8fa" in win7_gtk \
+    and "background-color: #123c5b" in win7_gtk \
+    and "color: #17212b" in win7_gtk, \
+    "Windows 7 Brisk menu does not separate its light and glass panes"
+assert ".apps-list row:selected" in win7_gtk \
+    and ".apps-list.content-view.view row button.flat:hover" in win7_gtk \
+    and ".apps-list.content-view.view row:backdrop" in win7_gtk \
+    and "row:selected:not(:hover)" in win7_gtk \
+    and "transition: none" in win7_gtk, \
+    "Windows 7 Brisk menu does not isolate launcher-button hover paint"
 assert "cairo-dock -c -f" in switcher, "Cairo-Dock must use its QEMU-safe plug-in-free mode"
 assert "current_theme" in switcher, "Cairo-Dock runtime config repair is missing"
 assert "spaced-launchers-v1" in switcher, "Cairo-Dock launcher migration is missing"
 assert "org.mate.terminal.profile:/org/mate/terminal/profiles/default/" in switcher, \
     "theme switching does not update the MATE Terminal profile"
-assert "terminal_background='#000000'" in switcher and "terminal_foreground='#888888'" in switcher, \
-    "dark themes do not use gray on black in MATE Terminal"
+assert "terminal_background='#101820'" in switcher and "terminal_foreground='#f2f6fa'" in switcher, \
+    "dark themes do not use a high-contrast dark MATE Terminal palette"
 assert "terminal_background='#ffffff'" in switcher and "terminal_foreground='#000000'" in switcher, \
     "light themes do not use black on white in MATE Terminal"
+assert "terminal_background_type='transparent'" in switcher \
+    and "terminal_background_type='solid'" in switcher \
+    and 'terminal_background_darkness=0.5' in switcher \
+    and 'linux-light|linux-dark)' in switcher \
+    and 'terminal_background_darkness=0.75' in switcher, \
+    "theme-specific MATE Terminal transparency or its solid fallback is missing"
 assert "color-scheme 'prefer-dark'" in switcher and "color-scheme 'default'" in switcher, \
     "theme switching does not drive the toolkit color scheme"
 assert "gtk-application-prefer-dark-theme" not in switcher \
     and "gtk-application-prefer-dark-theme" not in schema_override, \
     "theme switching uses a nonexistent GSettings key instead of the portal color scheme"
 qt_quick_config = (root / "etc/xdg/QtProject/qtquickcontrols2.conf").read_text(encoding="utf-8")
-assert "Style=Universal" in qt_quick_config and "Theme=Dark" in qt_quick_config \
+assert "Style=Universal" in qt_quick_config and "Theme=System" in qt_quick_config \
     and "Accent=#cfd3d8" in qt_quick_config, \
-    "Qt Quick slideshow scrollbar does not use a light grayscale accent"
+    "Qt Quick applications do not follow the system light/dark convention"
 for state_name in ("gtk-theme", "icon-theme", "window-theme", "wallpaper"):
     assert state_name in theme_monitor, f"theme monitor does not persist {state_name}"
 assert theme_monitor.index("apply_for_gtk \"$LAST\"") < theme_monitor.index(

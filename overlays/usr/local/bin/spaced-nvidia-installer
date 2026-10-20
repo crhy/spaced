@@ -1,2 +1,3 @@
 #!/bin/sh
-exec /usr/bin/python3 /usr/lib/spaced-linux/spaced-nvidia-installer.py "$@"
+# Compatibility entry point retained for existing shortcuts and documentation.
+exec /usr/local/bin/spaced-gpu-driver-manager "$@"

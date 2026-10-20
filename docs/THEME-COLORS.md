@@ -1,8 +1,8 @@
 # Spaced Linux theme and interface color reference
 
-This document inventories the color-bearing parts of the Spaced Linux desktop at commit `f462bdb4b4d3916caf1617159056f2743b016acf`.
+This document inventories the color-bearing parts of the current Spaced Linux desktop tree.
 
-It covers the ten selectable MATE metathemes, the internal `Spaced-Dark` engine, GTK2 and GTK3, window decorations, panel backgrounds, icons, wallpapers, terminal colors, Compiz presentation colors, LightDM, Flatpak propagation, and cross-toolkit settings.
+It covers the thirteen selectable MATE metathemes, the internal `Spaced-Dark` engine, GTK2 and GTK3, window decorations, panel backgrounds, icons, wallpapers, terminal colors, Compiz presentation colors, LightDM, Flatpak propagation, and cross-toolkit settings.
 
 For architecture, runtime flow, installation, and testing, see [MATE-theming.md](MATE-theming.md).
 
@@ -10,9 +10,9 @@ For architecture, runtime flow, installation, and testing, see [MATE-theming.md]
 
 Spaced Linux has:
 
-- **ten selectable metathemes** registered in `themes.json`;
+- **thirteen selectable metathemes** registered in `themes.json`;
 - **one internal engine directory**, `Spaced-Dark`, which is not a selectable top-level MATE metatheme;
-- **eleven `Spaced-Icons-*` directories**, including an internal `Spaced-Icons-Spaced-Dark` overlay;
+- **fourteen `Spaced-Icons-*` directories**: one for every selectable theme plus the internal `Spaced-Icons-Spaced-Dark` overlay;
 - two shared menu/panel icon overlays;
 - a hicolor fallback area for Spaced application and symbolic assets.
 
@@ -32,7 +32,7 @@ Paths in this document are repository paths beneath `overlays/`. Remove the lead
 | Titlebar and frame colors | GTK3 `wm_*` variables consumed by `metacity-theme-3.xml` |
 | Legacy titlebar drawing | `metacity-theme-1.xml` and its literal colors/assets |
 | Panel widget colors | GTK3 `@panel_bg_color` / `@panel_fg_color` |
-| Explicit panel toplevel color | optional `panel_color` in `usr/share/spaced-themes/themes.json` |
+| Explicit panel toplevel color and transparency | optional `panel_color` and `panel_opacity` in `usr/share/spaced-themes/themes.json` |
 | Folder/home icon colors | `usr/share/icons/Spaced-Icons-*/scalable/places/*.svg` |
 | Menu and trash icon colors | `usr/share/icons/Spaced-Menu-On-{Dark,Light}/` |
 | Wallpaper fallback colors | metatheme `index.theme` and `mate-background-properties/spaced-linux.xml` |
@@ -82,8 +82,11 @@ Shared widget CSS derives many final colors with GTK functions such as `shade()`
 | `Spaced-Win11-Light` | `#f3f3f3` / `#1f1f1f` | `#ffffff` / `#1f1f1f` | `#005fb8` / `#ffffff` | `#ffffff` / `#333333` |
 | `Spaced-Win311` | `#c0c0c0` / `#000000` | `#c0c0c0` / `#000000` | `#000080` / `#ffffff` | `#ffffcc` / `#000000` |
 | `Spaced-WinXP` | `#ece9d8` / `#000000` | `#ffffff` / `#000000` | `#316ac5` / `#ffffff` | `#ffffcc` / `#000000` |
+| `Spaced-Win7` | `#edf4fa` / `#17212b` | `#ffffff` / `#17212b` | `#3399ff` / `#ffffff` | `#ffffe1` / `#17212b` |
+| `Spaced-Win7Aero-Dark` | `#182533` / `#f2f6fa` | `#101820` / `#ffffff` | `#69b8ec` / `#101820` | `#101820` / `#ffffff` |
+| `Spaced-Ubuntu` | `#f4f1ee` / `#2c2c2c` | `#ffffff` / `#2c2c2c` | `#e95420` / `#ffffff` | `#3c3538` / `#ffffff` |
 
-The Spaced Linux Light tooltip palette is currently `#111111` background with `#1f1f1f` foreground, which has poor contrast. This table records the committed value; it is not an endorsement of that pairing.
+The automated theme-quality test checks these five semantic foreground/background pairs for every selectable theme at a minimum 4.5:1 contrast ratio.
 
 ## GTK3 accents, panel, and window-decoration inputs
 
@@ -100,6 +103,9 @@ The Spaced Linux Light tooltip palette is currently `#111111` background with `#
 | `Spaced-Win11-Light` | `#005fb8` / `#4a4a4a` | `#4e9a06` / `#cc0000` | `#005fb8` | `#e6e6e6` / `#1f1f1f` | `#ffffff` / `#1f1f1f` / `#666666` |
 | `Spaced-Win311` | `#0000ff` / `#800080` | `#008000` / `#ff0000` | `#ffffff` | `#c0c0c0` / `#000000` | `#000080` / `#ffffff` / `#c0c0c0` |
 | `Spaced-WinXP` | `#3c9a3c` / `#800080` | `#4e9a06` / `#cc0000` | `#3c9a3c` | `#235edc` / `#ffffff` | `#235edc` / `#ffffff` / `#b0c4e8` |
+| `Spaced-Win7` | `#0067b8` / `#5a4a86` | `#4e9a06` / `#cc0000` | `#3399ff` | `#183b60` / `#ffffff` | `#b9ddf4` / `#102535` / `#526878` |
+| `Spaced-Win7Aero-Dark` | `#0067b8` / `#5a4a86` | `#4e9a06` / `#cc0000` | `#69b8ec` | `#101a27` / `#ffffff` | `#274a63` / `#ffffff` / `#b7c5d1` |
+| `Spaced-Ubuntu` | `#e95420` / `#772953` | `#4e9a06` / `#cc0000` | `#e95420` | `#2c2528` / `#ffffff` | `#3c3538` / `#ffffff` / `#c5bec1` |
 
 `wm_border_focused` and `wm_border_unfocused` are generally darker `shade()` values of `wm_bg`; Windows 3.11 uses literal white and gray borders.
 
@@ -191,8 +197,11 @@ Spaced ships hicolor fallback SVGs for these names. The active icon theme's inhe
 | `Spaced-WinXP` | `#316ac5` | `#27559e` | `#ffffff` | explicit 3 px checkbox radius |
 | `Spaced-Win11-Light` | `#005fb8` | `#004c93` | `#ffffff` | explicit 3 px checkbox radius |
 | `Spaced-Win11-Dark` | `#60cdff` | `#4da4cc` | `#000000` | explicit 3 px checkbox radius |
+| `Spaced-Win7` | `#3399ff` | `#1d6fb8` | `#ffffff` | Aero blue |
+| `Spaced-Win7Aero-Dark` | `#69b8ec` | `#5799c5` | `#101820` | dark Aero blue |
+| `Spaced-Ubuntu` | `#e95420` | `#c34113` | `#ffffff` | Ubuntu orange |
 
-Seven themes use one combined selector for checked and indeterminate states. The four themes with explicit legacy `check:checked, radio:checked` blocks do not override indeterminate borders.
+Seven themes use one combined selector for checked and indeterminate states. Seven themes with explicit `check:checked, radio:checked` blocks do not override indeterminate borders (the count includes the internal engine).
 
 ### Indeterminate colors
 
@@ -209,12 +218,15 @@ Seven themes use one combined selector for checked and indeterminate states. The
 | `Spaced-WinXP` | `#316ac5` | `#316ac5` | `#ffffff` |
 | `Spaced-Win11-Light` | `#005fb8` | `#005fb8` | `#ffffff` |
 | `Spaced-Win11-Dark` | `#60cdff` | `#60cdff` | `#000000` |
+| `Spaced-Win7` | `#3399ff` | `#3399ff` | `#ffffff` |
+| `Spaced-Win7Aero-Dark` | `#69b8ec` | `#69b8ec` | `#101820` |
+| `Spaced-Ubuntu` | `#e95420` | `#e95420` | `#ffffff` |
 
-The last four rows use the shared `theme_selected_*` values for indeterminate states because their local tail rules target checked states only.
+The final six theme-specific checked-only blocks use the shared `theme_selected_*` values for indeterminate states.
 
 ### Maintenance recommendation
 
-The colors are functional, but the four explicit checked-only blocks duplicate shared shape rules. A future cleanup can normalize all themes to one combined checked/indeterminate selector while keeping the Windows 3.11 square-checkbox exception separate.
+The colors are functional, but the explicit checked-only blocks duplicate shared shape rules. A future cleanup can normalize all themes to one combined checked/indeterminate selector while keeping the Windows 3.11 square-checkbox exception separate.
 
 ## Switches
 
@@ -261,6 +273,8 @@ Most shared GTK3 rules use semantic variables. A few shared rules still carry li
 Theme-specific files intentionally contain additional literals for OS emulation. Examples include:
 
 - Windows XP's Luna taskbar, Start button, Brisk Menu, notebook, and button gradients;
+- Windows 7's translucent blue Aero taskbar and glass controls;
+- Ubuntu's aubergine launcher, orange active accents, and dark Ambiance titlebar;
 - Windows 11 Dark's translucent panel hover/checked surfaces;
 - Windows 3.11's white notebook key line and square checks;
 - macOS Aqua checked controls;
@@ -296,6 +310,9 @@ panel_fg_color
 | `Spaced-Win11-Light` | `#f3f3f3 / #1f1f1f / #ffffff / #1f1f1f / #005fb8 / #ffffff / #e6e6e6 / #1f1f1f` |
 | `Spaced-Win311` | `#c0c0c0 / #000000 / #ffffff / #000000 / #000080 / #ffffff / #000080 / #ffffff` |
 | `Spaced-WinXP` | `#ece9d8 / #000000 / #ffffff / #000000 / #316ac5 / #ffffff / #245edb / #ffffff` |
+| `Spaced-Win7` | `#edf4fa / #17212b / #ffffff / #17212b / #3399ff / #ffffff / #183b60 / #ffffff` |
+| `Spaced-Win7Aero-Dark` | `#182533 / #f2f6fa / #101820 / #ffffff / #69b8ec / #101820 / #101a27 / #ffffff` |
+| `Spaced-Ubuntu` | `#f4f1ee / #2c2c2c / #ffffff / #2c2c2c / #e95420 / #ffffff / #2c2528 / #ffffff` |
 
 Known GTK2/GTK3 differences include:
 
@@ -354,17 +371,23 @@ Special cases:
 
 - Windows 11 Dark uses quiet translucent hover/checked button surfaces and a 2 px active indicator.
 - Windows XP uses a blue taskbar gradient and a green Start/Brisk button gradient.
+- Windows 7 uses a translucent blue Aero taskbar and glassy applet buttons.
+- Win7Aero Dark uses the same layout and translucency with dark glass surfaces.
+- Ubuntu uses a translucent aubergine launcher with orange active accents.
 - GeoWorks expands panel selectors to keep separate applet plugs on the dark-cyan surface.
 
 ### 2. MATE toplevel background
 
 `spaced-switch-theme` writes an explicit toplevel color only when `themes.json` has `panel_color`:
 
-| Theme ID | Explicit toplevel color |
-|---|---|
-| `linux-dark` | `#2f2f2f` |
-| `win11-dark` | `#17243b` |
-| `android` | `#263238` |
+| Theme ID | Explicit toplevel color | Opacity |
+|---|---|---|
+| `linux-dark` | `#2f2f2f` | 65535 (opaque default) |
+| `win11-dark` | `#17243b` | 65535 (opaque default) |
+| `android` | `#263238` | 65535 (opaque default) |
+| `win7` | `#183b60` | 44500 |
+| `win7-aero-dark` | `#101a27` | 44500 |
+| `ubuntu` | `#2c2528` | 56000 |
 
 Other themes set the toplevel background type to `none`, allowing GTK CSS to show through.
 
@@ -390,6 +413,9 @@ The top-level `index.theme` files carry `BackgroundColor` values used with the s
 | Windows 11 Dark | `#202020` |
 | Windows 3.11 | `#008080` |
 | Windows XP | `#6b8e3f` |
+| Windows 7 Aero | `#3187ca` |
+| Win7Aero Dark | `#101820` |
+| Ubuntu | `#5e2750` |
 
 These values are not necessarily identical to the wallpaper catalog's `pcolor`; they are maintained in separate files.
 
@@ -402,7 +428,7 @@ These values are not necessarily identical to the wallpaper catalog's `pcolor`; 
 | `SpacedBack.jpg` | `#1a1a1a` |
 | `SpacedBackLight.jpg` | `#f0f0f0` |
 | `SimpleBackb.png` | `#17181d` |
-| `spaced-orbit-4k.png` | `#050912` |
+| `spaced-orbit-4k.jpg` | `#050912` |
 | `linuxmint.jpg` | `#1d1d1d` |
 | `macos.jpg` | `#3a3a3a` |
 | `win311.jpg` | `#808080` |
@@ -411,11 +437,14 @@ These values are not necessarily identical to the wallpaper catalog's `pcolor`; 
 | `win11dark.jpg` | `#0d1430` |
 | `geoworks.jpg` | `#404040` |
 | `android.jpg` | `#303030` |
+| `win7.jpg` | `#183b60` |
+| `win7aero-dark.jpg` | `#101820` |
+| `ubuntu.jpg` | `#2c2528` |
 | `bluecanvas.jpg` | `#1a3a5c` |
 | `euclidgalacticcore.jpg` | `#0a0a1a` |
 | `solarsystem.jpg` | `#1a1a2e` |
 
-The default GSettings background is `SpacedBack.jpg` with primary color `#1a1a1a`.
+The default GSettings background is `SpacedBack.jpg` with primary color `#1a1a1a`. All real wallpaper payloads live only in this directory. The four `.png` names `SpacedBack.png`, `SpacedBackLight.png`, `euclid-galaxy-garland.png`, and `spaced-orbit-4k.png` are compatibility symlinks to canonical JPEGs so existing user profiles keep working without duplicate image data.
 
 ## Icon colors
 
@@ -434,6 +463,8 @@ The default GSettings background is `SpacedBack.jpg` with primary color `#1a1a1a
 | `Spaced-Icons-Win311` | `#d2aa45` |
 | `Spaced-Icons-Geoworks` | `#607d8b` |
 | `Spaced-Icons-Mint` | `#86a650` |
+| `Spaced-Icons-Win7` | `#d6b35a`, with `#f3dc91` two-tone detail |
+| `Spaced-Icons-Ubuntu` | `#e95420` |
 
 Each overlay owns scalable `folder.svg`, `user-desktop.svg`, `user-home.svg`, and `user-home-open.svg` assets. The runtime does not recolor Papirus folders or rewrite symlinks.
 
@@ -474,16 +505,16 @@ Default 16-color palette:
 
 ### Theme-switch behavior
 
-`spaced-switch-theme` rewrites only the default profile's background and foreground:
+`spaced-switch-theme` rewrites the default profile's background, foreground, and theme-owned transparency settings:
 
 | `dark` in `themes.json` | Background | Foreground |
 |---|---|---|
-| `true` | `#000000` | `#888888` |
+| `true` | `#101820` | `#f2f6fa` |
 | `false` | `#ffffff` | `#000000` |
 
-The helper does not rewrite the bold color or 16-color palette on every switch; those are schema defaults unless the user changes them.
+Win7 and Win7Aero Dark terminals use 50% transparency. Spaced Linux Light and Dark use 25% transparency. Other themes use a solid terminal background. The helper does not rewrite the bold color or 16-color palette on every switch; those are schema defaults unless the user changes them.
 
-Dark registry entries are Linux Dark, Mint, Windows 11 Dark, and Android.
+Dark registry entries are Linux Dark, Mint, Windows 11 Dark, Win7Aero Dark, and Android.
 
 ## Compiz presentation colors
 
@@ -519,11 +550,11 @@ Qt Quick Controls are fixed to:
 
 ```text
 style  = Universal
-theme  = Dark
+theme  = System
 accent = #cfd3d8
 ```
 
-This setting does not switch to a light Qt Quick theme when the active Spaced theme is light.
+The system mode allows Qt Quick to follow the current platform light/dark preference instead of forcing every theme dark.
 
 ### GTK4 and libadwaita
 
@@ -531,14 +562,14 @@ GTK4 and libadwaita applications do not consume these GTK3 CSS files. They are o
 
 ## Flatpak propagation
 
-For registered theme switches, Spaced copies all `/usr/share/themes/Spaced-*` directories into `~/.local/share/themes`, grants read access, and sets a Flatpak `GTK_THEME` override.
+For registered theme switches, Spaced copies all `/usr/share/themes/Spaced-*` directories into `~/.local/share/themes`, grants read-only access to that directory, and removes stale global Flatpak `GTK_THEME` overrides. GTK3 apps can resolve the matching named theme; GTK4/libadwaita apps receive the desktop `color-scheme` preference through the settings portal.
 
 Consequences:
 
 - the user-local copy can shadow `/usr/share/themes`;
 - a package update can be invisible to Flatpaks until the export is refreshed;
 - GTK3 Flatpaks may follow the theme;
-- GTK4/libadwaita and Qt Flatpaks are not guaranteed to follow it.
+- GTK4/libadwaita and Qt Flatpaks are not guaranteed to reproduce GTK3 styling exactly.
 
 ## LightDM colors
 
@@ -546,7 +577,7 @@ The greeter uses a fixed configuration:
 
 ```text
 background       = SimpleBackb.png
-theme            = Spaced-Dark
+theme            = Spaced-Linux-Dark
 icon theme       = Papirus-Dark
 default user art = spaced-linux.png
 logo             = spaced-logo.png

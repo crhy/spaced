@@ -56,7 +56,8 @@ for path in ('usr/lib/spaced-linux/spaced-update.py', 'usr/lib/spaced-linux/spac
     assert (payload / path).read_bytes() == (root / 'overlays' / path).read_bytes(), f'Missing/stale overlay: {path}'
 for path in ('postinst', 'triggers'):
     assert (work / 'meta' / path).read_bytes() == (root / 'packages/spaced-meta/DEBIAN' / path).read_bytes(), f'Stale release maintainer script: {path}'
-for path in ('usr/share/backgrounds/spaced/spaced-orbit-4k.png',
+for path in ('usr/share/backgrounds/spaced/spaced-orbit-4k.jpg',
+             'usr/share/backgrounds/spaced/win7aero-dark.jpg',
              'usr/share/mate-background-properties/spaced-linux.xml'):
     assert (wallpapers / path).read_bytes() == (root / 'overlays' / path).read_bytes(), f'Missing/stale wallpaper: {path}'
     assert not (payload / path).exists(), f'Wallpaper payload duplicated in settings: {path}'

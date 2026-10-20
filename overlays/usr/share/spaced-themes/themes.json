@@ -57,6 +57,48 @@
       "dark": false
     },
     {
+      "id": "win7",
+      "name": "Windows 7 Aero",
+      "gtk_theme": "Spaced-Win7",
+      "wallpaper": "/usr/share/backgrounds/spaced/win7.jpg",
+      "panel_layout": "spaced-win7",
+      "panel_position": "bottom",
+      "panel_size": 40,
+      "panel_color": "#183b60",
+      "panel_opacity": 44500,
+      "panel_dark": true,
+      "cairo_dock": false,
+      "dark": false
+    },
+    {
+      "id": "win7-aero-dark",
+      "name": "Spaced Win7Aero Dark",
+      "gtk_theme": "Spaced-Win7Aero-Dark",
+      "wallpaper": "/usr/share/backgrounds/spaced/win7aero-dark.jpg",
+      "panel_layout": "spaced-win7",
+      "panel_position": "bottom",
+      "panel_size": 40,
+      "panel_color": "#101a27",
+      "panel_opacity": 44500,
+      "panel_dark": true,
+      "cairo_dock": false,
+      "dark": true
+    },
+    {
+      "id": "ubuntu",
+      "name": "Ubuntu",
+      "gtk_theme": "Spaced-Ubuntu",
+      "wallpaper": "/usr/share/backgrounds/spaced/ubuntu.jpg",
+      "panel_layout": "spaced-ubuntu",
+      "panel_position": "left",
+      "panel_size": 72,
+      "panel_color": "#2c2528",
+      "panel_opacity": 56000,
+      "panel_dark": true,
+      "cairo_dock": false,
+      "dark": false
+    },
+    {
       "id": "mint",
       "name": "Linux Mint",
       "gtk_theme": "Spaced-Mint",

@@ -13,7 +13,7 @@ import shlex
 import sys
 
 
-def check_hardware(database, sys_path):
+def check_hardware(database, sys_path, allowed_legacy=()):
     chips = json.loads(database.read_text())["chips"]
     found = 0
     for device in sorted((sys_path / "bus/pci/devices").glob("*")):
@@ -36,11 +36,13 @@ def check_hardware(database, sys_path):
         specificity = max(sum(key in chip for key in subsystem) for chip in matches)
         matches = [chip for chip in matches if sum(key in chip for key in subsystem) == specificity]
         for chip in matches:
-            if chip.get("legacybranch"):
+            if chip.get("legacybranch") and chip["legacybranch"] not in allowed_legacy:
                 raise ValueError(
                     f"{chip['name']} [10de:{device_id:04x}] requires NVIDIA's legacy {chip['legacybranch']} branch. "
                     "The current repository driver is incompatible. Keep the current driver; this installer does not replace it with an unsupported branch.")
-        print(f"Supported NVIDIA device: {matches[0]['name']} [10de:{device_id:04x}]")
+        branch = matches[0].get("legacybranch")
+        branch_note = f" (legacy {branch})" if branch else ""
+        print(f"Supported NVIDIA device: {matches[0]['name']} [10de:{device_id:04x}]{branch_note}")
     if not found:
         raise ValueError("No NVIDIA display device was found in sysfs.")
 
@@ -70,10 +72,12 @@ def main():
     parser.add_argument("recommendation", nargs="?", type=Path)
     parser.add_argument("--database", type=Path, default=Path("/usr/share/nvidia-driver-assistant/supported-gpus/supported-gpus.json"))
     parser.add_argument("--sys-path", type=Path, default=Path("/sys"))
+    parser.add_argument("--allow-legacy", action="append", default=[],
+                        help="legacy branch supplied by a separately verified package source")
     args = parser.parse_args()
     try:
         if args.action == "hardware":
-            check_hardware(args.database, args.sys_path)
+            check_hardware(args.database, args.sys_path, args.allow_legacy)
         else:
             if args.recommendation is None:
                 raise ValueError("Missing NVIDIA recommendation file.")

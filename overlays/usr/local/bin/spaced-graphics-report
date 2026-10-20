@@ -33,7 +33,7 @@ if [ -r "$state" ]; then
 else
     printf 'No saved override.\n'
 fi
-run dpkg-query -W '-f=${binary:Package} ${Version}\n' firmware-amd-graphics firmware-realtek firmware-mediatek libgl1-mesa-dri mesa-vulkan-drivers xserver-xorg-video-amdgpu amdgpu-top
+run dpkg-query -W '-f=${binary:Package} ${Version}\n' firmware-amd-graphics firmware-realtek firmware-mediatek libgl1-mesa-dri mesa-vulkan-drivers xserver-xorg-video-amdgpu xserver-xorg-video-ati xserver-xorg-video-radeon amdgpu-top
 run mokutil --sb-state
 if command -v nvidia-smi >/dev/null 2>&1; then
     run nvidia-smi --query-gpu=pci.bus_id,name,driver_version --format=csv

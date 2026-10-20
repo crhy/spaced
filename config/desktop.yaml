@@ -33,8 +33,8 @@ lightdm:
   greeter: lightdm-gtk-greeter
   autologin: user
   autologin_timeout: 0
-  background: /usr/share/backgrounds/spaced/SimpleBackc.png
-  theme: Spaced-Dark
+  background: /usr/share/backgrounds/spaced/SimpleBackb.png
+  theme: Spaced-Linux-Dark
   icons: Spaced-Icons-Linux-Dark
   logo: /usr/share/pixmaps/spaced-logo.png
 

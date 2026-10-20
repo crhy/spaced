@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
-Name=Spaced NVIDIA Post-Reboot Verification
+Name=Spaced GPU Driver Manager Post-Reboot Verification
 Comment=Verify NVIDIA, OpenGL, and Compiz after a driver installation
 Exec=/usr/bin/python3 /usr/lib/spaced-linux/spaced-nvidia-postboot.py
 Terminal=false

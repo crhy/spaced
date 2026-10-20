@@ -1,18 +1,21 @@
 # Spaced Linux MATE theme architecture
 
-This is the canonical contributor guide for Spaced Linux theming. It describes the repository at commit `f462bdb4b4d3916caf1617159056f2743b016acf`; re-check the implementation when later commits change theme files or session helpers.
+This is the canonical contributor guide for Spaced Linux theming. Keep it in step with theme files and session helpers whenever either changes.
 
 For exact color values, see [THEME-COLORS.md](THEME-COLORS.md). For panel objects and layout details, see [matepanel.md](matepanel.md).
 
 ## Theme inventory
 
-Spaced Linux ships **ten selectable MATE metathemes** and one internal shared engine directory:
+Spaced Linux ships **thirteen selectable MATE metathemes** and one internal shared engine directory:
 
 - `Spaced-Linux-Dark`
 - `Spaced-Linux-Light`
 - `Spaced-MacOS`
 - `Spaced-Win311`
 - `Spaced-WinXP`
+- `Spaced-Win7`
+- `Spaced-Win7Aero-Dark`
+- `Spaced-Ubuntu`
 - `Spaced-Mint`
 - `Spaced-Win11-Light`
 - `Spaced-Win11-Dark`
@@ -25,7 +28,7 @@ The similar names are important:
 - **Spaced Linux Dark** is the selectable default desktop theme in `Spaced-Linux-Dark`.
 - **Spaced-Dark** is the internal engine and LightDM theme. It has no top-level `X-GNOME-Metatheme` file.
 
-`make check` enforces ten registered/selectable themes and rejects `Spaced-Dark` if it becomes exposed as a duplicate choice.
+`make check` enforces thirteen registered/selectable themes and rejects `Spaced-Dark` if it becomes exposed as a duplicate choice.
 
 ## Repository paths and installed paths
 
@@ -141,7 +144,7 @@ For a registered theme, the helper applies:
 - panel layout name, edge, size, and optional explicit toplevel background color;
 - Cairo Dock start or stop;
 - real copies of all `Spaced-*` theme directories into `~/.local/share/themes` for Flatpak access;
-- the per-user Flatpak theme filesystem permission and `GTK_THEME` override.
+- the per-user Flatpak theme filesystem permission and removal of any obsolete global `GTK_THEME` override.
 
 ### External GTK themes
 
@@ -151,7 +154,7 @@ That means panel position, explicit panel color, terminal colors, or Cairo Dock 
 
 ## `themes.json`
 
-`overlays/usr/share/spaced-themes/themes.json` contains ten entries. Current keys are:
+`overlays/usr/share/spaced-themes/themes.json` contains thirteen entries. Current keys are:
 
 | Key | Purpose |
 |---|---|
@@ -160,9 +163,11 @@ That means panel position, explicit panel color, terminal colors, or Cairo Dock 
 | `gtk_theme` | Exact GTK theme name used for monitor lookup |
 | `wallpaper` | Installed wallpaper path |
 | `panel_layout` | MATE panel layout name |
-| `panel_position` | `top` or `bottom` |
-| `panel_size` | Panel height in pixels |
+| `panel_position` | `top`, `bottom`, `left`, or `right` |
+| `panel_size` | Panel thickness in pixels |
 | `panel_color` | Optional explicit MATE toplevel background color |
+| `panel_opacity` | Optional explicit toplevel opacity from 0 through 65535 |
+| `panel_dark` | Optional dark-panel icon and Brisk preference, independent of light/dark applications |
 | `cairo_dock` | Whether Cairo Dock should run |
 | `dark` | Brisk, toolkit dark preference, and terminal light/dark policy |
 
@@ -177,6 +182,9 @@ Current registry:
 | `macos` | `Spaced-MacOS` | `Spaced-Icons-MacOS` | `macos.jpg` | top, 30 | none | yes | no |
 | `win311` | `Spaced-Win311` | `Spaced-Icons-Win311` | `win311.jpg` | bottom, 30 | none | no | no |
 | `winxp` | `Spaced-WinXP` | `Spaced-Icons-WinXP` | `winxp.jpg` | bottom, 30 | none | no | no |
+| `win7` | `Spaced-Win7` | `Spaced-Icons-Win7` | `win7.jpg` | bottom, 40 | `#183b60`, opacity 44500 | no | no |
+| `win7-aero-dark` | `Spaced-Win7Aero-Dark` | `Spaced-Icons-Win7` | `win7aero-dark.jpg` | bottom, 40 | `#101a27`, opacity 44500 | no | yes |
+| `ubuntu` | `Spaced-Ubuntu` | `Spaced-Icons-Ubuntu` | `ubuntu.jpg` | left, 72 | `#2c2528`, opacity 56000 | no | no |
 | `mint` | `Spaced-Mint` | `Spaced-Icons-Mint` | `linuxmint.jpg` | bottom, 30 | none | no | yes |
 | `win11-light` | `Spaced-Win11-Light` | `Spaced-Icons-Win11-Light` | `win11light.jpg` | bottom, 30 | none | no | no |
 | `win11-dark` | `Spaced-Win11-Dark` | `Spaced-Icons-Win11-Dark` | `win11dark.jpg` | bottom, 30 | `#17243b` | no | yes |
@@ -347,14 +355,14 @@ Do not use `feh`, Caja restarts, Compiz background options, or repeated backgrou
 
 ## Panel and Cairo Dock
 
-All ten selectable themes use one applet composition. Nine layout files exist because Linux Dark and Linux Light both use `spaced-linux.layout`; the macOS and Android files set the initial top orientation, while the other files use bottom orientation.
+All thirteen selectable themes use one applet composition. Eleven layout files exist because Linux Dark and Linux Light share `spaced-linux.layout`, while both Windows 7 variants share `spaced-win7.layout`. macOS and Android start at the top, Ubuntu uses a thick 72 px left panel, both Windows 7 variants use a 40 px bottom panel, and the remaining themes start with a 30 px bottom panel.
 
 At runtime `spaced-switch-theme` moves and resizes the existing panel. It never runs `mate-panel --replace`, because replacing the panel can lose the notification-area X selection.
 
 Panel color has two GTK3-era channels:
 
 1. GTK CSS paints panel widgets using `@panel_bg_color` and `@panel_fg_color`.
-2. An optional `themes.json` `panel_color` makes mate-panel paint an explicit toplevel background.
+2. Optional `themes.json` `panel_color` and `panel_opacity` values make mate-panel paint an explicit translucent or opaque toplevel background.
 
 The explicit toplevel color can cover the CSS background while widget text and controls still come from CSS. See [matepanel.md](matepanel.md) for the complete model.
 
@@ -378,11 +386,11 @@ Qt Quick Controls are separate. The current global file forces:
 Style=Universal
 
 [Universal]
-Theme=Dark
+Theme=System
 Accent=#cfd3d8
 ```
 
-Therefore Qt Quick applications do not dynamically become light with a light Spaced theme. Do not document all Qt applications as fully following GTK.
+The `System` setting lets Qt Quick applications follow the session light/dark convention. Qt Widgets use GTK platform integration and the Fusion control style; they will coordinate with the palette but do not reproduce GTK CSS exactly.
 
 GTK4 and libadwaita applications do not consume the Spaced GTK3 CSS engine and are not guaranteed to match.
 
@@ -392,11 +400,11 @@ On each registered theme switch, `spaced-switch-theme`:
 
 1. copies every `/usr/share/themes/Spaced-*` directory into `~/.local/share/themes` with `rsync -a --delete`;
 2. grants `xdg-data/themes:ro` to user Flatpaks;
-3. sets a per-user Flatpak `GTK_THEME=<active-theme>` environment override.
+3. removes the obsolete per-user global `GTK_THEME` override, if present.
 
 Real copies are used because symlinks back to `/usr/share/themes` do not survive reliably inside a sandbox namespace.
 
-This supports sandboxed GTK3 applications that permit host themes. It does not guarantee matching GTK4/libadwaita or Qt rendering.
+GTK3 Flatpaks then resolve the XSettings theme name and files. GTK4/libadwaita Flatpaks follow the light/dark portal convention through `org.gnome.desktop.interface color-scheme`; they intentionally do not receive GTK3 CSS. Qt Flatpaks follow their own toolkit support and may coordinate without matching every GTK detail.
 
 A stale user export can shadow the freshly installed `/usr/share/themes` copy because GTK searches `~/.local/share/themes` first. Re-run a registered theme switch or remove/recreate the export when debugging.
 

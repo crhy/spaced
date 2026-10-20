@@ -1,9 +1,9 @@
-Spaced Video Drivers — Spaced Linux 9.26
+Spaced GPU Driver Manager — Spaced Linux
 
 The application is delivered by spaced-mate-default-settings through Spaced
-Update. Launch it from the menu, or run spaced-nvidia-installer.
+Update. Launch it from the menu, or run spaced-gpu-driver-manager.
 
-Check Graphics is read-only. Install NVIDIA Driver and Update AMD Drivers
+Check Graphics is read-only. Install NVIDIA Driver and Install / Repair AMD Drivers
 perform authenticated package operations. NVIDIA hardware compatibility,
 package removal protection, module and boot-image checks, and postboot
 verification are described in docs/NVIDIA-RECOVERY.md.

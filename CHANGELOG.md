@@ -1,5 +1,28 @@
 # Changelog
 
+## 10.26.5 - 2026-10-20
+
+Prepared for the 10.26.5 ISO and `10.26.5-1` APT packages.
+
+- Add **Spaced** and **Compiz** to Enchant's per-user dictionary for new and
+  existing profiles, without overwriting words added by the user (#333).
+- Remember each PulseAudio card's selected hardware profile, including the
+  analog or digital profile chosen for a USB DAC, and restore it after login
+  or when the device is reconnected (#336).
+- If an OS update fails while configuring packages, repair pending dpkg state,
+  validate dependencies and retry the exact transaction once. Persistent
+  errors still stop and remain visible; the updater never loops (#337).
+- Rename the Nvidia installer to **Spaced GPU Driver Manager**, add a guarded
+  Nvidia 580 compatibility path for Pascal/GTX 10-series cards, and include
+  the native Radeon/ATI compatibility drivers for older AMD hardware.
+- Add polished Spaced Ubuntu, Windows 7 and Windows 7 Aero Dark presets with
+  coordinated panel, Brisk Menu, terminal, window-decoration and application
+  colors. Improve contrast and cross-toolkit light/dark behavior throughout
+  the theme collection.
+- Consolidate all Spaced wallpaper files and references under
+  `/usr/share/backgrounds/spaced`, eliminating duplicate artwork.
+- Refresh the website theme gallery and screenshots.
+
 ## 10.26.4 - 2026-10-18
 
 Delivered through the 10.26.4 ISO and `10.26.4-1` APT packages.

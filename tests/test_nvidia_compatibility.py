@@ -37,6 +37,7 @@ class HardwareCompatibilityTests(unittest.TestCase):
         self.database.write_text(json.dumps({"chips": [
             {"devid": "0x0F02", "name": "GT 730 Fermi", "legacybranch": "390.xx"},
             {"devid": "0x1287", "name": "GT 730 Kepler", "legacybranch": "470.xx"},
+            {"devid": "0x1B80", "name": "GTX 1080 Pascal", "legacybranch": "580.xx"},
             {"devid": "0x2484", "name": "RTX 3070", "features": ["kernelopen"]},
         ]}))
 
@@ -68,6 +69,12 @@ class HardwareCompatibilityTests(unittest.TestCase):
         self.gpu("0000:02:00.0", "0x1287")
         with self.assertRaisesRegex(ValueError, "470.xx"):
             compat.check_hardware(self.database, self.root)
+
+    def test_pascal_is_allowed_only_with_verified_distro_fallback(self):
+        self.gpu("0000:01:00.0", "0x1b80")
+        with self.assertRaisesRegex(ValueError, "580.xx"):
+            compat.check_hardware(self.database, self.root)
+        compat.check_hardware(self.database, self.root, ("580.xx",))
 
     def test_unknown_gpu_fails_closed(self):
         self.gpu("0000:01:00.0", "0xffff")

@@ -16,7 +16,10 @@ ARCH="$(dpkg --print-architecture)"
 DEBIAN_VERSION=""
 CUDA_KEYRING_URL=""
 CUDA_KEYRING_SHA256=""
+CUDA_SOURCE_FILE=""
+CUDA_DISABLED_SOURCE=""
 DRIVER_PACKAGE=""
+DISTRO_NVIDIA_VERSION=""
 MODE=""
 DESKTOP_USER=""
 REBOOT_AFTER=0
@@ -150,6 +153,8 @@ detect_debian_release() {
             ;;
     esac
     CUDA_KEYRING_URL="https://developer.download.nvidia.com/compute/cuda/repos/debian${DEBIAN_VERSION}/x86_64/cuda-keyring_1.1-1_all.deb"
+    CUDA_SOURCE_FILE="/etc/apt/sources.list.d/cuda-debian${DEBIAN_VERSION}-x86_64.list"
+    CUDA_DISABLED_SOURCE="${CUDA_SOURCE_FILE}.spaced-legacy-disabled"
     case "$DEBIAN_VERSION" in
         12) CUDA_KEYRING_SHA256=e7f219eab6fe4819cdb5c15b98233dc3420302d9c00883219cd3d896857cf48d ;;
         13) CUDA_KEYRING_SHA256=d0d4ef986a44400f9db33c600ef33a985175e7cc63d805a10e1839c7a1e78f5f ;;
@@ -363,6 +368,10 @@ install_prerequisites() {
 install_official_repository() {
     detect_debian_release
     status "Enabling NVIDIA's official Debian $DEBIAN_VERSION repository"
+    if [ -e "$CUDA_DISABLED_SOURCE" ]; then
+        [ ! -e "$CUDA_SOURCE_FILE" ] || fatal 22 "Both enabled and disabled NVIDIA repository files exist. Remove the duplicate and retry."
+        mv -- "$CUDA_DISABLED_SOURCE" "$CUDA_SOURCE_FILE" || fatal 22 "The NVIDIA repository could not be re-enabled safely."
+    fi
     TMP_KEYRING="$(mktemp --suffix=.deb)"
     curl --fail --location --show-error --connect-timeout 20 --retry 3 --output "$TMP_KEYRING" "$CUDA_KEYRING_URL" || fatal 22 "NVIDIA's official repository keyring could not be downloaded."
     printf '%s  %s\n' "$CUDA_KEYRING_SHA256" "$TMP_KEYRING" | sha256sum --check --status || fatal 22 "NVIDIA's repository keyring checksum changed. No downloaded package was executed; update Spaced Linux and retry."
@@ -376,8 +385,22 @@ install_official_repository() {
     select_driver_package
 }
 
+disable_official_repository_for_legacy() {
+    # NVIDIA's current repository moves to newer branches. Pascal must remain
+    # on the compatible Devuan package captured before that repository existed.
+    [ -n "$CUDA_SOURCE_FILE" ] && [ -n "$CUDA_DISABLED_SOURCE" ] ||
+        fatal 24 "The NVIDIA repository path was not initialized."
+    [ -f "$CUDA_SOURCE_FILE" ] ||
+        fatal 24 "The NVIDIA repository file is missing, so the GTX 10-series update guard cannot be installed."
+    status "Locking this GTX 10-series system to Devuan's compatible NVIDIA branch"
+    mv -- "$CUDA_SOURCE_FILE" "$CUDA_DISABLED_SOURCE" ||
+        fatal 24 "The NVIDIA repository could not be disabled for this legacy GPU."
+    apt-get -o APT::Update::Error-Mode=any -o Acquire::Retries=3 update ||
+        fatal 24 "Package information could not be refreshed after locking the legacy NVIDIA branch."
+}
+
 select_driver_package() {
-    local supported_distros
+    local supported_distros hardware_output
     supported_distros="$(nvidia-driver-assistant --list-supported-distros 2>&1)" || fatal 24 "NVIDIA Driver Assistant could not list supported distributions."
     if ! grep -Eqi "^[[:space:]]*debian(:${DEBIAN_VERSION})?[[:space:]]*$" <<<"$supported_distros"; then
         fatal 24 "NVIDIA Driver Assistant does not support Debian $DEBIAN_VERSION. Driver installation has stopped."
@@ -385,13 +408,22 @@ select_driver_package() {
     # The assistant recommends latest cuda-drivers even for legacy-only GPUs.
     # Validate every physical NVIDIA display device against its signed package's
     # support database before accepting the recommendation.
-    python3 /usr/lib/spaced-linux/spaced-nvidia-compat.py hardware ||
+    hardware_output="$(python3 /usr/lib/spaced-linux/spaced-nvidia-compat.py hardware --allow-legacy 580.xx)" ||
         fatal 24 "This GPU cannot use the available NVIDIA driver. See the PCI ID and compatibility reason above; keep the current driver."
-    nvidia-driver-assistant --distro "Debian:$DEBIAN_VERSION" --verbose | tee "$RUN_DIR/recommendation.txt" ||
-        fatal 24 "NVIDIA Driver Assistant could not select a driver for this system."
-    DRIVER_PACKAGE="$(python3 /usr/lib/spaced-linux/spaced-nvidia-compat.py recommendation "$RUN_DIR/recommendation.txt")" ||
-        fatal 24 "NVIDIA's package recommendation could not be validated."
-    require_candidate "$DRIVER_PACKAGE" 23
+    printf '%s\n' "$hardware_output"
+    if grep -q 'legacy 580\.xx' <<<"$hardware_output"; then
+        [ -n "$DISTRO_NVIDIA_VERSION" ] && [ "$DISTRO_NVIDIA_VERSION" != "(none)" ] ||
+            fatal 24 "This GTX 10-series GPU needs NVIDIA's 580-or-older branch, but the Devuan NVIDIA package is unavailable."
+        DRIVER_PACKAGE="nvidia-driver=$DISTRO_NVIDIA_VERSION"
+        status "Selecting Devuan's Pascal-compatible NVIDIA driver $DISTRO_NVIDIA_VERSION"
+        disable_official_repository_for_legacy
+    else
+        nvidia-driver-assistant --distro "Debian:$DEBIAN_VERSION" --verbose | tee "$RUN_DIR/recommendation.txt" ||
+            fatal 24 "NVIDIA Driver Assistant could not select a driver for this system."
+        DRIVER_PACKAGE="$(python3 /usr/lib/spaced-linux/spaced-nvidia-compat.py recommendation "$RUN_DIR/recommendation.txt")" ||
+            fatal 24 "NVIDIA's package recommendation could not be validated."
+        require_candidate "$DRIVER_PACKAGE" 23
+    fi
     apt-get -o DPkg::Lock::Timeout=120 --simulate --no-remove install -y "$DRIVER_PACKAGE" > "$RUN_DIR/driver-plan.txt" ||
         fatal 30 "The recommended NVIDIA driver cannot be installed without removing existing packages. Keep the current driver and review the package plan."
     cat "$RUN_DIR/driver-plan.txt"
@@ -444,7 +476,7 @@ for path in sorted(root.glob('*')):
     output = []
     for line in original.splitlines(keepends=True):
         if any(pattern.search(line) for pattern in patterns):
-            output.append('# Disabled by Spaced NVIDIA Installer: ' + line)
+            output.append('# Disabled by Spaced GPU Driver Manager: ' + line)
             changed = True
         else:
             output.append(line)
@@ -457,7 +489,7 @@ PY
 write_nvidia_policy() {
     status "Disabling Nouveau and enabling NVIDIA DRM modesetting"
     cat > /etc/modprobe.d/zz-spaced-nvidia.conf <<'EOF_POLICY'
-# Managed by Spaced NVIDIA Driver Installer.
+# Managed by Spaced GPU Driver Manager.
 blacklist nouveau
 options nouveau modeset=0
 options nvidia_drm modeset=1
@@ -467,7 +499,7 @@ EOF_POLICY
     touch /etc/initramfs-tools/modules
     sed -i -E '/^[[:space:]]*(nouveau|nvidia|nvidia_modeset|nvidia_uvm|nvidia_drm)[[:space:]]*(#.*)?$/d' /etc/initramfs-tools/modules
     cat >> /etc/initramfs-tools/modules <<'EOF_MODULES'
-# Managed by Spaced NVIDIA Driver Installer.
+# Managed by Spaced GPU Driver Manager.
 nvidia
 nvidia_modeset
 nvidia_uvm
@@ -621,12 +653,14 @@ audit_system() {
 
 install_amd() {
     require_root
-    lspci -nn | grep -E '(VGA|3D|Display) controller|VGA compatible controller' | grep -qiE 'AMD|ATI|\[1002:' || fatal 12 "No AMD graphics device was detected."
+    lspci -nn | grep -E '(VGA|3D|Display) controller|VGA compatible controller' | grep -qiE 'AMD|ATI|\[1002:' || fatal 18 "No AMD graphics device was detected."
     [ -s /etc/X11/xorg.conf.d/20-spaced-amdgpu.conf ] || fatal 21 "Update Spaced Linux to install the AMD TearFree configuration."
-    status "Refreshing verified Devuan graphics packages"
+    status "Installing the native AMDGPU/Radeon and Mesa graphics stack"
     apt-get -o APT::Update::Error-Mode=any -o Acquire::Retries=3 update || fatal 16 "Package information could not be downloaded."
     apt-get -o DPkg::Lock::Timeout=120 --no-remove install -y \
-        firmware-amd-graphics xserver-xorg-video-amdgpu libgl1-mesa-dri mesa-vulkan-drivers amdgpu-top || fatal 21 "AMD graphics packages could not be updated."
+        firmware-amd-graphics xserver-xorg-video-amdgpu xserver-xorg-video-ati \
+        xserver-xorg-video-radeon libgl1-mesa-dri mesa-vulkan-drivers amdgpu-top || \
+        fatal 21 "AMD graphics packages could not be installed."
     update-initramfs -u -k all || fatal 41 "AMD packages were updated, but the boot images could not be refreshed. Review the log and retry before rebooting."
     printf 'SPACED_SUCCESS:amd:%s\n' "$KERNEL"
 }
@@ -645,6 +679,7 @@ install_system() {
     check_disk_space
     status "Refreshing Devuan package information"
     apt-get -o APT::Update::Error-Mode=any -o Acquire::Retries=3 update || fatal 16 "Package information could not be downloaded."
+    DISTRO_NVIDIA_VERSION="$(apt_candidate nvidia-driver)"
     install_prerequisites
     check_secure_boot
     backup_configuration
@@ -681,7 +716,7 @@ reboot_system() {
 
 rollback_system() {
     require_root
-    [ -f "$CURRENT_RUN_FILE" ] || fatal 51 "No Spaced NVIDIA transaction is available to roll back."
+    [ -f "$CURRENT_RUN_FILE" ] || fatal 51 "No Spaced GPU driver transaction is available to roll back."
     RUN_DIR="$(cat "$CURRENT_RUN_FILE")"
     rollback_transaction 51
 }

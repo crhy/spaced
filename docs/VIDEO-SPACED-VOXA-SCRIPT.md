@@ -41,7 +41,7 @@ starts with sysvinit. There is no systemd anywhere in it.”
 
 **[Theme selector: click through four or five themes quickly.]**
 
-“Eleven complete themes, from Windows 3.11 and XP to macOS, Android and our
+“Twelve complete themes, from Windows 3.11, XP, and 7 to Ubuntu, macOS, Android and our
 own dark and light designs. Pick the desktop your hands already know.”
 
 **[Spaced Bazaar, then Spaced Update.]**

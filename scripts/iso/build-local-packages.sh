@@ -68,7 +68,7 @@ SETTINGS_PATHS=(
     usr/local/share/applications/mate-window-properties.desktop
     usr/local/share/applications/spaced-help.desktop
     usr/share/applications/mimeapps.list
-    usr/share/applications/spaced-nvidia-installer.desktop
+    usr/share/applications/spaced-gpu-driver-manager.desktop
     usr/share/applications/spaced-sharing-password.desktop
     usr/share/applications/spaced-update.desktop
     usr/share/applications/spaced-window-manager.desktop

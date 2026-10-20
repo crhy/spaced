@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=X-GNOME-Metatheme
+Name=Spaced Ubuntu
+Comment=Ubuntu Unity and Ambiance inspired theme
+Encoding=UTF-8
+
+[X-GNOME-Metatheme]
+Name=Spaced Ubuntu
+GtkTheme=Spaced-Ubuntu
+MetacityTheme=Spaced-Ubuntu
+IconTheme=Spaced-Icons-Ubuntu
+CursorTheme=Adwaita
+BackgroundImage=/usr/share/backgrounds/spaced/ubuntu.jpg
+BackgroundColor=#5e2750

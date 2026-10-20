@@ -1,0 +1,409 @@
+/* Spaced Windows 7 Aero: pale glass frames, blue selection and a translucent taskbar. */
+@define-color theme_bg_color #edf4fa;
+@define-color theme_fg_color #17212b;
+@define-color theme_base_color #ffffff;
+@define-color theme_text_color #17212b;
+@define-color theme_selected_bg_color #3399ff;
+@define-color theme_selected_fg_color #101820;
+@define-color theme_tooltip_bg_color #ffffe1;
+@define-color theme_tooltip_fg_color #17212b;
+@define-color light_shadow #ffffff;
+@define-color dark_shadow #a6bacb;
+@define-color info_fg_color #000000;
+@define-color info_bg_color #fcf6ca;
+@define-color warning_fg_color #000000;
+@define-color warning_bg_color #faad3d;
+@define-color question_fg_color #ffffff;
+@define-color question_bg_color #5588ee;
+@define-color error_fg_color #ffffff;
+@define-color error_bg_color #ed3636;
+@define-color link_color #0067b8;
+@define-color link_visited_color #5a4a86;
+@define-color success_color #4e9a06;
+@define-color error_color #cc0000;
+@define-color titlebar_bg_color #9dd2ee;
+@define-color titlebar_fg_color #102535;
+@define-color menubar_bg_color #f5f9fc;
+@define-color menubar_fg_color #17212b;
+@define-color toolbar_bg_color #edf4fa;
+@define-color toolbar_fg_color #17212b;
+@define-color menu_bg_color #f7fbfe;
+@define-color menu_fg_color #17212b;
+@define-color panel_bg_color #183b60;
+@define-color panel_fg_color #ffffff;
+@define-color tab_checked_color #3399ff;
+@define-color osd_base #193b5c;
+@define-color osd_fg #ffffff;
+@define-color osd_bg alpha(@osd_base, 0.86);
+@define-color backdrop_selected_bg_color shade(@theme_bg_color, 0.9);
+@define-color backdrop_selected_fg_color @theme_fg_color;
+@define-color wm_bg #9dd2ee;
+@define-color wm_title_focused #102535;
+@define-color wm_title_unfocused #526878;
+@define-color wm_border_focused #5d94ba;
+@define-color wm_border_unfocused #96afc0;
+
+@import url("../../Spaced-Dark/gtk-3.0/gtk-widgets.css");
+@import url("../../Spaced-Dark/gtk-3.0/gtk-widgets-assets.css");
+@import url("../../Spaced-Dark/gtk-3.0/gtk-widgets-backdrop.css");
+@import url("../../Spaced-Dark/gtk-3.0/apps/granite-widgets.css");
+@import url("../../Spaced-Dark/gtk-3.0/apps/unity.css");
+@import url("../../Spaced-Dark/gtk-3.0/apps/xfce.css");
+@import url("../../Spaced-Dark/gtk-3.0/apps/lightdm-gtk-greeter.css");
+@import url("../../Spaced-Dark/gtk-3.0/spaced-overrides.css");
+
+/* Aero glass: mate-panel supplies the translucent blue toplevel and these
+ * rules keep every out-of-process applet from painting an opaque rectangle
+ * over it. */
+.mate-panel, .mate-panel > box, .mate-panel > grid,
+.mate-panel menubar, .mate-panel menubar > menuitem,
+.mate-panel-menu-bar, .gnome-panel-menu-bar,
+#MatePanelWidget, #MatePanelPopupWindow {
+    background-color: rgba(24, 59, 96, 0.56);
+    background-image: linear-gradient(to bottom, rgba(166,216,245,0.42), rgba(43,105,153,0.34) 52%, rgba(10,37,66,0.52));
+    color: #ffffff;
+    border-color: rgba(190,228,250,0.70);
+}
+
+.mate-panel-menu-bar #PanelApplet,
+.gnome-panel-menu-bar #PanelApplet,
+#MatePanelWidget #PanelApplet,
+PanelApplet, MatePanelApplet, NaTrayApplet,
+#PanelPlug, #PanelPlug > box, #PanelPlug > widget,
+#PanelApplet, #PanelApplet > box, #PanelApplet > widget {
+    background-color: transparent;
+    background-image: none;
+    color: #ffffff;
+    border-color: transparent;
+    box-shadow: none;
+}
+
+#PanelPlug button,
+#PanelApplet button:not(.brisk-button),
+#PanelApplet togglebutton:not(.brisk-button),
+#PanelApplet button, #showdesktop-button,
+button.brisk-button, button.brisk-button-vertical {
+    background-color: rgba(255,255,255,0.06);
+    background-image: linear-gradient(to bottom, rgba(255,255,255,0.22), rgba(41,105,157,0.12));
+    color: #ffffff;
+    border-color: rgba(210,238,255,0.42);
+    border-radius: 5px;
+    box-shadow: inset 0 1px rgba(255,255,255,0.34);
+}
+
+/* A 40px panel otherwise gives libwnck enough room to choose two compact
+ * task-list rows. Keep each task button at Windows taskbar height. */
+#PanelApplet button#tasklist-button,
+button#tasklist-button {
+    min-height: 30px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    margin-top: 2px;
+    margin-bottom: 2px;
+}
+
+#PanelApplet button:hover, #showdesktop-button:hover,
+button.brisk-button:hover, button.brisk-button:checked {
+    background-color: rgba(88,180,242,0.52);
+    border-color: rgba(224,245,255,0.85);
+}
+
+window.background.brisk-menu, window.brisk-menu, .brisk-menu {
+    /* Keep the GTK surface opaque and let Compiz apply the theme's 90%
+     * whole-window opacity, avoiding two stacked transparency passes. */
+    background-color: #123c5b;
+    background-image: linear-gradient(
+        to bottom,
+        #5382a0,
+        #315f7c 44%,
+        #163f5d
+    );
+    color: #ffffff;
+    border: 2px solid rgba(153,207,239,0.90);
+    border-radius: 7px 7px 0 0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.42);
+}
+
+window.background.brisk-menu > box, .brisk-menu > box {
+    background-color: transparent;
+    background-image: none;
+}
+
+window.brisk-menu box,
+window.brisk-menu scrolledwindow,
+window.brisk-menu viewport {
+    background-color: transparent;
+    background-image: none;
+    color: #ffffff;
+}
+
+/* Brisk puts the session controls below the category scroller in this
+ * sidebar wrapper. This is the light program pane in the Windows 7 layout. */
+window.brisk-menu > box > box > box,
+window.brisk-menu .categories-list,
+window.brisk-menu .categories-list viewport,
+.categories-list,
+.categories-list viewport {
+    background-color: #f7f8fa;
+    background-image: linear-gradient(to right, #ffffff, #f0f3f6);
+    color: #17212b;
+}
+
+window.brisk-menu .apps-list,
+window.brisk-menu .apps-list.content-view.view,
+window.brisk-menu .apps-list.content-view.view:hover,
+window.brisk-menu .apps-list.content-view.view:active,
+window.brisk-menu .apps-list.content-view.view:selected,
+window.brisk-menu .apps-list.content-view.view:focus,
+.apps-list,
+.apps-list.content-view.view,
+.apps-list.content-view.view:hover,
+.apps-list.content-view.view:active,
+.apps-list.content-view.view:selected,
+.apps-list.content-view.view:focus {
+    /* Give GTK a real backing color to repaint when a prelight ends.  With a
+     * transparent list surface Compiz can retain the old alpha pixels until
+     * another window damages that area, producing the familiar blue trails. */
+    background-color: #244f6e;
+    background-image: none;
+    color: #ffffff;
+    border-color: transparent;
+    box-shadow: none;
+    outline: none;
+    transition: none;
+}
+
+window.brisk-menu .categories-list,
+window.brisk-menu .categories-list label,
+.categories-list,
+.categories-list label {
+    color: #17212b;
+    text-shadow: none;
+}
+
+window.brisk-menu .apps-list viewport,
+.apps-list viewport {
+    background-color: #244f6e;
+    background-image: none;
+    color: #ffffff;
+    transition: none;
+}
+
+/* Brisk puts each flat application button inside an automatic GtkListBoxRow.
+ * Keep every wrapper-row state clear. Compiz does not reliably invalidate a
+ * translucent ListBoxRow when Brisk moves the pointer, so only the child
+ * button paints the rollover below. */
+window.brisk-menu .apps-list row,
+window.brisk-menu .apps-list row:hover,
+window.brisk-menu .apps-list row:selected,
+window.brisk-menu .apps-list row:selected:hover,
+window.brisk-menu .apps-list row:active,
+window.brisk-menu .apps-list row:focus,
+.apps-list row,
+.apps-list row:hover,
+.apps-list row:selected,
+.apps-list row:selected:hover,
+.apps-list row:active,
+.apps-list row:focus {
+    background-color: transparent;
+    background-image: none;
+    color: #ffffff;
+    text-shadow: 0 1px rgba(0,0,0,0.75);
+    border-color: transparent;
+    box-shadow: none;
+    outline: none;
+    transition: none;
+}
+
+/* The application entry is a flat GtkButton subclass. Clear its inherited
+ * theme layers so it can provide the menu's single, predictable rollover. */
+window.background.brisk-menu .apps-list.content-view.view row button.flat,
+window.background.brisk-menu .apps-list.content-view.view row button.flat:hover,
+window.background.brisk-menu .apps-list.content-view.view row button.flat:active,
+window.background.brisk-menu .apps-list.content-view.view row button.flat:checked,
+window.background.brisk-menu .apps-list.content-view.view row button.flat:focus,
+window.background.brisk-menu .apps-list.content-view.view row button.flat:backdrop,
+window.brisk-menu .apps-list row button.flat,
+window.brisk-menu .apps-list row button.flat:hover,
+window.brisk-menu .apps-list row button.flat:active,
+window.brisk-menu .apps-list row button.flat:checked,
+window.brisk-menu .apps-list row button.flat:focus,
+window.brisk-menu .apps-list row button.flat:backdrop,
+.apps-list.content-view.view row button.flat,
+.apps-list.content-view.view row button.flat:hover,
+.apps-list.content-view.view row button.flat:active,
+.apps-list.content-view.view row button.flat:checked,
+.apps-list.content-view.view row button.flat:focus,
+.apps-list.content-view.view row button.flat:backdrop,
+window.brisk-menu .apps-list row *,
+window.brisk-menu .apps-list row *:hover,
+window.brisk-menu .apps-list row *:active,
+window.brisk-menu .apps-list row *:checked,
+window.brisk-menu .apps-list row *:focus,
+window.brisk-menu .apps-list row:selected *,
+.apps-list row *,
+.apps-list row *:hover,
+.apps-list row *:active,
+.apps-list row *:checked,
+.apps-list row *:focus,
+.apps-list row:selected * {
+    background-color: transparent;
+    background-image: none;
+    color: #ffffff;
+    text-shadow: 0 1px rgba(0,0,0,0.75);
+    border-color: transparent;
+    box-shadow: none;
+    outline: none;
+    transition: none;
+}
+
+window.brisk-menu entry {
+    margin: 3px;
+    background-color: rgba(255,255,255,0.90);
+    background-image: none;
+    color: #17212b;
+    border-color: rgba(72,126,166,0.75);
+}
+
+window.brisk-menu .categories-list button,
+window.brisk-menu .categories-list radiobutton,
+window.brisk-menu .categories-list radio,
+.categories-list button,
+.categories-list radiobutton,
+.categories-list radio {
+    background-color: transparent;
+    background-image: none;
+    color: #17212b;
+    text-shadow: none;
+    border-color: transparent;
+    box-shadow: none;
+}
+
+window.brisk-menu .session-button,
+.session-button {
+    background-color: transparent;
+    background-image: none;
+    color: #17212b;
+    text-shadow: none;
+    border-color: transparent;
+    box-shadow: none;
+}
+
+window.brisk-menu .session-button image,
+.session-button image {
+    color: #334555;
+    -gtk-icon-shadow: none;
+}
+
+window.brisk-menu .categories-list button:hover,
+window.brisk-menu .categories-list button.flat:hover,
+window.brisk-menu .categories-list button.flat:checked,
+window.brisk-menu .categories-list radiobutton:hover,
+window.brisk-menu .categories-list radiobutton:checked,
+window.brisk-menu .categories-list radio:hover,
+window.brisk-menu .categories-list radio:checked,
+.categories-list button:hover,
+.categories-list button.flat:hover,
+.categories-list button.flat:checked,
+.categories-list radiobutton:hover,
+.categories-list radiobutton:checked,
+.categories-list radio:hover,
+.categories-list radio:checked {
+    background-color: #d7eafa;
+    background-image: linear-gradient(to bottom, #edf7ff, #bddcf3);
+    color: #101820;
+    border-color: #76a9d1;
+    border-radius: 3px;
+}
+
+/* Spaced-Dark's content-view button rules have more specificity than a plain
+ * row selector.  Match Brisk's complete widget path so an old active/checked
+ * button cannot remain as a dark stripe after the pointer changes panes. */
+window.background.brisk-menu .apps-list.content-view.view row > *,
+window.background.brisk-menu .apps-list.content-view.view row > *:hover,
+window.background.brisk-menu .apps-list.content-view.view row > *:active,
+window.background.brisk-menu .apps-list.content-view.view row > *:checked,
+window.background.brisk-menu .apps-list.content-view.view row > *:focus,
+.apps-list.content-view.view row > *,
+.apps-list.content-view.view row > *:hover,
+.apps-list.content-view.view row > *:active,
+.apps-list.content-view.view row > *:checked,
+.apps-list.content-view.view row > *:focus {
+    background-color: transparent;
+    background-image: none;
+    border-color: transparent;
+    box-shadow: none;
+    outline: none;
+    transition: none;
+}
+
+/* Brisk keeps the last application as the GtkListBox selection after the
+ * pointer leaves the applications pane. Windows 7 did not leave an inactive
+ * highlight behind, so never paint that selection state. The rollover rule
+ * follows this block and therefore remains visible on the current item. */
+window.background.brisk-menu .apps-list.content-view.view row:selected,
+window.background.brisk-menu .apps-list.content-view.view row:selected:not(:hover),
+window.background.brisk-menu .apps-list.content-view.view row:selected:focus,
+window.background.brisk-menu .apps-list.content-view.view row:selected:active,
+window.background.brisk-menu .apps-list.content-view.view row:selected > *,
+window.background.brisk-menu .apps-list.content-view.view row:selected *,
+.apps-list.content-view.view row:selected,
+.apps-list.content-view.view row:selected:not(:hover),
+.apps-list.content-view.view row:selected:focus,
+.apps-list.content-view.view row:selected:active,
+.apps-list.content-view.view row:selected > *,
+.apps-list.content-view.view row:selected * {
+    background-color: transparent;
+    background-image: none;
+    border-color: transparent;
+    box-shadow: none;
+    outline: none;
+    transition: none;
+}
+
+/* Spaced-Dark also supplies stateful list/button backgrounds. Make this reset
+ * authoritative inside Brisk so selected and prelight rows cannot leak
+ * through after the pointer moves. */
+window.background.brisk-menu .apps-list.content-view.view row,
+window.background.brisk-menu .apps-list.content-view.view row:hover,
+window.background.brisk-menu .apps-list.content-view.view row:selected,
+window.background.brisk-menu .apps-list.content-view.view row:selected:hover,
+window.background.brisk-menu .apps-list.content-view.view row:active,
+window.background.brisk-menu .apps-list.content-view.view row:focus,
+window.background.brisk-menu .apps-list.content-view.view row:backdrop,
+window.background.brisk-menu .apps-list.content-view.view row button.flat,
+window.background.brisk-menu .apps-list.content-view.view row button.flat:hover,
+window.background.brisk-menu .apps-list.content-view.view row button.flat:active,
+window.background.brisk-menu .apps-list.content-view.view row button.flat:checked,
+window.background.brisk-menu .apps-list.content-view.view row button.flat:focus,
+window.background.brisk-menu .apps-list.content-view.view row button.flat:backdrop {
+    background-color: transparent;
+    background-image: none;
+    border-color: transparent;
+    box-shadow: none;
+    outline: none;
+    transition: none;
+}
+
+/* Paint the rollover on Brisk's launcher button, whose hover state is
+ * invalidated correctly. The containing ListBoxRow always stays clear. */
+window.background.brisk-menu .apps-list.content-view.view row button.flat:hover,
+window.brisk-menu .apps-list row button.flat:hover,
+.apps-list.content-view.view row button.flat:hover,
+.apps-list row button.flat:hover {
+    background-color: rgba(78, 165, 224, 0.62);
+    background-image: linear-gradient(
+        to bottom,
+        rgba(190, 231, 255, 0.44),
+        rgba(49, 132, 195, 0.30)
+    );
+    color: #ffffff;
+    border-color: rgba(206,235,255,0.72);
+    border-radius: 3px;
+}
+
+check:checked, radio:checked {
+    background-color: #3399ff;
+    border-color: #1d6fb8;
+    color: #ffffff;
+}

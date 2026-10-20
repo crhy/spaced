@@ -48,12 +48,12 @@ def read_ini(path):
     return parser
 
 
-def atomic_write(path, content):
+def atomic_write(path, content, backup=True):
     path.parent.mkdir(parents=True, exist_ok=True)
     # Keep one pre-migration copy. Only the user's own files are touched.
-    backup = path.with_name(path.name + ".pre-9.26.2")
-    if path.exists() and not backup.exists():
-        shutil.copy2(path, backup)
+    backup_path = path.with_name(path.name + ".pre-9.26.2")
+    if backup and path.exists() and not backup_path.exists():
+        shutil.copy2(path, backup_path)
     fd, name = tempfile.mkstemp(prefix="." + path.name + ".", dir=path.parent)
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as stream:
@@ -168,6 +168,20 @@ def migrate_compiz_focus(path):
         save_ini(path, parser)
 
 
+def migrate_spelling(config):
+    """Teach Enchant-aware desktop applications the project names (#333)."""
+    dictionary = config / "enchant/en_US.dic"
+    try:
+        existing = dictionary.read_text(encoding="utf-8").splitlines()
+    except FileNotFoundError:
+        existing = []
+    words = {line.strip() for line in existing if line.strip()}
+    missing = [word for word in ("Compiz", "Spaced") if word not in words]
+    if missing:
+        content = "\n".join(existing + missing) + "\n"
+        atomic_write(dictionary, content, backup=False)
+
+
 def migrate(config):
     state = config / "spaced"
     state.mkdir(parents=True, exist_ok=True)
@@ -177,6 +191,7 @@ def migrate(config):
         if not focus_marker.exists():
             migrate_compiz_focus(config / "compiz/compizconfig/Default.ini")
             atomic_write(focus_marker, "10.26\n")
+        migrate_spelling(config)
         marker = state / "desktop-migration-9.26.2-v1"
         if marker.exists():
             return

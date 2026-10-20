@@ -1,0 +1,66 @@
+#!/usr/bin/python3
+"""Apply the compositor opacity rules owned by Spaced desktop themes."""
+
+import sys
+
+
+OWNED_MATCHES = {"class=Brisk-menu", "type=Dock", "class=Mate-panel"}
+# Brisk is exposed to Compiz as one surface, so its two CSS panes cannot have
+# independent compositor opacity.  A light fade lets the blue pane read as
+# glass without washing out the deliberately solid-looking white pane.
+WIN7_RULES = (("class=Brisk-menu", 90), ("type=Dock", 78))
+
+
+def set_decorator_opacity(win7):
+    """Use GWD's decoration-only opacity; application contents stay opaque."""
+    try:
+        from gi.repository import Gio
+
+        settings = Gio.Settings.new("org.compiz-0.gwd")
+    except Exception:
+        return
+
+    if win7:
+        # Windows 7 Aero kept the active frame clearer than background frames.
+        settings.set_double("marco-theme-active-opacity", 0.64)
+        settings.set_double("marco-theme-opacity", 0.54)
+    else:
+        settings.set_double("marco-theme-active-opacity", 1.0)
+        settings.set_double("marco-theme-opacity", 1.0)
+    settings.set_boolean("marco-theme-active-shade-opacity", True)
+    settings.set_boolean("marco-theme-shade-opacity", True)
+    Gio.Settings.sync()
+
+
+def main():
+    theme_id = sys.argv[1] if len(sys.argv) > 1 else ""
+
+    win7 = theme_id in {"win7", "win7-aero-dark"}
+    set_decorator_opacity(win7)
+
+    try:
+        import compizconfig
+
+        context = compizconfig.Context()
+        plugin = context.Plugins["obs"]
+        screen = plugin.Screens[0]
+        matches_setting = screen["opacity_matches"]
+        values_setting = screen["opacity_values"]
+    except (ImportError, KeyError, IndexError):
+        # A non-Compiz session needs no compositor-specific repair.
+        return 0
+
+    existing = zip(list(matches_setting.Value), list(values_setting.Value))
+    rules = [(match, value) for match, value in existing
+             if match not in OWNED_MATCHES]
+    if win7:
+        rules.extend(WIN7_RULES)
+
+    matches_setting.Value = [match for match, _value in rules]
+    values_setting.Value = [value for _match, value in rules]
+    context.Write()
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

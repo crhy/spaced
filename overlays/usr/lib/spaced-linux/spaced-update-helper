@@ -292,7 +292,18 @@ done <<< "$PLAN"
 step 20 'Downloading package upgrades'
 apt_run_status -y --download-only "${TRANSACTION[@]}"
 step 35 'Installing APT upgrades'
-apt_run_status -y "${TRANSACTION[@]}"
+if ! apt_run_status -y "${TRANSACTION[@]}"; then
+  # Issue #337: a transient maintainer-script/configuration failure left a
+  # dependency chain unpacked, and pressing Update a second time completed it.
+  # Perform that same bounded recovery automatically. Do not remove packages,
+  # run apt -f, or hide a second failure from the user.
+  log 'The first installation pass did not finish; retrying pending package configuration once.'
+  step 40 'Recovering interrupted package configuration'
+  dpkg --force-confdef --force-confold --configure --pending
+  apt_run check
+  step 45 'Retrying APT upgrades'
+  apt_run_status -y "${TRANSACTION[@]}"
+fi
 
 step 50 'Finalizing package configuration'
 dpkg --force-confdef --force-confold --configure --pending

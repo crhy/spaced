@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Gtk
+Name=Spaced-Ubuntu
+Comment=Spaced Linux Ubuntu Unity and Ambiance GTK3 theme
+
+[Settings]
+gtk-theme-name = "Spaced-Ubuntu"

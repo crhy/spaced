@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Gtk
+Name=Spaced-Win7Aero-Dark
+Comment=Spaced Linux dark Windows 7 Aero GTK3 theme
+
+[Settings]
+gtk-theme-name = "Spaced-Win7Aero-Dark"

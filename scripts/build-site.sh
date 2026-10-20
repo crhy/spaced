@@ -16,8 +16,8 @@ cp "$ROOT/website/_headers" "$DIST/_headers"
 
 cp -a "$ROOT/website/assets/." "$ASSETS/"
 cp "$ROOT/branding/spaced-icon-fancy.png" "$ASSETS/spaced-icon-fancy.png"
-cp "$ROOT/SpacedLinuxWallpapers/spaced-orbit-4k.png" "$ASSETS/spaced-orbit-4k.png"
-cp "$ROOT/SpacedLinuxWallpapers/solarsystem.jpg" "$ASSETS/solarsystem.jpg"
-cp "$ROOT/SpacedLinuxWallpapers/euclidgalacticcore.jpg" "$ASSETS/euclidgalacticcore.jpg"
+cp "$ROOT/overlays/usr/share/backgrounds/spaced/spaced-orbit-4k.jpg" "$ASSETS/spaced-orbit-4k.jpg"
+cp "$ROOT/overlays/usr/share/backgrounds/spaced/solarsystem.jpg" "$ASSETS/solarsystem.jpg"
+cp "$ROOT/overlays/usr/share/backgrounds/spaced/euclidgalacticcore.jpg" "$ASSETS/euclidgalacticcore.jpg"
 
 echo "Cloudflare Pages output created at: $DIST"

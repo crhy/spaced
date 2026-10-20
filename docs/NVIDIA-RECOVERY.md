@@ -1,13 +1,18 @@
-# Spaced Video Drivers: installation and recovery
+# Spaced GPU Driver Manager: installation and recovery
 
-Open **Spaced Video Drivers** from the menu or run `spaced-nvidia-installer`.
+Open **Spaced GPU Driver Manager** from the menu or run
+`spaced-gpu-driver-manager`. The old `spaced-nvidia-installer` command remains
+as a compatibility alias.
 Use **Check Graphics** to collect a read-only report before changing drivers.
 It includes PCI IDs, connected displays, desktop and NVIDIA PRIME renderers,
 kernel boot arguments, and AMD TearFree configuration. **Copy Log** copies the report.
 
-Choose **Install NVIDIA Driver** on supported NVIDIA hardware, or **Update AMD
-Drivers** on AMD hardware. Finish all updates in Spaced Update and reboot into
-the updated kernel first. The NVIDIA installer requires matching kernel headers
+Choose **Install NVIDIA Driver** on supported NVIDIA hardware, or **Install /
+Repair AMD Drivers** on AMD hardware. The AMD action installs both the native
+AMDGPU stack and the legacy Radeon Xorg driver with current Mesa and firmware;
+it does not install the obsolete proprietary Catalyst driver. Finish all
+updates in Spaced Update and reboot into
+the updated kernel first. The NVIDIA path requires matching kernel headers
 and rejects Secure Boot until it is disabled in firmware. Spaced does not manage
 MOK enrollment automatically.
 
@@ -16,13 +21,17 @@ keyring package against its SHA-256, refreshes authenticated APT metadata,
 and checks every NVIDIA display PCI ID against the support database supplied
 by the signed `nvidia-driver-assistant` package. It accepts one validated
 package recommendation and installs it with APT's removal prohibition.
-Package conflicts stop the operation for review. There is no forced driver branch.
+Package conflicts stop the operation for review.
 
 NVIDIA's upstream assistant selects a module flavor but can recommend the latest
-package even for a legacy GPU. Spaced checks `legacybranch` separately: GT 730
-Fermi variants require 390.xx; Kepler variants require 470.xx. These are not
-compatible with the current repository driver. Such cards keep their existing
-driver; unknown PCI IDs also stop safely. A modern card's successful check does
+package even for a legacy GPU. Spaced checks `legacybranch` separately: GTX 10
+series Pascal cards use Devuan's Pascal-compatible packaged driver instead of
+an incompatible latest NVIDIA branch. On Pascal systems the manager disables
+NVIDIA's rolling APT source after reading its signed support database, refreshes
+APT, and installs the exact Devuan version it saw beforehand. This prevents a
+later routine update from crossing onto an unsupported branch. GT 730 Fermi variants require 390.xx and
+Kepler variants require 470.xx; when those packages are unavailable, the card
+keeps its existing driver. Unknown PCI IDs also stop safely. A modern card's successful check does
 not override a second incompatible GPU. A 4K or five-monitor limit still requires
 the actual connector, EDID, cable and PCI variant to diagnose.
 

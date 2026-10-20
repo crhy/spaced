@@ -22,6 +22,8 @@ FIXED_PATHS = (*WRITTEN_PATHS, "etc/modprobe.d/spaced-live-nvidia.conf", "etc/X1
 FIXED_PATHS += (
     "etc/apt/sources.list.d/cuda-debian12-x86_64.list",
     "etc/apt/sources.list.d/cuda-debian13-x86_64.list",
+    "etc/apt/sources.list.d/cuda-debian12-x86_64.list.spaced-legacy-disabled",
+    "etc/apt/sources.list.d/cuda-debian13-x86_64.list.spaced-legacy-disabled",
     "usr/share/keyrings/cuda-archive-keyring.gpg",
 )
 

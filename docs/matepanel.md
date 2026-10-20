@@ -72,7 +72,7 @@ All objects are locked. Theme changes do not add, remove, or reorder applets.
 
 ## Layout files
 
-Nine layout files serve ten selectable themes:
+Eleven layout files serve thirteen selectable themes:
 
 ```text
 spaced-linux.layout
@@ -80,13 +80,15 @@ spaced-macos.layout
 spaced-android.layout
 spaced-win311.layout
 spaced-winxp.layout
+spaced-win7.layout
+spaced-ubuntu.layout
 spaced-mint.layout
 spaced-win11-light.layout
 spaced-win11-dark.layout
 spaced-geoworks.layout
 ```
 
-Linux Dark and Linux Light both use `spaced-linux.layout`. The files are otherwise intentionally almost identical; macOS and Android start with a top-oriented toplevel, while the others start at the bottom.
+Linux Dark and Linux Light both use `spaced-linux.layout`; Windows 7 Aero and Win7Aero Dark both use `spaced-win7.layout`. Every file keeps the same applets in the same order. macOS and Android start at the top, Ubuntu starts with a 72 px left panel, both Windows 7 variants start with a 40 px bottom panel, and the others start with a 30 px bottom panel.
 
 The layouts establish a new profile. Normal theme switching does not reload or replace the layout. Instead, `spaced-switch-theme` moves and resizes the existing panel.
 
@@ -99,13 +101,16 @@ The layouts establish a new profile. Normal theme switching does not reload or r
 | macOS | `spaced-macos` | top | 30 | on |
 | Windows 3.11 | `spaced-win311` | bottom | 30 | off |
 | Windows XP | `spaced-winxp` | bottom | 30 | off |
+| Windows 7 Aero | `spaced-win7` | bottom | 40 | off |
+| Spaced Win7Aero Dark | `spaced-win7` | bottom | 40 | off |
+| Ubuntu | `spaced-ubuntu` | left | 72 | off |
 | Linux Mint | `spaced-mint` | bottom | 30 | off |
 | Windows 11 Light | `spaced-win11-light` | bottom | 30 | off |
 | Windows 11 Dark | `spaced-win11-dark` | bottom | 30 | off |
 | GeoWorks | `spaced-geoworks` | bottom | 30 | off |
 | Android | `spaced-android` | top | 30 | on |
 
-`overlays/usr/share/spaced-themes/themes.json` is the runtime source for `panel_layout`, `panel_position`, `panel_size`, optional `panel_color`, and `cairo_dock`.
+`overlays/usr/share/spaced-themes/themes.json` is the runtime source for `panel_layout`, `panel_position`, `panel_size`, optional `panel_color`, optional `panel_opacity`, and `cairo_dock`.
 
 ## Runtime behavior
 
@@ -119,6 +124,8 @@ background/color
 background/opacity
 y
 y-bottom
+x
+x-right
 ```
 
 For a top panel:
@@ -133,6 +140,13 @@ For a bottom panel:
 ```text
 y = -1
 y-bottom = 0
+```
+
+For a left panel:
+
+```text
+x = 0
+x-right = -1
 ```
 
 The helper never runs `mate-panel --replace`. Replacing the process during a theme switch can lose the notification-area X selection and break tray applets.
@@ -156,20 +170,23 @@ This controls labels, menus, applet plugs, buttons, and related child widgets.
 
 ### Explicit MATE toplevel background
 
-Three themes currently set a `panel_color` in `themes.json`:
+Five themes currently set a `panel_color` in `themes.json`:
 
 | Theme | Explicit toplevel background |
 |---|---|
 | Spaced Linux Dark | `#2f2f2f` |
 | Windows 11 Dark | `#17243b` |
 | Android | `#263238` |
+| Windows 7 Aero | `#183b60` at opacity 44500 |
+| Spaced Win7Aero Dark | `#101a27` at opacity 44500 |
+| Ubuntu | `#2c2528` at opacity 56000 |
 
 For those themes the helper writes:
 
 ```text
 type = color
 color = <panel_color>
-opacity = 65535
+opacity = <panel_opacity, or 65535 when omitted>
 ```
 
 For other themes it writes `type = none`, allowing GTK CSS to provide the outer appearance.
@@ -186,6 +203,9 @@ Several themes intentionally add more than a palette change:
 
 - **Windows 11 Dark** uses flat rounded taskbar buttons, translucent hover/checked surfaces, and a thin active indicator.
 - **Windows XP** uses a saturated blue Luna taskbar gradient and a green Brisk/Start button gradient.
+- **Windows 7 Aero** uses a translucent blue glass taskbar and pale-blue controls.
+- **Spaced Win7Aero Dark** uses darker blue-gray glass, dark application surfaces, and a high-contrast pale-blue selection.
+- **Ubuntu** uses a thick translucent aubergine left launcher with orange active accents.
 - **GeoWorks** expands selectors so separate applet plug processes receive the dark-cyan surface.
 - **Spaced Linux Dark and Light** remain visually restrained and use their semantic panel palette.
 

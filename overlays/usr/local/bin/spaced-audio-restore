@@ -6,6 +6,7 @@ export LC_ALL=C
 
 state_dir=${XDG_CONFIG_HOME:-$HOME/.config}/spaced
 state_file=$state_dir/audio-state
+profile_state_file=$state_dir/audio-card-profiles
 unavailable_default=''
 
 wait_for_pulse() {
@@ -29,6 +30,62 @@ read_current() {
     printf '%s %s %s\n' "$volume" "$mute" "$sink"
 }
 
+valid_profile_token() {
+    [[ "$1" =~ ^[A-Za-z0-9_.:+-]+$ ]]
+}
+
+read_current_profiles() {
+    local cards
+    cards=$(pactl list cards 2>/dev/null) || return 1
+    awk '
+        /^[[:space:]]*Name: / { card=$2 }
+        /^[[:space:]]*Active Profile: / && card != "" {
+            profile=$3
+            if (profile != "off") print card, profile
+            card=""
+        }
+    ' <<< "$cards"
+}
+
+restore_profiles() {
+    local card profile
+    [ -r "$profile_state_file" ] || return 0
+    while read -r card profile extra; do
+        [ -z "${extra:-}" ] || continue
+        valid_profile_token "$card" || continue
+        valid_profile_token "$profile" || continue
+        pactl set-card-profile "$card" "$profile" >/dev/null 2>&1 || true
+    done < "$profile_state_file"
+}
+
+save_profiles() {
+    local card profile extra current temporary
+    declare -A profiles=()
+    if [ -r "$profile_state_file" ]; then
+        while read -r card profile extra; do
+            [ -z "${extra:-}" ] || continue
+            valid_profile_token "$card" || continue
+            valid_profile_token "$profile" || continue
+            profiles["$card"]=$profile
+        done < "$profile_state_file"
+    fi
+    current=$(read_current_profiles) || return 0
+    while read -r card profile extra; do
+        [ -n "$card" ] || continue
+        [ -z "${extra:-}" ] || continue
+        valid_profile_token "$card" || continue
+        valid_profile_token "$profile" || continue
+        profiles["$card"]=$profile
+    done <<< "$current"
+    ((${#profiles[@]})) || return 0
+    mkdir -p "$state_dir" || return 0
+    temporary=$profile_state_file.tmp
+    for card in "${!profiles[@]}"; do
+        printf '%s %s\n' "$card" "${profiles[$card]}"
+    done | sort > "$temporary" || return 0
+    mv "$temporary" "$profile_state_file"
+}
+
 save_current() {
     local current temporary volume mute sink
     current=$(read_current) || return 0
@@ -43,8 +100,19 @@ save_current() {
     mv "$temporary" "$state_file"
 }
 
+save_state() {
+    save_current
+    save_profiles
+}
+
 command -v pactl >/dev/null 2>&1 || exit 0
 wait_for_pulse || exit 0
+
+# A card profile controls physical modes such as analog versus S/PDIF. Apply
+# it before restoring the default sink because changing profile can replace
+# the card's sinks. Missing USB cards remain recorded and are retried when a
+# card appears later in the session.
+restore_profiles
 
 if { read -r saved_volume saved_mute saved_sink < "$state_file"; } 2>/dev/null \
     && [[ "$saved_volume" =~ ^[0-9]+$ ]] \
@@ -69,13 +137,14 @@ else
         pactl set-sink-mute @DEFAULT_SINK@ 0 >/dev/null 2>&1 || true
     fi
 fi
-save_current
-trap 'save_current; exit 0' HUP INT TERM
+save_state
+trap 'save_state; exit 0' HUP INT TERM
 
 # Dragging a volume slider emits a stream of sink events. Saving on each one
 # spawns three pactl processes per event; wait for the burst to settle first.
 SETTLE_SECONDS=${SPACED_AUDIO_SETTLE_SECONDS:-1}
 pending=''
+restore_pending=''
 while :; do
     if [ -n "$pending" ]; then
         IFS= read -r -t "$SETTLE_SECONDS" event
@@ -85,12 +154,19 @@ while :; do
     status=$?
     if [ "$status" -eq 0 ]; then
         case "$event" in
+            *"'new' on card "*) pending=1; restore_pending=1 ;;
+            *" on card "*) pending=1 ;;
             *" on sink "*|*" on server "*) pending=1 ;;
         esac
         continue
     fi
     # A status above 128 is the read timing out, which means the burst has
     # settled. Anything else is end-of-stream: save once more and stop.
-    [ -n "$pending" ] && { save_current; pending=''; }
+    if [ -n "$pending" ]; then
+        [ -n "$restore_pending" ] && restore_profiles
+        save_state
+        pending=''
+        restore_pending=''
+    fi
     [ "$status" -gt 128 ] || break
 done < <(pactl subscribe 2>/dev/null)

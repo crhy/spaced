@@ -13,9 +13,10 @@ FILES=(
     usr/lib/spaced-linux/spaced_nvidia_state.py
     usr/lib/spaced-linux/spaced-nvidia-installer.py
     usr/lib/spaced-linux/spaced-nvidia-postboot.py
+    usr/local/bin/spaced-gpu-driver-manager
     usr/local/bin/spaced-nvidia-installer
     usr/local/bin/spaced-graphics-report
-    usr/share/applications/spaced-nvidia-installer.desktop
+    usr/share/applications/spaced-gpu-driver-manager.desktop
     etc/xdg/autostart/spaced-nvidia-postboot.desktop
     usr/share/polkit-1/actions/com.spacedlinux.nvidia.policy
 )
@@ -51,7 +52,8 @@ for target in "${FILES[@]}"; do
     install -D -o root -g root -m "$mode" "$SOURCE_DIR/$target" "/$target"
 done
 update-desktop-database /usr/share/applications 2>/dev/null || true
+rm -f /usr/share/applications/spaced-nvidia-installer.desktop
 
-echo "Installed Spaced Video Drivers application files."
+echo "Installed Spaced GPU Driver Manager application files."
 echo "Backup: $BACKUP_DIR"
-echo "Launch with: spaced-nvidia-installer"
+echo "Launch with: spaced-gpu-driver-manager"

@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=X-GNOME-Metatheme
+Name=Spaced Windows 7 Aero
+Comment=Windows 7 Aero inspired theme
+Encoding=UTF-8
+
+[X-GNOME-Metatheme]
+Name=Spaced Windows 7 Aero
+GtkTheme=Spaced-Win7
+MetacityTheme=Spaced-Win7
+IconTheme=Spaced-Icons-Win7
+CursorTheme=Adwaita
+BackgroundImage=/usr/share/backgrounds/spaced/win7.jpg
+BackgroundColor=#3187ca

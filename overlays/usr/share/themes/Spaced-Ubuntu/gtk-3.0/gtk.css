@@ -1,0 +1,190 @@
+/* Spaced Ubuntu: Ambiance-era application chrome and a Unity-style launcher. */
+@define-color theme_bg_color #f4f1ee;
+@define-color theme_fg_color #2c2c2c;
+@define-color theme_base_color #ffffff;
+@define-color theme_text_color #2c2c2c;
+@define-color theme_selected_bg_color #a83d12;
+@define-color theme_selected_fg_color #ffffff;
+@define-color theme_tooltip_bg_color #3c3538;
+@define-color theme_tooltip_fg_color #ffffff;
+@define-color light_shadow #ffffff;
+@define-color dark_shadow #b9b4b0;
+@define-color info_fg_color #000000;
+@define-color info_bg_color #fcf6ca;
+@define-color warning_fg_color #000000;
+@define-color warning_bg_color #faad3d;
+@define-color question_fg_color #ffffff;
+@define-color question_bg_color #5588ee;
+@define-color error_fg_color #ffffff;
+@define-color error_bg_color #ed3636;
+@define-color link_color #e95420;
+@define-color link_visited_color #772953;
+@define-color success_color #4e9a06;
+@define-color error_color #cc0000;
+@define-color titlebar_bg_color #3c3538;
+@define-color titlebar_fg_color #ffffff;
+@define-color menubar_bg_color #ede9e6;
+@define-color menubar_fg_color #2c2c2c;
+@define-color toolbar_bg_color #f4f1ee;
+@define-color toolbar_fg_color #2c2c2c;
+@define-color menu_bg_color #ffffff;
+@define-color menu_fg_color #2c2c2c;
+@define-color panel_bg_color #2c2528;
+@define-color panel_fg_color #ffffff;
+@define-color tab_checked_color #e95420;
+@define-color osd_base #2c2528;
+@define-color osd_fg #ffffff;
+@define-color osd_bg alpha(@osd_base, 0.88);
+@define-color backdrop_selected_bg_color shade(@theme_bg_color, 0.9);
+@define-color backdrop_selected_fg_color @theme_fg_color;
+@define-color wm_bg #3c3538;
+@define-color wm_title_focused #ffffff;
+@define-color wm_title_unfocused #c5bec1;
+@define-color wm_border_focused #2b2527;
+@define-color wm_border_unfocused #5b5356;
+
+@import url("../../Spaced-Dark/gtk-3.0/gtk-widgets.css");
+@import url("../../Spaced-Dark/gtk-3.0/gtk-widgets-assets.css");
+@import url("../../Spaced-Dark/gtk-3.0/gtk-widgets-backdrop.css");
+@import url("../../Spaced-Dark/gtk-3.0/apps/granite-widgets.css");
+@import url("../../Spaced-Dark/gtk-3.0/apps/unity.css");
+@import url("../../Spaced-Dark/gtk-3.0/apps/xfce.css");
+@import url("../../Spaced-Dark/gtk-3.0/apps/lightdm-gtk-greeter.css");
+@import url("../../Spaced-Dark/gtk-3.0/spaced-overrides.css");
+
+/* Unity's launcher is a translucent aubergine slab. Keep the plug-hosted
+ * applets transparent so the MATE fallback panel color cannot cover it. */
+.mate-panel, .mate-panel > box, .mate-panel > grid,
+.mate-panel menubar, .mate-panel menubar > menuitem,
+.mate-panel-menu-bar, .gnome-panel-menu-bar,
+#MatePanelWidget, #MatePanelPopupWindow {
+    background-color: rgba(44,37,40,0.72);
+    background-image: linear-gradient(to right, rgba(73,58,65,0.62), rgba(35,29,32,0.68));
+    color: #ffffff;
+    border-color: rgba(255,255,255,0.14);
+}
+
+.mate-panel-menu-bar #PanelApplet,
+.gnome-panel-menu-bar #PanelApplet,
+#MatePanelWidget #PanelApplet,
+PanelApplet, MatePanelApplet, NaTrayApplet,
+#PanelPlug, #PanelPlug > box, #PanelPlug > widget,
+#PanelApplet, #PanelApplet > box, #PanelApplet > widget {
+    background-color: transparent;
+    background-image: none;
+    color: #ffffff;
+    border-color: transparent;
+    box-shadow: none;
+}
+
+#PanelPlug button,
+#PanelApplet button:not(.brisk-button),
+#PanelApplet togglebutton:not(.brisk-button),
+#PanelApplet button, #showdesktop-button,
+button.brisk-button, button.brisk-button-vertical {
+    min-width: 48px;
+    min-height: 48px;
+    padding: 4px;
+    background-color: rgba(255,255,255,0.04);
+    background-image: none;
+    color: #ffffff;
+    border-color: transparent;
+    border-radius: 7px;
+    box-shadow: none;
+}
+
+#PanelApplet button:hover, #showdesktop-button:hover,
+button.brisk-button:hover, button.brisk-button:checked,
+button.brisk-button-vertical:hover, button.brisk-button-vertical:checked {
+    background-color: rgba(255,255,255,0.18);
+    border-color: rgba(255,255,255,0.34);
+    box-shadow: inset 3px 0 #e95420;
+}
+
+window.background.brisk-menu,
+window.background.brisk-menu > box,
+window.brisk-menu,
+.brisk-menu {
+    background-color: rgba(44,37,40,0.92);
+    background-image: none;
+    color: #ffffff;
+    border-color: rgba(255,255,255,0.16);
+}
+
+/* Brisk nests the search, sidebar and app rows in ordinary GtkBoxes.  Keep
+ * those wrappers clear so the whole menu reads as one Unity aubergine pane. */
+window.brisk-menu box,
+window.brisk-menu scrolledwindow,
+window.brisk-menu viewport,
+window.brisk-menu .apps-list row button.flat,
+window.brisk-menu .apps-list row * {
+    background-color: transparent;
+    background-image: none;
+    color: #ffffff;
+}
+
+window.brisk-menu .categories-list,
+window.brisk-menu .categories-list viewport,
+window.brisk-menu .apps-list,
+window.brisk-menu .apps-list row,
+window.brisk-menu .apps-list viewport,
+.categories-list,
+.categories-list viewport,
+.apps-list,
+.apps-list row,
+.apps-list viewport {
+    background-color: transparent;
+    background-image: none;
+    color: #ffffff;
+}
+
+window.brisk-menu entry {
+    background-color: rgba(255,255,255,0.12);
+    background-image: none;
+    color: #ffffff;
+    border-color: rgba(255,255,255,0.20);
+}
+
+window.brisk-menu .categories-list button,
+window.brisk-menu .categories-list radiobutton,
+window.brisk-menu .categories-list radio,
+window.brisk-menu .session-button,
+.categories-list button,
+.categories-list radiobutton,
+.categories-list radio,
+.session-button {
+    background-color: transparent;
+    background-image: none;
+    color: #ffffff;
+    border-color: transparent;
+    box-shadow: none;
+}
+
+window.brisk-menu .categories-list button:hover,
+window.brisk-menu .categories-list button.flat:hover,
+window.brisk-menu .categories-list button.flat:checked,
+window.brisk-menu .categories-list radiobutton:hover,
+window.brisk-menu .categories-list radiobutton:checked,
+window.brisk-menu .categories-list radio:hover,
+window.brisk-menu .categories-list radio:checked,
+window.brisk-menu .apps-list row:hover,
+window.brisk-menu .apps-list row:selected,
+.categories-list button:hover,
+.categories-list button.flat:hover,
+.categories-list button.flat:checked,
+.categories-list radiobutton:hover,
+.categories-list radiobutton:checked,
+.categories-list radio:hover,
+.categories-list radio:checked,
+.apps-list row:hover,
+.apps-list row:selected {
+    background-color: #e95420;
+    background-image: none;
+    color: #ffffff;
+}
+
+check:checked, radio:checked {
+    background-color: #e95420;
+    border-color: #c34113;
+    color: #ffffff;
+}

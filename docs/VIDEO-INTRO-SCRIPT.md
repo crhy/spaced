@@ -14,7 +14,7 @@ Target length: about 75 seconds.
 
 **[0:20 — Show the theme selector; quickly preview several layouts]**
 
-“Choose from ten complete desktop themes inspired by classic and modern systems—from Windows 3.11 and XP to macOS, Android, Mint, and Spaced Linux’s own dark and light designs.”
+“Choose from twelve complete desktop themes inspired by classic and modern systems—from Windows 3.11, XP, and 7 to Ubuntu, macOS, Android, Mint, and Spaced Linux’s own dark and light designs.”
 
 **[0:36 — Show Compiz workspaces and one restrained desktop effect]**
 

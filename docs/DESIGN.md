@@ -36,6 +36,8 @@ The selectable collection also includes:
 - macOS;
 - Windows 3.11;
 - Windows XP;
+- Windows 7 Aero;
+- Ubuntu;
 - Linux Mint Dark;
 - Windows 11 Light;
 - Windows 11 Dark;
@@ -51,6 +53,8 @@ Use an accent when it is central to the source system:
 - macOS Aqua blue;
 - Windows 3.11 navy and classic system gray;
 - Windows XP Luna blue and Start-button green;
+- Windows 7 Aero glass blue;
+- Ubuntu aubergine and orange;
 - Mint-Y Dark green;
 - Windows 11 light/dark blue accents;
 - GeoWorks dark cyan;
@@ -115,7 +119,9 @@ Every theme uses the same panel applet composition:
 The panel is 30 px high by default.
 
 - Android and macOS place it at the top and use Cairo Dock at the bottom.
-- Other themes keep it at the bottom without Cairo Dock.
+- Ubuntu uses a thick 64 px panel at the left, with the standard Spaced applets arranged vertically.
+- Windows 7 uses a 40 px bottom panel; other themes keep the 30 px default.
+- Themes other than Android and macOS do not use Cairo Dock.
 - Theme switching moves and resizes the existing panel rather than replacing it.
 - The panel's outer toplevel background and its GTK child widgets must be considered separately.
 
@@ -227,7 +233,7 @@ Automated validation catches structural problems. It does not replace visual ins
 Spaced Linux does not aim to:
 
 - duplicate every historical operating-system widget exactly;
-- maintain eleven copies of the same GTK engine;
+- maintain thirteen copies of the same GTK engine;
 - recolor upstream Papirus files at runtime;
 - restart the panel for cosmetic changes;
 - force a wallpaper after the user replaces it;

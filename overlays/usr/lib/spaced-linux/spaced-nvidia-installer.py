@@ -25,6 +25,7 @@ ERRORS = {
     14: "There is not enough free space on the root filesystem.",
     15: "There is not enough free space for the boot image.",
     16: "Package information could not be downloaded.",
+    18: "No AMD graphics card was detected.",
     20: "The exact header package for the running kernel is unavailable.",
     21: "A required Devuan package is unavailable or could not be installed.",
     22: "NVIDIA's official Debian repository could not be enabled.",
@@ -47,7 +48,7 @@ ERRORS = {
 
 class Installer(Gtk.Window):
     def __init__(self) -> None:
-        super().__init__(title="Spaced Video Drivers")
+        super().__init__(title="Spaced GPU Driver Manager")
         self.running = False
         self.last_error: Optional[str] = None
         self.last_error_code: Optional[int] = None
@@ -62,15 +63,14 @@ class Installer(Gtk.Window):
         Gtk.Window.add(self, root)
 
         heading = Gtk.Label()
-        heading.set_markup('<span size="xx-large" weight="bold">Spaced Video Drivers</span>')
+        heading.set_markup('<span size="xx-large" weight="bold">Spaced GPU Driver Manager</span>')
         heading.set_xalign(0)
         root.pack_start(heading, False, False, 0)
 
         subtitle = Gtk.Label(
             label=(
-                "Installs the NVIDIA-recommended driver as a verified transaction, removes conflicting "
-                "blacklists, disables Nouveau only after the NVIDIA modules exist, prepares Compiz, and "
-                "checks the complete desktop after reboot."
+                "Checks every detected GPU, repairs the native AMD Radeon stack (including legacy cards), "
+                "and installs a compatible NVIDIA driver as a verified, recoverable transaction."
             )
         )
         subtitle.set_xalign(0)
@@ -125,7 +125,7 @@ class Installer(Gtk.Window):
         self.audit_button = Gtk.Button(label="Check Graphics")
         self.audit_button.connect("clicked", lambda *_: self.start_action("--audit"))
         buttons.pack_start(self.audit_button, False, False, 0)
-        self.amd_button = Gtk.Button(label="Update AMD Drivers")
+        self.amd_button = Gtk.Button(label="Install / Repair AMD Drivers")
         self.amd_button.connect("clicked", lambda *_: self.start_action("--install-amd"))
         self.amd_button.set_sensitive(self.has_amd)
         buttons.pack_start(self.amd_button, False, False, 0)
@@ -243,7 +243,7 @@ class Installer(Gtk.Window):
             buttons=Gtk.ButtonsType.NONE,
             text="Restore Graphics?",
         )
-        dialog.format_secondary_text("This removes packages installed by the last Spaced NVIDIA transaction, restores the saved graphics configuration, rebuilds the boot image, and then offers to reboot.")
+        dialog.format_secondary_text("This removes packages installed by the last Spaced GPU driver transaction, restores the saved graphics configuration, rebuilds the boot image, and then offers to reboot.")
         dialog.add_button("Cancel", Gtk.ResponseType.CANCEL)
         dialog.add_button("Restore Graphics", Gtk.ResponseType.OK)
         response = dialog.run()

@@ -56,6 +56,8 @@ dock:
 graphics:
   - amdgpu-top
   - xserver-xorg-video-amdgpu
+  - xserver-xorg-video-ati
+  - xserver-xorg-video-radeon
   - mesa-utils
   - xserver-xorg-input-libinput
   - xserver-xorg-video-intel

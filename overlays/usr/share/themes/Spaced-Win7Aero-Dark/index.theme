@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=X-GNOME-Metatheme
+Name=Spaced Win7Aero Dark
+Comment=Dark Windows 7 Aero inspired theme
+Encoding=UTF-8
+
+[X-GNOME-Metatheme]
+Name=Spaced Win7Aero Dark
+GtkTheme=Spaced-Win7Aero-Dark
+MetacityTheme=Spaced-Win7Aero-Dark
+IconTheme=Spaced-Icons-Win7Aero-Dark
+CursorTheme=Adwaita
+BackgroundImage=/usr/share/backgrounds/spaced/win7aero-dark.jpg
+BackgroundColor=#101820

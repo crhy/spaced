@@ -61,7 +61,7 @@ In VirtualBox: power off the virtual machine, open Settings > Display, set Graph
 
 In other virtual machines: enable 3D acceleration (virtio-gpu with GL where available) and start again.
 
-On physical hardware: the graphics driver failed to load. On NVIDIA systems, run Spaced Video Drivers (spaced-nvidia-installer) from a terminal once graphics are restored."
+On physical hardware: the graphics driver failed to load. Run Spaced GPU Driver Manager (spaced-gpu-driver-manager) from a terminal once graphics are restored."
     # Keep offering the choices until the user logs out, so closing the
     # terminal never leaves an unresponsive desktop with no way out.
     local choice

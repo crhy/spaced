@@ -87,6 +87,16 @@ class ConfigurationRecoveryTests(unittest.TestCase):
         self.assertEqual(key.read_text(), "existing key\n")
         self.assertFalse(source.exists())
 
+    def test_disabled_legacy_cuda_repository_is_restored(self):
+        config.backup(self.root, self.manifest)
+        disabled = self.write(
+            "etc/apt/sources.list.d/cuda-debian13-x86_64.list.spaced-legacy-disabled",
+            "disabled source\n",
+        )
+        config.capture(self.root, self.manifest)
+        self.assertTrue(config.restore(self.root, self.manifest))
+        self.assertFalse(disabled.exists())
+
 
 class DriverHelperTests(unittest.TestCase):
     def run_helper(self, action, failure=""):
@@ -199,6 +209,38 @@ printf 'SELECTED:%s\n' "$DRIVER_PACKAGE"
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("SELECTED:nvidia-open", result.stdout)
         self.assertIn("--simulate --no-remove install -y nvidia-open", result.stdout)
+
+    def test_pascal_selects_exact_distro_driver_captured_before_cuda_repo(self):
+        result, _ = self.run_helper(r'''
+DEBIAN_VERSION=13
+DISTRO_NVIDIA_VERSION=550.163.01-5.1
+CUDA_SOURCE_FILE="$TEST_ROOT/cuda.list"
+CUDA_DISABLED_SOURCE="$TEST_ROOT/cuda.list.spaced-legacy-disabled"
+printf 'deb NVIDIA\n' > "$CUDA_SOURCE_FILE"
+nvidia-driver-assistant() {
+    if [ "$1" = --list-supported-distros ]; then
+        printf '  debian\n'
+    else
+        echo ASSISTANT_RECOMMENDATION_MUST_NOT_RUN
+        return 99
+    fi
+}
+python3() {
+    if [ "$2" = hardware ]; then
+        printf 'Supported NVIDIA device: GeForce GTX 1080 [10de:1b80] (legacy 580.xx)\n'
+    fi
+}
+select_driver_package
+printf 'SELECTED:%s\n' "$DRIVER_PACKAGE"
+test ! -e "$CUDA_SOURCE_FILE" && printf 'SOURCE:disabled\n'
+test -e "$CUDA_DISABLED_SOURCE" && printf 'LEGACY_GUARD:present\n'
+''')
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("SELECTED:nvidia-driver=550.163.01-5.1", result.stdout)
+        self.assertIn("--simulate --no-remove install -y nvidia-driver=550.163.01-5.1", result.stdout)
+        self.assertIn("SOURCE:disabled", result.stdout)
+        self.assertIn("LEGACY_GUARD:present", result.stdout)
+        self.assertNotIn("ASSISTANT_RECOMMENDATION_MUST_NOT_RUN", result.stdout)
 
     def test_driver_apt_failure_stops_before_dkms(self):
         result, _ = self.run_helper(r'''

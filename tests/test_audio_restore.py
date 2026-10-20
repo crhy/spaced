@@ -22,6 +22,9 @@ class AudioRestoreTests(unittest.TestCase):
         self.default = self.root / 'default'
         self.default.write_text('speakers\n')
         (self.root / 'sinks').write_text('speakers\nheadphones\n')
+        self.profiles = self.root / 'profiles'
+        self.profiles.write_text('alsa_card.pci builtin:analog-stereo\n'
+                                 'alsa_card.usb-PD6 output:analog-stereo\n')
         self.env = dict(os.environ, HOME=str(self.root),
                         XDG_CONFIG_HOME=str(self.root / 'config'),
                         TEST_STATE=str(self.root),
@@ -43,9 +46,35 @@ case "$1" in
         printf '%s\\n' "$2" > "$TEST_STATE/default" ;;
     set-sink-volume|set-sink-mute)
         printf '%s\\n' "$*" >> "$TEST_STATE/commands" ;;
+    list)
+        [ "${2:-}" = cards ] || exit 1
+        number=0
+        while read -r card profile; do
+            printf 'Card #%s\\n' "$number"
+            printf '    Name: %s\\n' "$card"
+            printf '    Active Profile: %s\\n' "$profile"
+            number=$((number+1))
+        done < "$TEST_STATE/profiles" ;;
+    set-card-profile)
+        printf '%s\\n' "$*" >> "$TEST_STATE/commands"
+        grep -q "^$2 " "$TEST_STATE/profiles" || exit 1
+        awk -v card="$2" -v profile="$3" \\
+            '$1 == card {$2=profile} {print}' "$TEST_STATE/profiles" > "$TEST_STATE/profiles.tmp"
+        mv "$TEST_STATE/profiles.tmp" "$TEST_STATE/profiles" ;;
     subscribe)
         if [ -n "${NEXT_DEFAULT:-}" ]; then
             printf '%s\\n' "$NEXT_DEFAULT" > "$TEST_STATE/default"
+        fi
+        if [ -n "${NEXT_PROFILE:-}" ]; then
+            read -r card profile <<< "$NEXT_PROFILE"
+            awk -v card="$card" -v profile="$profile" \\
+                '$1 == card {$2=profile} {print}' "$TEST_STATE/profiles" > "$TEST_STATE/profiles.tmp"
+            mv "$TEST_STATE/profiles.tmp" "$TEST_STATE/profiles"
+            printf "Event 'change' on card #1\\n"
+        fi
+        if [ -n "${HOTPLUG_PROFILE:-}" ]; then
+            printf '%s\\n' "$HOTPLUG_PROFILE" >> "$TEST_STATE/profiles"
+            printf "Event 'new' on card #2\\n"
         fi
         printf "Event 'change' on server #0\\n"
         printf "Event 'change' on sink #1\\n"
@@ -103,7 +132,7 @@ esac
         self.assertEqual(self.state.read_text(), '50 no headphones\n')
         del self.env['NEXT_DEFAULT']
         self.default.write_text('speakers\n')
-        self.assertEqual(self.run_helper()[0], 'set-default-sink headphones')
+        self.assertIn('set-default-sink headphones', self.run_helper())
         self.assertEqual(self.default.read_text(), 'headphones\n')
 
     def test_saved_zero_volume_and_mute_remain_intentional(self):
@@ -152,6 +181,43 @@ esac
         self.assertEqual(self.run_helper(), [])
         self.assertEqual(self.state.read_text(), '50 no speakers\n')
         self.assertFalse((self.root / 'injected').exists())
+
+    def test_saved_hardware_profile_is_restored_before_sink_state(self):
+        profiles = self.state.with_name('audio-card-profiles')
+        profiles.write_text('alsa_card.usb-PD6 output:iec958-stereo\n')
+        self.state.write_text('35 no headphones\n')
+        commands = self.run_helper()
+        self.assertEqual(commands[0],
+                         'set-card-profile alsa_card.usb-PD6 output:iec958-stereo')
+        self.assertEqual(commands[1], 'set-default-sink headphones')
+        self.assertIn('alsa_card.usb-PD6 output:iec958-stereo',
+                      profiles.read_text())
+
+    def test_changed_hardware_profile_is_saved(self):
+        self.env['NEXT_PROFILE'] = 'alsa_card.usb-PD6 output:iec958-stereo'
+        self.run_helper()
+        profiles = self.state.with_name('audio-card-profiles').read_text()
+        self.assertIn('alsa_card.usb-PD6 output:iec958-stereo', profiles)
+
+    def test_unplugged_hardware_profile_is_retained(self):
+        self.profiles.write_text('alsa_card.pci builtin:analog-stereo\n')
+        profiles = self.state.with_name('audio-card-profiles')
+        profiles.write_text('alsa_card.usb-PD6 output:iec958-stereo\n')
+        self.run_helper()
+        self.assertIn('alsa_card.usb-PD6 output:iec958-stereo',
+                      profiles.read_text())
+
+    def test_hotplugged_card_receives_saved_profile(self):
+        self.profiles.write_text('alsa_card.pci builtin:analog-stereo\n')
+        profiles = self.state.with_name('audio-card-profiles')
+        profiles.write_text('alsa_card.usb-PD6 output:iec958-stereo\n')
+        self.env['HOTPLUG_PROFILE'] = \
+            'alsa_card.usb-PD6 output:analog-stereo'
+        commands = self.run_helper()
+        self.assertEqual(commands.count(
+            'set-card-profile alsa_card.usb-PD6 output:iec958-stereo'), 2)
+        self.assertIn('alsa_card.usb-PD6 output:iec958-stereo',
+                      self.profiles.read_text())
 
 
 if __name__ == '__main__':

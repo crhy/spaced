@@ -150,6 +150,25 @@ class MigrationTests(unittest.TestCase):
         self.assertNotIn('text/x-python', defaults)
         self.assertEqual(defaults['image/tiff'], 'eom.desktop')
 
+    def test_spaced_product_names_are_added_to_personal_dictionary(self):
+        dictionary = self.config / 'enchant/en_US.dic'
+        dictionary.parent.mkdir(parents=True)
+        dictionary.write_text('MyExistingWord\n')
+        # A completed older desktop migration must not suppress this newer,
+        # independent migration for issue #333.
+        marker = self.config / 'spaced/desktop-migration-9.26.4-v1'
+        marker.parent.mkdir()
+        marker.write_text('10.26.4\n')
+        migration.migrate(self.config)
+        self.assertEqual(dictionary.read_text().splitlines(),
+                         ['MyExistingWord', 'Compiz', 'Spaced'])
+        self.assertFalse(
+            dictionary.with_name(dictionary.name + '.pre-9.26.2').exists())
+        before = (dictionary.read_bytes(), dictionary.stat().st_mtime_ns)
+        migration.migrate(self.config)
+        self.assertEqual((dictionary.read_bytes(), dictionary.stat().st_mtime_ns),
+                         before)
+
 
 class SessionTests(unittest.TestCase):
     def setUp(self):

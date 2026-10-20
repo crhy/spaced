@@ -14,13 +14,19 @@ if [ -f /etc/lightdm/lightdm.conf ]; then
 fi
 
 if command -v glib-compile-schemas >/dev/null 2>&1; then
-    glib-compile-schemas /usr/share/glib-2.0/schemas
+    # A malformed schema owned by an unrelated package must not leave the
+    # Spaced settings package (and its dependants) unconfigured. dpkg's GLib
+    # trigger will retry cache generation after the package transaction.
+    glib-compile-schemas /usr/share/glib-2.0/schemas || true
 fi
 
 # Early installers also wrote a deb822 copy of the repository. Remove it only
 # when it is an exact duplicate; customized sources belong to the administrator.
 if [ -x /usr/lib/spaced-linux/spaced-clean-duplicate-apt-source ]; then
-    /usr/lib/spaced-linux/spaced-clean-duplicate-apt-source
+    # Source cleanup is conservative maintenance, not a condition for making
+    # the desktop package usable. Preserve administrator-owned variations and
+    # let a later package upgrade retry any transient filesystem failure.
+    /usr/lib/spaced-linux/spaced-clean-duplicate-apt-source || true
 fi
 
 if command -v update-desktop-database >/dev/null 2>&1; then
