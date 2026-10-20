@@ -68,11 +68,13 @@ watch_setting() {
     done < <(gsettings monitor "$schema" "$key" 2>/dev/null)
 }
 
-# The theme table is static for the life of the session. Read it once instead
-# of starting a Python interpreter on every theme change (issue #181).
+# Cache the theme table for ordinary switches. Package upgrades can add a new
+# preset while this monitor is already running, so retry an unknown GTK theme
+# after reloading the registry instead of requiring a logout.
 declare -A THEME_IDS=()
 load_theme_ids() {
     local gtk id
+    THEME_IDS=()
     while IFS='|' read -r gtk id; do
         [ -n "$gtk" ] && THEME_IDS["$gtk"]="$id"
     done < <(python3 -c "
@@ -92,6 +94,10 @@ apply_for_gtk() {
     local gtk_theme="$1"
     [ -n "$gtk_theme" ] || return 0
     local id="${THEME_IDS[$gtk_theme]:-}"
+    if [ -z "$id" ]; then
+        load_theme_ids
+        id="${THEME_IDS[$gtk_theme]:-}"
+    fi
     [ -n "$id" ] || return 0
     # This never rewrites the metatheme keys, so Appearance keeps the selected
     # theme highlighted rather than falling back to "Custom".

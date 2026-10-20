@@ -72,8 +72,8 @@ fi
 # restrained 25% transparency; every other preset resets to a solid surface.
 terminal_profile='org.mate.terminal.profile:/org/mate/terminal/profiles/default/'
 if [ "$dark" = True ]; then
-    terminal_background='#101820'
-    terminal_foreground='#f2f6fa'
+    terminal_background='#101010'
+    terminal_foreground='#d0d0d0'
 else
     terminal_background='#ffffff'
     terminal_foreground='#000000'

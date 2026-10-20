@@ -380,10 +380,12 @@ for theme in themes:
     assert (icon_root / icon / "index.theme").is_file(), f"{name}: missing icon theme {icon}"
     assert (icon_root / icon / "scalable/places/folder.svg").is_file(), f"{name}: missing folder icon"
 
-    background = values.get("BackgroundImage", "")
-    prefix = "/usr/share/backgrounds/spaced/"
-    assert background.startswith(prefix), f"{name}: invalid BackgroundImage"
-    assert (wallpaper_root / background.removeprefix(prefix)).is_file(), f"{name}: missing wallpaper"
+    assert "BackgroundImage" not in values, \
+        f"{name}: metatheme wallpaper prompts instead of switching automatically"
+    wallpaper = Path(theme["wallpaper"])
+    prefix = Path("/usr/share/backgrounds/spaced")
+    assert wallpaper.parent == prefix, f"{name}: wallpaper is outside the canonical directory"
+    assert (wallpaper_root / wallpaper.name).is_file(), f"{name}: missing wallpaper"
 
     gtk3 = (directory / "gtk-3.0/gtk.css").read_text(encoding="utf-8")
     assert "spaced-overrides.css" in gtk3, f"{name}: shared GTK3 surface rules are not loaded"
@@ -1218,8 +1220,8 @@ assert "current_theme" in switcher, "Cairo-Dock runtime config repair is missing
 assert "spaced-launchers-v1" in switcher, "Cairo-Dock launcher migration is missing"
 assert "org.mate.terminal.profile:/org/mate/terminal/profiles/default/" in switcher, \
     "theme switching does not update the MATE Terminal profile"
-assert "terminal_background='#101820'" in switcher and "terminal_foreground='#f2f6fa'" in switcher, \
-    "dark themes do not use a high-contrast dark MATE Terminal palette"
+assert "terminal_background='#101010'" in switcher and "terminal_foreground='#d0d0d0'" in switcher, \
+    "dark themes do not use the neutral gray-on-black MATE Terminal palette"
 assert "terminal_background='#ffffff'" in switcher and "terminal_foreground='#000000'" in switcher, \
     "light themes do not use black on white in MATE Terminal"
 assert "terminal_background_type='transparent'" in switcher \
@@ -1230,6 +1232,9 @@ assert "terminal_background_type='transparent'" in switcher \
     "theme-specific MATE Terminal transparency or its solid fallback is missing"
 assert "color-scheme 'prefer-dark'" in switcher and "color-scheme 'default'" in switcher, \
     "theme switching does not drive the toolkit color scheme"
+terminal_wrapper = (root / "usr/local/bin/mate-terminal").read_text(encoding="utf-8")
+assert "/usr/bin/mate-terminal --disable-factory" in terminal_wrapper, \
+    "MATE Terminal factory can retain colors from the previous theme"
 assert "gtk-application-prefer-dark-theme" not in switcher \
     and "gtk-application-prefer-dark-theme" not in schema_override, \
     "theme switching uses a nonexistent GSettings key instead of the portal color scheme"
@@ -1239,6 +1244,8 @@ assert "Style=Universal" in qt_quick_config and "Theme=System" in qt_quick_confi
     "Qt Quick applications do not follow the system light/dark convention"
 for state_name in ("gtk-theme", "icon-theme", "window-theme", "wallpaper"):
     assert state_name in theme_monitor, f"theme monitor does not persist {state_name}"
+assert 'if [ -z "$id" ]' in theme_monitor and "load_theme_ids" in theme_monitor, \
+    "theme monitor does not discover themes installed during the current session"
 assert theme_monitor.index("apply_for_gtk \"$LAST\"") < theme_monitor.index(
     "restore_setting org.mate.background picture-filename wallpaper"), \
     "theme monitor must restore a custom wallpaper after metatheme extras"

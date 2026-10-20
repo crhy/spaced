@@ -1,0 +1,5 @@
+#!/bin/sh
+# MATE Terminal's shared factory does not repaint its cached default profile
+# after a Spaced theme switch. A separate process reads the current profile at
+# launch, so every newly opened terminal follows the selected light/dark theme.
+exec /usr/bin/mate-terminal --disable-factory "$@"

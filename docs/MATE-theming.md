@@ -118,6 +118,8 @@ It starts `/usr/local/bin/spaced-theme-monitor`. The monitor:
 - restores saved visual choices from `~/.config/spaced/` at login;
 - monitors GTK, icon, window-theme, and wallpaper settings through `gsettings monitor`;
 - maps the current GTK theme to an entry in `themes.json`;
+- reloads the registry when an unknown GTK theme appears, so a preset installed
+  during the current desktop session works without logging out;
 - invokes `spaced-switch-theme <id>` for registered Spaced themes;
 - saves the current GTK theme, icon theme, window theme, and wallpaper as a small fallback for newly installed accounts whose last dconf writes may not survive the first reboot.
 
@@ -129,7 +131,7 @@ if t.get("gtk_theme") == gtk:
 
 Therefore `org.mate.interface gtk-theme` must exactly match the `gtk_theme` value in `themes.json`. Do not rely on case normalization.
 
-At login the monitor restores GTK, icon, and window-theme choices, applies the registered theme extras, and then restores the saved wallpaper. This order preserves a user-selected custom wallpaper instead of replacing it permanently with the metatheme suggestion.
+At login the monitor restores GTK, icon, and window-theme choices, applies the registered theme extras, and then restores the saved wallpaper. This order preserves a user-selected custom wallpaper. Selectable metathemes intentionally omit `BackgroundImage`: MATE asks for confirmation before applying that suggestion, while the registered switch helper can apply it directly and consistently.
 
 ### 3. `spaced-switch-theme` applies coordinated extras
 
@@ -458,7 +460,7 @@ Use this ownership rule:
 | Titlebar/frame palette | `wm_*` values in that theme's GTK3 palette, plus Metacity XML only when geometry or drawing logic changes |
 | Folder/home icon color | matching `Spaced-Icons-*` SVGs |
 | Preview card | the theme's static `preview.png` |
-| Suggested wallpaper or panel/dock behavior | `themes.json` and the top-level metatheme metadata as appropriate |
+| Wallpaper or panel/dock behavior | `themes.json`; metathemes carry only a fallback `BackgroundColor` |
 
 ## Installing documentation or theme changes on a running system
 

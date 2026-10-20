@@ -1,5 +1,19 @@
 # Changelog
 
+## 10.26.5-2 - 2026-10-20
+
+Delivered to installed systems through the `10.26.5-2` APT packages and
+included in the final 10.26.5 ISO.
+
+- Make every newly opened MATE Terminal immediately use the active theme
+  instead of inheriting stale colors from its shared factory process. Dark
+  presets now use neutral gray on black, and Spaced Light and Dark retain 25%
+  background transparency.
+- Let the running theme monitor discover presets installed during the current
+  desktop session.
+- Switch registered wallpapers automatically without MATE Appearance showing
+  a separate confirmation prompt.
+
 ## 10.26.5 - 2026-10-20
 
 Prepared for the 10.26.5 ISO and `10.26.5-1` APT packages.

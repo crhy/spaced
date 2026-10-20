@@ -399,7 +399,10 @@ Legacy panel widgets use `panel_bg_color` and `panel_fg_color` from the active G
 
 ## MATE metatheme fallback background colors
 
-The top-level `index.theme` files carry `BackgroundColor` values used with the suggested `BackgroundImage`:
+The top-level `index.theme` files carry fallback `BackgroundColor` values. They
+intentionally omit `BackgroundImage`: MATE Appearance asks for confirmation
+before applying a metatheme wallpaper. The registry and switch helper own that
+automatic change instead.
 
 | Selectable theme | Metatheme `BackgroundColor` |
 |---|---|
