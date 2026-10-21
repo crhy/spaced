@@ -41,6 +41,7 @@ SETTINGS_PATHS=(
     etc/init.d/spaced-first-boot-snapshot
     etc/init.d/spaced-wsdd
     etc/lightdm/lightdm.conf.d/60-spaced-installed.conf
+    etc/NetworkManager/dispatcher.d/90-spaced-samba-ready
     etc/profile.d/spaced-application-theming.sh
     etc/profile.d/spaced-flatpak-exports.sh
     etc/profile.d/spaced-xdg-runtime.sh

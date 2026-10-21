@@ -103,6 +103,12 @@ A resolution in this file should be updated when the implementation changes. Do 
   does not rerun Samba's service startup or restore missing or disabled boot
   links; a one-time upgrade migration enables smbd with update-rc.d and starts
   it through invoke-rc.d, respecting service policy (issue #297).
+- A sysvinit `$network` dependency only waits for NetworkManager's daemon, not
+  for asynchronous Wi-Fi to acquire an address. Samba can consequently exit
+  at boot with "Could not determine network interfaces" while WSDD continues
+  advertising a computer that refuses connections. A NetworkManager
+  dispatcher retries smbd after interface-up and DHCP-change events, but only
+  when its runlevel links show that the service is enabled (issue #344).
 - Samba guests run as `nobody`, which needs search (`x`) permission on every
   parent of a shared folder. Debian's `HOME_MODE 0700` blocks every guest
   share inside a home, which looks like a working share whose every open is
