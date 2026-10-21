@@ -716,9 +716,14 @@ assert "update-rc.d smbd defaults" in Path("scripts/iso/01-configure.chroot").re
     "smbd does not start at boot, so shared folders refuse connections (issue #297)"
 local_packages = Path("scripts/iso/build-local-packages.sh").read_text(encoding="utf-8")
 for path in ("etc/init.d/spaced-wsdd", "usr/share/applications/spaced-sharing-password.desktop",
-             "usr/share/polkit-1/actions/com.spacedlinux.sharing.policy"):
+             "usr/share/polkit-1/actions/com.spacedlinux.sharing.policy",
+             "etc/NetworkManager/dispatcher.d/90-spaced-samba-ready"):
     assert (root / path).exists() and path in local_packages, \
         f"{path} is not shipped, so Windows cannot find or sign in to Spaced shares (issue #297)"
+dispatcher = (root / "etc/NetworkManager/dispatcher.d/90-spaced-samba-ready").read_text(encoding="utf-8")
+assert "up|dhcp4-change|dhcp6-change" in dispatcher and "status" in dispatcher \
+    and "start" in dispatcher and "rc[2-5].d" in dispatcher, \
+    "smbd is not retried after asynchronous NetworkManager startup (issue #344)"
 assert "update-rc.d spaced-wsdd defaults" in Path("scripts/iso/01-configure.chroot").read_text(encoding="utf-8") \
     and "update-rc.d spaced-wsdd defaults" in \
     Path("packages/spaced-mate-default-settings/DEBIAN/postinst").read_text(encoding="utf-8"), \

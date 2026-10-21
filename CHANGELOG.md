@@ -1,5 +1,13 @@
 # Changelog
 
+## 10.26.5-3 - 2026-10-20
+
+Delivered to installed systems through the `10.26.5-3` APT packages.
+
+- Retry Samba after NetworkManager has actually brought an interface up. This
+  removes the Wi-Fi boot race that could leave a discoverable Spaced computer
+  refusing Windows file-sharing connections until another reboot (#344).
+
 ## 10.26.5-2 - 2026-10-20
 
 Delivered to installed systems through the `10.26.5-2` APT packages and

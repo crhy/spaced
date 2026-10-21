@@ -83,6 +83,22 @@ if [ "$1" = configure ] && [ ! -e "$marker" ] && [ -x /etc/init.d/smbd ]; then
     fi
 fi
 
+# 10.26.5 could start smbd before asynchronous NetworkManager Wi-Fi had an
+# address.  The dispatcher shipped by spaced-mate-default-settings retries on
+# future connections; make an already-connected upgraded system usable now.
+# invoke-rc.d preserves policy-rc.d during image builds, and a failed start
+# leaves the migration retryable on the next package configuration.
+marker=/var/lib/spaced-linux/smbd-network-ready-10.26.5-3
+dispatcher=/etc/NetworkManager/dispatcher.d/90-spaced-samba-ready
+if [ "$1" = configure ] && [ ! -e "$marker" ] && [ -x "$dispatcher" ] \
+        && [ -x /etc/init.d/smbd ]; then
+    if /etc/init.d/smbd status >/dev/null 2>&1 \
+        || invoke-rc.d --disclose-deny smbd start; then
+        install -d -m 0755 /var/lib/spaced-linux
+        : > "$marker"
+    fi
+fi
+
 # Guest ("Everyone") shares inside a 0700 home were listed but every open
 # was denied, because guests run as nobody (issue #297). Open existing
 # desktop homes to traversal once; never undo a later change.

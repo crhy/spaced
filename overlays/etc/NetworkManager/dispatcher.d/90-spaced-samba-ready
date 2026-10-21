@@ -1,0 +1,41 @@
+#!/bin/sh
+# NetworkManager brings Wi-Fi up asynchronously.  sysvinit's $network facility
+# only means that NetworkManager itself has started, so smbd can run too early,
+# find no interfaces, and exit.  Retry it once an interface really is usable.
+
+case "${2:-}" in
+    up|dhcp4-change|dhcp6-change) ;;
+    *) exit 0 ;;
+esac
+
+init_script=${SPACED_SMBD_INIT:-/etc/init.d/smbd}
+rc_root=${SPACED_RC_ROOT:-/etc}
+lock_file=${SPACED_SAMBA_LOCK:-/run/lock/spaced-samba-ready.lock}
+
+[ -x "$init_script" ] || exit 0
+
+# Do not undo an administrator's decision to disable Samba at boot.
+enabled=false
+for link in "$rc_root"/rc[2-5].d/S[0-9][0-9]smbd; do
+    if [ -L "$link" ]; then
+        enabled=true
+        break
+    fi
+done
+[ "$enabled" = true ] || exit 0
+
+# Multiple interfaces can become ready together.  Serialize their callbacks,
+# then recheck status so a healthy daemon is never restarted.
+exec 9>"$lock_file" || exit 0
+flock -n 9 || exit 0
+if "$init_script" status >/dev/null 2>&1; then
+    exit 0
+fi
+
+if ! "$init_script" start; then
+    logger -t spaced-samba-ready \
+        "smbd did not start after NetworkManager reported ${1:-an interface} ${2:-up}"
+fi
+
+# A service failure must not make NetworkManager mark the connection failed.
+exit 0
