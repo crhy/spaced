@@ -82,7 +82,7 @@ These are real Spaced Linux desktop sessions—not wallpaper mockups. Click any 
   </tr>
   <tr>
     <td width="50%" align="center">
-      <a href="website/assets/screenshots/desktop-macos.webp"><img src="website/assets/screenshots/desktop-macos.webp" alt="Spaced Linux macOS-style themed desktop"></a><br>
+      <a href="website/assets/themes/theme-macos.webp"><img src="website/assets/themes/theme-macos.webp" alt="Spaced Linux macOS-style themed desktop"></a><br>
       <sub><strong>A familiar favorite</strong> — The macOS-inspired theme is one of the many coordinated Spaced Linux desktop looks.</sub>
     </td>
     <td width="50%" align="center">
