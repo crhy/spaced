@@ -33,10 +33,11 @@ Their ordinary chrome and controls should be predominantly monochrome:
 
 The selectable collection also includes:
 
-- macOS;
+- macOS X;
 - Windows 3.11;
 - Windows XP;
-- Windows 7 Aero;
+- Windows 7 Light;
+- Windows 7 Dark;
 - Ubuntu;
 - Linux Mint Dark;
 - Windows 11 Light;
