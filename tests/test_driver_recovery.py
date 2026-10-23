@@ -213,10 +213,15 @@ printf 'SELECTED:%s\n' "$DRIVER_PACKAGE"
     def test_pascal_selects_exact_distro_driver_captured_before_cuda_repo(self):
         result, _ = self.run_helper(r'''
 DEBIAN_VERSION=13
-DISTRO_NVIDIA_VERSION=550.163.01-5.1
 CUDA_SOURCE_FILE="$TEST_ROOT/cuda.list"
 CUDA_DISABLED_SOURCE="$TEST_ROOT/cuda.list.spaced-legacy-disabled"
 printf 'deb NVIDIA\n' > "$CUDA_SOURCE_FILE"
+apt-cache() {
+    if [ "$1" = madison ]; then
+        printf ' nvidia-driver | 610.57.04-1 | https://developer.download.nvidia.com/compute/cuda/repos/debian13/x86_64  Packages\n'
+        printf ' nvidia-driver | 550.163.01-5.1 | http://deb.devuan.org/merged ceres/non-free amd64 Packages\n'
+    fi
+}
 nvidia-driver-assistant() {
     if [ "$1" = --list-supported-distros ]; then
         printf '  debian\n'
@@ -228,6 +233,8 @@ nvidia-driver-assistant() {
 python3() {
     if [ "$2" = hardware ]; then
         printf 'Supported NVIDIA device: GeForce GTX 1080 [10de:1b80] (legacy 580.xx)\n'
+    elif [ "$2" = legacy-version ]; then
+        printf '550.163.01-5.1\n'
     fi
 }
 select_driver_package
