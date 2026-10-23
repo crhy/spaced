@@ -36,6 +36,13 @@ for N in 24 32 48 64; do
             -draw "circle $x2,$y2 $((x2 + r)),$y2" )
     }
 
+    # A plain stroke with no end discs (used for the thin highlights).
+    add_stroke() {
+        local x1=$1 y1=$2 x2=$3 y2=$4 color=$5 width=$6
+        args+=( -stroke "$color" -strokewidth "$width" -fill none \
+            -draw "line $x1,$y1 $x2,$y2" )
+    }
+
     args=( -size "${N}x${N}" xc:none )
     # Black shadow X, offset down-right by N/16.
     add_line $((m + off)) $((m + off)) $((N - m + off)) $((N - m + off)) black "$redw"
@@ -43,9 +50,15 @@ for N in 24 32 48 64; do
     # Thick red X, margin N/8, round caps.
     add_line "$m" "$m" $((N - m)) $((N - m)) '#d01010' "$redw"
     add_line $((N - m)) "$m" "$m" $((N - m)) '#d01010' "$redw"
-    # Thin white highlight along the upper edge of each red stroke.
-    add_line $((m + half)) $((m - half)) $((N - m + half)) $((N - m - half)) white "$whitew"
-    add_line $((N - m - half)) $((m - half)) $((m - half)) $((N - m - half)) white "$whitew"
+    # Thin white highlight along the upper edge of each red stroke: middle 60%
+    # of the stroke, shifted perpendicular toward the top by redw/4, drawn as a
+    # plain translucent stroke with no round end discs.
+    q=$((redw / 4))
+    hw=$(( whitew > 1 ? whitew : 1 ))
+    add_stroke $(( m + ((N - m) - m) * 2 / 10 + q )) $(( m + ((N - m) - m) * 2 / 10 - q )) \
+               $(( m + ((N - m) - m) * 8 / 10 + q )) $(( m + ((N - m) - m) * 8 / 10 - q )) '#ffffffcc' "$hw"
+    add_stroke $(( (N - m) + (m - (N - m)) * 2 / 10 - q )) $(( m + ((N - m) - m) * 2 / 10 - q )) \
+               $(( (N - m) + (m - (N - m)) * 8 / 10 - q )) $(( m + ((N - m) - m) * 8 / 10 - q )) '#ffffffcc' "$hw"
 
     magick "${args[@]}" "$png"
     echo "$N $((N / 2)) $((N / 2)) $png" >> "$config"
