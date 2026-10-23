@@ -289,6 +289,10 @@ The theme documentation is split by purpose:
 
 Run `make check` before committing theme or documentation changes.
 
+For maintenance across the distribution, see the [subsystem map](docs/SUBSYSTEMS.md),
+[Compiz architecture and upstream strategy](docs/COMPIZ.md), and
+[10.26.6 post-release issue audit](docs/10.26.6-POST-RELEASE-AUDIT.md).
+
 ### NVIDIA recovery guide
 
 Spaced Linux includes a verified, transactional NVIDIA driver installer with automatic rollback, pre-reboot verification, and post-reboot desktop checks. For installation steps, SSH recovery procedures, DKMS troubleshooting, Secure Boot limitations, and the full error-code reference, see:

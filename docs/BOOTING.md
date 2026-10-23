@@ -10,12 +10,23 @@ the guards that keep those failures from coming back.
 Firmware (BIOS/UEFI)
   -> GRUB (live-build grub-pc / grub-efi, live GRUB menu)
   -> Linux kernel (live-boot initramfs)
-  -> live-boot mounts /run/live/medium, unsquashfs the live filesystem
+  -> live-boot mounts /run/live/medium and SquashFS with a writable overlay
   -> quiet text console with the cursor hidden (default entry only)
   -> sysvinit /etc/rcS.d + /etc/rc.d rc scripts
   -> LightDM autologin as "user"
   -> MATE session, Compiz window manager
 ```
+
+## Removing the installation medium
+
+The live filesystem remains backed by the medium. Removing it can strand
+Xorg or Python even after imports complete, because executable/library pages
+may still need to be read. The 10.26.6 restart helper prepares a small resident
+guard with input/reboot handles and locked mappings before displaying the
+removal prompt. Test by actually ejecting the medium, then supplying input;
+rebooting with the ISO attached does not exercise this failure. See the
+[installation-medium finding](FIXES.md#installation-medium-removal) and
+[release evidence](10.26.6-RELEASE-REVIEW.md).
 
 ## Live GRUB menu
 
