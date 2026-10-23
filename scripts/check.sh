@@ -621,6 +621,9 @@ session_reset = (root / "etc/X11/Xsession.d/05spaced-reset-session-env").read_te
 assert "AT_SPI_BUS_ADDRESS" in session_reset and "var/lib/lightdm" in session_reset \
     and "xprop -root -remove AT_SPI_BUS" in session_reset, \
     "installed sessions retain LightDM's inaccessible accessibility bus"
+theming_xsession_path = root / "etc/X11/Xsession.d/40spaced-application-theming"
+assert theming_xsession_path.is_file() and ". /etc/profile.d/spaced-application-theming.sh" in theming_xsession_path.read_text(encoding="utf-8"), \
+    "X sessions never load the toolkit theming exports (issue #339)"
 lightdm_config = (root / "etc/lightdm/lightdm.conf").read_text(encoding="utf-8")
 assert "session-setup-script=/usr/local/sbin/spaced-lightdm-session-setup" in lightdm_config, \
     "LightDM does not clean up greeter helpers before starting the user session"

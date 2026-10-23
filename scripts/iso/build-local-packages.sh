@@ -30,6 +30,7 @@ THEME_PATHS=(
 SETTINGS_PATHS=(
     etc/X11/Xsession.d/05spaced-reset-session-env
     etc/X11/Xsession.d/25spaced-flatpak-exports
+    etc/X11/Xsession.d/40spaced-application-theming
     etc/X11/xorg.conf.d/20-spaced-amdgpu.conf
     etc/apt/apt.conf.d
     etc/apt/preferences.d
