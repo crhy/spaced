@@ -7,6 +7,16 @@ Use **Check Graphics** to collect a read-only report before changing drivers.
 It includes PCI IDs, connected displays, desktop and NVIDIA PRIME renderers,
 kernel boot arguments, and AMD TearFree configuration. **Copy Log** copies the report.
 
+Validation boundary as of 23 October 2026: the 10.26.6 VM checks do not
+establish a fix on affected physical NVIDIA/AMD hardware. Issue
+[#334](https://github.com/crhy/spaced/issues/334) remains open: its later report
+describes a working 470 driver replaced by a nonworking 550 driver. The
+Pascal branch guard is partial progress, not proof that every recommended
+branch works on that machine. Preserving a known-working installation and
+testing recovery on the affected hardware remain follow-up work. Collect
+before/after versions and logs; do not close from a successful package
+installation alone. See the [post-release audit](10.26.6-POST-RELEASE-AUDIT.md).
+
 Choose **Install NVIDIA Driver** on supported NVIDIA hardware, or **Install /
 Repair AMD Drivers** on AMD hardware. The AMD action installs both the native
 AMDGPU stack and the legacy Radeon Xorg driver with current Mesa and firmware;

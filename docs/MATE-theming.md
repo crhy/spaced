@@ -294,7 +294,7 @@ MATE starts `/usr/local/bin/spaced-window-manager` as the required window manage
 
 - checks that an X display and direct-rendering GLX context are available;
 - starts `compiz ccp --replace`;
-- restarts Compiz after a crash while X is still alive;
+- restarts after a nonzero child exit while X is alive, with bounded backoff;
 - does not paint the wallpaper and does not act as the window decorator.
 
 The Compiz INI profile is seeded from:
@@ -311,13 +311,17 @@ and becomes:
 
 The companion `config` file selects the INI backend and MATE integration.
 
-Compiz's `decoration` plugin separately starts:
+Compiz's `decoration` plugin and XDG autostart both invoke:
 
 ```text
-gtk-window-decorator --replace
+spaced-window-decorator
 ```
 
-The selected window theme is stored in `org.mate.Marco.general theme`. Each selectable theme provides `metacity-1/metacity-theme-1.xml` and `metacity-theme-3.xml`. The version-3 files consume `wm_*` values from the active GTK palette through `gtk:custom(...)` bindings.
+That helper locks one supervisor per display and runs `gtk-window-decorator --replace`, restarting abnormal exits while X remains alive. Its children close the lock descriptor.
+
+The selected window theme is stored in `org.mate.Marco.general theme`. Each selectable theme provides `metacity-1/metacity-theme-1.xml` and `metacity-theme-3.xml`. The version-3 files consume `wm_*` values from the active GTK palette through `gtk:custom(...)` bindings. Using this schema and libmarco does not mean Marco is the running window manager.
+
+Compiz itself can exec Marco on a fatal graphics error without changing PID, which the launcher's child-exit loop does not detect. The 10.26.6 pixmap-lifetime patch fixes one such trigger. See the [Compiz guide](COMPIZ.md) for actual-WM verification, both decorator patches, performance testing and upstream strategy.
 
 The Compiz profile also owns independent presentation colors such as the cube background and skydome gradient. Those values do not come from `gtk.css`.
 

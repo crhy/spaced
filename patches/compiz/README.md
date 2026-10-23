@@ -1,5 +1,11 @@
 # Compiz decorator fixes
 
+See [Compiz architecture and upstream strategy](../../docs/COMPIZ.md) for
+the rendering/lifetime model, internal Marco fallback, diagnostic commands,
+verification matrix and recommendation to submit these as independent
+upstream fixes after rebasing and validation. Both patches remain downstream;
+this documentation does not claim an upstream submission.
+
 Spaced 10.26.6 rebuilds Debian/Ceres `compiz 2:0.8.18-9` as
 `2:0.8.18-9+spaced10.26.6`. It retains the title-bar button fix first
 shipped in 10.26.2 (issue [#279](https://github.com/crhy/spaced/issues/279))

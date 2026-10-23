@@ -15,6 +15,17 @@ meet at the ISO boundary:
 
 ## Runtime topology
 
+OS updates are a separate delivery path: the shipped Spaced Update source is
+`overlays/usr/lib/spaced-linux/` in `crhy/spaced`, not the separate
+`crhy/spacedupdate` repository. GitHub OS release detection must be paired
+with publication to the signed `crhy/spaced-apt` repository. Welcome changes
+need a Welcome release; Bazaar/application changes need publication to the
+appropriate signed Flatpak origin. Refresh AppStream at both system and user
+scope before computing available updates. When an app's version is missing,
+compare the installed ref/origin/scope with the actual repository commit;
+a GitHub release asset alone does not establish Flatpak availability. See
+the [subsystem map](SUBSYSTEMS.md) and [post-release audit](10.26.6-POST-RELEASE-AUDIT.md).
+
 The image registers two signed remotes:
 
 | Name | URL | Purpose |
