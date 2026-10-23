@@ -845,6 +845,10 @@ assert ";wobbly;" not in compiz_text and ";animation;" not in compiz_text, \
 assert ";clone;" not in compiz_text and ";expo;" not in compiz_text, \
     "Clone Output or Expo is enabled by default"
 assert "firepaint" in compiz_text, "Compiz paint-fire-on-screen plugin is not enabled"
+assert "s0_num_particles = 4000" in compiz_text, \
+    "Compiz firepaint particle count is not rhY's default (issue #353)"
+assert "as_clear_button = <Shift><Super>Button3" in compiz_text, \
+    "Compiz firepaint clear button is not rhY's default (issue #353)"
 assert "cube;3d;focuspoll;rotate;scale;ezoom;" in compiz_text, "Compiz desktop effects regressed"
 # Compiz 0.8 has no "focus" plug-in; 9.26.4's setting for issue #234 did nothing.
 assert "focus" not in compiz_text.split("as_active_plugins = ", 1)[1].split("\n", 1)[0].split(";") \
