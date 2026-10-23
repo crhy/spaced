@@ -33,6 +33,9 @@ ROOT_RUN ?= $(shell command -v flatpak-spawn >/dev/null 2>&1 && printf 'flatpak-
 VM_SSH_PORT ?= 2222
 VBOX_SSH_PORT ?= 2223
 ISO_SMOKE_TIMEOUT ?= 240
+# live-build always adds -comp xz. 1 MiB blocks and the x86 BCJ filter make
+# the 10.26.5 root filesystem 131 MB (8.4%) smaller; see docs/10.26.6-IMAGE-SIZE.md.
+MKSQUASHFS_OPTIONS ?= -b 1M -Xbcj x86 -Xdict-size 100%
 VM_XRES ?= 1440
 VM_YRES ?= 900
 SAFE_XRES ?= 1920
@@ -150,7 +153,7 @@ prepare: marco ## Stage authored live-build configuration
 lb-config: prepare ## Generate the complete live-build tree
 
 lb-build: prepare ## Build the live ISO (requires sudo)
-	$(ROOT_RUN) sh -lc 'cd "$(abspath $(LB_DIR))" && exec lb build'
+	$(ROOT_RUN) sh -lc 'cd "$(abspath $(LB_DIR))" && exec env MKSQUASHFS_OPTIONS="$(MKSQUASHFS_OPTIONS)" lb build'
 	iso=$$(find $(LB_DIR) -maxdepth 1 -type f -name '*.iso' -print -quit)
 	test -n "$$iso"
 	rm -f $(ISO_DIR)/$(ISO_NAME) $(ISO_DIR)/$(ISO_NAME).sha256

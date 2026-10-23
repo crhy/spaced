@@ -1,5 +1,38 @@
 # Changelog
 
+## 10.26.6 - 2026-10-23
+
+Prepared for the 10.26.6 ISO and `10.26.6-1` APT packages. Includes the
+Samba network-ready fix first delivered as `10.26.5-3` (#344).
+
+- Qt and LibreOffice applications follow the Spaced theme again. The theming
+  variables in `/etc/profile.d/spaced-application-theming.sh` never reached
+  the desktop because `/etc/X11/Xsession` does not read `/etc/profile.d`; a
+  new `Xsession.d` script loads them into every session (#339).
+- Right-click the desktop and choose **Change Theme…** to open the theme
+  chooser (#346).
+- Simpler theme names everywhere they are shown: Windows 7 Light, Windows 7
+  Dark, Windows XP, Windows 11 Light and Dark, Mac OS X, Ubuntu, Linux Mint,
+  GeoWorks, Android and more. Theme IDs are unchanged, so existing settings
+  keep working (#347).
+- xkill now shows a big red X with white highlights and a black shadow
+  instead of X11's tiny fallback glyph, through a new `Spaced-Cursors` theme
+  built on Adwaita (#356).
+- New Compiz "paint fire" defaults: finer white fire with more particles and
+  Shift+Super+right-click to clear. Existing accounts get them only where the
+  Compiz default is still in place (#353).
+- Spaced GPU Driver Manager never gives a GTX 10-series (Pascal) card a driver
+  newer than the 580 branch, even if NVIDIA's repository is still enabled from
+  an earlier run; it installs Devuan's compatible driver or keeps the current
+  one (#334).
+- New `spaced-open-target` helper for keyboard shortcuts: point a custom
+  shortcut at a script, an app ID (Flatpaks included) or any file, and it runs
+  or opens it in its default app (#351).
+- GDebi is preinstalled and opens downloaded `.deb` packages.
+- Smaller ISO: the live filesystem uses 1 MiB squashfs blocks and the x86 BCJ
+  filter, measured at 131 MB (8.4%) smaller on the 10.26.5 tree
+  (`docs/10.26.6-IMAGE-SIZE.md`).
+
 ## 10.26.5-3 - 2026-10-20
 
 Delivered to installed systems through the `10.26.5-3` APT packages.
