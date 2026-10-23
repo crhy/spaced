@@ -1191,6 +1191,14 @@ for surface, body_color in (("Spaced-Menu-On-Dark", "#e5e7eb"),
         assert body_color in trash and "viewBox=\"0 0 64 64\"" in trash, \
             f"{surface} {trash_name} is not a scalable high-contrast SVG"
 
+# xkill grabs the XC_pirate pointer; ship a big red X through the Spaced-Cursors
+# theme so it is visible on every desktop (issue #356).
+xkill_cursor = (icon_root / "Spaced-Cursors/cursors/pirate").read_bytes()
+assert xkill_cursor[:4] == b"Xcur", "xkill cursor is not an XCUR binary file (issue #356)"
+gschema_override = (root / "usr/share/glib-2.0/schemas/90_spaced-linux.gschema.override").read_text(encoding="utf-8")
+assert "cursor-theme='Spaced-Cursors'" in gschema_override, \
+    "the xkill cursor theme override is missing (issue #356)"
+
 assert not (root / "etc/skel/.config/cairo-dock/current_theme").exists(), \
     "Cairo-Dock current_theme must be built as a directory by the live hook"
 assert "Default-Single" in build_hook, "Cairo-Dock default theme is not seeded"

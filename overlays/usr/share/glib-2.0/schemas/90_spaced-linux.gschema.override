@@ -21,7 +21,9 @@ format='12-hour'
 show-date=false
 
 [org.mate.peripherals-mouse]
-cursor-theme='Adwaita'
+# xkill grabs the XC_pirate pointer; ship a big red X through the Spaced-Cursors
+# theme so it is visible on every desktop (issue #356).
+cursor-theme='Spaced-Cursors'
 
 [org.mate.peripherals-keyboard]
 numlock-state='on'
