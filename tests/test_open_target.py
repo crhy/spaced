@@ -79,6 +79,14 @@ class OpenTargetTests(unittest.TestCase):
         self.assertTrue(self.marker("marker-exec"))
         self.assertEqual(self.calls(), [])
 
+    def test_tilde_path_expands_to_home(self):
+        # MATE runs shortcut commands without a shell, so "~" arrives literally.
+        script = self.home / "my script.sh"
+        script.write_text("#!/bin/sh\nprintf 'ran\\n' > " + str(self.root / "marker-tilde") + "\n")
+        script.chmod(0o755)
+        self.invoke("~/my script.sh")
+        self.assertTrue(self.marker("marker-tilde"))
+
     def test_non_executable_shebang_script_runs_via_interpreter(self):
         script = self.root / "plain.sh"
         script.write_text("#!/bin/sh\nprintf 'ran\\n' > " + str(self.root / "marker-plain") + "\n")

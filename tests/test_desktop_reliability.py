@@ -128,7 +128,7 @@ class MigrationTests(unittest.TestCase):
         self.assertEqual(profile.read_text(), original)
 
     def test_firepaint_defaults_are_added_to_an_empty_profile(self):
-        # Issue #353: an account still on Compiz's firepaint defaults gets rhY's.
+        # Issue #353: an account still on Compiz's firepaint defaults gets the Spaced ones.
         profile = self.config / 'compiz/compizconfig/Default.ini'
         profile.parent.mkdir(parents=True)
         profile.write_text('')

@@ -169,7 +169,7 @@ def migrate_compiz_focus(path):
 
 
 def migrate_firepaint(path):
-    """Ship rhY's fire-writing defaults for Compiz's firepaint plug-in (#353)."""
+    """Apply the Spaced fire-writing defaults for Compiz's firepaint plug-in (#353)."""
     if not path.exists():
         return
     parser = read_ini(path)

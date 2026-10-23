@@ -210,7 +210,7 @@ printf 'SELECTED:%s\n' "$DRIVER_PACKAGE"
         self.assertIn("SELECTED:nvidia-open", result.stdout)
         self.assertIn("--simulate --no-remove install -y nvidia-open", result.stdout)
 
-    def test_pascal_selects_exact_distro_driver_captured_before_cuda_repo(self):
+    def test_pascal_selects_devuan_driver_even_with_nvidia_repo_enabled(self):
         result, _ = self.run_helper(r'''
 DEBIAN_VERSION=13
 CUDA_SOURCE_FILE="$TEST_ROOT/cuda.list"

@@ -89,6 +89,15 @@ def debian_version_key():
             upstream, revision = rest, ""
         return epoch, upstream, revision
 
+    def char_rank(char):
+        # dpkg order: "~" first, then the end of the part, then letters,
+        # then every other character.
+        if char == "~":
+            return -1
+        if char == "":
+            return 0
+        return ord(char) if char.isalpha() else ord(char) + 256
+
     def compare_part(left, right):
         i = j = 0
         while i < len(left) or j < len(right):
@@ -107,8 +116,7 @@ def debian_version_key():
                     return -1 if left_value < right_value else 1
                 i, j = i_end, j_end
             else:
-                left_rank = -1 if lc == "~" else (0 if lc == "" else ord(lc))
-                right_rank = -1 if rc == "~" else (0 if rc == "" else ord(rc))
+                left_rank, right_rank = char_rank(lc), char_rank(rc)
                 if left_rank != right_rank:
                     return -1 if left_rank < right_rank else 1
                 i += 1

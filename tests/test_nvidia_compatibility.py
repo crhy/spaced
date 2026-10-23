@@ -109,6 +109,12 @@ class LegacyVersionTests(unittest.TestCase):
     def madison(self, *entries):
         return "".join(f" nvidia-driver | {version} | {repo}\n" for version, repo in entries)
 
+    def test_debian_character_order(self):
+        key = compat.debian_version_key()
+        self.assertLess(key("1.0a"), key("1.0+"))  # letters before punctuation
+        self.assertLess(key("1.0~"), key("1.0"))   # tilde before the end
+        self.assertLess(key("1.0"), key("1.0a"))
+
     def test_nvidia_repository_line_is_ignored(self):
         output = self.madison(("610.57.04-1", self.NVIDIA_REPO), ("550.163.01-2", self.DEVUAN_REPO))
         self.assertEqual(compat.legacy_version(output, 580), "550.163.01-2")

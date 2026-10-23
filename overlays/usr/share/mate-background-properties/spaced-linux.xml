@@ -58,7 +58,7 @@
     <shade_type>solid</shade_type>
   </wallpaper>
   <wallpaper deleted="false">
-    <name>Spaced macOS</name>
+    <name>Mac OS X</name>
     <filename>/usr/share/backgrounds/spaced/macos.jpg</filename>
     <options>zoom</options>
     <pcolor>#3a3a3a</pcolor>
@@ -82,7 +82,7 @@
     <shade_type>solid</shade_type>
   </wallpaper>
   <wallpaper deleted="false">
-    <name>Spaced Windows 7</name>
+    <name>Windows 7 Light</name>
     <filename>/usr/share/backgrounds/spaced/win7.jpg</filename>
     <options>zoom</options>
     <pcolor>#183b60</pcolor>
@@ -122,7 +122,7 @@
     <shade_type>solid</shade_type>
   </wallpaper>
   <wallpaper deleted="false">
-    <name>Spaced GEOS</name>
+    <name>GeoWorks</name>
     <filename>/usr/share/backgrounds/spaced/geoworks.jpg</filename>
     <options>zoom</options>
     <pcolor>#404040</pcolor>

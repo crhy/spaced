@@ -68,5 +68,38 @@ class ChangeThemeTests(unittest.TestCase):
             popen.assert_called_once_with(["mate-appearance-properties", "--show-page=theme"])
 
 
+
+def _real_caja_available():
+    try:
+        import gi
+        gi.require_version("Caja", "2.0")
+        from gi.repository import Caja  # noqa: F401
+        return True
+    except (ImportError, ValueError):
+        return False
+
+
+@unittest.skipUnless(_real_caja_available(), "python3-caja GObject bindings are not installed")
+class RealCajaBindingTests(unittest.TestCase):
+    """The fake modules above cannot catch GObject base-class order errors."""
+
+    def test_extension_constructs_with_real_bindings(self):
+        spec = importlib.util.spec_from_file_location("spaced_change_theme_real", EXTENSION)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        provider = module.SpacedChangeTheme()
+
+        class Folder:
+            def __init__(self, uri):
+                self.uri = uri
+
+            def get_uri(self):
+                return self.uri
+
+        items = provider.get_background_items(None, Folder("x-caja-desktop:///"))
+        self.assertEqual(items[0].props.label, "Change Theme…")
+        self.assertEqual(provider.get_background_items(None, Folder("file:///tmp")), [])
+
+
 if __name__ == "__main__":
     unittest.main()

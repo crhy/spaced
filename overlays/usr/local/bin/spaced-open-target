@@ -6,6 +6,11 @@
 set -u
 
 target="${1:-}"
+# MATE runs shortcut commands without a shell, so expand a leading ~ here.
+case "$target" in
+    "~") target="$HOME" ;;
+    "~/"*) target="$HOME/${target#\~/}" ;;
+esac
 
 if [ -z "$target" ]; then
     printf 'Usage: spaced-open-target <path-or-desktop-id>\n' >&2

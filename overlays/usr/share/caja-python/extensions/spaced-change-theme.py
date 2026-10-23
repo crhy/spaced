@@ -1,10 +1,10 @@
 # Spaced Linux: "Change Theme…" in the Caja desktop right-click menu (issue #346).
-# Opens the same theme chooser the Welcome dialog uses: mate-appearance-properties.
+# Opens the existing MATE Appearance Preferences dialog on its Theme page.
 import subprocess
 from gi.repository import Caja, GObject
 
 
-class SpacedChangeTheme(Caja.MenuProvider, GObject.GObject):
+class SpacedChangeTheme(GObject.GObject, Caja.MenuProvider):
     def __init__(self):
         GObject.GObject.__init__(self)
 
