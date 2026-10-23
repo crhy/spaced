@@ -4,6 +4,7 @@ import importlib.util
 import os
 from pathlib import Path
 import shutil
+import struct
 import subprocess
 import sys
 import tempfile
@@ -72,9 +73,52 @@ class PromptTests(unittest.TestCase):
 
 
 class RebootFallbackTests(unittest.TestCase):
+    def test_guard_waits_for_prompt_before_accepting_raw_input(self):
+        helper = load_helper()
+        event = struct.pack('llHHi', 0, 0, 1, 28, 1)
+        poller = mock.Mock()
+        poller.poll.side_effect = [[(12, 1)], [(10, 1)], [(12, 1)]]
+        # First key is ignored; arm command drains pending input; next key restarts.
+        with mock.patch.object(helper.os, 'listdir', return_value=['event0']), \
+                mock.patch.object(helper.os, 'open', side_effect=[12, 13]), \
+                mock.patch.object(helper.os, 'read', side_effect=[event, b'a', BlockingIOError(), event]), \
+                mock.patch.object(helper.os, 'write') as write, \
+                mock.patch.object(helper.os, 'close'), \
+                mock.patch.object(helper.os, 'sync') as sync, \
+                mock.patch.object(helper.resource, 'setrlimit'), \
+                mock.patch.object(helper.select, 'poll', return_value=poller), \
+                mock.patch.object(helper, 'LIBC') as libc:
+            libc.mlockall.return_value = 0
+            helper.resident_restart_guard(10, 11)
+        self.assertEqual(poller.poll.call_count, 3)
+        libc.mlockall.assert_called_once_with(3)
+        sync.assert_called_once_with()
+        libc.reboot.assert_called_once_with(0x01234567)
+        self.assertEqual(write.call_args_list, [mock.call(11, b'1'), mock.call(13, b'b')])
+
+    def test_raw_input_ignores_motion_and_releases(self):
+        helper = load_helper()
+        event = struct.Struct('llHHi')
+        ignored = event.pack(0, 0, 2, 0, 1) + event.pack(0, 0, 1, 28, 0)
+        self.assertFalse(helper.input_pressed(ignored))
+        self.assertTrue(helper.input_pressed(ignored + event.pack(0, 0, 1, 28, 1)))
+        self.assertTrue(helper.input_pressed(event.pack(0, 0, 1, 272, 1)))
+
+    def test_guard_failure_reboots_before_removal_prompt(self):
+        helper = load_helper()
+        with mock.patch.object(helper, 'start_restart_guard', side_effect=RuntimeError('mlock failed')), \
+                mock.patch.object(helper, 'close_live_desktop') as close, \
+                mock.patch.object(helper, 'show_prompt') as prompt, \
+                mock.patch.object(helper, 'reboot') as reboot:
+            helper.main()
+        close.assert_not_called()
+        prompt.assert_not_called()
+        reboot.assert_called_once_with()
+
     def test_prompt_failure_still_reboots(self):
         helper = load_helper()
-        with mock.patch.object(helper, 'close_live_desktop'), \
+        with mock.patch.object(helper, 'start_restart_guard', return_value=99), \
+                mock.patch.object(helper, 'close_live_desktop'), \
                 mock.patch.object(helper, 'show_prompt', side_effect=RuntimeError('no display')), \
                 mock.patch.object(helper, 'reboot') as reboot:
             helper.main()
@@ -83,11 +127,12 @@ class RebootFallbackTests(unittest.TestCase):
     def test_desktop_closes_before_prompt(self):
         helper = load_helper()
         order = []
-        with mock.patch.object(helper, 'close_live_desktop', lambda: order.append('close')), \
-                mock.patch.object(helper, 'show_prompt', lambda _cb: order.append('prompt')), \
+        with mock.patch.object(helper, 'start_restart_guard', lambda: order.append('guard')), \
+                mock.patch.object(helper, 'close_live_desktop', lambda: order.append('close')), \
+                mock.patch.object(helper, 'show_prompt', lambda _cb, _ready: order.append('prompt')), \
                 mock.patch.object(helper, 'reboot', lambda: order.append('reboot')):
             helper.main()
-        self.assertEqual(order, ['close', 'prompt', 'reboot'])
+        self.assertEqual(order, ['guard', 'close', 'prompt', 'reboot'])
 
     def test_live_desktop_is_closed_by_owner_not_by_name(self):
         helper = load_helper()

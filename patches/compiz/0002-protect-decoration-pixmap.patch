@@ -1,0 +1,43 @@
+Description: Keep decorator pixmaps alive while creating their GLX and Damage references
+ Theme changes replace pixmaps owned by gtk-window-decorator. Without the
+ server grab, it can free a pixmap after XGetGeometry succeeds but before
+ glXCreatePixmap imports it, causing Compiz to launch its fallback manager.
+Author: Spaced Linux Developers <dev@spacedlinux.com>
+Forwarded: no
+Last-Update: 2026-10-23
+
+--- a/plugins/decoration.c
++++ b/plugins/decoration.c
+@@ -328,9 +328,16 @@
+ 
+     initTexture (screen, &texture->texture);
+ 
++    /* The decorator can replace and free its pixmap during a theme change.
++     * Keep it alive from the geometry query through the GLX and Damage
++     * references; a pixmap already retired before the grab is rejected below.
++     */
++    XGrabServer (screen->display->display);
++
+     if (!XGetGeometry (screen->display->display, pixmap, &root,
+ 		       &i, &i, &width, &height, &ui, &depth))
+     {
++	XUngrabServer (screen->display->display);
+ 	finiTexture (screen, &texture->texture);
+ 	free (texture);
+ 	return NULL;
+@@ -339,6 +346,7 @@
+     if (!bindPixmapToTexture (screen, &texture->texture, pixmap,
+ 			      width, height, depth))
+     {
++	XUngrabServer (screen->display->display);
+ 	finiTexture (screen, &texture->texture);
+ 	free (texture);
+ 	return NULL;
+@@ -349,6 +357,7 @@
+ 
+     texture->damage = XDamageCreate (screen->display->display, pixmap,
+ 				     XDamageReportRawRectangles);
++    XUngrabServer (screen->display->display);
+ 
+     texture->refCount = 1;
+     texture->pixmap   = pixmap;

@@ -434,6 +434,9 @@ PYREPORT
         echo "VirtualBox $FIRMWARE ($GRAPHICS, controller ${EFFECTIVE_GRAPHICS_CONTROLLER:-unknown}) smoke test passed: live SSH, MATE and installer check ready after ${elapsed}s"
         echo "Screenshot: $SCREENSHOT"
         echo "Installer screenshot: $INSTALLER_SCREENSHOT"
+        if [ "${SPACED_VM_THEME_TESTS:-0}" = 1 ]; then
+            bash "$PROJECT_ROOT/scripts/vm/check-live-themes.sh" "$SSH_PORT" "$ARTIFACT_DIR/themes"
+        fi
         exit 0
     fi
     if ! VBoxManage showvminfo "$VM_NAME" --machinereadable 2>/dev/null | grep -q '^VMState="running"'; then

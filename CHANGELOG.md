@@ -5,6 +5,15 @@
 Prepared for the 10.26.6 ISO and `10.26.6-1` APT packages. Includes the
 Samba network-ready fix first delivered as `10.26.5-3` (#344).
 
+- Keep Compiz running when changing themes. Protecting window-decoration
+  pixmaps during import fixes a race that could switch the session to Marco,
+  reproduced during Windows 7 theme selection in VirtualBox.
+- Restart reliably after removing the installation medium. A small resident
+  input handler survives the loss of the live filesystem and Xorg, so the
+  final key press or mouse click can still restart into the installed system.
+- Backport MATE Caja's upstream fix for moving a file between filesystems
+  after renaming it in the conflict dialog. Caja now preserves the chosen
+  name instead of asking about the original conflict again (upstream PR #1888).
 - Qt and LibreOffice applications follow the Spaced theme again. The theming
   variables in `/etc/profile.d/spaced-application-theming.sh` never reached
   the desktop because `/etc/X11/Xsession` does not read `/etc/profile.d`; a

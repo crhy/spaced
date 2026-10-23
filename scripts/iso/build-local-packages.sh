@@ -284,3 +284,4 @@ stage_meta
 "$ROOT/scripts/iso/stage-marco.sh"
 "$ROOT/scripts/iso/stage-compiz.sh"
 "$ROOT/scripts/iso/stage-xorg-server.sh"
+"$ROOT/scripts/iso/stage-caja.sh"

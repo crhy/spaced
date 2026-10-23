@@ -26,6 +26,7 @@ This record tracks the current tree; update it with the implementation.
 | Compiz silently falling back | MATE requires `spaced-window-manager`. It verifies X/GLX and starts `compiz ccp --replace`; if Compiz is unavailable, the session fails instead of silently substituting another window manager. | `overlays/usr/local/bin/spaced-window-manager` |
 | Compiz profile location | The active seeded INI profile is `~/.config/compiz/compizconfig/Default.ini`, copied from `/etc/skel`. It is not stored under `.config/compiz-1`. | `overlays/etc/skel/.config/compiz/compizconfig/` |
 | Window decorator ownership | `spaced-window-manager` starts Compiz. Compiz's decoration plugin separately runs `gtk-window-decorator --replace`. | Compiz `Default.ini` |
+| Compiz falls back to Marco during theme changes | A decorator pixmap could disappear between the geometry query and GLX import. The 10.26.6 Compiz rebuild holds an X server grab through creation of the GLX and Damage references. A diagnostic stack traced the VirtualBox failure to `decorGetTexture`. | `patches/compiz/0002-protect-decoration-pixmap.patch` |
 | Notification-area crash during theme switching | The switch helper moves and resizes the existing panel. It never runs `mate-panel --replace`, preserving the notification-area X selection. | `spaced-switch-theme` |
 | Panel color mismatch | Panel widget CSS and optional MATE toplevel background colors are documented and tested as separate channels. | theme CSS, `themes.json` `panel_color` |
 | Static preview mismatch | `preview.png` is treated as a separate artifact from live GTK CSS. Visual changes must be tested live and reflected in the static preview independently. | each theme's `preview.png` |
@@ -85,6 +86,31 @@ sudo dpkg -i build/local-packages/spaced-themes_*_all.deb \
 ```
 
 A resolution in this file should be updated when the implementation changes. Do not preserve obsolete paths or helper names merely as historical context; use Git history for superseded implementations.
+
+## 10.26.6
+
+### Installation-medium removal
+
+The KVM installation review reproduced a stalled restart after ejecting the
+ISO at the final prompt. Importing GTK/libc before removal does not make a
+process resident: Xorg and the helper can still fault on pages backed by the
+removed squashfs. The restart helper now forks before importing GTK, opens
+Linux input devices and the emergency restart handle, resolves libc reboot,
+and locks the small guard's mappings with `mlockall`. It accepts input only
+after the prompt is ready, and also handles the graphical parent's exit.
+Failure to prepare the guard restarts before asking for medium removal.
+Test by actually ejecting the ISO at the prompt, then pressing a key or
+clicking; a reboot with the ISO still attached does not cover this failure.
+Delivered in the 10.26.6 ISO and `10.26.6-1` settings package.
+
+### Caja cross-filesystem moves
+
+- Caja's move-to-copy fallback must carry the destination chosen in the
+  conflict dialog. Reconstructing it from the source basename loses a rename
+  when crossing filesystems and asks the user about the original conflict
+  again. `patches/caja/` backports merged upstream PR #1888 to 1.26.4-3;
+  stage its four matching binary packages and corresponding source together.
+  This fix is independent of SMB throughput and copy-cancellation hangs.
 
 ## 10.26.1
 

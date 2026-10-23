@@ -1,10 +1,10 @@
 #!/bin/bash
-# Stage the rebuilt Compiz packages (decorator click-area fix, issue #279) for the ISO and the APT repository.
+# Stage the rebuilt Compiz packages (decorator click areas and pixmap lifetime) for the ISO and APT.
 set -euo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 ARTIFACTS=${SPACED_COMPIZ_ARTIFACT_DIR:-$ROOT/build/compiz/artifacts}
 OUTPUT=${LOCAL_PACKAGE_OUTPUT:-$ROOT/build/local-packages}
-VERSION=2:0.8.18-9+spaced10.26.2
+VERSION=2:0.8.18-9+spaced10.26.6
 FILE_VERSION=${VERSION#*:}
 files=()
 # The binary packages depend on each other by exact version, so all of them ship together.
