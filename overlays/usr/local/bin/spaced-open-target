@@ -1,0 +1,78 @@
+#!/bin/bash
+# spaced-open-target: open a script, app or file from a keyboard shortcut (issue #351)
+# MATE custom keyboard shortcuts run one command line, so a shortcut points at this
+# helper and passes any script, app id or document as its single argument.
+# Usage: spaced-open-target <path-or-desktop-id>
+set -u
+
+target="${1:-}"
+
+if [ -z "$target" ]; then
+    printf 'Usage: spaced-open-target <path-or-desktop-id>\n' >&2
+    exit 2
+fi
+
+# gtk-launch resolves a bare id to a <id>.desktop file in the desktop-file search
+# path; "knows it" means such a file exists in one of those applications dirs.
+gtk_launch_knows() {
+    id="$1"
+    for dir in \
+        "$HOME/.local/share/applications" \
+        /usr/local/share/applications \
+        /usr/share/applications \
+        "$HOME/.local/share/flatpak/exports/share/applications" \
+        /var/lib/flatpak/exports/share/applications; do
+        [ -f "$dir/$id.desktop" ] && return 0
+    done
+    return 1
+}
+
+# A .desktop file given by path: gtk-launch by id when it lives in an applications
+# dir, otherwise gio launch on the file itself.
+case "$target" in
+    *.desktop)
+        if [ -f "$target" ]; then
+            case "$target" in
+                */applications/*) exec gtk-launch "$(basename "$target" .desktop)" ;;
+                *) exec gio launch "$target" ;;
+            esac
+        fi
+        ;;
+esac
+
+# A bare id (no path separator) that gtk-launch can resolve.
+case "$target" in
+    */*) : ;;
+    *)
+        if gtk_launch_knows "$target"; then
+            exec gtk-launch "$target"
+        fi
+        ;;
+esac
+
+# An existing executable file: run it directly.
+if [ -f "$target" ] && [ -x "$target" ]; then
+    exec "$target"
+fi
+
+# An existing non-executable script: run its shebang interpreter with the file.
+if [ -f "$target" ]; then
+    IFS= read -r first_line < "$target" || first_line=""
+    case "$first_line" in
+        \#!*)
+            read -r -a interp <<<"${first_line#\#!}"
+            exec "${interp[@]}" "$target"
+            ;;
+    esac
+fi
+
+# Any other existing file or directory: hand it to the desktop opener.
+if [ -f "$target" ] || [ -d "$target" ]; then
+    exec xdg-open "$target"
+fi
+
+# Nothing matched: report and fail.
+if command -v notify-send >/dev/null 2>&1; then
+    notify-send "Shortcut target not found" "$target"
+fi
+exit 1

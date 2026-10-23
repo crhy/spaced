@@ -1568,6 +1568,15 @@ assert "self.cleanupbtn.set_sensitive(not busy)" in update_app \
 assert not list(Path("overlays").rglob("spaced-upgrade-testing.sh")), \
     "the testing-channel bootstrap is a host script and must not stage into the ISO"
 
+open_target_path = root / "usr/local/bin/spaced-open-target"
+assert open_target_path.is_file() and open_target_path.stat().st_mode & 0o111, \
+    "keyboard-shortcut target launcher is missing or not executable (issue #351)"
+open_target = open_target_path.read_text(encoding="utf-8")
+assert "Usage: spaced-open-target" in open_target and "exit 2" in open_target, \
+    "spaced-open-target does not print usage and exit 2 with no argument (issue #351)"
+assert "Shortcut target not found" in open_target and "notify-send" in open_target, \
+    "spaced-open-target does not report a missing target (issue #351)"
+
 fastfetch_logo = (root / "usr/share/fastfetch/logos/spaced-linux.txt").read_text(encoding="utf-8")
 assert "~**+<{{{{{{{{)+~~" in fastfetch_logo, "fastfetch logo is not the current Spaced ASCII art"
 PY
