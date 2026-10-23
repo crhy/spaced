@@ -1,11 +1,11 @@
 [Desktop Entry]
 Type=X-GNOME-Metatheme
-Name=Spaced GeoWorks
+Name=GeoWorks
 Comment=GeoWorks inspired theme
 Encoding=UTF-8
 
 [X-GNOME-Metatheme]
-Name=Spaced GeoWorks
+Name=GeoWorks
 GtkTheme=Spaced-Geoworks
 MetacityTheme=Spaced-Geoworks
 IconTheme=Spaced-Icons-Geoworks

@@ -102,6 +102,41 @@ class RecommendationTests(unittest.TestCase):
                 compat.recommended_package(command)
 
 
+class LegacyVersionTests(unittest.TestCase):
+    NVIDIA_REPO = "https://developer.download.nvidia.com/compute/cuda/repos/debian13/x86_64  Packages"
+    DEVUAN_REPO = "http://deb.devuan.org/merged ceres/non-free amd64 Packages"
+
+    def madison(self, *entries):
+        return "".join(f" nvidia-driver | {version} | {repo}\n" for version, repo in entries)
+
+    def test_debian_character_order(self):
+        key = compat.debian_version_key()
+        self.assertLess(key("1.0a"), key("1.0+"))  # letters before punctuation
+        self.assertLess(key("1.0~"), key("1.0"))   # tilde before the end
+        self.assertLess(key("1.0"), key("1.0a"))
+
+    def test_nvidia_repository_line_is_ignored(self):
+        output = self.madison(("610.57.04-1", self.NVIDIA_REPO), ("550.163.01-2", self.DEVUAN_REPO))
+        self.assertEqual(compat.legacy_version(output, 580), "550.163.01-2")
+
+    def test_newer_devuan_branch_is_rejected(self):
+        output = self.madison(("590.01.01-1", self.DEVUAN_REPO), ("580.95.05-1", self.DEVUAN_REPO))
+        self.assertEqual(compat.legacy_version(output, 580), "580.95.05-1")
+
+    def test_only_nvidia_repository_lines_raises(self):
+        output = self.madison(("610.57.04-1", self.NVIDIA_REPO), ("610.11.01-1", self.NVIDIA_REPO))
+        with self.assertRaisesRegex(ValueError, "No Devuan"):
+            compat.legacy_version(output, 580)
+
+    def test_epoch_beats_higher_plain_revision(self):
+        output = self.madison(("1:580.10-1", self.DEVUAN_REPO), ("580.99-1", self.DEVUAN_REPO))
+        self.assertEqual(compat.legacy_version(output, 580), "1:580.10-1")
+
+    def test_tilde_revision_sorts_below(self):
+        ordered = sorted(["580.65.06-1", "580.65.06-1~bpo1"], key=compat.debian_version_key())
+        self.assertEqual(ordered, ["580.65.06-1~bpo1", "580.65.06-1"])
+
+
 class PostbootOpenGLTests(unittest.TestCase):
     NVIDIA = "direct rendering: Yes\nOpenGL vendor string: NVIDIA Corporation\nOpenGL renderer string: NVIDIA RTX 3070"
     INTEL = "direct rendering: Yes\nOpenGL vendor string: Intel\nOpenGL renderer string: Mesa Intel UHD"

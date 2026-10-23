@@ -1,11 +1,11 @@
 [Desktop Entry]
 Type=X-GNOME-Metatheme
-Name=Spaced Windows XP
+Name=Windows XP
 Comment=Windows XP inspired theme
 Encoding=UTF-8
 
 [X-GNOME-Metatheme]
-Name=Spaced Windows XP
+Name=Windows XP
 GtkTheme=Spaced-WinXP
 MetacityTheme=Spaced-WinXP
 IconTheme=Spaced-Icons-WinXP

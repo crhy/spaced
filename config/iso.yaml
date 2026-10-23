@@ -1,6 +1,6 @@
-# Spaced Linux 10.26.5 ISO Configuration
-iso_name: spaced-linux-10.26.5
-version: "10.26.5"
+# Spaced Linux 10.26.6 ISO Configuration
+iso_name: spaced-linux-10.26.6
+version: "10.26.6"
 arch: amd64
 
 # Package sources

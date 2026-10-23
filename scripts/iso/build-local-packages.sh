@@ -30,6 +30,7 @@ THEME_PATHS=(
 SETTINGS_PATHS=(
     etc/X11/Xsession.d/05spaced-reset-session-env
     etc/X11/Xsession.d/25spaced-flatpak-exports
+    etc/X11/Xsession.d/40spaced-application-theming
     etc/X11/xorg.conf.d/20-spaced-amdgpu.conf
     etc/apt/apt.conf.d
     etc/apt/preferences.d
@@ -73,6 +74,7 @@ SETTINGS_PATHS=(
     usr/share/applications/spaced-sharing-password.desktop
     usr/share/applications/spaced-update.desktop
     usr/share/applications/spaced-window-manager.desktop
+    usr/share/caja-python/extensions/spaced-change-theme.py
     usr/share/fastfetch/logos/spaced-linux.txt
     usr/share/flatpak/remotes.d/flathub.flatpakrepo
     usr/share/glib-2.0/schemas/90_spaced-linux.gschema.override
@@ -282,3 +284,4 @@ stage_meta
 "$ROOT/scripts/iso/stage-marco.sh"
 "$ROOT/scripts/iso/stage-compiz.sh"
 "$ROOT/scripts/iso/stage-xorg-server.sh"
+"$ROOT/scripts/iso/stage-caja.sh"

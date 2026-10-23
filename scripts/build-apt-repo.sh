@@ -90,6 +90,16 @@ for source in "$compiz_artifacts"/compiz_*.dsc "$compiz_artifacts"/compiz_*.orig
     fi
     cp "$source" "$destination"
 done
+# Publish the corresponding Caja source alongside the rebuilt binaries.
+caja_artifacts=${SPACED_CAJA_ARTIFACT_DIR:-$ROOT/build/caja/artifacts}
+for source in "$caja_artifacts"/caja_*.dsc "$caja_artifacts"/caja_*.orig.tar.* "$caja_artifacts"/caja_*.debian.tar.*; do
+    [[ -f "$source" ]] || { echo "Missing corresponding Caja source: $source" >&2; exit 1; }
+    destination="$source_dir/${source##*/}"
+    if [[ -e "$destination" ]] && ! cmp -s "$source" "$destination"; then
+        echo "Refusing to replace published source bytes: $destination" >&2; exit 1
+    fi
+    cp "$source" "$destination"
+done
 # The rebuilt X server (amdgpu ABI fix, issue #298) is a format 1.0 source.
 xorg_artifacts=${SPACED_XORG_ARTIFACT_DIR:-$ROOT/build/xorg-server/artifacts}
 for source in "$xorg_artifacts"/xorg-server_*.dsc "$xorg_artifacts"/xorg-server_*.orig.tar.* "$xorg_artifacts"/xorg-server_*.diff.gz; do

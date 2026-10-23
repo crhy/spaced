@@ -127,6 +127,52 @@ class MigrationTests(unittest.TestCase):
         migration.migrate_compiz_focus(profile)
         self.assertEqual(profile.read_text(), original)
 
+    def test_firepaint_defaults_are_added_to_an_empty_profile(self):
+        # Issue #353: an account still on Compiz's firepaint defaults gets the Spaced ones.
+        profile = self.config / 'compiz/compizconfig/Default.ini'
+        profile.parent.mkdir(parents=True)
+        profile.write_text('')
+        migration.migrate_firepaint(profile)
+        updated = migration.read_ini(profile)
+        for key, value in (('s0_fire_size', '3.000000'), ('s0_fire_color', '#ffffffff'),
+                           ('s0_fire_life', '0.800000'), ('s0_bg_brightness', '80'),
+                           ('s0_num_particles', '4000'), ('as_clear_button', '<Shift><Super>Button3')):
+            self.assertEqual(updated['firepaint'][key], value)
+
+    def test_firepaint_keeps_a_size_the_user_chose(self):
+        # Issue #353: a value the user picked is never overwritten.
+        profile = self.config / 'compiz/compizconfig/Default.ini'
+        profile.parent.mkdir(parents=True)
+        profile.write_text('[firepaint]\ns0_fire_size = 9.000000\n')
+        migration.migrate_firepaint(profile)
+        updated = migration.read_ini(profile)
+        self.assertEqual(updated['firepaint']['s0_fire_size'], '9.000000')
+        for key, value in (('s0_fire_color', '#ffffffff'), ('s0_fire_life', '0.800000'),
+                           ('s0_bg_brightness', '80'), ('s0_num_particles', '4000'),
+                           ('as_clear_button', '<Shift><Super>Button3')):
+            self.assertEqual(updated['firepaint'][key], value)
+
+    def test_firepaint_defaults_apply_once_and_never_overwrite(self):
+        # Issue #353: the firepaint defaults are gated by their own marker.
+        profile = self.config / 'compiz/compizconfig/Default.ini'
+        profile.parent.mkdir(parents=True)
+        profile.write_text('')
+        state = self.config / 'spaced'
+        state.mkdir()
+        (state / 'desktop-migration-10.26-v1').write_text('10.26\n')
+        migration.migrate(self.config)
+        updated = migration.read_ini(profile)
+        for key in ('s0_fire_size', 's0_fire_color', 's0_fire_life',
+                    's0_bg_brightness', 's0_num_particles', 'as_clear_button'):
+            self.assertIn(key, updated['firepaint'])
+        marker = state / 'desktop-migration-10.26-firepaint-v1'
+        self.assertTrue(marker.exists())
+        marker_mtime = marker.stat().st_mtime_ns
+        before = (profile.read_bytes(), profile.stat().st_mtime_ns)
+        migration.migrate(self.config)
+        self.assertEqual((profile.read_bytes(), profile.stat().st_mtime_ns), before)
+        self.assertEqual(marker.stat().st_mtime_ns, marker_mtime)
+
     def test_skel_compiz_profile_needs_no_focus_migration(self):
         skel = ROOT / 'overlays/etc/skel/.config/compiz/compizconfig/Default.ini'
         profile = self.config / 'Default.ini'

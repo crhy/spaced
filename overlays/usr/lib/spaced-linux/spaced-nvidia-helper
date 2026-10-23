@@ -20,6 +20,7 @@ CUDA_SOURCE_FILE=""
 CUDA_DISABLED_SOURCE=""
 DRIVER_PACKAGE=""
 DISTRO_NVIDIA_VERSION=""
+LEGACY_VERSION=""
 MODE=""
 DESKTOP_USER=""
 REBOOT_AFTER=0
@@ -412,10 +413,11 @@ select_driver_package() {
         fatal 24 "This GPU cannot use the available NVIDIA driver. See the PCI ID and compatibility reason above; keep the current driver."
     printf '%s\n' "$hardware_output"
     if grep -q 'legacy 580\.xx' <<<"$hardware_output"; then
-        [ -n "$DISTRO_NVIDIA_VERSION" ] && [ "$DISTRO_NVIDIA_VERSION" != "(none)" ] ||
-            fatal 24 "This GTX 10-series GPU needs NVIDIA's 580-or-older branch, but the Devuan NVIDIA package is unavailable."
-        DRIVER_PACKAGE="nvidia-driver=$DISTRO_NVIDIA_VERSION"
-        status "Selecting Devuan's Pascal-compatible NVIDIA driver $DISTRO_NVIDIA_VERSION"
+        apt-cache madison nvidia-driver > "$RUN_DIR/madison.txt"
+        LEGACY_VERSION="$(python3 /usr/lib/spaced-linux/spaced-nvidia-compat.py legacy-version "$RUN_DIR/madison.txt" --max-major 580)" ||
+            fatal 24 "No Devuan NVIDIA driver at or below the 580 branch is available for this GTX 10-series GPU; keep the current driver."
+        DRIVER_PACKAGE="nvidia-driver=$LEGACY_VERSION"
+        status "Selecting Devuan's Pascal-compatible NVIDIA driver $LEGACY_VERSION"
         disable_official_repository_for_legacy
     else
         nvidia-driver-assistant --distro "Debian:$DEBIAN_VERSION" --verbose | tee "$RUN_DIR/recommendation.txt" ||

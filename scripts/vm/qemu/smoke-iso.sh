@@ -199,6 +199,9 @@ while (( SECONDS - started < TIMEOUT )); do
             echo "$ACCEL/$FIRMWARE smoke passed after $((SECONDS - started))s"
             echo "Screenshot: $SCREENSHOT"
             echo "Runtime evidence: $RUNTIME"
+            if [ "${SPACED_VM_THEME_TESTS:-0}" = 1 ]; then
+                bash "$PROJECT_ROOT/scripts/vm/check-live-themes.sh" "$SSH_PORT" "$ARTIFACT_DIR/themes"
+            fi
             exit 0
         fi
     fi

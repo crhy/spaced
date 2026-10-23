@@ -168,6 +168,30 @@ def migrate_compiz_focus(path):
         save_ini(path, parser)
 
 
+def migrate_firepaint(path):
+    """Apply the Spaced fire-writing defaults for Compiz's firepaint plug-in (#353)."""
+    if not path.exists():
+        return
+    parser = read_ini(path)
+    if not parser.has_section("firepaint"):
+        parser.add_section("firepaint")
+    defaults = {
+        "s0_fire_size": "3.000000",
+        "s0_fire_color": "#ffffffff",
+        "s0_fire_life": "0.800000",
+        "s0_bg_brightness": "80",
+        "s0_num_particles": "4000",
+        "as_clear_button": "<Shift><Super>Button3",
+    }
+    changed = False
+    for key, value in defaults.items():
+        if key not in parser["firepaint"]:
+            parser["firepaint"][key] = value
+            changed = True
+    if changed:
+        save_ini(path, parser)
+
+
 def migrate_spelling(config):
     """Teach Enchant-aware desktop applications the project names (#333)."""
     dictionary = config / "enchant/en_US.dic"
@@ -191,6 +215,10 @@ def migrate(config):
         if not focus_marker.exists():
             migrate_compiz_focus(config / "compiz/compizconfig/Default.ini")
             atomic_write(focus_marker, "10.26\n")
+        firepaint_marker = state / "desktop-migration-10.26-firepaint-v1"
+        if not firepaint_marker.exists():
+            migrate_firepaint(config / "compiz/compizconfig/Default.ini")
+            atomic_write(firepaint_marker, "10.26\n")
         migrate_spelling(config)
         marker = state / "desktop-migration-9.26.2-v1"
         if marker.exists():

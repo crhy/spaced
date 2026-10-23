@@ -621,6 +621,9 @@ session_reset = (root / "etc/X11/Xsession.d/05spaced-reset-session-env").read_te
 assert "AT_SPI_BUS_ADDRESS" in session_reset and "var/lib/lightdm" in session_reset \
     and "xprop -root -remove AT_SPI_BUS" in session_reset, \
     "installed sessions retain LightDM's inaccessible accessibility bus"
+theming_xsession_path = root / "etc/X11/Xsession.d/40spaced-application-theming"
+assert theming_xsession_path.is_file() and ". /etc/profile.d/spaced-application-theming.sh" in theming_xsession_path.read_text(encoding="utf-8"), \
+    "X sessions never load the toolkit theming exports (issue #339)"
 lightdm_config = (root / "etc/lightdm/lightdm.conf").read_text(encoding="utf-8")
 assert "session-setup-script=/usr/local/sbin/spaced-lightdm-session-setup" in lightdm_config, \
     "LightDM does not clean up greeter helpers before starting the user session"
@@ -842,6 +845,10 @@ assert ";wobbly;" not in compiz_text and ";animation;" not in compiz_text, \
 assert ";clone;" not in compiz_text and ";expo;" not in compiz_text, \
     "Clone Output or Expo is enabled by default"
 assert "firepaint" in compiz_text, "Compiz paint-fire-on-screen plugin is not enabled"
+assert "s0_num_particles = 4000" in compiz_text, \
+    "Compiz firepaint particle count is not the Spaced default (issue #353)"
+assert "as_clear_button = <Shift><Super>Button3" in compiz_text, \
+    "Compiz firepaint clear button is not the Spaced default (issue #353)"
 assert "cube;3d;focuspoll;rotate;scale;ezoom;" in compiz_text, "Compiz desktop effects regressed"
 # Compiz 0.8 has no "focus" plug-in; 9.26.4's setting for issue #234 did nothing.
 assert "focus" not in compiz_text.split("as_active_plugins = ", 1)[1].split("\n", 1)[0].split(";") \
@@ -924,6 +931,10 @@ assert "x-scheme-handler/http=com.brave.Browser.desktop" in mimeapps \
     and "x-scheme-handler/https=com.brave.Browser.desktop" in mimeapps \
     and "text/html=com.brave.Browser.desktop" in mimeapps, \
     "web links are not defaulted to Brave (issue #35)"
+assert "application/vnd.debian.binary-package=gdebi.desktop" in mimeapps, \
+    "Debian .deb files are not defaulted to the GDebi installer"
+assert "gdebi" in packages and "gdebi-core" in packages, \
+    "the GDebi graphical installer or its gdebi-core dependency is missing from config/packages.yaml"
 skel_mimeapps = (root / "etc/skel/.config/mimeapps.list").read_text(encoding="utf-8")
 assert "x-scheme-handler/http=com.brave.Browser.desktop" in skel_mimeapps \
     and "x-scheme-handler/https=com.brave.Browser.desktop" in skel_mimeapps \
@@ -1183,6 +1194,14 @@ for surface, body_color in (("Spaced-Menu-On-Dark", "#e5e7eb"),
         trash = (icon_root / surface / "scalable/places" / trash_name).read_text(encoding="utf-8")
         assert body_color in trash and "viewBox=\"0 0 64 64\"" in trash, \
             f"{surface} {trash_name} is not a scalable high-contrast SVG"
+
+# xkill grabs the XC_pirate pointer; ship a big red X through the Spaced-Cursors
+# theme so it is visible on every desktop (issue #356).
+xkill_cursor = (icon_root / "Spaced-Cursors/cursors/pirate").read_bytes()
+assert xkill_cursor[:4] == b"Xcur", "xkill cursor is not an XCUR binary file (issue #356)"
+gschema_override = (root / "usr/share/glib-2.0/schemas/90_spaced-linux.gschema.override").read_text(encoding="utf-8")
+assert "cursor-theme='Spaced-Cursors'" in gschema_override, \
+    "the xkill cursor theme override is missing (issue #356)"
 
 assert not (root / "etc/skel/.config/cairo-dock/current_theme").exists(), \
     "Cairo-Dock current_theme must be built as a directory by the live hook"
@@ -1552,6 +1571,15 @@ assert "self.cleanupbtn.set_sensitive(not busy)" in update_app \
     "Spaced Update cleanup does not respect the busy flag (issue #217)"
 assert not list(Path("overlays").rglob("spaced-upgrade-testing.sh")), \
     "the testing-channel bootstrap is a host script and must not stage into the ISO"
+
+open_target_path = root / "usr/local/bin/spaced-open-target"
+assert open_target_path.is_file() and open_target_path.stat().st_mode & 0o111, \
+    "keyboard-shortcut target launcher is missing or not executable (issue #351)"
+open_target = open_target_path.read_text(encoding="utf-8")
+assert "Usage: spaced-open-target" in open_target and "exit 2" in open_target, \
+    "spaced-open-target does not print usage and exit 2 with no argument (issue #351)"
+assert "Shortcut target not found" in open_target and "notify-send" in open_target, \
+    "spaced-open-target does not report a missing target (issue #351)"
 
 fastfetch_logo = (root / "usr/share/fastfetch/logos/spaced-linux.txt").read_text(encoding="utf-8")
 assert "~**+<{{{{{{{{)+~~" in fastfetch_logo, "fastfetch logo is not the current Spaced ASCII art"

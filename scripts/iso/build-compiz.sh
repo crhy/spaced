@@ -11,7 +11,7 @@ OUTPUT=${2:-$ROOT/build/compiz}
 mkdir -p "$OUTPUT"
 OUTPUT=$(cd "$OUTPUT" && pwd)
 PATCHES="$ROOT/patches/compiz"
-VERSION=2:0.8.18-9+spaced10.26.2
+VERSION=2:0.8.18-9+spaced10.26.6
 for tool in curl sha256sum dpkg-source patch; do
     command -v "$tool" >/dev/null || { echo "Missing build tool: $tool" >&2; exit 1; }
 done
@@ -42,10 +42,12 @@ dpkg-source --before-build "$source_dir"
 cat > "$build_dir/changelog" <<EOF
 compiz ($VERSION) unstable; urgency=medium
 
+  * decoration: protect decorator pixmaps while creating GLX/Damage references
+    so a concurrent theme change cannot trigger the fallback window manager.
   * gtk-window-decorator: put the title-bar button click areas where the
     buttons are drawn instead of 10 px left of and below them (Spaced #279).
 
- -- Spaced Linux Developers <dev@spacedlinux.com>  Thu, 08 Oct 2026 00:00:00 +0000
+ -- Spaced Linux Developers <dev@spacedlinux.com>  Fri, 23 Oct 2026 00:00:00 +0000
 
 EOF
 cat "$source_dir/debian/changelog" >> "$build_dir/changelog"

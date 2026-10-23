@@ -8,7 +8,10 @@
 # unmounted the installed target, so an immediate reboot loses nothing.
 import ctypes
 import os
+import resource
+import select
 import signal
+import struct
 import subprocess
 import sys
 import time
@@ -17,6 +20,96 @@ MESSAGE = "Remove the installation USB medium,\nthen press any key to restart."
 
 LIBC = ctypes.CDLL(None, use_errno=True)
 LINUX_REBOOT_CMD_RESTART = 0x01234567
+
+
+def input_pressed(data):
+    """Linux input_event records: ignore pointer motion and key releases."""
+    event = struct.Struct('llHHi')
+    return any(kind == 1 and value == 1
+               for _sec, _usec, kind, _code, value in event.iter_unpack(data))
+
+
+def resident_restart_guard(control, ready):
+    """Keep a small input/reboot process in RAM, independent of Xorg.
+
+    Importing GTK does not make the live medium safe to remove: the dynamic
+    loader can still page in code, and Xorg can die on the first input event.
+    Fork before importing GTK, open input devices, and lock these mappings.
+    """
+    inputs = []
+    for name in os.listdir('/dev/input'):
+        if name.startswith('event'):
+            inputs.append(os.open('/dev/input/' + name, os.O_RDONLY | os.O_NONBLOCK))
+    if not inputs:
+        raise RuntimeError('No restart input devices')
+    poller = select.poll()
+    for fd in [control, *inputs]:
+        poller.register(fd, select.POLLIN)
+    # Resolve the libc symbol while the medium is still present.
+    restart = LIBC.reboot
+    restart.argtypes = [ctypes.c_int]
+    restart.restype = ctypes.c_int
+    emergency = os.open('/proc/sysrq-trigger', os.O_WRONLY)
+    resource.setrlimit(resource.RLIMIT_MEMLOCK, (resource.RLIM_INFINITY, resource.RLIM_INFINITY))
+    if LIBC.mlockall(1 | 2) != 0:  # MCL_CURRENT | MCL_FUTURE
+        raise OSError(ctypes.get_errno(), 'Cannot keep restart guard in RAM')
+    os.write(ready, b'1')
+    os.close(ready)
+    armed = False
+    while True:
+        for fd, flags in poller.poll():
+            if fd == control:
+                command = os.read(fd, 16)
+                if b'r' in command or not command:
+                    os.sync()
+                    restart(LINUX_REBOOT_CMD_RESTART)
+                    os.write(emergency, b'b')
+                    return
+                if b'a' in command:
+                    # Discard input from the original Finish click.
+                    for device in inputs:
+                        try:
+                            while os.read(device, 4096):
+                                pass
+                        except BlockingIOError:
+                            pass
+                    armed = True
+            elif flags & select.POLLIN:
+                try:
+                    data = os.read(fd, struct.calcsize('llHHi') * 64)
+                except BlockingIOError:
+                    continue
+                if armed and input_pressed(data):
+                    os.sync()
+                    restart(LINUX_REBOOT_CMD_RESTART)
+                    os.write(emergency, b'b')
+                    return
+            else:
+                poller.unregister(fd)
+
+
+def start_restart_guard():
+    control_read, control_write = os.pipe()
+    ready_read, ready_write = os.pipe()
+    child = os.fork()
+    if child == 0:
+        os.close(control_write)
+        os.close(ready_read)
+        try:
+            resident_restart_guard(control_read, ready_write)
+        finally:
+            os._exit(1)
+    os.close(control_read)
+    os.close(ready_write)
+    readable, _, _ = select.select([ready_read], [], [], 10)
+    ready = os.read(ready_read, 1) if readable else b''
+    os.close(ready_read)
+    if ready != b'1':
+        os.close(control_write)
+        signal_all([child], signal.SIGKILL)
+        os.waitpid(child, 0)
+        raise RuntimeError('Restart guard unavailable; rebooting before medium removal')
+    return control_write
 
 
 def reboot():
@@ -93,7 +186,7 @@ def close_live_desktop():
     signal_all(victims, signal.SIGKILL)
 
 
-def show_prompt(on_restart):
+def show_prompt(on_restart, on_ready=None):
     # The session bus died with the desktop; do not wait on accessibility.
     os.environ["NO_AT_BRIDGE"] = "1"
     import gi
@@ -151,6 +244,8 @@ def show_prompt(on_restart):
         gdk_window.focus(Gdk.CURRENT_TIME)
         status = display.get_default_seat().grab(
             gdk_window, Gdk.SeatCapabilities.ALL, True, None, None, None)
+        if status == Gdk.GrabStatus.SUCCESS and on_ready:
+            on_ready()
         return status != Gdk.GrabStatus.SUCCESS
 
     GLib.timeout_add(200, grab)
@@ -158,9 +253,10 @@ def show_prompt(on_restart):
 
 
 def main():
-    close_live_desktop()
     try:
-        show_prompt(reboot)
+        guard = start_restart_guard()
+        close_live_desktop()
+        show_prompt(lambda: os.write(guard, b'r'), lambda: os.write(guard, b'a'))
     except Exception as error:  # Any failure must still restart the machine.
         print(f"spaced-reboot-after-install: {error}", file=sys.stderr)
     reboot()

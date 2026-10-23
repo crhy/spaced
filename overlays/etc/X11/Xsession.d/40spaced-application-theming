@@ -1,0 +1,6 @@
+# /etc/X11/Xsession never reads /etc/profile.d, so the toolkit theming exports
+# would be absent from the running desktop and Qt apps (VLC) and LibreOffice
+# would ignore the Spaced theme (issue #339).
+if [ -r /etc/profile.d/spaced-application-theming.sh ]; then
+    . /etc/profile.d/spaced-application-theming.sh
+fi

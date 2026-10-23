@@ -1,5 +1,5 @@
 #!/bin/bash
-# Isolate the Marco and nm-applet focus module build dependencies from the
+# Isolate the desktop backport and nm-applet focus module build dependencies from the
 # developer's operating system.
 set -euo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
@@ -67,7 +67,14 @@ if ! "$ROOT/scripts/iso/stage-xorg-server.sh" --check 2>/dev/null; then
     chroot "$CHROOT" /usr/bin/env DEB_BUILD_OPTIONS=parallel=4 \
         bash /workspace/scripts/iso/build-xorg-server.sh --build /workspace/build/xorg-server
 fi
+# Caja's upstream fix preserves a renamed destination in cross-filesystem moves.
+if ! "$ROOT/scripts/iso/stage-caja.sh" --check 2>/dev/null; then
+    chroot "$CHROOT" /usr/bin/env DEBIAN_FRONTEND=noninteractive \
+        apt-get build-dep -y --no-install-recommends caja
+    chroot "$CHROOT" /usr/bin/env DEB_BUILD_OPTIONS=parallel=2 \
+        bash /workspace/scripts/iso/build-caja.sh --build /workspace/build/caja
+fi
 if [ -n "${PKEXEC_UID:-}" ]; then
     chown -R "$PKEXEC_UID" "$ROOT/build/marco/artifacts" "$ROOT/build/nm-focus" "$ROOT/build/compiz" \
-        "$ROOT/build/xorg-server"
+        "$ROOT/build/xorg-server" "$ROOT/build/caja"
 fi

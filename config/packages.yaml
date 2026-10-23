@@ -1,6 +1,7 @@
 desktop:
   - caja
   - caja-admin
+  - python3-caja
   - gvfs-backends
   - usbmuxd
   - mate-control-center
@@ -71,6 +72,7 @@ file_managers:
   - caja-open-terminal
 applications:
   - eom
+  - gdebi
   - gdebi-core
   - gparted
   - pluma

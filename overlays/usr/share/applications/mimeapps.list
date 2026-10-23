@@ -45,6 +45,7 @@ image/jpeg2000=eom.desktop
 image/jpx=eom.desktop
 image/x-icns=eom.desktop
 image/vnd.wap.wbmp=eom.desktop
+application/vnd.debian.binary-package=gdebi.desktop;
 
 [Added Associations]
 text/plain=pluma.desktop;
@@ -58,3 +59,4 @@ text/x-perl=pluma.desktop;
 application/x-perl=pluma.desktop;
 x-scheme-handler/magnet=spaced-suggest-qbittorrent.desktop;
 application/x-bittorrent=spaced-suggest-qbittorrent.desktop;
+application/vnd.debian.binary-package=gdebi.desktop;
