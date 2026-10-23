@@ -74,6 +74,7 @@ SETTINGS_PATHS=(
     usr/share/applications/spaced-sharing-password.desktop
     usr/share/applications/spaced-update.desktop
     usr/share/applications/spaced-window-manager.desktop
+    usr/share/caja-python/extensions/spaced-change-theme.py
     usr/share/fastfetch/logos/spaced-linux.txt
     usr/share/flatpak/remotes.d/flathub.flatpakrepo
     usr/share/glib-2.0/schemas/90_spaced-linux.gschema.override

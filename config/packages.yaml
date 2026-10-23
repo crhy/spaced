@@ -1,6 +1,7 @@
 desktop:
   - caja
   - caja-admin
+  - python3-caja
   - gvfs-backends
   - usbmuxd
   - mate-control-center
