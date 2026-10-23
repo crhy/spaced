@@ -1,11 +1,11 @@
 [Desktop Entry]
 Type=X-GNOME-Metatheme
-Name=Spaced Mac OS X
+Name=Mac OS X
 Comment=Mac OS X inspired theme
 Encoding=UTF-8
 
 [X-GNOME-Metatheme]
-Name=Spaced Mac OS X
+Name=Mac OS X
 GtkTheme=Spaced-MacOS
 MetacityTheme=Spaced-MacOS
 IconTheme=Spaced-Icons-MacOS

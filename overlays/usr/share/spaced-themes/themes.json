@@ -58,7 +58,7 @@
     },
     {
       "id": "win7",
-      "name": "Windows 7 Aero",
+      "name": "Windows 7 Light",
       "gtk_theme": "Spaced-Win7",
       "wallpaper": "/usr/share/backgrounds/spaced/win7.jpg",
       "panel_layout": "spaced-win7",
@@ -72,7 +72,7 @@
     },
     {
       "id": "win7-aero-dark",
-      "name": "Spaced Win7Aero Dark",
+      "name": "Windows 7 Dark",
       "gtk_theme": "Spaced-Win7Aero-Dark",
       "wallpaper": "/usr/share/backgrounds/spaced/win7aero-dark.jpg",
       "panel_layout": "spaced-win7",

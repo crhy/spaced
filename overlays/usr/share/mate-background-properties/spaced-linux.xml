@@ -50,7 +50,7 @@
     <shade_type>solid</shade_type>
   </wallpaper>
   <wallpaper deleted="false">
-    <name>Spaced Linux Mint</name>
+    <name>Linux Mint</name>
     <filename>/usr/share/backgrounds/spaced/linuxmint.jpg</filename>
     <options>zoom</options>
     <pcolor>#1d1d1d</pcolor>
@@ -66,7 +66,7 @@
     <shade_type>solid</shade_type>
   </wallpaper>
   <wallpaper deleted="false">
-    <name>Spaced Windows 3.11</name>
+    <name>Windows 3.11</name>
     <filename>/usr/share/backgrounds/spaced/win311.jpg</filename>
     <options>zoom</options>
     <pcolor>#808080</pcolor>
@@ -74,7 +74,7 @@
     <shade_type>solid</shade_type>
   </wallpaper>
   <wallpaper deleted="false">
-    <name>Spaced Windows XP</name>
+    <name>Windows XP</name>
     <filename>/usr/share/backgrounds/spaced/winxp.jpg</filename>
     <options>zoom</options>
     <pcolor>#235edc</pcolor>
@@ -90,7 +90,7 @@
     <shade_type>solid</shade_type>
   </wallpaper>
   <wallpaper deleted="false">
-    <name>Spaced Win7Aero Dark</name>
+    <name>Windows 7 Dark</name>
     <filename>/usr/share/backgrounds/spaced/win7aero-dark.jpg</filename>
     <options>zoom</options>
     <pcolor>#101a27</pcolor>
@@ -98,7 +98,7 @@
     <shade_type>solid</shade_type>
   </wallpaper>
   <wallpaper deleted="false">
-    <name>Spaced Ubuntu</name>
+    <name>Ubuntu</name>
     <filename>/usr/share/backgrounds/spaced/ubuntu.jpg</filename>
     <options>zoom</options>
     <pcolor>#2c2528</pcolor>
@@ -106,7 +106,7 @@
     <shade_type>solid</shade_type>
   </wallpaper>
   <wallpaper deleted="false">
-    <name>Spaced Windows 11 Light</name>
+    <name>Windows 11 Light</name>
     <filename>/usr/share/backgrounds/spaced/win11light.jpg</filename>
     <options>zoom</options>
     <pcolor>#f3f3f3</pcolor>
@@ -114,7 +114,7 @@
     <shade_type>solid</shade_type>
   </wallpaper>
   <wallpaper deleted="false">
-    <name>Spaced Windows 11 Dark</name>
+    <name>Windows 11 Dark</name>
     <filename>/usr/share/backgrounds/spaced/win11dark.jpg</filename>
     <options>zoom</options>
     <pcolor>#0d1430</pcolor>
@@ -130,7 +130,7 @@
     <shade_type>solid</shade_type>
   </wallpaper>
   <wallpaper deleted="false">
-    <name>Spaced Android</name>
+    <name>Android</name>
     <filename>/usr/share/backgrounds/spaced/android.jpg</filename>
     <options>zoom</options>
     <pcolor>#303030</pcolor>
