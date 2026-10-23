@@ -23,7 +23,8 @@ Samba network-ready fix first delivered as `10.26.5-3` (#344).
 - Simpler theme names everywhere they are shown: Windows 7 Light, Windows 7
   Dark, Windows XP, Windows 11 Light and Dark, Mac OS X, Ubuntu, Linux Mint,
   GeoWorks, Android and more. Theme IDs are unchanged, so existing settings
-  keep working (#347).
+  keep working (#347). The renamed background catalog ships in
+  `spaced-wallpapers 2026.10-2`, required by the matching APT packages.
 - xkill now shows a big red X with white highlights and a black shadow
   instead of X11's tiny fallback glyph, through a new `Spaced-Cursors` theme
   built on Adwaita (#356).
