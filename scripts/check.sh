@@ -931,6 +931,10 @@ assert "x-scheme-handler/http=com.brave.Browser.desktop" in mimeapps \
     and "x-scheme-handler/https=com.brave.Browser.desktop" in mimeapps \
     and "text/html=com.brave.Browser.desktop" in mimeapps, \
     "web links are not defaulted to Brave (issue #35)"
+assert "application/vnd.debian.binary-package=gdebi.desktop" in mimeapps, \
+    "Debian .deb files are not defaulted to the GDebi installer"
+assert "gdebi" in packages and "gdebi-core" in packages, \
+    "the GDebi graphical installer or its gdebi-core dependency is missing from config/packages.yaml"
 skel_mimeapps = (root / "etc/skel/.config/mimeapps.list").read_text(encoding="utf-8")
 assert "x-scheme-handler/http=com.brave.Browser.desktop" in skel_mimeapps \
     and "x-scheme-handler/https=com.brave.Browser.desktop" in skel_mimeapps \

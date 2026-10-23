@@ -72,6 +72,7 @@ file_managers:
   - caja-open-terminal
 applications:
   - eom
+  - gdebi
   - gdebi-core
   - gparted
   - pluma
