@@ -27,6 +27,9 @@ This record tracks the current tree; update it with the implementation.
 | Compiz profile location | The active seeded INI profile is `~/.config/compiz/compizconfig/Default.ini`, copied from `/etc/skel`. It is not stored under `.config/compiz-1`. | `overlays/etc/skel/.config/compiz/compizconfig/` |
 | Window decorator ownership | Compiz's decoration plugin and XDG autostart use `spaced-window-decorator`, whose per-display lock permits one supervisor of `gtk-window-decorator --replace`. Children close lock descriptor 9; nonzero exits retry with bounded backoff while X is alive. | Compiz `Default.ini`, `overlays/usr/local/bin/spaced-window-decorator` |
 | Compiz falls back to Marco during theme changes | A decorator pixmap could disappear between the geometry query and GLX import. The 10.26.6 Compiz rebuild holds an X server grab through creation of the GLX and Damage references. A diagnostic stack traced the VirtualBox failure to `decorGetTexture`. | `patches/compiz/0002-protect-decoration-pixmap.patch` |
+| Package scripts lose stdout during Spaced Update | APT's status protocol must never share fd 1 with `dpkg` maintainer scripts: APT closes its status fd before starting `dpkg`, which made DKMS and other scripts fail with `Bad file descriptor`. Spaced Update reserves fd 3 for status records and leaves stdout intact. | `spaced-update-helper`, `tests/test_update_issue_277.py` |
+| Desktop migration resets a user preference | Login migrations may repair invalid or obsolete values, but must not write an ordinary preference on every login. Caja's **Show Hidden Files** remains false for a new profile through the schema default; existing users keep their choice. | `spaced-first-login-repair`, schema default, `scripts/check.sh` |
+| Driver manager replaces a working NVIDIA stack | A loaded NVIDIA module plus a successful `nvidia-smi -L` is treated as a working installation, including legacy, Tesla and `.run` installations. Replacement is opt-in through a separate, strongly confirmed action. | `spaced-nvidia-helper`, `spaced-nvidia-installer.py` |
 | Notification-area crash during theme switching | The switch helper moves and resizes the existing panel. It never runs `mate-panel --replace`, preserving the notification-area X selection. | `spaced-switch-theme` |
 | Panel color mismatch | Panel widget CSS and optional MATE toplevel background colors are documented and tested as separate channels. | theme CSS, `themes.json` `panel_color` |
 | Static preview mismatch | `preview.png` is treated as a separate artifact from live GTK CSS. Visual changes must be tested live and reflected in the static preview independently. | each theme's `preview.png` |
@@ -86,6 +89,31 @@ sudo dpkg -i build/local-packages/spaced-themes_*_all.deb \
 ```
 
 A resolution in this file should be updated when the implementation changes. Do not preserve obsolete paths or helper names merely as historical context; use Git history for superseded implementations.
+
+## 10.26.7
+
+The 10.26.7 work follows three preservation rules: updater progress gets its
+own descriptor rather than borrowing a maintainer-script stream; migrations
+fill only vacant Compiz command slots and do not reset user choices; and a
+working NVIDIA stack is retained unless replacement is explicitly requested.
+The new Compiz screenshot patch is recorded under `patches/compiz/` and must
+be validated in the source build environment before the ISO is published.
+
+### Application launchers and shortcuts
+
+- Brisk's four Spaced context actions pass a desktop-file path as an argv
+  element to `spaced-app-action`; never interpolate launcher content into a
+  shell command. Flatpak and Debian package operations remain separate, and
+  icon changes create a per-user desktop override rather than modifying a
+  package-owned file (issue #354).
+- MATE's application chooser must retain desktop-entry launch semantics with
+  `gtk-launch <desktop-id>`. The separate file chooser uses
+  `spaced-open-target` so executable scripts, shebang scripts and documents
+  all follow the same tested dispatch path (issue #351).
+- The custom MATE menu layout must name `alacarte.desktop`, because Alacarte is
+  the editor installed by both the ISO package list and the desktop-settings
+  package. The desktop migration replaces the old `menulibre.desktop` slot;
+  do not add a second menu editor just to satisfy that stale launcher (#372).
 
 ## 10.26.6
 

@@ -5,14 +5,6 @@ if [ -f /usr/lib/spaced-linux/migrate-desktop.py ]; then
 fi
 # Run new migrations even when the older panel repair already completed.
 /usr/local/bin/spaced-flatpak-theme-migration 2>/dev/null || true
-hidden_marker="$HOME/.config/spaced/hidden-files-10.26.1"
-if [ ! -e "$hidden_marker" ] && command -v gsettings >/dev/null 2>&1 \
-    && gsettings list-schemas 2>/dev/null | grep -qx org.mate.caja.preferences; then
-  if gsettings set org.mate.caja.preferences show-hidden-files false; then
-    mkdir -p "$(dirname "$hidden_marker")"
-    touch "$hidden_marker"
-  fi
-fi
 marker="$HOME/.config/spaced/first-login-repair-v5"
 [ -e "$marker" ] && exit 0
 mkdir -p "$(dirname "$marker")"

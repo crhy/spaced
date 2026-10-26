@@ -44,7 +44,13 @@ for path in ('usr/local/bin/install-spaced-linux', 'usr/local/bin/spaced-live-se
     assert not (wallpapers / path).exists(), f'Live-only entrypoint delivered by upgrade: {path}'
 for path in ('usr/lib/spaced-linux/spaced-update.py', 'usr/lib/spaced-linux/spaced-update-helper',
              'usr/lib/spaced-linux/spaced-update-apt-guard', 'usr/lib/spaced-linux/spaced-update-refresh',
+             'usr/lib/spaced-linux/migrate-desktop.py',
+             'usr/lib/spaced-linux/spaced-nvidia-helper',
+             'usr/lib/spaced-linux/spaced-nvidia-installer.py',
              'usr/local/bin/gnome-software', 'usr/local/bin/spaced-suggest-app',
+             'usr/local/bin/spaced-app-action',
+             'usr/local/bin/spaced-hotkey-action',
+             'usr/local/bin/spaced-first-login-repair',
              'usr/share/keyrings/spaced-archive-keyring.gpg', 'etc/apt/sources.list.d/spaced-apt.list',
              'etc/lightdm/lightdm.conf.d/60-spaced-installed.conf',
              'etc/X11/xorg.conf.d/20-spaced-amdgpu.conf', 'usr/local/bin/spaced-graphics-report',

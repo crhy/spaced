@@ -1,0 +1,155 @@
+From: Spaced Linux Developers <dev@spacedlinux.com>
+Subject: screenshot: use date and time in output filenames
+
+Numbered filenames restart at screenshot1.png whenever the Desktop is empty.
+That makes captures ambiguous after they are moved and makes a later capture
+easy to confuse with, or overwrite onto, an earlier one.  Use a sortable local
+timestamp and retain a numeric suffix only for multiple captures in one second.
+
+--- a/plugins/screenshot.c
++++ b/plugins/screenshot.c
+@@ -28,5 +28,6 @@
+ #include <stdlib.h>
+ #include <string.h>
+-#include <dirent.h>
++#include <time.h>
++#include <unistd.h>
+ 
+ #include <compiz-core.h>
+@@ -159,38 +160,6 @@ shotTerminate (CompDisplay     *d,
+     return FALSE;
+ }
+ 
+-static int
+-shotFilter (const struct dirent *d)
+-{
+-    int number;
+-
+-    if (sscanf (d->d_name, "screenshot%d.png", &number))
+-    {
+-	int nDigits = 0;
+-
+-	for (; number > 0; number /= 10)
+-	    nDigits++;
+-
+-	/* make sure there are no trailing characters in the name */
+-	if (strlen (d->d_name) == 14 + nDigits)
+-	    return 1;
+-    }
+-    return 0;
+-}
+-
+-static int
+-shotSort (const struct dirent **a,
+-	  const struct dirent **b)
+-{
+-    int		  al = strlen ((*a)->d_name);
+-    int		  bl = strlen ((*b)->d_name);
+-
+-    if (al == bl)
+-	return strcoll ((*a)->d_name, (*b)->d_name);
+-    else
+-	return al - bl;
+-}
+-
+ static char *
+ shotGetXDGDesktopDir (void)
+ {
+@@ -291,6 +260,48 @@ shotGetXDGDesktopDir (void)
+     return NULL;
+ }
+ 
++static Bool
++shotGetFilename (const char *dir,
++		 char       *name,
++		 size_t     length)
++{
++    time_t    now;
++    struct tm local;
++    char      timestamp[32];
++    int       suffix;
++
++    now = time (NULL);
++    if (now == (time_t) -1 || !localtime_r (&now, &local) ||
++	!strftime (timestamp, sizeof (timestamp), "%Y-%m-%d_%H-%M-%S", &local))
++	return FALSE;
++
++    for (suffix = 1; suffix < 10000; suffix++)
++    {
++	char *path = NULL;
++	int  printed;
++
++	if (suffix == 1)
++	    printed = snprintf (name, length, "screenshot-%s.png", timestamp);
++	else
++	    printed = snprintf (name, length, "screenshot-%s-%d.png",
++				timestamp, suffix);
++	if (printed < 0 || (size_t) printed >= length)
++	    return FALSE;
++
++	printed = asprintf (&path, "%s/%s", dir, name);
++	if (printed < 0)
++	    return FALSE;
++	if (access (path, F_OK) != 0)
++	{
++	    free (path);
++	    return TRUE;
++	}
++	free (path);
++    }
++
++    return FALSE;
++}
++
+ static void
+ shotPaintScreen (CompScreen   *s,
+ 		 CompOutput   *outputs,
+@@ -338,32 +349,16 @@ shotPaintScreen (CompScreen   *s,
+ 		buffer = malloc (sizeof (GLubyte) * w * h * 4);
+ 		if (buffer)
+ 		{
+-		    struct dirent **namelist;
+-		    int		  n;
+-
+ 		    glReadPixels (x1, s->height - y2, w, h,
+ 				  GL_RGBA, GL_UNSIGNED_BYTE,
+ 				  (GLvoid *) buffer);
+ 
+-		    n = scandir (dir, &namelist, shotFilter, shotSort);
+-		    if (n >= 0)
++		    {
++			char name[256];
++			char *app;
++
++			if (shotGetFilename (dir, name, sizeof (name)))
+ 		    {
+-			char name[256];
+-			char *app;
+-			int  number = 0;
+-
+-			if (n > 0)
+-			    sscanf (namelist[n - 1]->d_name,
+-				    "screenshot%d.png",
+-				    &number);
+-
+-			number++;
+-
+-			if (n)
+-			    free (namelist);
+-
+-			sprintf (name, "screenshot%d.png", number);
+-
+ 			app = sd->opt[SHOT_DISPLAY_OPTION_LAUNCH_APP].value.s;
+ 
+ 			if (!writeImageToFile (s->display, dir, name, "png",
+@@ -391,7 +386,9 @@ shotPaintScreen (CompScreen   *s,
+ 		    }
+ 		    else
+ 		    {
+-			perror (dir);
++			compLogMessage ("screenshot", CompLogLevelError,
++					"failed to create timestamped screenshot filename");
++		    }
+ 		    }
+ 
+ 		    free (buffer);

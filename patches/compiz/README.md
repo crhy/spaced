@@ -6,10 +6,12 @@ verification matrix and recommendation to submit these as independent
 upstream fixes after rebasing and validation. Both patches remain downstream;
 this documentation does not claim an upstream submission.
 
-Spaced 10.26.6 rebuilds Debian/Ceres `compiz 2:0.8.18-9` as
-`2:0.8.18-9+spaced10.26.6`. It retains the title-bar button fix first
+Spaced 10.26.7 rebuilds Debian/Ceres `compiz 2:0.8.18-9` as
+`2:0.8.18-9+spaced10.26.7`. It retains the title-bar button fix first
 shipped in 10.26.2 (issue [#279](https://github.com/crhy/spaced/issues/279))
-and protects decoration pixmaps during theme changes.
+and protects decoration pixmaps during theme changes. It also gives Compiz
+screenshots sortable date-and-time filenames (issue
+[#362](https://github.com/crhy/spaced/issues/362)).
 
 With a Marco theme the decorator "compensated" for Marco's invisible resize
 border by moving the click area of every right-hand title-bar button left by
@@ -26,6 +28,10 @@ decorator can free the pixmap between those requests, making
 that failure from `decorGetTexture` during a Windows 7 theme switch in
 VirtualBox. Release testing exercises all 13 themes repeatedly. Remove this
 patch when upstream provides equivalent protection for this lifetime race.
+
+The third patch replaces Compiz's directory-dependent `screenshot1.png`
+sequence with `screenshot-YYYY-MM-DD_HH-MM-SS.png`; captures made in the same
+second receive `-2`, `-3`, and so on instead of replacing an existing file.
 
 Source archives and Debian packaging come from
 `https://mirror.hootsoftware.com/devuan/merged/pool/DEBIAN/main/c/compiz/`;

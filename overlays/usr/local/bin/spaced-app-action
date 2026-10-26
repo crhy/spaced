@@ -1,0 +1,133 @@
+#!/bin/bash
+# Application actions used by the Spaced Brisk Menu context menu (issue #354).
+set -u
+
+action=${1:-}
+desktop_file=${2:-}
+
+show_error() {
+    zenity --error --title="Application action" --no-markup --text="$1" 2>/dev/null || true
+}
+
+if [[ ! -f $desktop_file || $desktop_file != *.desktop ]]; then
+    show_error "The selected application launcher is no longer available."
+    exit 1
+fi
+
+desktop_file=$(readlink -f -- "$desktop_file")
+desktop_id=$(basename "$desktop_file" .desktop)
+name=$(sed -n 's/^Name=//p' "$desktop_file" | head -n 1)
+command_line=$(sed -n 's/^Exec=//p' "$desktop_file" | head -n 1)
+flatpak_id=$(sed -n 's/^X-Flatpak=//p' "$desktop_file" | head -n 1)
+[[ -n $name ]] || name=$desktop_id
+
+flatpak_scope=
+if [[ -n $flatpak_id ]]; then
+    if flatpak info --user "$flatpak_id" >/dev/null 2>&1; then
+        flatpak_scope=--user
+    elif flatpak info --system "$flatpak_id" >/dev/null 2>&1; then
+        flatpak_scope=--system
+    fi
+fi
+
+native_package=
+if [[ -z $flatpak_scope ]]; then
+    owner=$(dpkg-query -S "$desktop_file" 2>/dev/null | head -n 1 || true)
+    native_package=${owner%%:*}
+fi
+
+case "$action" in
+    properties)
+        kind="Desktop launcher"
+        [[ -z $flatpak_scope ]] || kind="Flatpak ($flatpak_id, ${flatpak_scope#--})"
+        [[ -z $native_package ]] || kind="Debian package ($native_package)"
+        zenity --info --title="$name — Properties" --no-markup \
+            --text="Name: $name
+Type: $kind
+Command: ${command_line:-Not declared}
+Launcher: $desktop_file" 2>/dev/null
+        ;;
+
+    uninstall)
+        if [[ -n $flatpak_scope ]]; then
+            zenity --question --title="Uninstall $name?" --no-markup \
+                --text="Remove $name and its application data?" 2>/dev/null || exit 0
+            exec flatpak uninstall "$flatpak_scope" --noninteractive --delete-data -- "$flatpak_id"
+        fi
+        if [[ -n $native_package ]]; then
+            zenity --question --title="Uninstall $name?" --no-markup \
+                --text="Remove Debian package $native_package? Other software may depend on it." \
+                2>/dev/null || exit 0
+            exec pkexec env DEBIAN_FRONTEND=noninteractive apt-get remove -y -- "$native_package"
+        fi
+        show_error "$name is not owned by an installed Flatpak or Debian package."
+        exit 1
+        ;;
+
+    check-updates)
+        update_available=false
+        if [[ -n $flatpak_scope ]]; then
+            if flatpak remote-ls "$flatpak_scope" --updates --columns=application 2>/dev/null |
+                    grep -Fxq "$flatpak_id"; then
+                update_available=true
+            fi
+        elif [[ -n $native_package ]]; then
+            if apt list --upgradable 2>/dev/null |
+                    awk -F/ -v package="$native_package" '$1 == package { found=1 } END { exit !found }'; then
+                update_available=true
+            fi
+        else
+            show_error "Updates cannot be checked because $name has no installed package owner."
+            exit 1
+        fi
+
+        if $update_available; then
+            zenity --question --title="Update available" --ok-label="Open Spaced Update" \
+                --cancel-label="Not now" --no-markup \
+                --text="An update is available for $name." 2>/dev/null || exit 0
+            exec spaced-update
+        fi
+        zenity --info --title="No update found" --no-markup \
+            --text="$name is up to date in the currently refreshed package data." 2>/dev/null
+        ;;
+
+    change-icon)
+        image=$(zenity --file-selection --title="Choose an icon for $name" \
+            --file-filter="Images | *.png *.svg *.xpm *.jpg *.jpeg *.webp" 2>/dev/null) || exit 0
+        [[ -f $image ]] || { show_error "The selected icon is not a file."; exit 1; }
+        extension=${image##*.}
+        extension=${extension,,}
+        case "$extension" in
+            png|svg|xpm|jpg|jpeg|webp) ;;
+            *) show_error "Choose a PNG, SVG, XPM, JPEG, or WebP image."; exit 1 ;;
+        esac
+
+        icon_dir="$HOME/.local/share/icons/spaced-custom"
+        applications="$HOME/.local/share/applications"
+        icon_file="$icon_dir/$desktop_id.$extension"
+        override="$applications/$desktop_id.desktop"
+        mkdir -p "$icon_dir" "$applications"
+        install -m 0644 -- "$image" "$icon_file"
+        temporary=$(mktemp "$applications/.${desktop_id}.XXXXXX")
+        trap 'rm -f -- "$temporary"' EXIT
+        awk -v icon="$icon_file" '
+            $0 == "[Desktop Entry]" { print; main=1; next }
+            main && /^\[/ { if (!written) print "Icon=" icon; main=0 }
+            main && /^Icon=/ { if (!written) print "Icon=" icon; written=1; next }
+            { print }
+            END { if (main && !written) print "Icon=" icon }
+        ' "$desktop_file" > "$temporary"
+        chmod 0644 "$temporary"
+        mv -- "$temporary" "$override"
+        trap - EXIT
+        command -v update-desktop-database >/dev/null 2>&1 && \
+            update-desktop-database "$applications" >/dev/null 2>&1 || true
+        zenity --info --title="Icon changed" --no-markup \
+            --text="$name now uses the selected icon. The menu may take a moment to refresh." 2>/dev/null
+        ;;
+
+    *)
+        printf 'Usage: %s {properties|uninstall|check-updates|change-icon} DESKTOP_FILE\n' "$0" >&2
+        exit 2
+        ;;
+esac
