@@ -3,7 +3,7 @@ Subject: Let custom shortcuts target applications and files reliably
 
 --- a/capplets/keybindings/mate-keybinding-properties.c
 +++ b/capplets/keybindings/mate-keybinding-properties.c
-@@ -1846,12 +1846,27 @@
+@@ -1846,12 +1846,32 @@
    if (response_id == GTK_RESPONSE_OK)
      {
        GAppInfo *info;
@@ -23,13 +23,18 @@ Subject: Let custom shortcuts target applications and files reliably
 +        }
 +      app_id = g_app_info_get_id (info);
 +
-+      if (app_id != NULL)
++      if (app_id != NULL && app_id[0] != '\0')
 +        {
 +          quoted_id = g_shell_quote (app_id);
 +          command = g_strdup_printf ("gtk-launch %s", quoted_id);
 +          gtk_entry_set_text (GTK_ENTRY (custom_shortcut_command_entry), command);
 +          g_free (command);
 +          g_free (quoted_id);
++        }
++      else
++        {
++          gtk_entry_set_text (GTK_ENTRY (custom_shortcut_command_entry),
++                              g_app_info_get_executable (info));
 +        }
        /* if name isn't set yet, use the associated one */
        custom_name = gtk_entry_get_text (GTK_ENTRY (custom_shortcut_name_entry));
