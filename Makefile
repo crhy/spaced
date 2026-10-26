@@ -33,6 +33,7 @@ ROOT_RUN ?= $(shell command -v flatpak-spawn >/dev/null 2>&1 && printf 'flatpak-
 VM_SSH_PORT ?= 2222
 VBOX_SSH_PORT ?= 2223
 ISO_SMOKE_TIMEOUT ?= 240
+SPACED_VM_THEME_TESTS ?= 0
 # live-build always adds -comp xz. 1 MiB blocks and the x86 BCJ filter make
 # the 10.26.5 root filesystem 131 MB (8.4%) smaller; see docs/10.26.6-IMAGE-SIZE.md.
 MKSQUASHFS_OPTIONS ?= -b 1M -Xbcj x86 -Xdict-size 100%
@@ -41,7 +42,7 @@ VM_YRES ?= 900
 SAFE_XRES ?= 1920
 SAFE_YRES ?= 1080
 VM_RUN := $(HOST_RUN) env SPACED_VM_SSH_PORT=$(VM_SSH_PORT) SPACED_VM_XRES=$(VM_XRES) SPACED_VM_YRES=$(VM_YRES)
-ISO_SMOKE_RUN := $(HOST_RUN) env SPACED_ISO_SMOKE_TIMEOUT=$(ISO_SMOKE_TIMEOUT)
+ISO_SMOKE_RUN := $(HOST_RUN) env SPACED_ISO_SMOKE_TIMEOUT=$(ISO_SMOKE_TIMEOUT) SPACED_VM_THEME_TESTS=$(SPACED_VM_THEME_TESTS)
 VBOX_RUN := $(ISO_SMOKE_RUN) SPACED_VBOX_SSH_PORT=$(VBOX_SSH_PORT)
 
 .PHONY: help check deps clean cache-clean marco prepare lb-config lb-build iso-build iso-test iso-smoke iso-smoke-kvm iso-smoke-kvm-efi iso-smoke-kvm-4k iso-smoke-virtualbox iso-smoke-virtualbox-efi vbox-smoke vbox-smoke-default iso-test-safe iso-test-safe-1024 iso-test-safe-1080 vm-create vm-install vm-start vm-stop release-preflight release apt-repo apt-repo-publish
