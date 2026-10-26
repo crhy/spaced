@@ -1,0 +1,128 @@
+From: Spaced Linux Developers <dev@spacedlinux.com>
+Subject: Let custom shortcuts target applications and files reliably
+
+--- a/capplets/keybindings/mate-keybinding-properties.c
++++ b/capplets/keybindings/mate-keybinding-properties.c
+@@ -1846,12 +1846,32 @@
+   if (response_id == GTK_RESPONSE_OK)
+     {
+       GAppInfo *info;
++      const gchar *app_id;
+       const gchar *custom_name;
++      gchar *quoted_id;
++      gchar *command;
+ 
+       info = gtk_app_chooser_get_app_info (GTK_APP_CHOOSER (dialog));
+-
+-      gtk_entry_set_text (GTK_ENTRY (custom_shortcut_command_entry),
+-                          g_app_info_get_executable (info));
++      if (info == NULL)
++        {
++          gtk_widget_hide (dialog);
++          return;
++        }
++      app_id = g_app_info_get_id (info);
++
++      if (app_id != NULL && app_id[0] != '\0')
++        {
++          quoted_id = g_shell_quote (app_id);
++          command = g_strdup_printf ("gtk-launch %s", quoted_id);
++          gtk_entry_set_text (GTK_ENTRY (custom_shortcut_command_entry), command);
++          g_free (command);
++          g_free (quoted_id);
++        }
++      else
++        {
++          gtk_entry_set_text (GTK_ENTRY (custom_shortcut_command_entry),
++                              g_app_info_get_executable (info));
++        }
+       /* if name isn't set yet, use the associated one */
+       custom_name = gtk_entry_get_text (GTK_ENTRY (custom_shortcut_name_entry));
+       if (! custom_name || custom_name[0] == '\0')
+@@ -1865,6 +1880,46 @@
+ }
+ 
+ static void
++cb_file_dialog_clicked (GtkButton *button, gpointer data)
++{
++  GtkWidget *dialog;
++  const gchar *custom_name;
++  gchar *filename;
++  gchar *basename;
++  gchar *quoted_filename;
++  gchar *command;
++
++  dialog = gtk_file_chooser_dialog_new (_("Choose a shortcut target"),
++                                        GTK_WINDOW (custom_shortcut_dialog),
++                                        GTK_FILE_CHOOSER_ACTION_OPEN,
++                                        _("_Cancel"), GTK_RESPONSE_CANCEL,
++                                        _("_Open"), GTK_RESPONSE_ACCEPT,
++                                        NULL);
++
++  if (gtk_dialog_run (GTK_DIALOG (dialog)) == GTK_RESPONSE_ACCEPT)
++    {
++      filename = gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (dialog));
++      quoted_filename = g_shell_quote (filename);
++      command = g_strdup_printf ("spaced-open-target %s", quoted_filename);
++      gtk_entry_set_text (GTK_ENTRY (custom_shortcut_command_entry), command);
++
++      custom_name = gtk_entry_get_text (GTK_ENTRY (custom_shortcut_name_entry));
++      if (! custom_name || custom_name[0] == '\0')
++        {
++          basename = g_path_get_basename (filename);
++          gtk_entry_set_text (GTK_ENTRY (custom_shortcut_name_entry), basename);
++          g_free (basename);
++        }
++
++      g_free (command);
++      g_free (quoted_filename);
++      g_free (filename);
++    }
++
++  gtk_widget_destroy (dialog);
++}
++
++static void
+ setup_dialog (GtkBuilder *builder, GSettings *marco_settings)
+ {
+   GtkCellRenderer *renderer;
+@@ -1960,6 +2015,8 @@
+   g_signal_connect (widget, "response", G_CALLBACK (cb_app_dialog_response), NULL);
+   widget = gtk_app_chooser_dialog_get_widget (GTK_APP_CHOOSER_DIALOG (widget));
+   gtk_app_chooser_widget_set_show_all (GTK_APP_CHOOSER_WIDGET (widget), TRUE);
++  button = _gtk_builder_get_widget (builder, "custom-shortcut-file-button");
++  g_signal_connect (button, "clicked", G_CALLBACK (cb_file_dialog_clicked), NULL);
+ }
+ 
+ static void
+--- a/capplets/keybindings/mate-keybinding-properties.ui
++++ b/capplets/keybindings/mate-keybinding-properties.ui
+@@ -129,7 +129,7 @@
+                 </child>
+                 <child>
+                   <object class="GtkButton" id="custom-shortcut-command-button">
+-                    <property name="label" translatable="yes">_Browse applications...</property>
++                    <property name="label" translatable="yes">Browse _Applications...</property>
+                     <property name="visible">True</property>
+                     <property name="can_focus">True</property>
+                     <property name="receives_default">True</property>
+@@ -140,6 +140,19 @@
+                     <property name="top_attach">1</property>
+                   </packing>
+                 </child>
++                <child>
++                  <object class="GtkButton" id="custom-shortcut-file-button">
++                    <property name="label" translatable="yes">Browse _Files...</property>
++                    <property name="visible">True</property>
++                    <property name="can_focus">True</property>
++                    <property name="receives_default">True</property>
++                    <property name="use_underline">True</property>
++                  </object>
++                  <packing>
++                    <property name="left_attach">3</property>
++                    <property name="top_attach">1</property>
++                  </packing>
++                </child>
+               </object>
+               <packing>
+                 <property name="expand">True</property>

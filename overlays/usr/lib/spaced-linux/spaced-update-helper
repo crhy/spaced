@@ -174,10 +174,12 @@ APT_OPTIONS=(-o DPkg::Lock::Timeout=120 -o Acquire::Retries=3
              -o APT::Update::Error-Mode=any -o Dpkg::Use-Pty=0
              -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold)
 apt_run() { apt-get "${APT_OPTIONS[@]}" "$@"; }
-# APT's machine-readable progress goes to stdout with a STATUS prefix so the
-# desktop can drive the progress bar; every other stdout line stays as today.
+# APT's machine-readable progress shares the log pipe through a dedicated
+# descriptor.  Do not use descriptor 1 as APT::Status-Fd: APT closes the
+# status descriptor before running dpkg, and that would also close stdout in
+# maintainer scripts (issue #373).
 apt_run_status() {
-  apt-get "${APT_OPTIONS[@]}" -o APT::Status-Fd=1 "$@" |
+  apt-get "${APT_OPTIONS[@]}" -o APT::Status-Fd=3 "$@" 3>&1 |
     sed -u -e 's/^\(dlstatus\|pmstatus\):/STATUS &/'
 }
 

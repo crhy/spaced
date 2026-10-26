@@ -1,0 +1,62 @@
+#!/bin/bash
+# Stable commands behind Spaced Linux's default global shortcuts (issue #351).
+set -u
+
+notify_missing() {
+    if command -v notify-send >/dev/null 2>&1; then
+        notify-send "Shortcut application is not installed" "$1"
+    fi
+    exit 1
+}
+
+set_all_sinks() {
+    local mode="$1" sink current any_unmuted=0
+    command -v pactl >/dev/null 2>&1 || notify_missing "PulseAudio controls"
+    mapfile -t sinks < <(pactl list short sinks 2>/dev/null | awk '{print $1}')
+    [ "${#sinks[@]}" -gt 0 ] || notify_missing "No audio output is available"
+    if [ "$mode" = toggle ]; then
+        for sink in "${sinks[@]}"; do
+            current="$(pactl get-sink-mute "$sink" 2>/dev/null | awk '{print $2; exit}')"
+            [ "$current" = yes ] || any_unmuted=1
+        done
+        if [ "$any_unmuted" -eq 1 ]; then
+            mode=1
+        else
+            mode=0
+        fi
+    fi
+    for sink in "${sinks[@]}"; do
+        pactl set-sink-mute "$sink" "$mode" >/dev/null 2>&1 || true
+    done
+}
+
+launch_calc() {
+    if command -v libreoffice >/dev/null 2>&1; then
+        exec libreoffice --calc
+    fi
+    if command -v flatpak >/dev/null 2>&1 \
+            && flatpak info org.libreoffice.LibreOffice >/dev/null 2>&1; then
+        exec flatpak run org.libreoffice.LibreOffice --calc
+    fi
+    notify_missing "LibreOffice Calc"
+}
+
+show_help() {
+    command -v zenity >/dev/null 2>&1 || exit 1
+    zenity --info --title="Spaced Linux keyboard shortcuts" --width=520 \
+        --text="<b>Global shortcuts</b>\n\nCtrl+Alt+V   Open Voxa\nCtrl+Alt+X   Select a window to close\nCtrl+Alt+M   Mute or unmute all audio output\nCtrl+Alt+T   Open a terminal\nCtrl+Alt+L   Lock the screen\nCtrl+Alt+C   Mute audio and open LibreOffice Calc\nCtrl+Alt+K   Show this shortcut list\nCtrl+Alt+S   Open Sound Preferences\nShift+Print  Select an area to capture"
+}
+
+case "${1:-}" in
+    voxa) exec spaced-open-target io.github.crhy.voxa ;;
+    close-window) exec xkill ;;
+    mute) set_all_sinks toggle ;;
+    lock) exec mate-screensaver-command --lock ;;
+    mute-calc) set_all_sinks 1; launch_calc ;;
+    shortcuts) show_help ;;
+    sound) exec mate-volume-control ;;
+    *)
+        printf 'Usage: spaced-hotkey-action {voxa|close-window|mute|lock|mute-calc|shortcuts|sound}\n' >&2
+        exit 2
+        ;;
+esac

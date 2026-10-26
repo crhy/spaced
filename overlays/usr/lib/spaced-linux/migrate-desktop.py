@@ -192,6 +192,68 @@ def migrate_firepaint(path):
         save_ini(path, parser)
 
 
+def migrate_window_previews(path):
+    """Enable the stable taskbar previews supplied by Compiz Extras (#350)."""
+    if not path.exists():
+        return
+    parser = read_ini(path)
+    if not parser.has_section("core"):
+        return
+    serialized = parser["core"].get("as_active_plugins", "")
+    plugins = serialized.split(";")
+    if not serialized or "thumbnail" in plugins:
+        return
+    # Keep the plug-in order otherwise intact.  Window Previews has no
+    # dependency on later effects, but loading it before workarounds matches
+    # the new-account profile and the order CCSM itself writes.
+    try:
+        plugins.insert(plugins.index("workarounds"), "thumbnail")
+    except ValueError:
+        insert_at = len(plugins) - 1 if plugins[-1] == "" else len(plugins)
+        plugins.insert(insert_at, "thumbnail")
+    parser["core"]["as_active_plugins"] = ";".join(plugins)
+    save_ini(path, parser)
+
+
+DEFAULT_HOTKEYS = (
+    ("spaced-hotkey-action voxa", "<Control><Alt>v"),
+    ("spaced-hotkey-action close-window", "<Control><Alt>x"),
+    ("spaced-hotkey-action mute", "<Control><Alt>m"),
+    ("spaced-hotkey-action lock", "<Control><Alt>l"),
+    ("spaced-hotkey-action mute-calc", "<Control><Alt>c"),
+    ("spaced-hotkey-action shortcuts", "<Control><Alt>k"),
+    ("spaced-hotkey-action sound", "<Control><Alt>s"),
+)
+
+
+def migrate_default_hotkeys(path):
+    """Fill vacant command slots without taking over a user's binding (#351)."""
+    if not path.exists():
+        return
+    parser = read_ini(path)
+    if not parser.has_section("commands"):
+        parser.add_section("commands")
+    commands = parser["commands"]
+    changed = False
+    for wanted_command, wanted_key in DEFAULT_HOTKEYS:
+        values = {value.lower() for section in parser.sections()
+                  for value in parser[section].values()}
+        # An existing key binding belongs to the user. An existing command may
+        # have been moved to a different key and must not be duplicated.
+        if wanted_key.lower() in values or wanted_command.lower() in values:
+            continue
+        for slot in range(12):
+            command, key = f"as_command{slot}", f"as_run_command{slot}_key"
+            if commands.get(command, "") or commands.get(key, ""):
+                continue
+            commands[command] = wanted_command
+            commands[key] = wanted_key
+            changed = True
+            break
+    if changed:
+        save_ini(path, parser)
+
+
 def migrate_spelling(config):
     """Teach Enchant-aware desktop applications the project names (#333)."""
     dictionary = config / "enchant/en_US.dic"
@@ -204,6 +266,18 @@ def migrate_spelling(config):
     if missing:
         content = "\n".join(existing + missing) + "\n"
         atomic_write(dictionary, content, backup=False)
+
+
+def migrate_menu_editor(path):
+    """Replace the stale MenuLibre slot with the editor shipped in the image."""
+    try:
+        content = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return
+    updated = content.replace("<Filename>menulibre.desktop</Filename>",
+                              "<Filename>alacarte.desktop</Filename>")
+    if updated != content:
+        atomic_write(path, updated)
 
 
 def migrate(config):
@@ -219,23 +293,33 @@ def migrate(config):
         if not firepaint_marker.exists():
             migrate_firepaint(config / "compiz/compizconfig/Default.ini")
             atomic_write(firepaint_marker, "10.26\n")
+        previews_marker = state / "desktop-migration-10.26-window-previews-v1"
+        if not previews_marker.exists():
+            migrate_window_previews(config / "compiz/compizconfig/Default.ini")
+            atomic_write(previews_marker, "10.26.7\n")
         migrate_spelling(config)
+        migrate_menu_editor(config / "menus/mate-applications.menu")
         marker = state / "desktop-migration-9.26.2-v1"
-        if marker.exists():
-            return
-        generic_mime = config / "mimeapps.list"
-        migrate_mime(generic_mime)
-        generic = read_ini(generic_mime)
-        inherited = generic["Default Applications"] if generic.has_section("Default Applications") else {}
-        # Desktop-specific files take precedence over mimeapps.list in MATE.
-        mate_mime = config / "mate-mimeapps.list"
-        if mate_mime.exists():
-            migrate_mime(mate_mime, inherited, repair_v1=True)
-        migrate_compiz(config / "compiz/compizconfig/Default.ini")
-        btop = config / "btop/btop.conf"
-        if not btop.exists():
-            atomic_write(btop, 'graph_symbol = "block"\n')
-        atomic_write(marker, "9.26.2\n")
+        if not marker.exists():
+            generic_mime = config / "mimeapps.list"
+            migrate_mime(generic_mime)
+            generic = read_ini(generic_mime)
+            inherited = generic["Default Applications"] if generic.has_section("Default Applications") else {}
+            # Desktop-specific files take precedence over mimeapps.list in MATE.
+            mate_mime = config / "mate-mimeapps.list"
+            if mate_mime.exists():
+                migrate_mime(mate_mime, inherited, repair_v1=True)
+            migrate_compiz(config / "compiz/compizconfig/Default.ini")
+            btop = config / "btop/btop.conf"
+            if not btop.exists():
+                atomic_write(btop, 'graph_symbol = "block"\n')
+            atomic_write(marker, "9.26.2\n")
+        # Run this after the old screenshot migration, so existing accounts
+        # retain its slot and the new defaults fill only what remains vacant.
+        hotkeys_marker = state / "desktop-migration-10.26-default-hotkeys-v1"
+        if not hotkeys_marker.exists():
+            migrate_default_hotkeys(config / "compiz/compizconfig/Default.ini")
+            atomic_write(hotkeys_marker, "10.26.7\n")
 
 
 if __name__ == "__main__":

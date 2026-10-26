@@ -42,6 +42,7 @@ class MigrationTests(unittest.TestCase):
         self.assertEqual(updated['commands']['as_command0'], 'my-custom-command')
         self.assertEqual(updated['commands']['as_command1'], 'mate-screenshot --area')
         self.assertEqual(updated['commands']['as_run_command1_key'], '<Shift>Print')
+        self.assertEqual(updated['commands']['as_command2'], 'spaced-hotkey-action voxa')
         self.assertEqual(profile.with_name('Default.ini.pre-9.26.2').read_text(), original)
         files = {p: (p.read_bytes(), p.stat().st_mtime_ns) for p in self.config.rglob('*') if p.is_file()}
         migration.migrate(self.config)
@@ -59,7 +60,8 @@ class MigrationTests(unittest.TestCase):
         updated = migration.read_ini(profile)
         self.assertEqual(updated['decoration']['as_command'], 'emerald --replace')
         self.assertEqual(updated['screenshot']['as_initiate_button'], '<Alt>Button2')
-        self.assertNotIn('as_command0', updated['commands'])
+        self.assertEqual(updated['commands']['as_command0'], 'spaced-hotkey-action voxa')
+        self.assertEqual(updated['commands']['as_command3'], 'custom-shot')
         self.assertEqual(btop.read_text(), 'graph_symbol = "braille"\n')
 
     def test_broken_configuration_is_preserved_and_retried(self):
@@ -82,6 +84,17 @@ class MigrationTests(unittest.TestCase):
                           'text/x-shellscript', 'application/x-shellscript',
                           'text/x-perl', 'application/x-perl', 'text/plain'):
             self.assertEqual(defaults[mime_type], 'pluma.desktop', mime_type)
+
+    def test_menu_editor_migration_uses_the_installed_alacarte_launcher(self):
+        menu = self.config / 'menus/mate-applications.menu'
+        menu.parent.mkdir(parents=True)
+        menu.write_text('<Layout>\n<Filename>menulibre.desktop</Filename>\n</Layout>\n')
+        migration.migrate(self.config)
+        self.assertIn('<Filename>alacarte.desktop</Filename>', menu.read_text())
+        self.assertNotIn('menulibre.desktop', menu.read_text())
+        before = menu.read_bytes()
+        migration.migrate(self.config)
+        self.assertEqual(menu.read_bytes(), before)
 
     def test_mate_specific_defaults_are_migrated(self):
         mime = self.config / 'mate-mimeapps.list'
@@ -112,7 +125,8 @@ class MigrationTests(unittest.TestCase):
         (state / 'desktop-migration-9.26.2-v1').write_text('9.26.2\n')
         migration.migrate(self.config)
         updated = migration.read_ini(profile)
-        self.assertEqual(updated['core']['as_active_plugins'], 'core;ccp;focuspoll;rotate;')
+        self.assertEqual(updated['core']['as_active_plugins'],
+                         'core;ccp;focuspoll;rotate;thumbnail;')
         self.assertFalse(updated.has_section('focus'))
         self.assertEqual(updated['core']['s0_focus_prevention_match'], '!(class=Nm-applet)')
         before = profile.read_bytes()
@@ -126,6 +140,22 @@ class MigrationTests(unittest.TestCase):
         original = profile.read_text()
         migration.migrate_compiz_focus(profile)
         self.assertEqual(profile.read_text(), original)
+
+    def test_default_hotkeys_use_free_slots_and_preserve_user_keys(self):
+        profile = self.config / 'compiz/compizconfig/Default.ini'
+        profile.parent.mkdir(parents=True)
+        profile.write_text('[commands]\nas_command0=custom\nas_run_command0_key=<Control><Alt>v\n'
+                           'as_command2=another\nas_run_command2_key=<Control>F8\n')
+        migration.migrate_default_hotkeys(profile)
+        commands = migration.read_ini(profile)['commands']
+        self.assertEqual(commands['as_command0'], 'custom')
+        self.assertEqual(commands['as_command2'], 'another')
+        self.assertNotIn('spaced-hotkey-action voxa', commands.values())
+        for action in ('close-window', 'mute', 'lock', 'mute-calc', 'shortcuts', 'sound'):
+            self.assertIn(f'spaced-hotkey-action {action}', commands.values())
+        before = profile.read_bytes()
+        migration.migrate_default_hotkeys(profile)
+        self.assertEqual(profile.read_bytes(), before)
 
     def test_firepaint_defaults_are_added_to_an_empty_profile(self):
         # Issue #353: an account still on Compiz's firepaint defaults gets the Spaced ones.
@@ -173,11 +203,36 @@ class MigrationTests(unittest.TestCase):
         self.assertEqual((profile.read_bytes(), profile.stat().st_mtime_ns), before)
         self.assertEqual(marker.stat().st_mtime_ns, marker_mtime)
 
+    def test_window_previews_are_enabled_for_an_existing_profile(self):
+        # Issue #350: CCSM's Window Previews plug-in fixes stale taskbar images.
+        profile = self.config / 'compiz/compizconfig/Default.ini'
+        profile.parent.mkdir(parents=True)
+        profile.write_text('[core]\nas_active_plugins=core;ccp;svg;workarounds;cube;\n')
+        migration.migrate_window_previews(profile)
+        plugins = migration.read_ini(profile)['core']['as_active_plugins'].split(';')
+        self.assertEqual(plugins, ['core', 'ccp', 'svg', 'thumbnail',
+                                   'workarounds', 'cube', ''])
+
+    def test_window_preview_migration_is_idempotent(self):
+        profile = self.config / 'compiz/compizconfig/Default.ini'
+        profile.parent.mkdir(parents=True)
+        profile.write_text('[core]\nas_active_plugins=core;thumbnail;workarounds;\n')
+        original = profile.read_bytes()
+        migration.migrate_window_previews(profile)
+        self.assertEqual(profile.read_bytes(), original)
+
     def test_skel_compiz_profile_needs_no_focus_migration(self):
         skel = ROOT / 'overlays/etc/skel/.config/compiz/compizconfig/Default.ini'
         profile = self.config / 'Default.ini'
         profile.write_bytes(skel.read_bytes())
         migration.migrate_compiz_focus(profile)
+        self.assertEqual(profile.read_bytes(), skel.read_bytes())
+
+    def test_skel_compiz_profile_needs_no_window_preview_migration(self):
+        skel = ROOT / 'overlays/etc/skel/.config/compiz/compizconfig/Default.ini'
+        profile = self.config / 'Default.ini'
+        profile.write_bytes(skel.read_bytes())
+        migration.migrate_window_previews(profile)
         self.assertEqual(profile.read_bytes(), skel.read_bytes())
 
     def test_v1_inserted_mate_defaults_are_removed(self):

@@ -31,6 +31,7 @@ ERRORS = {
     22: "NVIDIA's official Debian repository could not be enabled.",
     23: "NVIDIA Driver Assistant is unavailable.",
     24: "NVIDIA Driver Assistant does not support this system or GPU.",
+    25: "A working NVIDIA driver was detected and left unchanged.",
     30: "The NVIDIA package installation failed. Review the recovery result in the log.",
     40: "The NVIDIA kernel modules were not built. Review the recovery result in the log.",
     41: "The boot image could not be rebuilt. Review the recovery result in the log.",
@@ -79,6 +80,7 @@ class Installer(Gtk.Window):
 
         self.gpu = self.detect_gpu()
         self.has_nvidia = bool(self.gpu and any(name in self.gpu.lower() for name in ("nvidia", "[10de:")))
+        self.working_nvidia = self.detect_working_nvidia()
         self.has_amd = bool(self.gpu and any(name in self.gpu.lower() for name in ("amd", "ati", "[1002:")))
         frame = Gtk.Frame(label="Detected hardware")
         root.pack_start(frame, False, False, 0)
@@ -130,6 +132,8 @@ class Installer(Gtk.Window):
         self.amd_button.set_sensitive(self.has_amd)
         buttons.pack_start(self.amd_button, False, False, 0)
         self.install_button = Gtk.Button(label="Install NVIDIA Driver")
+        if self.working_nvidia:
+            self.install_button.set_label("Replace Working NVIDIA Driver")
         self.install_button.connect("clicked", self.confirm_install)
         self.install_button.set_sensitive(self.has_nvidia and (not PENDING_FILE.exists() or installation_verified(PENDING_FILE)))
         buttons.pack_start(self.install_button, True, True, 0)
@@ -179,6 +183,15 @@ class Installer(Gtk.Window):
                 devices.append(line.strip())
         return "\n".join(devices) or None
 
+    @staticmethod
+    def detect_working_nvidia() -> bool:
+        try:
+            result = subprocess.run(["nvidia-smi", "-L"], check=False,
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except OSError:
+            return False
+        return result.returncode == 0
+
     def on_delete(self, *_args) -> bool:
         if not self.running:
             return False
@@ -217,19 +230,28 @@ class Installer(Gtk.Window):
         self.close_button.set_sensitive(not busy)
 
     def confirm_install(self, *_args) -> None:
+        replacing = self.working_nvidia
         dialog = Gtk.MessageDialog(
             transient_for=self,
             modal=True,
             message_type=Gtk.MessageType.QUESTION,
             buttons=Gtk.ButtonsType.NONE,
-            text="Install and verify the NVIDIA driver?",
+            text=("Replace the working NVIDIA driver?" if replacing
+                  else "Install and verify the NVIDIA driver?"),
         )
-        dialog.format_secondary_text(
-            "Spaced Linux will not disable Nouveau until the NVIDIA modules are built. Any failed verification "
-            "before reboot triggers an automatic rollback. The computer will reboot only after you approve it."
-        )
+        if replacing:
+            dialog.format_secondary_text(
+                "nvidia-smi reports that the current driver is working. Keeping it is the safest choice. "
+                "Replace it only to resolve a specific problem; Spaced will save the current packages and "
+                "configuration for rollback."
+            )
+        else:
+            dialog.format_secondary_text(
+                "Spaced Linux will not disable Nouveau until the NVIDIA modules are built. Any failed verification "
+                "before reboot triggers an automatic rollback. The computer will reboot only after you approve it."
+            )
         dialog.add_button("Cancel", Gtk.ResponseType.CANCEL)
-        dialog.add_button("Install", Gtk.ResponseType.OK)
+        dialog.add_button("Replace Driver" if replacing else "Install", Gtk.ResponseType.OK)
         response = dialog.run()
         dialog.destroy()
         if response == Gtk.ResponseType.OK:
@@ -286,6 +308,8 @@ class Installer(Gtk.Window):
 
     def run_action(self, mode: str) -> None:
         command = ["pkexec", HELPER, mode, "--desktop-user", self.user]
+        if mode == "--install" and self.working_nvidia:
+            command.append("--replace-working-driver")
         if mode == "--audit":
             command = [HELPER, mode]
         try:

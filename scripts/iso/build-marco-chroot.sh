@@ -74,7 +74,22 @@ if ! "$ROOT/scripts/iso/stage-caja.sh" --check 2>/dev/null; then
     chroot "$CHROOT" /usr/bin/env DEB_BUILD_OPTIONS=parallel=2 \
         bash /workspace/scripts/iso/build-caja.sh --build /workspace/build/caja
 fi
+# Brisk's context menu is extended with Spaced package and launcher actions.
+if ! "$ROOT/scripts/iso/stage-brisk-menu.sh" --check 2>/dev/null; then
+    chroot "$CHROOT" /usr/bin/env DEBIAN_FRONTEND=noninteractive \
+        apt-get build-dep -y --no-install-recommends brisk-menu
+    chroot "$CHROOT" /usr/bin/env DEB_BUILD_OPTIONS=parallel=2 \
+        bash /workspace/scripts/iso/build-brisk-menu.sh --build /workspace/build/brisk-menu
+fi
+# MATE's shortcut editor uses desktop IDs and can select arbitrary files.
+if ! "$ROOT/scripts/iso/stage-mate-control-center.sh" --check 2>/dev/null; then
+    chroot "$CHROOT" /usr/bin/env DEBIAN_FRONTEND=noninteractive \
+        apt-get build-dep -y --no-install-recommends mate-control-center
+    chroot "$CHROOT" /usr/bin/env DEB_BUILD_OPTIONS=parallel=2 \
+        bash /workspace/scripts/iso/build-mate-control-center.sh --build /workspace/build/mate-control-center
+fi
 if [ -n "${PKEXEC_UID:-}" ]; then
     chown -R "$PKEXEC_UID" "$ROOT/build/marco/artifacts" "$ROOT/build/nm-focus" "$ROOT/build/compiz" \
-        "$ROOT/build/xorg-server" "$ROOT/build/caja"
+        "$ROOT/build/xorg-server" "$ROOT/build/caja" "$ROOT/build/brisk-menu" \
+        "$ROOT/build/mate-control-center"
 fi

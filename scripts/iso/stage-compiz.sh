@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 ARTIFACTS=${SPACED_COMPIZ_ARTIFACT_DIR:-$ROOT/build/compiz/artifacts}
 OUTPUT=${LOCAL_PACKAGE_OUTPUT:-$ROOT/build/local-packages}
-VERSION=2:0.8.18-9+spaced10.26.6
+VERSION=2:0.8.18-9+spaced10.26.7
 FILE_VERSION=${VERSION#*:}
 files=()
 # The binary packages depend on each other by exact version, so all of them ship together.

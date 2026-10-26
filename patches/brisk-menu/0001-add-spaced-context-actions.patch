@@ -1,0 +1,129 @@
+From: Spaced Linux Developers <dev@spacedlinux.com>
+Subject: Add application context actions and fix action ownership
+
+--- a/src/backend/apps/apps-backend.c
++++ b/src/backend/apps/apps-backend.c
+@@ -70,6 +70,8 @@
+ static gboolean brisk_apps_backend_reload(BriskAppsBackend *backend);
+ static void brisk_apps_backend_launch_action(GSimpleAction *action, GVariant *parameter,
+                                              BriskBackend *backend);
++static void brisk_apps_backend_launch_spaced_action(GSimpleAction *action, GVariant *parameter,
++                                                    BriskBackend *backend);
+ 
+ DEF_AUTOFREE(gchar, g_free)
+ DEF_AUTOFREE(GSList, g_slist_free)
+@@ -125,12 +127,25 @@
+ static GMenu *brisk_apps_backend_get_item_actions(BriskBackend *backend, BriskItem *item,
+                                                   GActionGroup *group)
+ {
++        static const struct {
++                const gchar *id;
++                const gchar *label;
++                const gchar *verb;
++        } spaced_actions[] = {
++                { "properties", N_("_Properties"), "properties" },
++                { "uninstall", N_("_Uninstall"), "uninstall" },
++                { "check-updates", N_("Check for _Updates"), "check-updates" },
++                { "change-icon", N_("Change _Icon"), "change-icon" },
++        };
+         GMenu *ret = NULL;
+         GDesktopAppInfo *info = NULL;
+ 
+         ret = g_menu_new();
+ 
+         info = g_desktop_app_info_new(brisk_item_get_id(item));
++        if (!info) {
++                return ret;
++        }
+         const gchar *const *actions = g_desktop_app_info_list_actions(info);
+ 
+         for (guint i = 0; i < g_strv_length((gstrv *)actions); i++) {
+@@ -153,7 +168,7 @@
+                                        g_free);
+                 g_object_set_data_full(G_OBJECT(action),
+                                        "__appinfo",
+-                                       (gpointer)info,
++                                       (gpointer)g_object_ref(info),
+                                        g_object_unref);
+                 g_signal_connect(action,
+                                  "activate",
+@@ -164,6 +179,35 @@
+                 g_menu_append(ret, action_name, menu_id);
+         }
+ 
++        const gchar *desktop_file = g_desktop_app_info_get_filename(info);
++        if (desktop_file) {
++                for (guint i = 0; i < G_N_ELEMENTS(spaced_actions); i++) {
++                        autofree(gchar) *action_id = NULL;
++                        autofree(gchar) *menu_id = NULL;
++                        autofree(GSimpleAction) *action = NULL;
++
++                        action_id = g_strdup_printf("apps.spaced-%s", spaced_actions[i].id);
++                        menu_id = g_strdup_printf("brisk-context-items.%s", action_id);
++                        action = g_simple_action_new(action_id, NULL);
++                        g_action_map_add_action(G_ACTION_MAP(group), G_ACTION(action));
++                        g_object_set_data_full(G_OBJECT(action),
++                                               "__spaced-verb",
++                                               g_strdup(spaced_actions[i].verb),
++                                               g_free);
++                        g_object_set_data_full(G_OBJECT(action),
++                                               "__desktop-file",
++                                               g_strdup(desktop_file),
++                                               g_free);
++                        g_signal_connect(action,
++                                         "activate",
++                                         G_CALLBACK(brisk_apps_backend_launch_spaced_action),
++                                         backend);
++                        g_menu_append(ret, _(spaced_actions[i].label), menu_id);
++                }
++        }
++
++        g_object_unref(info);
++
+         return ret;
+ }
+ 
+@@ -324,7 +368,7 @@
+                                              __brisk_unused__ GVariant *parameter,
+                                              BriskBackend *backend)
+ {
+-        autofree(GDesktopAppInfo) *app_info = g_object_get_data(G_OBJECT(action), "__appinfo");
++        GDesktopAppInfo *app_info = g_object_get_data(G_OBJECT(action), "__appinfo");
+         const gchar *action_name = g_object_get_data(G_OBJECT(action), "__aname");
+         g_assert(app_info != NULL);
+         brisk_backend_hide_menu(backend);
+@@ -332,6 +376,34 @@
+ }
+ 
+ /**
++ * brisk_apps_backend_launch_spaced_action:
++ *
++ * Hand a desktop file to the distribution's application-action helper.
++ */
++static void brisk_apps_backend_launch_spaced_action(GSimpleAction *action,
++                                                    __brisk_unused__ GVariant *parameter,
++                                                    BriskBackend *backend)
++{
++        const gchar *verb = g_object_get_data(G_OBJECT(action), "__spaced-verb");
++        const gchar *desktop_file = g_object_get_data(G_OBJECT(action), "__desktop-file");
++        gchar *argv[] = {
++                "/usr/local/bin/spaced-app-action",
++                (gchar *)verb,
++                (gchar *)desktop_file,
++                NULL,
++        };
++        GError *error = NULL;
++
++        g_assert(verb != NULL);
++        g_assert(desktop_file != NULL);
++        brisk_backend_hide_menu(backend);
++        if (!g_spawn_async(NULL, argv, NULL, G_SPAWN_DEFAULT, NULL, NULL, NULL, &error)) {
++                g_warning("Unable to start Spaced application action: %s", error->message);
++                g_error_free(error);
++        }
++}
++
++/**
+  * brisk_apps_backend_load:
+  *
+  * Begin loading menu structures and fire off the first scheduled adds to the

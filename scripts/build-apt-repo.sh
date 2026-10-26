@@ -100,6 +100,28 @@ for source in "$caja_artifacts"/caja_*.dsc "$caja_artifacts"/caja_*.orig.tar.* "
     fi
     cp "$source" "$destination"
 done
+# Publish Brisk Menu's context-action source with its replacement binary.
+brisk_artifacts=${SPACED_BRISK_MENU_ARTIFACT_DIR:-$ROOT/build/brisk-menu/artifacts}
+for source in "$brisk_artifacts"/brisk-menu_*.dsc "$brisk_artifacts"/brisk-menu_*.orig.tar.* "$brisk_artifacts"/brisk-menu_*.debian.tar.*; do
+    [[ -f "$source" ]] || { echo "Missing corresponding Brisk Menu source: $source" >&2; exit 1; }
+    destination="$source_dir/${source##*/}"
+    if [[ -e "$destination" ]] && ! cmp -s "$source" "$destination"; then
+        echo "Refusing to replace published source bytes: $destination" >&2; exit 1
+    fi
+    cp "$source" "$destination"
+done
+# Publish MATE Control Center's shortcut-editor source with its binaries.
+mate_control_center_artifacts=${SPACED_MATE_CONTROL_CENTER_ARTIFACT_DIR:-$ROOT/build/mate-control-center/artifacts}
+for source in "$mate_control_center_artifacts"/mate-control-center_*.dsc \
+              "$mate_control_center_artifacts"/mate-control-center_*.orig.tar.* \
+              "$mate_control_center_artifacts"/mate-control-center_*.debian.tar.*; do
+    [[ -f "$source" ]] || { echo "Missing corresponding MATE Control Center source: $source" >&2; exit 1; }
+    destination="$source_dir/${source##*/}"
+    if [[ -e "$destination" ]] && ! cmp -s "$source" "$destination"; then
+        echo "Refusing to replace published source bytes: $destination" >&2; exit 1
+    fi
+    cp "$source" "$destination"
+done
 # The rebuilt X server (amdgpu ABI fix, issue #298) is a format 1.0 source.
 xorg_artifacts=${SPACED_XORG_ARTIFACT_DIR:-$ROOT/build/xorg-server/artifacts}
 for source in "$xorg_artifacts"/xorg-server_*.dsc "$xorg_artifacts"/xorg-server_*.orig.tar.* "$xorg_artifacts"/xorg-server_*.diff.gz; do

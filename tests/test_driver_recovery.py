@@ -184,6 +184,33 @@ modprobe() {
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("READ_ONLY_REPORT", result.stdout)
 
+    def test_working_nvidia_driver_is_kept_without_explicit_replacement(self):
+        result, _ = self.run_helper(r'''
+require_root() { :; }
+resolve_desktop_user() { :; }
+new_run() {
+    RUN_DIR="$TEST_ROOT/run"
+    LOG_FILE="$TEST_ROOT/install.log"
+}
+detect_nvidia_gpu() { printf 'NVIDIA test GPU\n'; }
+working_nvidia_driver() { return 0; }
+apt-get() { echo APT_MUST_NOT_RUN; }
+install_system
+echo SHOULD_NOT_CONTINUE
+''')
+        self.assertEqual(result.returncode, 25, result.stdout + result.stderr)
+        self.assertIn("already running successfully", result.stdout + result.stderr)
+        self.assertNotIn("APT_MUST_NOT_RUN", result.stdout)
+        self.assertNotIn("SHOULD_NOT_CONTINUE", result.stdout)
+
+    def test_replacement_requires_explicit_helper_flag(self):
+        result, _ = self.run_helper(r'''
+parse_args --install --replace-working-driver
+printf 'MODE:%s REPLACE:%s\n' "$MODE" "$REPLACE_WORKING_DRIVER"
+''')
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("MODE:--install REPLACE:1", result.stdout)
+
     def test_successful_recovery_can_reboot_later(self):
         result, _ = self.run_helper('REBOOT_AFTER=0; rollback_transaction 30; require_root() { :; }; reboot_system')
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
@@ -309,6 +336,20 @@ class DriverGuiTests(unittest.TestCase):
         with patch.object(self.gui.threading, "Thread") as thread:
             self.gui.Installer.start_action(window, "--install")
         thread.assert_not_called()
+
+    def test_gui_only_passes_replacement_flag_for_working_driver(self):
+        for working, expected in ((False, False), (True, True)):
+            with self.subTest(working=working):
+                window = MagicMock()
+                window.user = "tester"
+                window.working_nvidia = working
+                process = MagicMock()
+                process.stdout = []
+                process.wait.return_value = 0
+                with patch.object(self.gui.subprocess, "Popen", return_value=process) as popen:
+                    self.gui.Installer.run_action(window, "--install")
+                command = popen.call_args.args[0]
+                self.assertEqual("--replace-working-driver" in command, expected)
 
 
 if __name__ == "__main__":

@@ -285,3 +285,5 @@ stage_meta
 "$ROOT/scripts/iso/stage-compiz.sh"
 "$ROOT/scripts/iso/stage-xorg-server.sh"
 "$ROOT/scripts/iso/stage-caja.sh"
+"$ROOT/scripts/iso/stage-brisk-menu.sh"
+"$ROOT/scripts/iso/stage-mate-control-center.sh"

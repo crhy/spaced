@@ -177,7 +177,7 @@ assert {"avahi-daemon", "libnss-mdns", "smbclient", "wsdd"}.issubset(packages), 
 assert {package for package in packages if "systemd" in package} == \
     {"systemd-standalone-sysusers", "systemd-standalone-tmpfiles"}, \
     "a systemd-named package entered the image set"
-assert {"btop", "caja-admin", "gigolo", "gparted", "nvtop", "timeshift", "zstd"}.issubset(packages), \
+assert {"alacarte", "btop", "caja-admin", "eom", "gigolo", "gparted", "nvtop", "timeshift", "zstd"}.issubset(packages), \
     "administrator, partitioning, Windows-share, or backup desktop integration is missing"
 assert "libfuse2t64" in packages, "legacy AppImages cannot start without FUSE 2 compatibility (issue #153)"
 assert {"gnome-keyring", "libcanberra-gtk3-module", "accountsservice"}.issubset(packages), \
@@ -186,7 +186,7 @@ assert "mate-power-manager" in packages, \
     "MATE Power Management Control Center panel is not included (issue #98)"
 defaults_control = (Path("packages/spaced-mate-default-settings/DEBIAN/control")
                     .read_text(encoding="utf-8"))
-for package in ("accountsservice", "caja-admin", "gigolo", "gnome-keyring",
+for package in ("accountsservice", "alacarte", "caja-admin", "gigolo", "gnome-keyring",
                 "libcanberra-gtk3-module", "pulseaudio-utils", "timeshift",
                 "tzdata", "wmctrl", "x11-xserver-utils",
                 "xdg-desktop-portal-gtk"):
@@ -845,6 +845,19 @@ assert ";wobbly;" not in compiz_text and ";animation;" not in compiz_text, \
 assert ";clone;" not in compiz_text and ";expo;" not in compiz_text, \
     "Clone Output or Expo is enabled by default"
 assert "firepaint" in compiz_text, "Compiz paint-fire-on-screen plugin is not enabled"
+assert ";thumbnail;" in compiz_text, \
+    "Compiz Window Previews is not enabled for stable taskbar thumbnails (issue #350)"
+for command, key in (
+    ("spaced-hotkey-action voxa", "<Control><Alt>v"),
+    ("spaced-hotkey-action close-window", "<Control><Alt>x"),
+    ("spaced-hotkey-action mute", "<Control><Alt>m"),
+    ("spaced-hotkey-action mute-calc", "<Control><Alt>c"),
+    ("spaced-hotkey-action lock", "<Control><Alt>l"),
+    ("spaced-hotkey-action shortcuts", "<Control><Alt>k"),
+    ("spaced-hotkey-action sound", "<Control><Alt>s"),
+):
+    assert command in compiz_text and key in compiz_text, \
+        f"Compiz default shortcut {key} is missing its action (issue #351)"
 assert "s0_num_particles = 4000" in compiz_text, \
     "Compiz firepaint particle count is not the Spaced default (issue #353)"
 assert "as_clear_button = <Shift><Super>Button3" in compiz_text, \
@@ -855,6 +868,15 @@ assert "focus" not in compiz_text.split("as_active_plugins = ", 1)[1].split("\n"
     and "[focus]" not in compiz_text, "Compiz profile enables a plug-in Compiz 0.8 does not have"
 assert "s0_focus_prevention_match = !(class=Nm-applet)" in compiz_text, \
     "Compiz focus-stealing prevention blocks nm-applet's Wi-Fi password dialog (issue #234)"
+
+menu_layout = (root / "etc/skel/.config/menus/mate-applications.menu").read_text(encoding="utf-8")
+assert "<Filename>alacarte.desktop</Filename>" in menu_layout \
+    and "<Filename>menulibre.desktop</Filename>" not in menu_layout, \
+    "the menu points at an application editor that is not installed (issue #372)"
+mime_defaults = (root / "etc/skel/.config/mimeapps.list").read_text(encoding="utf-8")
+assert "image/svg+xml=eom.desktop" in mime_defaults \
+    and "image/svg+xml-compressed=eom.desktop" in mime_defaults, \
+    "SVG images are not associated with Eye of MATE (issue #372)"
 # libnma 1.10 no longer focuses the password field itself. The module, its
 # nm-applet wrapper and the package that delivers them must stay together.
 nm_focus_source = Path("src/spaced-nm-focus/spaced-nm-focus.c").read_text(encoding="utf-8")
@@ -1288,8 +1310,8 @@ assert "window-scaling-factor" not in first_login_repair and "xdpyinfo" not in f
     "first-login repair overrides MATE's automatic or user-selected scaling"
 assert "text/x-shellscript" in first_login_repair and "pluma.desktop" in first_login_repair, \
     "upgraded profiles do not receive the Pluma shell-script association"
-assert "org.mate.caja.preferences show-hidden-files false" in first_login_repair, \
-    "upgraded Caja profiles do not receive the hidden-file persistence migration"
+assert "gsettings set org.mate.caja.preferences show-hidden-files" not in first_login_repair, \
+    "first-login repair overrides the user's saved hidden-file preference"
 for object_id in ("brisk-menu", "window-list", "notification-area",
                   "volume-control-applet", "clock", "show-desktop"):
     assert object_id in first_login_repair, f"panel migration does not repair {object_id}"
@@ -1341,6 +1363,43 @@ for compiz_script, needle in (("scripts/iso/build-marco-chroot.sh", "build-compi
                               ("scripts/build-apt-repo.sh", "compiz_artifacts")):
     assert needle in Path(compiz_script).read_text(encoding="utf-8"), \
         f"{compiz_script} does not build, stage or publish the rebuilt Compiz (issue #279)"
+
+brisk_patch = Path("patches/brisk-menu/0001-add-spaced-context-actions.patch").read_text(encoding="utf-8")
+assert all(action in brisk_patch for action in
+           ("_Properties", "_Uninstall", "Check for _Updates", "Change _Icon")), \
+    "the Brisk patch is missing an application context action (issue #354)"
+assert "g_object_ref(info)" in brisk_patch and "g_object_unref(info)" in brisk_patch, \
+    "the Brisk patch does not preserve application-info ownership (issue #354)"
+assert len(Path("patches/brisk-menu/sources.sha256").read_text(encoding="utf-8").split()) == 6, \
+    "the Brisk Menu source archives are not pinned by SHA-256"
+for brisk_script, needle in (("scripts/iso/build-marco-chroot.sh", "build-brisk-menu.sh"),
+                             ("scripts/iso/build-local-packages.sh", "stage-brisk-menu.sh"),
+                             ("scripts/build-apt-repo.sh", "brisk_artifacts"),
+                             ("Makefile", "stage-brisk-menu.sh --check")):
+    assert needle in Path(brisk_script).read_text(encoding="utf-8"), \
+        f"{brisk_script} does not build, stage or publish rebuilt Brisk Menu (issue #354)"
+
+mcc_patch = Path("patches/mate-control-center/0001-improve-custom-shortcut-targets.patch").read_text(encoding="utf-8")
+assert "gtk-launch %s" in mcc_patch and "spaced-open-target %s" in mcc_patch, \
+    "the MATE Control Center patch lost application or file shortcut dispatch (issue #351)"
+assert "custom-shortcut-file-button" in mcc_patch, \
+    "the MATE Control Center shortcut file chooser is missing (issue #351)"
+mcc_devuan_patch = Path("patches/mate-control-center/0002-fix-libsystemd-auto-detection.patch").read_text(encoding="utf-8")
+assert all(needle in mcc_devuan_patch for needle in
+           ('[auto], [PKG_CHECK_MODULES(SYSTEMD,', '[have_systemd=no])',
+            'Origin: upstream, https://github.com/mate-desktop/mate-control-center/commit/')), \
+    "the MATE Control Center patch no longer backports init-neutral libsystemd detection"
+mcc_build = Path("scripts/iso/build-mate-control-center.sh").read_text(encoding="utf-8")
+assert "usr/share/mate-time-admin/" in mcc_build, \
+    "the MATE Control Center build must omit systemd-only time-admin data"
+assert len(Path("patches/mate-control-center/sources.sha256").read_text(encoding="utf-8").split()) == 6, \
+    "the MATE Control Center source archives are not pinned by SHA-256"
+for mcc_script, needle in (("scripts/iso/build-marco-chroot.sh", "build-mate-control-center.sh"),
+                           ("scripts/iso/build-local-packages.sh", "stage-mate-control-center.sh"),
+                           ("scripts/build-apt-repo.sh", "mate_control_center_artifacts"),
+                           ("Makefile", "stage-mate-control-center.sh --check")):
+    assert needle in Path(mcc_script).read_text(encoding="utf-8"), \
+        f"{mcc_script} does not build, stage or publish rebuilt MATE Control Center (issue #351)"
 
 xorg_patch = Path("patches/xorg-server/0001-revert-damage-abi-break.patch").read_text(encoding="utf-8")
 assert "-    DamagePtr *pListHead;" in xorg_patch, \
@@ -1535,6 +1594,9 @@ assert 'scope in ("user", "system")' in update_app \
 assert 'apt-refresh' in update_helper and 'flock -n' in update_helper \
     and 'APT::Update::Error-Mode=any' in update_helper, \
     "Spaced Update must serialize transactions and reject incomplete APT indexes"
+assert "APT::Status-Fd=3" in update_helper and '3>&1' in update_helper \
+    and "APT::Status-Fd=1" not in update_helper, \
+    "APT progress must not close maintainer-script stdout during updates (issue #373)"
 assert "dpkg --force-confdef --force-confold --configure --pending" in update_helper \
     and "dpkg --triggers-only --pending" in update_helper \
     and update_helper.index("apt_run_status -y \"${TRANSACTION[@]}\"") < \
@@ -1580,6 +1642,22 @@ assert "Usage: spaced-open-target" in open_target and "exit 2" in open_target, \
     "spaced-open-target does not print usage and exit 2 with no argument (issue #351)"
 assert "Shortcut target not found" in open_target and "notify-send" in open_target, \
     "spaced-open-target does not report a missing target (issue #351)"
+hotkey_action_path = root / "usr/local/bin/spaced-hotkey-action"
+assert hotkey_action_path.is_file() and hotkey_action_path.stat().st_mode & 0o111, \
+    "default keyboard-shortcut action helper is missing or not executable (issue #351)"
+hotkey_action = hotkey_action_path.read_text(encoding="utf-8")
+for action in ("voxa", "close-window", "mute", "mute-calc", "lock", "shortcuts", "sound"):
+    assert action in hotkey_action, f"keyboard-shortcut action {action} is missing (issue #351)"
+
+nvidia_helper = (root / "usr/lib/spaced-linux/spaced-nvidia-helper").read_text(encoding="utf-8")
+nvidia_installer = (root / "usr/lib/spaced-linux/spaced-nvidia-installer.py").read_text(encoding="utf-8")
+assert "working_nvidia_driver" in nvidia_helper \
+    and "--replace-working-driver" in nvidia_helper \
+    and "REPLACE_WORKING_DRIVER" in nvidia_helper, \
+    "NVIDIA installer does not preserve a functioning installed driver (issue #334)"
+assert "Replace Working NVIDIA Driver" in nvidia_installer \
+    and 'command.append("--replace-working-driver")' in nvidia_installer, \
+    "NVIDIA Driver Manager lacks the explicit working-driver replacement path (issue #334)"
 
 fastfetch_logo = (root / "usr/share/fastfetch/logos/spaced-linux.txt").read_text(encoding="utf-8")
 assert "~**+<{{{{{{{{)+~~" in fastfetch_logo, "fastfetch logo is not the current Spaced ASCII art"

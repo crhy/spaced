@@ -1,5 +1,37 @@
 # Changelog
 
+## 10.26.7 - 2026-10-26
+
+Prepared for the 10.26.7 ISO and `10.26.7-1` APT packages.
+
+- Keep package maintainer scripts connected to their normal stdout during a
+  Spaced Update. APT progress now uses a dedicated file descriptor instead of
+  stdout, preventing DKMS and other post-install scripts from failing with
+  `Bad file descriptor` during a large upgrade (#373).
+- Preserve each user's **Show Hidden Files** preference. The first-login
+  repair no longer resets Caja's setting after the user changes it (#361,
+  #372).
+- Enable Compiz Window Previews for new and existing accounts, fixing stale
+  taskbar thumbnails without replacing any other Compiz preference (#350).
+- Name Compiz screenshots with the capture date and time and add a numeric
+  suffix when two captures happen in the same second (#362).
+- Add conservative default global shortcuts for Voxa, xkill, audio mute,
+  screen lock, LibreOffice Calc, the shortcut list and Sound Preferences.
+  Existing bindings and commands are never replaced (#351).
+- Make MATE's custom-shortcut application chooser store the desktop ID through
+  `gtk-launch`, and add a file chooser for scripts and ordinary files (#351).
+- Add Properties, Uninstall, Check for Updates and Change Icon actions to
+  Brisk's application context menu. Package operations stay type-aware for
+  Flatpak and native applications, and custom icons are per-user (#354).
+- Make the menu's application-editor entry open the installed Alacarte editor
+  instead of offering to install MenuLibre. Existing accounts are migrated,
+  and SVG images remain associated with the installed Eye of MATE viewer
+  (#372).
+- Keep a currently loaded and working NVIDIA driver unless the user explicitly
+  chooses to replace it. This prevents the driver manager from replacing a
+  working legacy or Tesla branch merely because a newer repository candidate
+  exists (#334).
+
 ## 10.26.6 - 2026-10-23
 
 Prepared for the 10.26.6 ISO and `10.26.6-1` APT packages. Includes the

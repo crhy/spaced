@@ -74,7 +74,7 @@ entry.select_region(0, 13)
 processes = [subprocess.Popen(['caja', '--no-desktop', account.pw_dir], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL),
              subprocess.Popen(['mate-terminal', '--disable-factory', '--title=Theme review terminal',
                                '--geometry=52x12+540+410', '-e',
-                               "bash -c 'printf \"Readable terminal text\\nSpaced Linux 10.26.6\\n\"; sleep 600'"],
+                               "bash -c 'printf \"Readable terminal text\\nSpaced Linux 10.26.7\\n\"; sleep 600'"],
                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)]
 settle(3)
 

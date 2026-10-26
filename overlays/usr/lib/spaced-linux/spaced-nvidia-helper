@@ -24,6 +24,7 @@ LEGACY_VERSION=""
 MODE=""
 DESKTOP_USER=""
 REBOOT_AFTER=0
+REPLACE_WORKING_DRIVER=0
 RUN_DIR=""
 TRANSACTION_ACTIVE=0
 TMP_KEYRING=""
@@ -80,6 +81,9 @@ parse_args() {
             --reboot-after)
                 REBOOT_AFTER=1
                 ;;
+            --replace-working-driver)
+                REPLACE_WORKING_DRIVER=1
+                ;;
             *)
                 echo "Unknown argument: $1" >&2
                 return 64
@@ -117,6 +121,12 @@ run_as_desktop_user() {
 
 detect_nvidia_gpu() {
     lspci -nn 2>/dev/null | awk 'tolower($0) ~ /(vga compatible controller|3d controller|display controller)/ && tolower($0) ~ /(nvidia|\[10de:)/ {print; exit}'
+}
+
+working_nvidia_driver() {
+    command -v nvidia-smi >/dev/null 2>&1 || return 1
+    nvidia-smi -L >/dev/null 2>&1 || return 1
+    grep -q '^nvidia ' /proc/modules 2>/dev/null || return 1
 }
 
 apt_candidate() {
@@ -677,6 +687,9 @@ install_system() {
     gpu="$(detect_nvidia_gpu || true)"
     [ -n "$gpu" ] || fatal 12 "No NVIDIA graphics device was detected."
     printf '%s\n' "$gpu"
+    if [ "$REPLACE_WORKING_DRIVER" -ne 1 ] && working_nvidia_driver; then
+        fatal 25 "An NVIDIA driver is already running successfully. It was left unchanged. Use the Driver Manager's explicit Replace Driver action only if replacement is intentional."
+    fi
     [ "$ARCH" = amd64 ] || fatal 11 "This installer currently supports amd64 only. Detected: $ARCH."
     check_disk_space
     status "Refreshing Devuan package information"

@@ -85,6 +85,14 @@ class RefreshHelperTests(unittest.TestCase):
 
 
 class HelperProgressTests(unittest.TestCase):
+    def test_apt_progress_uses_a_dedicated_file_descriptor(self):
+        # Issue #373: when Status-Fd was stdout, APT closed stdout before
+        # invoking dpkg and every maintainer script failed to write output.
+        text = HELPER.read_text()
+        self.assertIn('APT::Status-Fd=3', text)
+        self.assertIn('3>&1 |', text)
+        self.assertNotIn('APT::Status-Fd=1', text)
+
     def test_progress_filter_keeps_ordinary_apt_output(self):
         # The log in the Details pane is the only record of a failed upgrade.
         text = HELPER.read_text()
