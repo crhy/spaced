@@ -506,7 +506,7 @@ def artifact_default(name):
     return match.group(1)
 
 assert artifact_default("SPACED_WELCOME_REPOSITORY") == "crhy/spacedwelcome"
-assert artifact_default("SPACED_WELCOME_VERSION") == "0.1.19"
+assert artifact_default("SPACED_WELCOME_VERSION") == "0.1.20"
 assert artifact_default("SPACED_GITHUB_REMOTE_NAME") == "spaced-github"
 assert artifact_default("SPACED_GITHUB_REMOTE_DESCRIPTOR_URL") == \
     "https://crhy.github.io/spacedbazaar/spaced-github.flatpakrepo"

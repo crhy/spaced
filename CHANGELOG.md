@@ -1,5 +1,12 @@
 # Changelog
 
+## Component releases - 2026-10-30
+
+- Publish Spaced RGB 0.1.0 as a standalone GitHub release and a signed Flatpak
+  in Bazaar’s `spaced-github` catalog.
+- Add Spaced RGB to suggested applications in Spaced Welcome 0.1.20, delivered
+  through its standalone release and the Spaced APT repository.
+
 ## 10.26.7 - 2026-10-26
 
 Prepared for the 10.26.7 ISO and `10.26.7-1` APT packages.
