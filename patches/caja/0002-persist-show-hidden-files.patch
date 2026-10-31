@@ -1,0 +1,34 @@
+--- a/src/caja-window-menus.c
++++ b/src/caja-window-menus.c
+@@ -394,23 +394,18 @@
+ action_show_hidden_files_callback (GtkAction *action,
+                                    gpointer callback_data)
+ {
+-    CajaWindow *window;
+-    CajaWindowShowHiddenFilesMode mode;
+-
+-    window = CAJA_WINDOW (callback_data);
++    CajaWindow *window = CAJA_WINDOW (callback_data);
++    gboolean show_hidden;
+ 
+     G_GNUC_BEGIN_IGNORE_DEPRECATIONS;
+-    if (gtk_toggle_action_get_active (GTK_TOGGLE_ACTION (action)))
+-    {
+-        mode = CAJA_WINDOW_SHOW_HIDDEN_FILES_ENABLE;
+-    }
+-    else
+-    {
+-        mode = CAJA_WINDOW_SHOW_HIDDEN_FILES_DISABLE;
+-    }
++    show_hidden = gtk_toggle_action_get_active (GTK_TOGGLE_ACTION (action));
+     G_GNUC_END_IGNORE_DEPRECATIONS;
+ 
+-    caja_window_info_set_hidden_files_mode (window, mode);
++    /* The menu is a persistent preference, like the Preferences dialog.
++     * Keep this window following the preference so subsequent changes apply. */
++    g_settings_set_boolean (caja_preferences,
++                            CAJA_PREFERENCES_SHOW_HIDDEN_FILES, show_hidden);
++    caja_window_info_set_hidden_files_mode (window, CAJA_WINDOW_SHOW_HIDDEN_FILES_DEFAULT);
+ }
+ 
+ static void

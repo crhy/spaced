@@ -1,4 +1,8 @@
-# Caja cross-filesystem move fix
+# Caja fixes
+
+`0002-persist-show-hidden-files.patch` makes the View menu and Ctrl+H update
+the existing `show-hidden-files` preference. New windows and restarted Caja
+processes retain the selection (Spaced issue #379).
 
 Caja 1.26.4-3 loses the destination selected in the conflict dialog when a
 move falls back to copying and deleting across filesystems. The user can be
@@ -13,7 +17,7 @@ copy cancellation hangs or SMB performance reports.
 `sources.sha256` pins the Devuan/Debian 1.26.4-3 source archives. Build with
 `make marco`; `scripts/iso/build-caja.sh --prepare-only` can also prepare the
 patched source without compiling. The package version is
-`1.26.4-3+spaced10.26.6`.
+`1.26.4-3+spaced10.26.8`.
 
 The ISO and APT builders stage Caja, caja-common, libcaja-extension1 and
 gir1.2-caja-2.0 together. The APT builder also includes the corresponding

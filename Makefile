@@ -76,7 +76,7 @@ cache-clean: ## Remove cached live-build packages and bootstrap data
 
 marco: ## Build patched desktop packages and the nm-applet focus module in an isolated Devuan chroot
 	mkdir -p $(BUILD_DIR)
-	if ! $(HOST_RUN) scripts/iso/stage-marco.sh --check || ! $(HOST_RUN) scripts/iso/stage-compiz.sh --check || ! $(HOST_RUN) scripts/iso/stage-xorg-server.sh --check || ! $(HOST_RUN) scripts/iso/stage-caja.sh --check || ! $(HOST_RUN) scripts/iso/stage-brisk-menu.sh --check || ! $(HOST_RUN) scripts/iso/stage-mate-control-center.sh --check || [ ! -f $(BUILD_DIR)/nm-focus/libspaced-nm-focus.so ]; then
+	if ! $(HOST_RUN) scripts/iso/stage-marco.sh --check || ! $(HOST_RUN) scripts/iso/stage-compiz.sh --check || ! $(HOST_RUN) scripts/iso/stage-compiz-plugins-main.sh --check || ! $(HOST_RUN) scripts/iso/stage-xorg-server.sh --check || ! $(HOST_RUN) scripts/iso/stage-caja.sh --check || ! $(HOST_RUN) scripts/iso/stage-brisk-menu.sh --check || ! $(HOST_RUN) scripts/iso/stage-mate-control-center.sh --check || [ ! -f $(BUILD_DIR)/nm-focus/libspaced-nm-focus.so ]; then
 		$(ROOT_RUN) bash "$(abspath scripts/iso/build-marco-chroot.sh)"
 	fi
 

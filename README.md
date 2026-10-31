@@ -4,7 +4,7 @@
   </a>
 </p>
 
-<h1 align="center">Spaced Linux 10.26.7</h1>
+<h1 align="center">Spaced Linux 10.26.8</h1>
 
 <p align="center"><strong>Spaced. Polished. Agile. Compiz. Efficient. Devuan.</strong></p>
 
@@ -28,7 +28,7 @@
 
 <p align="center">
   <a href="https://github.com/crhy/spaced/releases"><strong>Download releases</strong></a> ·
-  <a href="CHANGELOG.md"><strong>10.26.7 release status</strong></a>
+  <a href="CHANGELOG.md"><strong>10.26.8 release status</strong></a>
 </p>
 
 <p align="center">
@@ -37,7 +37,7 @@
   <img alt="Compiz" src="https://img.shields.io/badge/window%20manager-Compiz-5b5bd6">
   <img alt="Init system" src="https://img.shields.io/badge/init-sysvinit-555555">
   <img alt="Architecture" src="https://img.shields.io/badge/architecture-amd64-2563eb">
-  <img alt="Release" src="https://img.shields.io/badge/release-10.26.7-0ea5e9">
+  <img alt="Release" src="https://img.shields.io/badge/release-10.26.8-0ea5e9">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-black">
 </p>
 
@@ -151,14 +151,14 @@ Spaced Linux combines a modern system with visual ideas from the best desktop er
 
 ## Download Spaced Linux
 
-**Spaced Linux 10.26.7 is the current release.** Download it from the [Spaced Linux 10.26.7 release page](https://github.com/crhy/spaced/releases/tag/v10.26.7).
+**Spaced Linux 10.26.8 is the current release.** Download it from the [Spaced Linux 10.26.8 release page](https://github.com/crhy/spaced/releases/tag/v10.26.8).
 
-10.26.7 is the seventh patch to the October 2026 release. Its changes are listed in the [changelog](CHANGELOG.md).
+10.26.8 is the eighth patch to the October 2026 release. Its changes are listed in the [changelog](CHANGELOG.md).
 
 Verify the download on Linux:
 
 ```bash
-sha256sum -c spaced-linux-10.26.7-amd64.iso.sha256
+sha256sum -c spaced-linux-10.26.8-amd64.iso.sha256
 ```
 
 Test release images in a virtual machine or on non-critical hardware before adopting them for daily use.

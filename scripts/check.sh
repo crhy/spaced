@@ -466,7 +466,7 @@ for split_control in (themes_control, wallpapers_control):
         and "Replaces: spaced-mate-default-settings (<< 9.26.3-1)" in split_control, \
         "split artwork package lacks the Breaks/Replaces takeover for upgrades"
 assert f"spaced-mate-default-settings (= {package_version})" in meta_control \
-    and "spaced-welcome (>= 0.1.19)" in meta_control \
+    and "spaced-welcome (>= 0.1.21)" in meta_control \
     and "libfuse2t64" in meta_control, \
     "spaced-meta does not pull in the standalone Welcome package and desktop defaults"
 # The artwork split moves payload out of spaced-mate-default-settings. No
@@ -506,7 +506,7 @@ def artifact_default(name):
     return match.group(1)
 
 assert artifact_default("SPACED_WELCOME_REPOSITORY") == "crhy/spacedwelcome"
-assert artifact_default("SPACED_WELCOME_VERSION") == "0.1.20"
+assert artifact_default("SPACED_WELCOME_VERSION") == "0.1.21"
 assert artifact_default("SPACED_GITHUB_REMOTE_NAME") == "spaced-github"
 assert artifact_default("SPACED_GITHUB_REMOTE_DESCRIPTOR_URL") == \
     "https://crhy.github.io/spacedbazaar/spaced-github.flatpakrepo"
@@ -1117,7 +1117,6 @@ for policy_key, policy_value in (
     ("SearchSuggestEnabled", False),
     ("AlternateErrorPagesEnabled", False),
     ("BackgroundModeEnabled", False),
-    ("DefaultBrowserSettingEnabled", False),
     ("PromotionalTabsEnabled", False),
     ("FeedbackSurveysEnabled", False),
     ("BraveAIChatEnabled", False),
@@ -1129,6 +1128,8 @@ for policy_key, policy_value in (
         f"Brave policy {policy_key} is not set as requested (issue #282)"
 assert brave_policy.get("TorDisabled") is not True, \
     "Brave's private windows with Tor must stay available (issue #282)"
+assert "DefaultBrowserSettingEnabled" not in brave_policy, \
+    "Brave must allow changing the default browser (upstream crash #60038, issue #380)"
 menu_on_dark = icon_root / "Spaced-Menu-On-Dark/scalable/places"
 menu_on_light = icon_root / "Spaced-Menu-On-Light/scalable/places"
 for menu_directory, color in ((menu_on_dark, "#b8bcc2"), (menu_on_light, "#202020")):

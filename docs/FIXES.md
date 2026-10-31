@@ -8,6 +8,10 @@ This record tracks the current tree; update it with the implementation.
 
 | Area | Current resolution | Main implementation |
 |---|---|---|
+| Caja forgets hidden files after closing a window | The window toggle now persists to Caja’s global preference. Removing login resets alone did not persist the window-local value. Candidate 10.26.8; GUI tested across close/reopen and process restart. | `patches/caja/0002-persist-show-hidden-files.patch` |
+| Brisk cannot open installed editor | Brisk’s own editor lookup now includes Alacarte. Changing a desktop launcher does not change the applet’s hardcoded lookup. | `patches/brisk-menu/0002-support-alacarte-menu-editor.patch` |
+| Zoom also scrolls Qt content | A passive wheel-button grab occurs after XI2 fractional scroll events. Enhanced Zoom grabs on the configured modifier chord, releasing on modifier, binding and plugin changes. Candidate 10.26.8. | `patches/compiz-plugins-main/` |
+| Welcome suggested apps fail on fresh profiles | Welcome 0.1.21 removes unsupported `flatpak remote-add --noninteractive`. Live images expose `/etc/machine-id` through the sysvinit D-Bus ID; Calamares regenerates installed-machine IDs. | Welcome v0.1.21; `overlays/etc/machine-id` |
 | Calamares launcher | The desktop launcher is executable, says **Install Spaced Linux**, and uses Spaced branding. Debian module defaults remain available, while unwanted launcher/branding conflicts are removed during image construction. | `overlays/etc/skel/Desktop/install-spaced-linux.desktop`, Calamares overlay, image hook |
 | Installer slideshow | The slideshow uses valid Calamares `Presentation`/`Slide` QML and the installer enforces a 5 GB storage minimum. | `overlays/etc/calamares/` |
 | Theme warning or question-mark state | The image has **thirteen selectable MATE metathemes** plus the internal `Spaced-Dark` engine. Every selectable theme has GTK2, GTK3, top-level metatheme metadata, Metacity metadata, a valid icon overlay, wallpaper metadata, and a static preview. | `overlays/usr/share/themes/`, `themes.json`, `scripts/check.sh` |
