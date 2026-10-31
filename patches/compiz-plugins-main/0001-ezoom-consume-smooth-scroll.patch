@@ -1,0 +1,141 @@
+Description: Consume smooth scroll before Qt clients while zoom modifiers are held
+Author: Spaced Linux Developers <dev@spacedlinux.com>
+Bug: https://github.com/crhy/spaced/issues/371
+Forwarded: no
+
+--- a/src/ezoom/ezoom.c
++++ b/src/ezoom/ezoom.c
+@@ -237,6 +237,7 @@
+     int                    focusY;
+     unsigned long int      grabbed;
+     int	                   grabIndex; // for zoomBox
++    int                        wheelGrabIndex;
+     double                 lastMouseChange;
+     double                 lastFocusChange;
+     double                 lastNotificationChange;
+@@ -2046,7 +2047,7 @@
+ 	    return FALSE;
+ 	if (target == 1.0f && za->newZoom == 1.0f)
+ 	    return FALSE;
+-	if (otherScreenGrabExist (s, NULL))
++	if (otherScreenGrabExist (s, "ezoom-wheel", NULL))
+ 	    return FALSE;
+ 
+ 	setScale (s, out, target);
+@@ -2394,6 +2395,67 @@
+     zoomAreaToWindow (w);
+ }
+ 
++/* A passive Button4/5 grab starts only after XI2 smooth-scroll valuators
++ * have already reached clients such as Qt. Grab when the configured modifier
++ * chord becomes active, before the first fractional scroll event arrives.
++ * Leave unrelated shortcuts and another plugin's active grab alone.
++ */
++static void
++zoomUpdateWheelGrab (CompDisplay *d, unsigned int mods)
++{
++    CompScreen *s;
++    unsigned int mask = (ShiftMask | ControlMask | Mod1Mask | Mod2Mask |
++                         Mod3Mask | Mod4Mask | Mod5Mask) & ~d->ignoredModMask;
++    Bool match = FALSE;
++    int i;
++    ZOOM_DISPLAY (d);
++
++    for (i = DOPT_IN; i <= DOPT_OUT; i++)
++    {
++        CompAction *a = &zd->opt[i].value.action;
++        unsigned int required = virtualToRealModMask (d, a->button.modifiers);
++        if ((a->type & CompBindingTypeButton) &&
++            (a->button.button == 4 || a->button.button == 5) &&
++            (required & mask) && (mods & mask) == (required & mask))
++            match = TRUE;
++    }
++    for (s = d->screens; s; s = s->next)
++    {
++        Window root, child;
++        int rx, ry, wx, wy;
++        unsigned int buttons;
++        ZOOM_SCREEN (s);
++
++        if (!match && zs->wheelGrabIndex)
++        {
++            removeScreenGrab (s, zs->wheelGrabIndex, NULL);
++            zs->wheelGrabIndex = 0;
++        }
++        else if (match && !s->maxGrab &&
++                 XQueryPointer (d->display, s->root, &root, &child,
++                                &rx, &ry, &wx, &wy, &buttons))
++        {
++            zs->wheelGrabIndex = pushScreenGrab (s, None, "ezoom-wheel");
++            if (zs->wheelGrabIndex)
++            {
++                /* pushScreenGrab uses owner_events=True. XI2 clients still
++                 * receive their scroll valuators with that setting. Update
++                 * our own grab so the server delivers events only to us.
++                 */
++                if (XGrabPointer (d->display, s->grabWindow, FALSE,
++                                  ButtonPressMask | ButtonReleaseMask |
++                                  PointerMotionMask, GrabModeAsync,
++                                  GrabModeAsync, s->root, None,
++                                  CurrentTime) != GrabSuccess)
++                {
++                    removeScreenGrab (s, zs->wheelGrabIndex, NULL);
++                    zs->wheelGrabIndex = 0;
++                }
++            }
++        }
++    }
++}
++
+ /* Event handler. Pass focus-related events on and handle XFixes events. */
+ static void
+ zoomHandleEvent (CompDisplay *d,
+@@ -2402,6 +2464,10 @@
+     CompScreen *s;
+     XMotionEvent *mev;
+     ZOOM_DISPLAY(d);
++
++    if (event->type == d->xkbEvent &&
++        ((XkbAnyEvent *) event)->xkb_type == XkbStateNotify)
++        zoomUpdateWheelGrab (d, ((XkbStateNotifyEvent *) event)->mods);
+ 
+     switch (event->type) {
+ 	case MotionNotify:
+@@ -2602,7 +2668,18 @@
+     if (!o)
+ 	return FALSE;
+ 
+-    return compSetDisplayOption (display, o, value);
++    if (!compSetDisplayOption (display, o, value))
++        return FALSE;
++
++    if (index == DOPT_IN || index == DOPT_OUT)
++    {
++        XkbStateRec state;
++        if (XkbGetState (display->display, XkbUseCoreKbd, &state) == Success)
++            zoomUpdateWheelGrab (display, state.mods);
++        else
++            zoomUpdateWheelGrab (display, 0);
++    }
++    return TRUE;
+ }
+ 
+ 
+@@ -2710,6 +2787,7 @@
+     }
+  
+     zs->grabIndex = 0;
++    zs->wheelGrabIndex = 0;
+     zs->nZooms = 0;
+     zs->zooms = NULL;
+     zs->lastMouseChange = 0;
+@@ -2747,6 +2825,9 @@
+     ZOOM_DISPLAY (s->display);
+     ZOOM_SCREEN (s);
+ 
++    if (zs->wheelGrabIndex)
++        removeScreenGrab (s, zs->wheelGrabIndex, NULL);
++
+     UNWRAP (zs, s, preparePaintScreen);
+     UNWRAP (zs, s, donePaintScreen);
+     UNWRAP (zs, s, paintOutput);

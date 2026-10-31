@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 ARTIFACTS=${SPACED_CAJA_ARTIFACT_DIR:-$ROOT/build/caja/artifacts}
 OUTPUT=${LOCAL_PACKAGE_OUTPUT:-$ROOT/build/local-packages}
-VERSION=1.26.4-3+spaced10.26.6
+VERSION=1.26.4-3+spaced10.26.8
 FILE_VERSION=${VERSION#*:}
 files=()
 # The binary packages depend on each other by exact version, so all of them ship together.

@@ -60,6 +60,13 @@ if ! "$ROOT/scripts/iso/stage-compiz.sh" --check 2>/dev/null; then
     chroot "$CHROOT" /usr/bin/env DEB_BUILD_OPTIONS=parallel=2 \
         bash /workspace/scripts/iso/build-compiz.sh --build /workspace/build/compiz
 fi
+# Enhanced Zoom must consume XI2 scrolling before it reaches Qt clients (#371).
+if ! "$ROOT/scripts/iso/stage-compiz-plugins-main.sh" --check 2>/dev/null; then
+    chroot "$CHROOT" /usr/bin/env DEBIAN_FRONTEND=noninteractive \
+        apt-get build-dep -y --no-install-recommends compiz-plugins-main
+    chroot "$CHROOT" /usr/bin/env DEB_BUILD_OPTIONS=parallel=2 \
+        bash /workspace/scripts/iso/build-compiz-plugins-main.sh --build /workspace/build/compiz-plugins-main
+fi
 # The X server with the amdgpu ABI fix (issue #298) is built here as well.
 if ! "$ROOT/scripts/iso/stage-xorg-server.sh" --check 2>/dev/null; then
     chroot "$CHROOT" /usr/bin/env DEBIAN_FRONTEND=noninteractive \
@@ -90,6 +97,6 @@ if ! "$ROOT/scripts/iso/stage-mate-control-center.sh" --check 2>/dev/null; then
 fi
 if [ -n "${PKEXEC_UID:-}" ]; then
     chown -R "$PKEXEC_UID" "$ROOT/build/marco/artifacts" "$ROOT/build/nm-focus" "$ROOT/build/compiz" \
-        "$ROOT/build/xorg-server" "$ROOT/build/caja" "$ROOT/build/brisk-menu" \
+        "$ROOT/build/compiz-plugins-main" "$ROOT/build/xorg-server" "$ROOT/build/caja" "$ROOT/build/brisk-menu" \
         "$ROOT/build/mate-control-center"
 fi

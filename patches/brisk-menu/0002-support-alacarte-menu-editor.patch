@@ -1,0 +1,24 @@
+--- a/src/mate-applet/applet.c
++++ b/src/mate-applet/applet.c
+@@ -311,10 +311,12 @@
+ void brisk_menu_applet_edit_menus(__brisk_unused__ GtkAction *action, BriskMenuApplet *self)
+ {
+         static const char *editors[] = {
++                "alacarte.desktop",
+                 "menulibre.desktop",
+                 "mozo.desktop",
+         };
+         static const char *binaries[] = {
++                "alacarte",
+                 "menulibre",
+                 "mozo",
+         };
+@@ -346,7 +348,7 @@
+         }
+ 
+         brisk_menu_applet_notify_fail(_("Failed to launch menu editor"),
+-                                      _("Please install 'menulibre' or 'mozo' to edit menus"));
++                                      _("Please install 'alacarte', 'menulibre' or 'mozo' to edit menus"));
+ }
+ 
+ /**

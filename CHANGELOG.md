@@ -1,5 +1,25 @@
 # Changelog
 
+## 10.26.8 - 2026-10-31
+
+Prepared for the 10.26.8 ISO and `10.26.8-1` APT packages. This release is
+limited to the verified changes below. The one-off greeter report (#374) and
+the unreproduced minimized-window/data-loss report (#380) remain open and are
+not claimed as fixed.
+
+- Persist Caja’s Show Hidden Files choice in Caja itself, covering window
+  closure and process restart (#379).
+- Make Brisk Edit Menus open the installed Alacarte editor. Add Change Menu
+  Icon and Restore Default Menu Icon actions for the panel button (#379).
+- Consume high-resolution wheel events while the configured Compiz zoom
+  modifiers are held, preventing simultaneous Qt application scrolling (#371).
+- Pin released Spaced Welcome 0.1.21, which fixes Flatpak remote creation
+  during suggested-app installation (#381). Expose the sysvinit D-Bus machine
+  ID at `/etc/machine-id` in the live image for AccountsService clients.
+- Remove the managed policy disabling Brave’s default-browser setting, a
+  trigger of an upstream settings crash. The separate minimized-window/data
+  loss report remains unresolved (#380).
+
 ## Component releases - 2026-10-30
 
 - Publish Spaced RGB 0.1.0 as a standalone GitHub release and a signed Flatpak
