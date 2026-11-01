@@ -77,6 +77,17 @@
                 "reason": "Standalone first-login application packaged independently from desktop defaults"
             },
             {
+                "name": "spaced-monitor",
+                "architecture": "all",
+                "repository": "crhy/spacedmonitor",
+                "configuration": "config/external-artifacts.conf",
+                "versionVariable": "SPACED_MONITOR_VERSION",
+                "checksumVariable": "SPACED_MONITOR_SHA256",
+                "localOverride": "SPACED_MONITOR_DEB",
+                "stagingScript": "scripts/iso/stage-external-artifacts.sh",
+                "reason": "Standalone desktop system monitor released from its own repository and published to the signed apt archive"
+            },
+            {
                 "name": "SpacedBazaar",
                 "architecture": [
                     "x86_64",

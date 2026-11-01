@@ -32,6 +32,8 @@ esac
 
 WELCOME_FILENAME="spaced-welcome_${SPACED_WELCOME_VERSION}_all.deb"
 WELCOME_URL=${SPACED_WELCOME_URL:-https://github.com/${SPACED_WELCOME_REPOSITORY}/releases/download/${SPACED_WELCOME_RELEASE_TAG}/${WELCOME_FILENAME}}
+MONITOR_FILENAME="spaced-monitor_${SPACED_MONITOR_VERSION}_all.deb"
+MONITOR_URL=${SPACED_MONITOR_URL:-https://github.com/${SPACED_MONITOR_REPOSITORY}/releases/download/${SPACED_MONITOR_RELEASE_TAG}/${MONITOR_FILENAME}}
 
 for command in awk base64 cp curl dpkg-deb gpg install mktemp mv sha256sum; do
     command -v "$command" >/dev/null 2>&1 || die "required host command is missing: $command"
@@ -122,6 +124,25 @@ find "$LOCAL_PACKAGE_OUTPUT" -maxdepth 1 -type f -name 'spaced-welcome_*.deb' \
 install_atomic "$welcome_source" "$welcome_destination"
 
 materialize \
+    "spaced-monitor $SPACED_MONITOR_VERSION" \
+    "$MONITOR_URL" "${SPACED_MONITOR_DEB:-}" "$SPACED_MONITOR_SHA256" \
+    "spaced-monitor-${SPACED_MONITOR_VERSION}-${SPACED_MONITOR_SHA256,,}.deb"
+monitor_source=$MATERIALIZED
+monitor_package=$(dpkg-deb -f "$monitor_source" Package)
+monitor_version=$(dpkg-deb -f "$monitor_source" Version)
+monitor_arch=$(dpkg-deb -f "$monitor_source" Architecture)
+[[ $monitor_package == spaced-monitor ]] ||
+    die "Monitor artifact package is '$monitor_package', expected 'spaced-monitor'"
+[[ $monitor_version == "$SPACED_MONITOR_VERSION" ]] ||
+    die "Monitor artifact version is '$monitor_version', expected '$SPACED_MONITOR_VERSION'"
+[[ $monitor_arch == all || $monitor_arch == "$DEB_ARCH" ]] ||
+    die "Monitor artifact architecture '$monitor_arch' is incompatible with '$DEB_ARCH'"
+monitor_destination="$LOCAL_PACKAGE_OUTPUT/spaced-monitor_${SPACED_MONITOR_VERSION}_${monitor_arch}.deb"
+find "$LOCAL_PACKAGE_OUTPUT" -maxdepth 1 -type f -name 'spaced-monitor_*.deb' \
+    ! -name "$(basename "$monitor_destination")" -delete
+install_atomic "$monitor_source" "$monitor_destination"
+
+materialize \
     "spaced-github Flatpak remote" \
     "$SPACED_GITHUB_REMOTE_DESCRIPTOR_URL" "${SPACED_GITHUB_REMOTE_FILE:-}" \
     "$SPACED_GITHUB_REMOTE_SHA256" \
@@ -149,4 +170,5 @@ actual_fingerprint=$(GNUPGHOME="$work/gnupg" gpg --batch --show-keys --with-colo
 install_atomic "$remote_source" "$STAGE_OUTPUT/spaced-github.flatpakrepo"
 
 printf 'Staged %s\n' "$welcome_destination"
+printf 'Staged %s\n' "$monitor_destination"
 printf 'Staged signed %s Flatpak remote\n' "$SPACED_GITHUB_REMOTE_NAME"
