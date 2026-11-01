@@ -65,6 +65,13 @@ Two components sit below the line name:
   apt-repo-publish` to `crhy/spaced-apt`. Spaced Update offers any newer GitHub
   release tag, so a tag without APT packages makes every system loop on the
   upgrade (issue #209).
+- A component released from its own repository is pinned in
+  `config/external-artifacts.conf` and staged by
+  `scripts/iso/stage-external-artifacts.sh`; a GitHub release tag with no
+  archive entry leaves `apt install <component>` unresolvable. To publish one
+  already-built package without a full `make apt-repo` build, use
+  `scripts/publish-apt-package.sh`, which regenerates and re-signs the metadata
+  with the pinned key and refuses to replace published bytes.
 - Spaced Update ships from `overlays/usr/lib/spaced-linux/` in this repository
   (`spaced-update.py`, `spaced-update-helper`, `spaced-update-refresh`), with
   its tests under `tests/`. The separate `crhy/spacedupdate` tree is not what
