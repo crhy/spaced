@@ -1,0 +1,200 @@
+#!/usr/bin/env python3
+"""Publish the active Spaced GTK theme as a libadwaita palette.
+
+GTK 4 / libadwaita ignores the GTK 3 metathemes under /usr/share/themes and
+only follows the light/dark preference, so the Flatpak apps (Voxa, Spaced Bazaar)
+stay gray on the navy presets. This helper reads the named colours out of the
+active theme's gtk-3.0/gtk.css plus the catalogue's dark flag and publishes them
+as a small CSS file and a JSON file the apps can load themselves.
+
+Both files are written atomically: everything is computed and validated first,
+so a failure leaves the previous palette untouched.
+"""
+import json
+import os
+import re
+import sys
+import tempfile
+from pathlib import Path
+
+THEMES_ROOT = Path("/usr/share/themes")
+THEMES_JSON = Path("/usr/share/spaced-themes/themes.json")
+
+# gtk-3.0 named colours this helper reads from a theme.
+GTK_NAMES = (
+    "theme_bg_color",
+    "theme_base_color",
+    "theme_fg_color",
+    "theme_selected_bg_color",
+    "theme_selected_fg_color",
+)
+
+DEFINE_RE = re.compile(r"@define-color\s+([A-Za-z_][\w-]*)\s+([^;]+);")
+HEX_RE = re.compile(r"^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$")
+
+
+def normalize_color(raw):
+    """Return a canonical #rrggbb for a GTK colour token, or None."""
+    value = raw.strip().lower()
+    match = HEX_RE.match(value)
+    if not match:
+        return None
+    digits = match.group(1)
+    if len(digits) == 3:
+        digits = "".join(char * 2 for char in digits)
+    return f"#{digits[:6]}"
+
+
+def read_definitions(css_path):
+    """Map every @define-color name to its raw value in one stylesheet."""
+    definitions = {}
+    try:
+        text = css_path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+    for name, raw in DEFINE_RE.findall(text):
+        definitions[name] = raw.strip()
+    return definitions
+
+
+def resolve_color(definitions, name):
+    """Resolve one named colour, following a single level of @name references."""
+    raw = definitions.get(name)
+    if raw is None:
+        return None
+    if raw.startswith("@"):
+        raw = definitions.get(raw[1:].strip())
+        if raw is None:
+            return None
+    return normalize_color(raw)
+
+
+def mix(first, second, ratio):
+    """Blend two #rrggbb colours, ratio of the way from first to second."""
+    one = [int(first[index:index + 2], 16) for index in (1, 3, 5)]
+    two = [int(second[index:index + 2], 16) for index in (1, 3, 5)]
+    channels = [round(a + (b - a) * ratio) for a, b in zip(one, two)]
+    return "#%02x%02x%02x" % tuple(min(255, max(0, value)) for value in channels)
+
+
+def relative_luminance(color):
+    channels = [int(color[index:index + 2], 16) / 255 for index in (1, 3, 5)]
+    channels = [value / 12.92 if value <= 0.04045
+                else ((value + 0.055) / 1.055) ** 2.4 for value in channels]
+    return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2]
+
+
+def catalogue_entry(gtk_theme, themes_json):
+    """Return the catalogue theme whose gtk_theme matches, or None."""
+    try:
+        themes = json.loads(Path(themes_json).read_text(encoding="utf-8"))["themes"]
+    except (OSError, ValueError, KeyError):
+        return None
+    for theme in themes:
+        if theme.get("gtk_theme") == gtk_theme:
+            return theme
+    return None
+
+
+def palette_for(gtk_theme, themes_root=THEMES_ROOT, themes_json=THEMES_JSON):
+    """Build the libadwaita colour map for one GTK theme name."""
+    css_path = Path(themes_root) / gtk_theme / "gtk-3.0/gtk.css"
+    definitions = read_definitions(css_path)
+    if definitions is None:
+        raise SystemExit(f"spaced-theme-palette: missing {css_path}")
+
+    colors = {}
+    for name in GTK_NAMES:
+        resolved = resolve_color(definitions, name)
+        if resolved is None:
+            raise SystemExit(f"spaced-theme-palette: {css_path} has no usable {name}")
+        colors[name] = resolved
+
+    entry = catalogue_entry(gtk_theme, themes_json)
+    if entry is not None and "dark" in entry:
+        dark = bool(entry["dark"])
+    else:
+        # A catalogue added mid-session can lag the installed theme files, so
+        # fall back to the stylesheet's own contrast instead of failing.
+        dark = relative_luminance(colors["theme_bg_color"]) < 0.2
+
+    base = colors["theme_base_color"]
+    foreground = colors["theme_fg_color"]
+    # libadwaita expects raised surfaces (cards, sidebars) to sit a shade off
+    # the view background; mixing 5% toward the theme's own foreground keeps
+    # that direction correct for both light and dark presets.
+    raised = mix(base, foreground, 0.05)
+
+    return {
+        "window_bg_color": colors["theme_bg_color"],
+        "window_fg_color": colors["theme_fg_color"],
+        "view_bg_color": base,
+        "view_fg_color": colors["theme_fg_color"],
+        "headerbar_bg_color": colors["theme_bg_color"],
+        "headerbar_fg_color": colors["theme_fg_color"],
+        "sidebar_bg_color": raised,
+        "card_bg_color": raised,
+        "popover_bg_color": colors["theme_bg_color"],
+        "dialog_bg_color": colors["theme_bg_color"],
+        "accent_bg_color": colors["theme_selected_bg_color"],
+        "accent_fg_color": colors["theme_selected_fg_color"],
+        "accent_color": colors["theme_selected_bg_color"],
+    }, dark
+
+
+def render_css(gtk_theme, colors, dark):
+    lines = [f"/* spaced-theme: {gtk_theme} dark={1 if dark else 0} */"]
+    lines += [f"@define-color {name} {value};" for name, value in colors.items()]
+    return "\n".join(lines) + "\n"
+
+
+def atomic_write(path, text):
+    """Replace path in one step; never leave a partial file behind."""
+    directory = Path(path).parent
+    directory.mkdir(parents=True, exist_ok=True)
+    handle, temporary = tempfile.mkstemp(dir=str(directory), prefix="." + Path(path).name + ".")
+    try:
+        with os.fdopen(handle, "w", encoding="utf-8") as stream:
+            stream.write(text)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.chmod(temporary, 0o600)
+        os.replace(temporary, str(path))
+    except BaseException:
+        try:
+            os.unlink(temporary)
+        except OSError:
+            pass
+        raise
+
+
+def main(argv):
+    args = [argument for argument in argv[1:] if not argument.startswith("--")]
+    options = {argument[2:].split("=", 1)[0]: argument[2:].split("=", 1)[1]
+               for argument in argv[1:] if argument.startswith("--")}
+    themes_root = options.get("themes-root", os.environ.get("SPACED_THEMES_ROOT", str(THEMES_ROOT)))
+    themes_json = options.get("themes-json", os.environ.get("SPACED_THEMES_JSON", str(THEMES_JSON)))
+
+    if not args:
+        print("Usage: spaced-theme-palette <gtk-theme-name> "
+              "[--themes-root=DIR] [--themes-json=FILE]", file=sys.stderr)
+        return 2
+    gtk_theme = args[0]
+
+    config_home = os.environ.get("XDG_CONFIG_HOME") or os.path.join(
+        os.environ.get("HOME") or os.path.expanduser("~"), ".config")
+    state_dir = Path(config_home) / "spaced"
+
+    colors, dark = palette_for(gtk_theme, themes_root, themes_json)
+    css_text = render_css(gtk_theme, colors, dark)
+    json_text = json.dumps(
+        {"gtk_theme": gtk_theme, "dark": dark, "colors": colors},
+        indent=2, sort_keys=True) + "\n"
+
+    atomic_write(state_dir / "libadwaita.css", css_text)
+    atomic_write(state_dir / "theme.json", json_text)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

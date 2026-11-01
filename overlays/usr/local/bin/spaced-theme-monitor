@@ -115,6 +115,11 @@ restore_setting org.mate.interface icon-theme icon-theme || true
 restore_setting org.mate.Marco.general theme window-theme || true
 LAST="$(get_gtk)"
 [ -n "$LAST" ] && apply_for_gtk "$LAST"
+
+# GTK 4 / libadwaita apps ignore the GTK 3 metathemes, so publish the palette
+# once at login as well: the files must exist from the first boot, not only
+# after the first theme change. A failure here must not stop the session.
+/usr/local/bin/spaced-theme-palette "$LAST" 2>/dev/null || true
 restore_setting org.mate.background picture-filename wallpaper || true
 save_desktop_state
 

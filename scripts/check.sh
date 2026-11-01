@@ -1258,6 +1258,19 @@ assert 'marco-theme-active-opacity", 0.64' in opacity_helper \
     and 'marco-theme-opacity", 0.54' in opacity_helper \
     and 'marco-theme-active-opacity", 1.0' in opacity_helper, \
     "Windows 7 decoration glass or its opaque fallback is missing"
+palette_helper_path = root / "usr/local/bin/spaced-theme-palette"
+palette_helper = palette_helper_path.read_text(encoding="utf-8")
+assert palette_helper_path.stat().st_mode & 0o111, \
+    "libadwaita palette helper is not executable"
+assert '/usr/local/bin/spaced-theme-palette "$gtk_theme" 2>/dev/null || true' in switcher, \
+    "theme switching does not publish the libadwaita palette"
+assert '/usr/local/bin/spaced-theme-palette "$LAST" 2>/dev/null || true' in theme_monitor, \
+    "theme monitor does not publish the libadwaita palette at login"
+assert "window_bg_color" in palette_helper and "card_bg_color" in palette_helper \
+    and "accent_bg_color" in palette_helper, \
+    "libadwaita palette helper does not cover the libadwaita colour names"
+assert "os.replace(" in palette_helper, \
+    "libadwaita palette files are not written atomically"
 assert "background-color: #f7f8fa" in win7_gtk \
     and "background-color: #123c5b" in win7_gtk \
     and "color: #17212b" in win7_gtk, \

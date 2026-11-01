@@ -146,6 +146,11 @@ for id in bottom top; do
     esac
 done
 
+# GTK 4 / libadwaita ignores these metathemes and only follows color-scheme, so
+# publish the same palette as CSS the Flatpak apps can load themselves. It must
+# never abort the switch: the desktop is already themed by the time it runs.
+/usr/local/bin/spaced-theme-palette "$gtk_theme" 2>/dev/null || true
+
 # GTK draws each surface correctly, but MATE/Compiz still treats the panel and
 # Brisk popup as opaque top-level windows. Apply only the compositor rules
 # owned by the active Spaced theme, preserving any other user opacity rules.
