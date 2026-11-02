@@ -1318,6 +1318,27 @@ assert theme_monitor.index("apply_for_gtk \"$LAST\"") < theme_monitor.index(
 assert "gsettings monitor org.mate.background picture-filename" not in theme_monitor, \
     "wallpaper persistence must reuse the generic event-driven monitor"
 
+# th07: the monitor must survive its own death and clean up after it.
+assert "--supervise" in theme_monitor and "SPACED_THEME_MONITOR_CHILD" in theme_monitor, \
+    "theme monitor has no supervisor mode that restarts the monitor child"
+assert "flock -n 8" in theme_monitor, \
+    "theme monitor supervisor does not hold the singleton lock"
+assert "logger -t spaced-theme-monitor" in theme_monitor, \
+    "theme monitor does not log its exits through syslog"
+assert "trap 'monitor_signal HUP' HUP" in theme_monitor \
+    and "trap 'monitor_signal INT' INT" in theme_monitor \
+    and "trap 'monitor_signal TERM' TERM" in theme_monitor, \
+    "theme monitor does not trap and record HUP/INT/TERM"
+assert "pkill -P" in theme_monitor and "main_watch_pid" in theme_monitor, \
+    "theme monitor does not kill its gsettings watchers on exit"
+assert "pkill -f" not in theme_monitor, \
+    "theme monitor must not use pkill -f, which can match its own command line"
+assert "kill_stale_gsettings_monitors" in theme_monitor and "-P 1 -x gsettings" in theme_monitor, \
+    "theme monitor does not clean up gsettings monitors orphaned by an older version"
+theme_monitor_autostart = (root / "etc/xdg/autostart/spaced-theme-monitor.desktop").read_text(encoding="utf-8")
+assert "Exec=/usr/local/bin/spaced-theme-monitor --supervise" in theme_monitor_autostart, \
+    "theme monitor autostart does not run the supervisor"
+
 first_login_repair = (root / "usr/local/bin/spaced-first-login-repair").read_text(encoding="utf-8")
 assert "first-login-repair-v5" in first_login_repair, "first-login repair marker was not advanced"
 assert "window-scaling-factor" not in first_login_repair and "xdpyinfo" not in first_login_repair, \

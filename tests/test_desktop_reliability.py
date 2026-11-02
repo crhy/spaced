@@ -3,6 +3,7 @@ import configparser
 import importlib.util
 import os
 import shutil
+import signal
 from pathlib import Path
 import subprocess
 import sys
@@ -674,6 +675,121 @@ class ThemeSwitchTests(unittest.TestCase):
         # Eight rapid clicks collapse into one switch; the later, separate
         # choice still gets applied.
         self.assertEqual(result.stdout.split(), ['H', 'Z'])
+
+
+class ThemeMonitorSupervisionTests(unittest.TestCase):
+    """Issue #181 follow-up: the monitor must survive crashes and never leak
+    orphaned `gsettings monitor` children when it (or its supervisor) dies."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.state = Path(self.temp.name)
+        self.bin = self.state / 'bin'
+        self.bin.mkdir()
+        self.script = self.state / 'spaced-theme-monitor'
+        self.script.write_text((BIN / 'spaced-theme-monitor').read_text())
+        self.script.chmod(0o755)
+        self.env = dict(os.environ, XDG_RUNTIME_DIR=str(self.state),
+                        TEST_STATE=str(self.state),
+                        PATH=f'{self.bin}:{os.environ["PATH"]}')
+
+        # A fake gsettings whose `monitor` blocks in a builtin read (no long-lived
+        # child of its own), so killing it never orphans a grandchild.
+        (self.bin / 'gsettings').write_text(
+            '#!/bin/bash\n'
+            'case "$1" in\n'
+            '  get) printf "'"'"'Spaced-Linux-Dark'"'"'\n" ;;\n'
+            '  monitor) read -r _ < "$TEST_STATE/monitor-fifo" ;;\n'
+            '  set) printf "%s\n" "$*" >> "$TEST_STATE/settings-writes" ;;\n'
+            'esac\n')
+        (self.bin / 'gsettings').chmod(0o755)
+        (self.bin / 'logger').write_text(
+            '#!/bin/bash\nprintf "%s\n" "$*" >> "$TEST_STATE/logger-calls"\n')
+        (self.bin / 'logger').chmod(0o755)
+        # Stub pgrep so the orphan sweep never sees the developer's real PPID-1
+        # gsettings monitors; the test exercises the supervise/cleanup path only.
+        (self.bin / 'pgrep').write_text('#!/bin/bash\nexit 1\n')
+        (self.bin / 'pgrep').chmod(0o755)
+
+    def _proc_children(self, parent):
+        kids = []
+        for entry in Path('/proc').glob('[0-9]*'):
+            try:
+                stat = (entry / 'stat').read_text()
+                cmd = (entry / 'cmdline').read_bytes().split(b'\0')
+            except (FileNotFoundError, ProcessLookupError, PermissionError):
+                continue
+            ppid = stat.rsplit(')', 1)[1].split()[1]
+            if ppid == str(parent) and str(self.script).encode() in cmd:
+                kids.append(int(entry.name))
+        return kids
+
+    def _fake_gsettings_procs(self):
+        procs = []
+        for entry in Path('/proc').glob('[0-9]*'):
+            try:
+                cmd = (entry / 'cmdline').read_bytes().split(b'\0')
+            except (FileNotFoundError, ProcessLookupError, PermissionError):
+                continue
+            if str(self.bin / 'gsettings').encode() in cmd:
+                procs.append(int(entry.name))
+        return procs
+
+    def _wait_until(self, predicate, timeout):
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if predicate():
+                return True
+            time.sleep(0.1)
+        return False
+
+    def test_supervision_restarts_a_killed_monitor_and_leaves_no_gsettings(self):
+        fifo = self.state / 'monitor-fifo'
+        os.mkfifo(str(fifo))
+        fifo_writer = os.open(str(fifo), os.O_RDWR)
+        self.addCleanup(os.close, fifo_writer)
+
+        supervisor = subprocess.Popen([str(self.script), '--supervise'],
+                                      env=self.env, stdout=subprocess.PIPE,
+                                      stderr=subprocess.STDOUT)
+        def _reap():
+            try:
+                supervisor.terminate()
+                supervisor.wait(timeout=5)
+            except (ProcessLookupError, subprocess.TimeoutExpired):
+                pass
+            supervisor.stdout.close()
+        self.addCleanup(_reap)
+
+        self.assertTrue(self._wait_until(
+            lambda: len(self._proc_children(supervisor.pid)) >= 1, 5),
+            'supervisor never started a monitor child')
+        first = self._proc_children(supervisor.pid)[0]
+
+        self.assertTrue(self._wait_until(
+            lambda: len(self._fake_gsettings_procs()) >= 1, 5),
+            'monitor never started a gsettings watcher')
+
+        # Kill the monitor out from under the supervisor (simulates a crash).
+        os.kill(first, signal.SIGTERM)
+
+        # A replacement child must appear within the restart window.
+        self.assertTrue(self._wait_until(
+            lambda: any(pid != first for pid in
+                        self._proc_children(supervisor.pid)), 5),
+            'supervisor did not restart the monitor within 5s')
+
+        # The crash is recorded, naming the signal that ended the child.
+        calls = (self.state / 'logger-calls').read_text()
+        self.assertIn('TERM', calls)
+
+        # Stopping the supervisor must tear the whole tree down.
+        os.kill(supervisor.pid, signal.SIGTERM)
+        supervisor.wait(timeout=5)
+        self.assertTrue(self._wait_until(
+            lambda: len(self._fake_gsettings_procs()) == 0, 5),
+            'stopping the supervisor left an orphaned gsettings process')
 
 
 class WindowManagerNoticeTests(unittest.TestCase):
