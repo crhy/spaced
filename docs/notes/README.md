@@ -11,3 +11,4 @@ Working notes, decisions and standing orders for this project, kept by Claude Co
 - [spaced-apps-follow-theme](spaced-apps-follow-theme.md): rhY wants every Spaced app to take colours from the active desktop theme (navy for Win dark themes, grey for Spaced Dark/Mint, light for light themes), live; series th01-th06
 - [spaced-theme-monitor-dies](spaced-theme-monitor-dies.md): Theme switching "broke" on rhY's PC because spaced-theme-monitor died silently (2026-10-31 ~11:10); fix th07 queued on theme-follow for the next Spaced release.
 - [strata-vs-avalon-ab](strata-vs-avalon-ab.md): Strata vs Avalon A/B = both engines build Spaced Monitor from the same 9 tasks; setup, files and how to resume (2026-10-31)
+- [notes-live-on-github](notes-live-on-github.md): rhY's rule (2026-11-01): all Spaced/theme data and every memory note must be on GitHub; upload each note to its repo's docs/notes/ right after writing it.
