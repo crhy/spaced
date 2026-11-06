@@ -15,6 +15,7 @@ import os
 import re
 import sys
 import tempfile
+import tomllib
 from pathlib import Path
 
 THEMES_ROOT = Path("/usr/share/themes")
@@ -169,34 +170,57 @@ def atomic_write(path, text):
 
 
 def rustdesk_toml_with_theme(text, theme):
-    """Set options.theme in a RustDesk local-config TOML document."""
+    """Set options.theme without changing any other RustDesk preference.
+
+    Keep the original formatting, but validate both the input and the result:
+    unfamiliar TOML layouts must be left untouched rather than corrupting a
+    user's profile or editing a key in a different table.
+    """
+    try:
+        current = tomllib.loads(text)
+    except tomllib.TOMLDecodeError:
+        return text
+    options = current.get("options", {})
+    if not isinstance(options, dict) or options.get("theme") == theme:
+        return text
+    expected = {**current, "options": {**options, "theme": theme}}
+
     lines = text.splitlines(keepends=True)
     section_start = None
     section_end = len(lines)
     for index, line in enumerate(lines):
         stripped = line.strip()
-        if stripped == "[options]":
+        if re.fullmatch(r'''\[\s*(?:options|"options"|'options')\s*\]\s*(?:#.*)?''', stripped):
             section_start = index
             continue
-        if section_start is not None and stripped.startswith("[") and stripped.endswith("]"):
+        if section_start is not None and re.fullmatch(r"\[.*\]\s*(?:#.*)?", stripped):
             section_end = index
             break
 
     replacement = f'theme = "{theme}"\n'
     if section_start is not None:
         for index in range(section_start + 1, section_end):
-            if re.match(r"^\s*theme\s*=", lines[index]):
+            if re.match(r'''^\s*(?:theme|"theme"|'theme')\s*=''', lines[index]):
                 lines[index] = replacement
-                return "".join(lines)
-        lines.insert(section_end, replacement)
-        return "".join(lines)
+                break
+        else:
+            if section_end and not lines[section_end - 1].endswith("\n"):
+                lines[section_end - 1] += "\n"
+            lines.insert(section_end, replacement)
+    else:
+        if lines and not lines[-1].endswith("\n"):
+            lines[-1] += "\n"
+        if lines and lines[-1].strip():
+            lines.append("\n")
+        lines.extend(("[options]\n", replacement))
 
-    if lines and not lines[-1].endswith("\n"):
-        lines[-1] += "\n"
-    if lines and lines[-1].strip():
-        lines.append("\n")
-    lines.extend(("[options]\n", replacement))
-    return "".join(lines)
+    updated = "".join(lines)
+    try:
+        if tomllib.loads(updated) == expected:
+            return updated
+    except tomllib.TOMLDecodeError:
+        pass
+    return text
 
 
 def sync_rustdesk_theme(config_home, home, dark):
@@ -212,7 +236,7 @@ def sync_rustdesk_theme(config_home, home, dark):
             old_text = path.read_text(encoding="utf-8")
         except FileNotFoundError:
             old_text = ""
-        except OSError:
+        except (OSError, UnicodeError):
             continue
         new_text = rustdesk_toml_with_theme(old_text, theme)
         if new_text != old_text:

@@ -713,7 +713,7 @@ class ThemeSwitchTests(unittest.TestCase):
 
 class ThemeMonitorSupervisionTests(unittest.TestCase):
     """Issue #181 follow-up: the monitor must survive crashes and never leak
-    orphaned `gsettings monitor` children when it (or its supervisor) dies."""
+    watchers after a child crash or graceful supervisor shutdown."""
 
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -724,7 +724,9 @@ class ThemeMonitorSupervisionTests(unittest.TestCase):
         self.script = self.state / 'spaced-theme-monitor'
         self.script.write_text((BIN / 'spaced-theme-monitor').read_text())
         self.script.chmod(0o755)
-        self.env = dict(os.environ, XDG_RUNTIME_DIR=str(self.state),
+        self.env = dict(os.environ, HOME=str(self.state),
+                        XDG_CONFIG_HOME=str(self.state / 'config'),
+                        XDG_RUNTIME_DIR=str(self.state),
                         TEST_STATE=str(self.state),
                         PATH=f'{self.bin}:{os.environ["PATH"]}')
 
@@ -802,11 +804,11 @@ class ThemeMonitorSupervisionTests(unittest.TestCase):
         first = self._proc_children(supervisor.pid)[0]
 
         self.assertTrue(self._wait_until(
-            lambda: len(self._fake_gsettings_procs()) >= 1, 5),
-            'monitor never started a gsettings watcher')
+            lambda: len(self._fake_gsettings_procs()) == 4, 5),
+            'monitor never started all four gsettings watchers')
 
         # Kill the monitor out from under the supervisor (simulates a crash).
-        os.kill(first, signal.SIGTERM)
+        os.kill(first, signal.SIGKILL)
 
         # A replacement child must appear within the restart window.
         self.assertTrue(self._wait_until(
@@ -814,9 +816,13 @@ class ThemeMonitorSupervisionTests(unittest.TestCase):
                         self._proc_children(supervisor.pid)), 5),
             'supervisor did not restart the monitor within 5s')
 
-        # The crash is recorded, naming the signal that ended the child.
+        self.assertTrue(self._wait_until(
+            lambda: len(self._fake_gsettings_procs()) == 4, 5),
+            'replacement monitor leaked watchers from the killed monitor')
+
+        # SIGKILL cannot run the monitor's cleanup trap: its supervisor must.
         calls = (self.state / 'logger-calls').read_text()
-        self.assertIn('TERM', calls)
+        self.assertIn('status 137', calls)
 
         # Stopping the supervisor must tear the whole tree down.
         os.kill(supervisor.pid, signal.SIGTERM)

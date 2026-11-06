@@ -140,15 +140,22 @@ supervise() {
     local -a restarts=() kept=()
     local t
     supervise_stop() {
-        [ -n "$child_pid" ] && kill "$child_pid" 2>/dev/null
+        # Each monitor owns a session/process group. Its watcher wrappers may
+        # outlive a SIGKILLed monitor, so clean the group, not just its leader.
+        if [ -n "$child_pid" ]; then
+            kill -TERM -- "-$child_pid" 2>/dev/null || true
+            wait "$child_pid" 2>/dev/null || true
+        fi
         return 0
     }
     trap 'supervise_stop; exit 0' HUP INT TERM
     while :; do
-        SPACED_THEME_MONITOR_CHILD=1 "$0" &
+        setsid env SPACED_THEME_MONITOR_CHILD=1 "$0" 8>&- &
         child_pid=$!
         wait "$child_pid"
         status=$?
+        supervise_stop
+        child_pid=''
         logger -t spaced-theme-monitor \
             "monitor exited (status $status); restarting in ${delay:-2}s" 2>/dev/null || true
         restarts+=("$(date +%s)")

@@ -186,7 +186,7 @@ if [ "$cairo_dock" = True ]; then
         # later switch then blocked on `flock 7` before reaching the panel
         # move or the pkill below, which is why Cairo never closed and the
         # panel never moved back until Cairo was killed by hand.
-        cairo-dock -c -f -a -d "$dock_config" >/dev/null 2>&1 7>&- 8>&- &
+        setsid cairo-dock -c -f -a -d "$dock_config" >/dev/null 2>&1 7>&- 8>&- &
     fi
 else
     pkill -u "$(id -u)" -x cairo-dock 2>/dev/null || true

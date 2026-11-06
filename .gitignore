@@ -1,4 +1,5 @@
 build/
+/build
 *.iso
 *.qcow2
 *.swp

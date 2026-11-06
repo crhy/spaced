@@ -1,8 +1,10 @@
 import json
 import re
+import runpy
 import subprocess
 import sys
 import tempfile
+import tomllib
 import unittest
 from pathlib import Path
 
@@ -52,6 +54,63 @@ def gtk_colors(theme_name):
             raw = definitions[raw[1:].strip()].strip()
         colors[name] = raw.lower()
     return colors
+
+
+class RustDeskTomlTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.update = staticmethod(runpy.run_path(str(HELPER))["rustdesk_toml_with_theme"])
+
+    def assert_only_theme_changed(self, source):
+        original = tomllib.loads(source)
+        expected = {**original, "options": {**original.get("options", {}), "theme": "dark"}}
+        updated = self.update(source, "dark")
+        self.assertEqual(expected, tomllib.loads(updated))
+        self.assertEqual(updated, self.update(updated, "dark"))
+        return updated
+
+    def test_missing_final_newline_is_added_before_the_new_key(self):
+        for source in ('[options]', '[options]\nfoo = "bar"', '[options]\n# keep this comment'):
+            with self.subTest(source=source):
+                self.assertEqual(source + '\ntheme = "dark"\n',
+                                 self.assert_only_theme_changed(source))
+
+    def test_commented_and_quoted_headers_are_preserved(self):
+        for header in ('[options] # settings', '[ options ] # settings',
+                       '["options"] # settings', "['options'] # settings"):
+            with self.subTest(header=header):
+                source = header + '\nfoo = "bar"\n'
+                self.assertEqual(source + 'theme = "dark"\n',
+                                 self.assert_only_theme_changed(source))
+
+    def test_comment_on_next_table_does_not_change_its_theme(self):
+        source = '[options]\nfoo = "bar"\n[ui_flutter] # keep this table\ntheme = "other"\n'
+        self.assertEqual(
+            '[options]\nfoo = "bar"\ntheme = "dark"\n'
+            '[ui_flutter] # keep this table\ntheme = "other"\n',
+            self.assert_only_theme_changed(source))
+
+    def test_quoted_theme_key_is_updated_without_a_duplicate(self):
+        for key in ('theme', '"theme"', "'theme'"):
+            with self.subTest(key=key):
+                self.assert_only_theme_changed('[options]\n' + key + ' = "light"\n')
+
+    def test_no_options_table_is_added_without_changing_other_values(self):
+        for source in ('', 'remote_id = "123"', '[ui_flutter]\ntheme = "other"'):
+            with self.subTest(source=source):
+                self.assert_only_theme_changed(source)
+
+    def test_unrecognized_layouts_and_invalid_input_are_left_untouched(self):
+        for source in (
+            'options = {theme = "light", foo = "bar"}\n',
+            'options = "unexpected"\n',
+            '[options]\ninvalid toml',
+            # A header-looking line inside a multiline value must not be edited.
+            'note = """\n[options]\ntheme = "light"\n"""\n',
+            '[options]\nnotes = """\ntheme = "light"\n"""\n',
+        ):
+            with self.subTest(source=source):
+                self.assertEqual(source, self.update(source, "dark"))
 
 
 class PaletteGeneratorTests(unittest.TestCase):
@@ -178,6 +237,19 @@ class PaletteGeneratorTests(unittest.TestCase):
         self.assertEqual(
             '[options]\nfoo = "bar"\ntheme = "dark"\n[ui_flutter]\nscale = "1"\n',
             profile.read_text(encoding="utf-8"))
+
+    def test_invalid_rustdesk_profile_is_preserved_and_does_not_block_the_palette(self):
+        theme = next(item for item in self.themes if item["dark"])
+        for number, original in enumerate((b'[options]\ninvalid toml', b'\xff\xfe')):
+            with self.subTest(original=original):
+                config_home = self.workspace / f"config-rustdesk-invalid-{number}"
+                profile = config_home / "RustDesk/RustDesk_local.toml"
+                profile.parent.mkdir(parents=True, exist_ok=True)
+                profile.write_bytes(original)
+                result = self.run_helper(theme["gtk_theme"], config_home)
+                self.assertEqual(0, result.returncode, result.stderr)
+                self.assertEqual(original, profile.read_bytes())
+                self.assertTrue((config_home / "spaced/theme.json").is_file())
 
     def test_one_level_of_at_name_indirection_is_followed(self):
         themes_root = self.workspace / "themes-ref"

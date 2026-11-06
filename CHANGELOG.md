@@ -4,13 +4,16 @@
 
 Prepared for the first November 2026 ISO and `11.26-1` APT packages.
 
-- Include Spaced Monitor 0.1.6 in both the ISO and signed APT archive, with
+- Include Spaced Monitor 0.1.7 in both the ISO and signed APT archive, with
   Fahrenheit temperature support, clearer process names, reliable card
-  maximize/restore interaction, and its full automated and visual test suite.
+  maximize/restore interaction, correctly refreshed network addresses, and its
+  full automated and visual test suite.
 - Make the desktop theme bridge resilient to monitor restarts and abandoned
   processes, extend coordinated libadwaita colors across all supported themes,
   and synchronize RustDesk's supported light/dark preference for native and
   Flatpak installations (#398, #403).
+- Clean up the entire theme worker process group after a crash, and preserve
+  unrelated RustDesk preferences when updating commented or quoted TOML files.
 - Rebase the X server on Devuan `2:21.1.25-2devuan1`, retaining Devuan's
   video-driver ABI compatibility patch while removing the obsolete source URL
   and duplicate local patch (#401).
@@ -33,6 +36,7 @@ Prepared for the first November 2026 ISO and `11.26-1` APT packages.
   a readable path without disabling APT's `_apt` sandbox (#399).
 - Pin and stage SpacedBazaar's signed catalog with its Easy Effects install-state
   correction, so completed transactions refresh to the installed state (#397).
+  Bazaar 0.1.15 also follows live Spaced light, dark and colored palettes.
 - Retain the removal of the Brave managed default-browser policy. The separate
   minimize/draft-loss report remains unreproduced, with no distro policy left
   that can close or replace a Brave window (#380).
