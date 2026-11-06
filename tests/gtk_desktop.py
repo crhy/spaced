@@ -28,6 +28,29 @@ def style(provider, nodes):
 
 
 class DesktopStyleTests(unittest.TestCase):
+    def test_disabled_labels_and_slider_edges_across_all_palettes(self):
+        for css in sorted((ROOT / 'overlays/usr/share/themes').glob('Spaced-*/gtk-3.0/gtk.css')):
+            with self.subTest(theme=css.parents[1].name):
+                provider = Gtk.CssProvider()
+                provider.load_from_path(str(css))
+                label = style(provider, [('button', []), ('label', [])])
+                foreground = label.lookup_color('theme_fg_color')[1]
+                background = label.lookup_color('theme_bg_color')[1]
+                for state in (Gtk.StateFlags.INSENSITIVE,
+                              Gtk.StateFlags.INSENSITIVE | Gtk.StateFlags.BACKDROP):
+                    label.set_state(state)
+                    actual = label.get_color(state)
+                    for channel in ('red', 'green', 'blue'):
+                        expected = (getattr(foreground, channel) + getattr(background, channel)) / 2
+                        self.assertAlmostEqual(getattr(actual, channel), expected, places=2)
+                slider = style(provider, [('scale', ['horizontal']), ('contents', []),
+                                          ('trough', []), ('slider', [])])
+                for state in (Gtk.StateFlags.NORMAL, Gtk.StateFlags.BACKDROP):
+                    slider.set_state(state)
+                    border = slider.get_border_color(state)
+                    self.assertEqual(border.to_string(), foreground.to_string())
+                    self.assertEqual(slider.get_border(state).top, 2)
+
     @unittest.skipIf(GtkSource is None, 'requires gir1.2-gtksource-4 (Pluma)')
     def test_pluma_caret_renders_across_all_palettes(self):
         def settle(duration=0.1):

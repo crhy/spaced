@@ -46,6 +46,7 @@ bluetooth:
   - bluez-tools
 audio:
   - pulseaudio
+  - pulseaudio-module-bluetooth
   - pulseaudio-utils
   - mate-media
 themes:

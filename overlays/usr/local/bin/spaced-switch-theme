@@ -205,16 +205,24 @@ if command -v flatpak >/dev/null 2>&1; then
     # rebuilt when the installed theme packages change. Copying every theme tree
     # on each switch was the single most expensive part of a theme change.
     stamp_file="$theme_export/.spaced-export-stamp"
-    stamp=$(find /usr/share/themes -maxdepth 1 -name 'Spaced-*' -printf '%f %T@\n' \
-        2>/dev/null | sort | cksum)
+    # A CSS-only package update does not change its top-level directory mtime.
+    # Include nested files and link targets; ctime also detects replacements
+    # which retain their original size and mtime. This is metadata-only on the
+    # common path, rather than hashing/copying every asset on every switch.
+    stamp=$(find /usr/share/themes/Spaced-* -printf '%p %y %s %T@ %C@ %l\n' \
+        2>/dev/null | LC_ALL=C sort | cksum)
     if [ "$stamp" != "$(cat "$stamp_file" 2>/dev/null || true)" ]; then
+        export_ok=true
         for theme_dir in /usr/share/themes/Spaced-*; do
             [ -d "$theme_dir" ] || continue
-            rsync -a --delete "$theme_dir/" "$theme_export/${theme_dir##*/}/" 2>/dev/null \
-                || true
+            rsync -a --checksum --delete "$theme_dir/" "$theme_export/${theme_dir##*/}/" 2>/dev/null \
+                || export_ok=false
         done
-        flatpak override --user --filesystem=xdg-data/themes:ro >/dev/null 2>&1 || true
-        printf '%s\n' "$stamp" >"$stamp_file" 2>/dev/null || true
+        flatpak override --user --filesystem=xdg-data/themes:ro >/dev/null 2>&1 || export_ok=false
+        # A partial export must retry on the next switch, not cache success.
+        if "$export_ok"; then
+            printf '%s\n' "$stamp" >"$stamp_file" 2>/dev/null || true
+        fi
     fi
     # GTK3 follows XSettings; GTK4/libadwaita follows color-scheme. Forcing a
     # GTK3 theme through GTK_THEME breaks GTK4 CSS and must not be recreated.

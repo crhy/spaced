@@ -30,6 +30,7 @@ for required_package in \
     btop \
     gparted \
     nvtop \
+    pulseaudio-module-bluetooth \
     pulseaudio-utils \
     tzdata \
     firmware-nvidia-graphics \
@@ -191,7 +192,8 @@ assert "mate-power-manager" in packages, \
 defaults_control = (Path("packages/spaced-mate-default-settings/DEBIAN/control")
                     .read_text(encoding="utf-8"))
 for package in ("accountsservice", "caja-admin", "gigolo", "gnome-keyring", "mozo",
-                "libcanberra-gtk3-module", "pulseaudio-utils", "timeshift",
+                "libcanberra-gtk3-module", "pulseaudio-module-bluetooth",
+                "pulseaudio-utils", "timeshift",
                 "tzdata", "unrar-free", "wmctrl", "x11-xserver-utils",
                 "xdg-desktop-portal-gtk"):
     assert package in defaults_control, \
@@ -471,7 +473,7 @@ for split_control in (themes_control, wallpapers_control):
         "split artwork package lacks the Breaks/Replaces takeover for upgrades"
 assert f"spaced-mate-default-settings (= {package_version})" in meta_control \
     and "spaced-welcome (>= 0.1.21)" in meta_control \
-    and "spaced-monitor (>= 0.1.7)" in meta_control \
+    and "spaced-monitor (>= 0.1.8)" in meta_control \
     and "libfuse2t64" in meta_control, \
     "spaced-meta does not pull in the standalone applications and desktop defaults"
 # The artwork split moves payload out of spaced-mate-default-settings. No
@@ -528,8 +530,8 @@ def artifact_default(name):
 assert artifact_default("SPACED_WELCOME_REPOSITORY") == "crhy/spacedwelcome"
 assert artifact_default("SPACED_WELCOME_VERSION") == "0.1.21"
 assert artifact_default("SPACED_MONITOR_REPOSITORY") == "crhy/spacedmonitor"
-assert artifact_default("SPACED_MONITOR_VERSION") == "0.1.7"
-assert artifact_default("SPACED_MONITOR_RELEASE_TAG") == "v0.1.7"
+assert artifact_default("SPACED_MONITOR_VERSION") == "0.1.8"
+assert artifact_default("SPACED_MONITOR_RELEASE_TAG") == "v0.1.8"
 assert artifact_default("SPACED_GITHUB_REMOTE_NAME") == "spaced-github"
 assert artifact_default("SPACED_GITHUB_REMOTE_DESCRIPTOR_URL") == \
     "https://crhy.github.io/spacedbazaar/spaced-github.flatpakrepo"
@@ -1217,8 +1219,10 @@ for theme in themes:
     icon_metadata = (icon_root / f"Spaced-Icons-{theme['gtk_theme'].removeprefix('Spaced-')}" / "index.theme")
     menu_variant = "Spaced-Menu-On-Dark" if theme.get("panel_dark", theme["dark"]) else "Spaced-Menu-On-Light"
     icon_metadata_text = icon_metadata.read_text(encoding="utf-8")
-    assert icon_metadata.is_file() and f"Inherits={menu_variant},Papirus-Dark,hicolor" in icon_metadata_text, \
-        f"{theme['name']}: scalable Papirus icons do not precede low-resolution hicolor fallbacks"
+    papirus_variant = ("Papirus-Dark" if theme["dark"] else
+                       "Papirus" if theme.get("panel_dark", False) else "Papirus-Light")
+    assert icon_metadata.is_file() and f"Inherits={menu_variant},{papirus_variant},hicolor" in icon_metadata_text, \
+        f"{theme['name']}: fallback icons must match application surfaces, independently of panel brightness"
     assert "Directories=48x48/places," in icon_metadata_text \
         and "[48x48/places]" in icon_metadata_text, \
         f"{theme['name']}: the exact Brisk raster mark is missing from the active theme index"

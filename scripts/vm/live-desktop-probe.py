@@ -78,7 +78,7 @@ try:
     report['memory'] = Path('/proc/meminfo').read_text()
     report['uptime'] = Path('/proc/uptime').read_text().strip()
     code, versions, error = run('dpkg-query', '-W', '-f=${binary:Package} ${Version} ${db:Status-Status}\n',
-                             'compiz-core', 'compiz-gtk', 'mate-panel', 'libmarco-private2',
+                             'compiz-core', 'compiz-gnome', 'mate-panel', 'libmarco-private2',
                              'spaced-meta', 'spaced-mate-default-settings',
                              'spaced-themes', 'spaced-wallpapers', 'spaced-monitor',
                              'spaced-welcome', 'mozo', 'unrar-free', 'xserver-xorg-core',

@@ -658,11 +658,11 @@ label selection {
 }
 
 label:disabled {
-    color: shade(@theme_text_color, 0.50);
+    color: mix(@theme_fg_color, @theme_bg_color, 0.50);
 }
 
 label:disabled:backdrop {
-    color: shade(@theme_text_color, 0.50);
+    color: mix(@theme_fg_color, @theme_bg_color, 0.50);
 }
 
 label:backdrop {
@@ -2122,8 +2122,7 @@ scale slider:backdrop {
                                       shade(@theme_bg_color, 1.2),
                                       shade(@theme_bg_color, 0.97)
                                      );
-    border-color: @dark_shadow;
-    border: 2px solid @light_shadow;
+    border-color: @theme_fg_color;
     border-radius: 100%;
 }
 
