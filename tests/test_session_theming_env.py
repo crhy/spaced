@@ -14,6 +14,23 @@ PROBE = ('. "{xsession}"; printf "%s|%s|%s" "$QT_QPA_PLATFORMTHEME" '
 
 
 class SessionThemingEnvTests(unittest.TestCase):
+    def test_palette_directory_exists_before_desktop_apps_start(self):
+        for custom_config in (False, True):
+            with self.subTest(custom_config=custom_config), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                env = {'PATH': os.environ['PATH'], 'HOME': str(root)}
+                config = root / ('custom-config' if custom_config else '.config')
+                if custom_config:
+                    env['XDG_CONFIG_HOME'] = str(config)
+                script = XSESSION.read_text().replace(PROFILE_PATH, str(root / 'absent-profile'))
+                subprocess.run(['sh', '-c', script], env=env, check=True)
+                self.assertTrue((config / 'spaced').is_dir())
+                self.assertEqual((config / 'spaced').stat().st_mode & 0o777, 0o700)
+                marker = config / 'spaced/libadwaita.css'
+                marker.write_text('preserve existing palette')
+                subprocess.run(['sh', '-c', script], env=env, check=True)
+                self.assertEqual(marker.read_text(), 'preserve existing palette')
+
     def test_xsession_loads_theming_exports(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
