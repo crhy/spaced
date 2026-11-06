@@ -60,7 +60,15 @@ class PaletteGeneratorTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.themes = json.loads(REGISTRY.read_text(encoding="utf-8"))["themes"]
-        cls.workspace = Path(tempfile.mkdtemp(prefix="libadwaita-palette-", dir=str(ROOT / "build")))
+        build_root = ROOT / "build"
+        build_root.mkdir(exist_ok=True)
+        cls._workspace = tempfile.TemporaryDirectory(
+            prefix="libadwaita-palette-", dir=str(build_root))
+        cls.workspace = Path(cls._workspace.name)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls._workspace.cleanup()
 
     def run_helper(self, gtk_theme, config_home, themes_root=THEME_ROOT, themes_json=REGISTRY):
         env = {
