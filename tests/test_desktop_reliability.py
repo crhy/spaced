@@ -86,16 +86,20 @@ class MigrationTests(unittest.TestCase):
                           'text/x-perl', 'application/x-perl', 'text/plain'):
             self.assertEqual(defaults[mime_type], 'pluma.desktop', mime_type)
 
-    def test_menu_editor_migration_uses_the_installed_alacarte_launcher(self):
-        menu = self.config / 'menus/mate-applications.menu'
-        menu.parent.mkdir(parents=True)
-        menu.write_text('<Layout>\n<Filename>menulibre.desktop</Filename>\n</Layout>\n')
-        migration.migrate(self.config)
-        self.assertIn('<Filename>alacarte.desktop</Filename>', menu.read_text())
-        self.assertNotIn('menulibre.desktop', menu.read_text())
-        before = menu.read_bytes()
-        migration.migrate(self.config)
-        self.assertEqual(menu.read_bytes(), before)
+    def test_menu_editor_migration_uses_the_installed_mozo_launcher(self):
+        for old_launcher in ('menulibre.desktop', 'alacarte.desktop'):
+            with self.subTest(old_launcher=old_launcher):
+                menu = self.config / 'menus/mate-applications.menu'
+                menu.parent.mkdir(parents=True, exist_ok=True)
+                menu.write_text(
+                    f'<Layout>\n<Filename>{old_launcher}</Filename>\n</Layout>\n')
+                migration.migrate(self.config)
+                self.assertEqual(
+                    menu.read_text().count('<Filename>mozo.desktop</Filename>'), 1)
+                self.assertNotIn(old_launcher, menu.read_text())
+                before = menu.read_bytes()
+                migration.migrate(self.config)
+                self.assertEqual(menu.read_bytes(), before)
 
     def test_mate_specific_defaults_are_migrated(self):
         mime = self.config / 'mate-mimeapps.list'
@@ -533,6 +537,7 @@ class DesktopIconTests(unittest.TestCase):
                         TEST_STATE=str(self.state),
                         PATH=str(self.fakebin) + os.pathsep + os.environ['PATH'])
         self.command('xrandr', 'cat "$TEST_STATE/xrandr"')
+        self.command('xprop', 'exit 1')
         (self.state / 'xrandr').write_text(self.LAYOUT)
 
     def command(self, name, body):
@@ -582,6 +587,35 @@ class DesktopIconTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual((path.read_bytes(), path.stat().st_mtime_ns), before)
         self.assertEqual(result.stdout, '')
+
+    def test_positions_reserved_for_the_top_panel_are_reflowed(self):
+        self.command(
+            'xprop',
+            'printf "%s\\n" '
+            '"_NET_CURRENT_DESKTOP(CARDINAL) = 0" '
+            '"_NET_WORKAREA(CARDINAL) = 0, 30, 3840, 1050"')
+        path = self.metadata(
+            '[under-panel]\ncaja-icon-position=8,8\n'
+            '[visible]\ncaja-icon-position=64,120\n')
+        result = self.run_repair()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        parser = configparser.ConfigParser(interpolation=None, strict=False)
+        parser.optionxform = str
+        parser.read_string(path.read_text())
+        self.assertNotIn('caja-icon-position', parser['under-panel'])
+        self.assertEqual(parser['visible']['caja-icon-position'], '64,120')
+        self.assertIn('under-panel', result.stdout)
+
+    def test_work_area_for_the_current_desktop_is_selected(self):
+        self.command(
+            'xprop',
+            'printf "%s\\n" '
+            '"_NET_CURRENT_DESKTOP(CARDINAL) = 1" '
+            '"_NET_WORKAREA(CARDINAL) = 0, 0, 3840, 1080, 0, 44, 3840, 1036"')
+        path = self.metadata('[under-panel]\ncaja-icon-position=8,30\n')
+        result = self.run_repair()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn('caja-icon-position', path.read_text())
 
     def test_unreadable_layout_makes_the_repair_do_nothing(self):
         self.command('xrandr', 'exit 1')

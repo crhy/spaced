@@ -23,13 +23,11 @@ import sys
 import tempfile
 from pathlib import Path
 
-# Caja lays desktop icons out on a grid; allow a cell's worth of slack so an
-# icon that is merely clipped at a screen edge is left where the user put it.
-ICON_SLACK = 128
 POSITION_KEY = "caja-icon-position"
 METADATA_ATTRIBUTE = f"metadata::{POSITION_KEY}"
 MODE_PATTERN = re.compile(r"\b(\d+)x(\d+)\+(-?\d+)\+(-?\d+)\b")
 DESKTOP_DIR_PATTERN = re.compile(r"^\s*XDG_DESKTOP_DIR=(.*)\s*$")
+CARDINAL_PATTERN = re.compile(r"=\s*(-?\d+(?:\s*,\s*-?\d+)*)\s*$")
 
 
 def run(command):
@@ -58,8 +56,49 @@ def screen_rectangles():
     return rectangles
 
 
+def usable_rectangles(rectangles):
+    """Intersect connected screens with the desktop's EWMH work area.
+
+    Caja must not place icons underneath a panel.  XRandR only describes the
+    physical monitor bounds, while the window manager publishes the usable
+    desktop (excluding panels and docks) through ``_NET_WORKAREA``.
+    """
+    output = run(["xprop", "-root", "_NET_CURRENT_DESKTOP", "_NET_WORKAREA"])
+    if not output:
+        return rectangles
+    current = 0
+    workarea_values = []
+    for line in output.splitlines():
+        match = CARDINAL_PATTERN.search(line)
+        if not match:
+            continue
+        values = [int(value.strip()) for value in match.group(1).split(",")]
+        if line.startswith("_NET_CURRENT_DESKTOP") and len(values) == 1:
+            current = values[0]
+        elif line.startswith("_NET_WORKAREA"):
+            workarea_values = values
+    offset = current * 4
+    if current < 0 or len(workarea_values) < offset + 4:
+        return rectangles
+    work_left, work_top, work_width, work_height = workarea_values[offset:offset + 4]
+    if work_width <= 0 or work_height <= 0:
+        return rectangles
+    work_right = work_left + work_width
+    work_bottom = work_top + work_height
+    usable = []
+    for left, top, width, height in rectangles:
+        right, bottom = left + width, top + height
+        clipped_left, clipped_top = max(left, work_left), max(top, work_top)
+        clipped_right, clipped_bottom = min(right, work_right), min(bottom, work_bottom)
+        if clipped_right > clipped_left and clipped_bottom > clipped_top:
+            usable.append((clipped_left, clipped_top,
+                           clipped_right - clipped_left,
+                           clipped_bottom - clipped_top))
+    return usable or rectangles
+
+
 def reachable(position, rectangles):
-    """True when a stored icon position still falls on a connected screen."""
+    """True when a stored icon position falls inside usable desktop space."""
     try:
         x_text, y_text = position.split(",", 1)
         x, y = int(x_text.strip()), int(y_text.strip())
@@ -67,8 +106,7 @@ def reachable(position, rectangles):
         # An unparseable position cannot be validated; leave it alone.
         return True
     for left, top, width, height in rectangles:
-        if (left - ICON_SLACK <= x < left + width
-                and top - ICON_SLACK <= y < top + height):
+        if left <= x < left + width and top <= y < top + height:
             return True
     return False
 
@@ -194,6 +232,7 @@ def repair_once():
     if not rectangles:
         # Without a trustworthy layout, doing nothing is the safe choice.
         return 0
+    rectangles = usable_rectangles(rectangles)
     config = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
     desktop = desktop_directory(config)
     repaired = repair_file_icons(desktop, rectangles)

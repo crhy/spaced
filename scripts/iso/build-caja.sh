@@ -11,7 +11,7 @@ OUTPUT=${2:-$ROOT/build/caja}
 mkdir -p "$OUTPUT"
 OUTPUT=$(cd "$OUTPUT" && pwd)
 PATCHES="$ROOT/patches/caja"
-VERSION=1.26.4-3+spaced10.26.8
+VERSION=1.26.4-3+spaced11.26
 for tool in curl sha256sum dpkg-source patch; do
     command -v "$tool" >/dev/null || { echo "Missing build tool: $tool" >&2; exit 1; }
 done
@@ -44,8 +44,10 @@ caja ($VERSION) unstable; urgency=medium
 
   * Preserve renamed destinations across filesystems (MATE Caja PR #1888).
   * Persist View > Show Hidden Files across new windows (Spaced #379).
+  * Measure new desktop icons before positioning them so overflowing Gigolo
+    volume icons wrap inside the visible work area (MATE Caja 333e272, Spaced #389).
 
- -- Spaced Linux Developers <dev@spacedlinux.com>  Fri, 30 Oct 2026 00:00:00 +0000
+ -- Spaced Linux Developers <dev@spacedlinux.com>  Fri, 06 Nov 2026 00:00:00 +0000
 
 EOF
 cat "$source_dir/debian/changelog" >> "$build_dir/changelog"

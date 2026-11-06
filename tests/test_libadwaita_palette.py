@@ -64,6 +64,8 @@ class PaletteGeneratorTests(unittest.TestCase):
 
     def run_helper(self, gtk_theme, config_home, themes_root=THEME_ROOT, themes_json=REGISTRY):
         env = {
+            # Keep Path.home() and Flatpak state inside the disposable fixture.
+            "HOME": str(config_home.parent),
             "XDG_CONFIG_HOME": str(config_home),
             "SPACED_THEMES_ROOT": str(themes_root),
             "SPACED_THEMES_JSON": str(themes_json),
@@ -130,6 +132,44 @@ class PaletteGeneratorTests(unittest.TestCase):
             theme = next(item for item in self.themes if item["id"] == theme_id)
             css_path, _ = self.generate(theme["gtk_theme"])
             self.assertIn(f"dark={expected}", css_path.read_text(encoding="utf-8").splitlines()[0])
+
+    def test_rustdesk_native_and_flatpak_profiles_follow_the_theme(self):
+        dark_theme = next(item for item in self.themes if item["dark"])
+        light_theme = next(item for item in self.themes if not item["dark"])
+        config_home = self.workspace / "config-rustdesk"
+        native = config_home / "RustDesk/RustDesk_local.toml"
+        flatpak = (config_home / "../.var/app/com.rustdesk.RustDesk/config/RustDesk/"
+                   "RustDesk_local.toml").resolve()
+
+        native.parent.mkdir(parents=True, exist_ok=True)
+        native.write_text(
+            'remote_id = "123"\n\n[options]\nfoo = "bar"\ntheme = "light"\n\n[ui_flutter]\n',
+            encoding="utf-8")
+        result = self.run_helper(dark_theme["gtk_theme"], config_home)
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn('remote_id = "123"', native.read_text(encoding="utf-8"))
+        self.assertIn('foo = "bar"', native.read_text(encoding="utf-8"))
+        self.assertEqual(1, native.read_text(encoding="utf-8").count('theme = "dark"'))
+        self.assertEqual('[options]\ntheme = "dark"\n', flatpak.read_text(encoding="utf-8"))
+
+        result = self.run_helper(light_theme["gtk_theme"], config_home)
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual(1, native.read_text(encoding="utf-8").count('theme = "light"'))
+        self.assertNotIn('theme = "dark"', native.read_text(encoding="utf-8"))
+        self.assertEqual('[options]\ntheme = "light"\n', flatpak.read_text(encoding="utf-8"))
+
+    def test_rustdesk_theme_is_added_to_an_existing_options_section(self):
+        theme = next(item for item in self.themes if item["dark"])
+        config_home = self.workspace / "config-rustdesk-options"
+        profile = config_home / "RustDesk/RustDesk_local.toml"
+        profile.parent.mkdir(parents=True, exist_ok=True)
+        profile.write_text('[options]\nfoo = "bar"\n[ui_flutter]\nscale = "1"\n',
+                           encoding="utf-8")
+        result = self.run_helper(theme["gtk_theme"], config_home)
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual(
+            '[options]\nfoo = "bar"\ntheme = "dark"\n[ui_flutter]\nscale = "1"\n',
+            profile.read_text(encoding="utf-8"))
 
     def test_one_level_of_at_name_indirection_is_followed(self):
         themes_root = self.workspace / "themes-ref"

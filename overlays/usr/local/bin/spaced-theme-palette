@@ -168,6 +168,61 @@ def atomic_write(path, text):
         raise
 
 
+def rustdesk_toml_with_theme(text, theme):
+    """Set options.theme in a RustDesk local-config TOML document."""
+    lines = text.splitlines(keepends=True)
+    section_start = None
+    section_end = len(lines)
+    for index, line in enumerate(lines):
+        stripped = line.strip()
+        if stripped == "[options]":
+            section_start = index
+            continue
+        if section_start is not None and stripped.startswith("[") and stripped.endswith("]"):
+            section_end = index
+            break
+
+    replacement = f'theme = "{theme}"\n'
+    if section_start is not None:
+        for index in range(section_start + 1, section_end):
+            if re.match(r"^\s*theme\s*=", lines[index]):
+                lines[index] = replacement
+                return "".join(lines)
+        lines.insert(section_end, replacement)
+        return "".join(lines)
+
+    if lines and not lines[-1].endswith("\n"):
+        lines[-1] += "\n"
+    if lines and lines[-1].strip():
+        lines.append("\n")
+    lines.extend(("[options]\n", replacement))
+    return "".join(lines)
+
+
+def sync_rustdesk_theme(config_home, home, dark):
+    """Make native and Flatpak RustDesk follow the active Spaced theme."""
+    theme = "dark" if dark else "light"
+    paths = (
+        Path(config_home) / "RustDesk/RustDesk_local.toml",
+        Path(home) / ".var/app/com.rustdesk.RustDesk/config/RustDesk/RustDesk_local.toml",
+    )
+    for path in paths:
+        path = path.resolve()
+        try:
+            old_text = path.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            old_text = ""
+        except OSError:
+            continue
+        new_text = rustdesk_toml_with_theme(old_text, theme)
+        if new_text != old_text:
+            try:
+                atomic_write(path, new_text)
+            except OSError:
+                # RustDesk is optional; its profile must never break a theme switch.
+                pass
+
+
 def main(argv):
     args = [argument for argument in argv[1:] if not argument.startswith("--")]
     options = {argument[2:].split("=", 1)[0]: argument[2:].split("=", 1)[1]
@@ -193,6 +248,10 @@ def main(argv):
 
     atomic_write(state_dir / "libadwaita.css", css_text)
     atomic_write(state_dir / "theme.json", json_text)
+    # RustDesk's Flutter "system" setting does not reliably receive MATE's
+    # light/dark preference. Keep its own supported preference in sync so the
+    # native and Flatpak builds do not open white under a dark Spaced theme.
+    sync_rustdesk_theme(config_home, Path.home(), dark)
     return 0
 
 

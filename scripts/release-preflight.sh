@@ -20,10 +20,13 @@ require_digest() {
 }
 
 require_digest SPACED_WELCOME_SHA256 "$SPACED_WELCOME_SHA256" 64
+require_digest SPACED_MONITOR_SHA256 "$SPACED_MONITOR_SHA256" 64
 require_digest SPACED_GITHUB_REMOTE_SHA256 "$SPACED_GITHUB_REMOTE_SHA256" 64
 require_digest SPACED_GITHUB_GPG_FINGERPRINT "$SPACED_GITHUB_GPG_FINGERPRINT" 40
 [[ $SPACED_WELCOME_RELEASE_TAG == "v$SPACED_WELCOME_VERSION" ]] ||
     die "Welcome tag '$SPACED_WELCOME_RELEASE_TAG' does not match version '$SPACED_WELCOME_VERSION'"
+[[ $SPACED_MONITOR_RELEASE_TAG == "v$SPACED_MONITOR_VERSION" ]] ||
+    die "Monitor tag '$SPACED_MONITOR_RELEASE_TAG' does not match version '$SPACED_MONITOR_VERSION'"
 
 welcome_version_file=$ROOT/components/spacedwelcome/VERSION
 if [[ -f $welcome_version_file ]]; then

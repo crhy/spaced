@@ -269,13 +269,17 @@ def migrate_spelling(config):
 
 
 def migrate_menu_editor(path):
-    """Replace the stale MenuLibre slot with the editor shipped in the image."""
+    """Replace superseded menu editors with Mozo, the MATE-native editor."""
     try:
         content = path.read_text(encoding="utf-8")
     except FileNotFoundError:
         return
-    updated = content.replace("<Filename>menulibre.desktop</Filename>",
-                              "<Filename>alacarte.desktop</Filename>")
+    updated = content
+    for old_launcher in ("menulibre.desktop", "alacarte.desktop"):
+        updated = updated.replace(
+            f"<Filename>{old_launcher}</Filename>",
+            "<Filename>mozo.desktop</Filename>",
+        )
     if updated != content:
         atomic_write(path, updated)
 

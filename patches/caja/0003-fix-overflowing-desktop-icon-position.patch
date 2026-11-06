@@ -1,0 +1,37 @@
+Description: Load icon contents before assigning desktop positions
+Origin: upstream, https://github.com/mate-desktop/caja/commit/333e2728dbebb12110fc9b2c821089eb372ee14e
+Bug: https://github.com/mate-desktop/caja/issues/85
+Applied-Upstream: https://github.com/mate-desktop/caja/commit/333e2728dbebb12110fc9b2c821089eb372ee14e
+
+--- a/libcaja-private/caja-icon-container.c
++++ b/libcaja-private/caja-icon-container.c
+@@ -7688,13 +7688,0 @@
+-static void
+-finish_adding_icon (CajaIconContainer *container,
+-                    CajaIcon *icon)
+-{
+-    caja_icon_container_update_icon (container, icon);
+-    eel_canvas_item_show (EEL_CANVAS_ITEM (icon->item));
+-
+-    g_signal_connect_object (icon->item, "event",
+-                             G_CALLBACK (item_event_callback), container, 0);
+-
+-    g_signal_emit (container, signals[ICON_ADDED], 0, icon->data);
+-}
+-
+@@ -7718,4 +7705,5 @@
+         icon = p->data;
++        caja_icon_container_update_icon (container, icon);
+         if (icon->has_lazy_position)
+         {
+             assign_icon_position (container, icon);
+@@ -7728,3 +7716,7 @@
+-
+-        finish_adding_icon (container, icon);
++        eel_canvas_item_show (EEL_CANVAS_ITEM (icon->item));
++
++        g_signal_connect_object (icon->item, "event",
++                                 G_CALLBACK (item_event_callback), container, 0);
++
++        g_signal_emit (container, signals[ICON_ADDED], 0, icon->data);
+     }

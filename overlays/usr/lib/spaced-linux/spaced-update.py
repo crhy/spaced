@@ -1793,5 +1793,9 @@ if __name__ == "__main__":
     application = App()
     application.show_all()
     application.os_tab.progress.hide()
+    # pack_end() makes the optional release-notes button the first focusable
+    # action in GTK's traversal order. Put initial keyboard focus on the
+    # useful release check instead of painting "What's new" as selected.
+    application.os_tab.checkbtn.grab_focus()
     application.schedule_autocheck()
     Gtk.main()

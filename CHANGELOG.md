@@ -1,5 +1,42 @@
 # Changelog
 
+## 11.26 - 2026-11-06
+
+Prepared for the first November 2026 ISO and `11.26-1` APT packages.
+
+- Include Spaced Monitor 0.1.6 in both the ISO and signed APT archive, with
+  Fahrenheit temperature support, clearer process names, reliable card
+  maximize/restore interaction, and its full automated and visual test suite.
+- Make the desktop theme bridge resilient to monitor restarts and abandoned
+  processes, extend coordinated libadwaita colors across all supported themes,
+  and synchronize RustDesk's supported light/dark preference for native and
+  Flatpak installations (#398, #403).
+- Rebase the X server on Devuan `2:21.1.25-2devuan1`, retaining Devuan's
+  video-driver ABI compatibility patch while removing the obsolete source URL
+  and duplicate local patch (#401).
+- Measure new Caja desktop icons before positioning them, backporting upstream
+  commit `333e272` so overflowing Gigolo volumes wrap within the active monitor
+  work area. Repair older saved positions against top-panel and per-workspace
+  layouts, and validate Caja and Brisk Menu through the live desktop smoke path
+  (#389, #404).
+- Replace Alacarte with Mozo throughout the default menu, migration, packaging,
+  and Brisk Menu editor integration (#391).
+- Launch executable text files as programs by default, while leaving users free
+  to change Caja's preference (#388).
+- Reset and refresh the X display before LightDM's greeter starts, and use the
+  full-resolution Spaced medallion for the default account avatar (#384, #393).
+- Keep keyboard focus off the Spaced Update What's New expander when the window
+  opens (#392).
+- Install `unrar-free` so Engrampa/Caja can extract RAR archives from the
+  context menu (#400).
+- Keep GDebi as the default `.deb` handler so local packages are staged through
+  a readable path without disabling APT's `_apt` sandbox (#399).
+- Pin and stage SpacedBazaar's signed catalog with its Easy Effects install-state
+  correction, so completed transactions refresh to the installed state (#397).
+- Retain the removal of the Brave managed default-browser policy. The separate
+  minimize/draft-loss report remains unreproduced, with no distro policy left
+  that can close or replace a Brave window (#380).
+
 ## 10.26.8 - 2026-10-31
 
 Prepared for the 10.26.8 ISO and `10.26.8-1` APT packages. This release is

@@ -1,6 +1,7 @@
 #!/bin/bash
-# Rebuild Devuan's xorg-server with the upstream revert of the 21.1.25
-# DamageRec ABI break, which crashes the amdgpu driver (issue #298).
+# Rebuild Devuan's corrected xorg-server source. Devuan's -2 source now
+# carries the upstream DamageRec ABI revert, so Spaced must not apply it a
+# second time (issues #298 and #401).
 set -euo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 MODE=${1:---build}
@@ -12,7 +13,7 @@ OUTPUT=${2:-$ROOT/build/xorg-server}
 mkdir -p "$OUTPUT"
 OUTPUT=$(cd "$OUTPUT" && pwd)
 PATCHES="$ROOT/patches/xorg-server"
-VERSION=2:21.1.25-1devuan1+spaced10.26.3
+VERSION=2:21.1.25-2devuan1+spaced11.26
 for tool in curl sha256sum dpkg-source patch; do
     command -v "$tool" >/dev/null || { echo "Missing build tool: $tool" >&2; exit 1; }
 done
@@ -32,15 +33,10 @@ done < "$PATCHES/sources.sha256"
 build_dir=$(mktemp -d "$OUTPUT/source.XXXXXXXX")
 cp "$OUTPUT/downloads/xorg-server_21.1.25.orig.tar.gz" "$build_dir/"
 # The descriptor and every archive were verified against the tracked hashes.
-dpkg-source --no-check -x "$OUTPUT/downloads/xorg-server_21.1.25-1devuan1.dsc" "$build_dir/xorg-server-21.1.25"
+dpkg-source --no-check -x "$OUTPUT/downloads/xorg-server_21.1.25-2devuan1.dsc" "$build_dir/xorg-server-21.1.25"
 source_dir="$build_dir/xorg-server-21.1.25"
-# Format 1.0: debian/rules applies debian/patches/series with quilt.
-for patch_file in "$PATCHES"/*.patch; do
-    name="spaced-$(basename "$patch_file")"
-    cp "$patch_file" "$source_dir/debian/patches/$name"
-    printf '%s\n' "$name" >> "$source_dir/debian/patches/series"
-done
-# Fail now, not halfway through the build, if a patch no longer applies.
+# Format 1.0: verify Devuan's pinned patch series and the restored ABI before
+# spending time on a full build.
 check_dir=$(mktemp -d "$OUTPUT/check.XXXXXXXX")
 cp -a "$source_dir/." "$check_dir/"
 while read -r name; do
@@ -54,12 +50,11 @@ rm -rf "$check_dir"
 cat > "$build_dir/changelog" <<EOF
 xorg-server ($VERSION) unstable; urgency=medium
 
-  * Revert "damage: Unlink a damage from the list it was actually inserted
-    on" (upstream MR 2355, as in Debian 2:21.1.25-2). It changed DamageRec
-    without a driver ABI bump, so xf86-video-amdgpu crashed the server at
-    startup (Spaced #298, Debian #1150321).
+  * Rebase on Devuan 2:21.1.25-2devuan1, which incorporates upstream MR 2355
+    and restores the DamageRec driver ABI without a second local patch
+    (Spaced #298, #401; Debian #1150321).
 
- -- Spaced Linux Developers <dev@spacedlinux.com>  Wed, 14 Oct 2026 00:00:00 +0000
+ -- Spaced Linux Developers <dev@spacedlinux.com>  Fri, 06 Nov 2026 00:00:00 +0000
 
 EOF
 cat "$source_dir/debian/changelog" >> "$build_dir/changelog"

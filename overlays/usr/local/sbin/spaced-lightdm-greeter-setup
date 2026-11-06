@@ -1,0 +1,17 @@
+#!/bin/sh
+# Some Xorg/display combinations enter LightDM with the output logically on
+# but the first frame still blank.  Pointer movement wakes it, which makes the
+# greeter look hung.  Wake the output and force an initial repaint before the
+# GTK greeter maps its window.
+
+[ -n "${DISPLAY:-}" ] || exit 0
+
+if command -v xset >/dev/null 2>&1; then
+    xset -display "$DISPLAY" s reset >/dev/null 2>&1 || true
+    xset -display "$DISPLAY" dpms force on >/dev/null 2>&1 || true
+fi
+if command -v xrefresh >/dev/null 2>&1; then
+    xrefresh -display "$DISPLAY" >/dev/null 2>&1 || true
+fi
+
+exit 0
