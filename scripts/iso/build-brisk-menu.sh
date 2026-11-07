@@ -11,7 +11,7 @@ OUTPUT=${2:-$ROOT/build/brisk-menu}
 mkdir -p "$OUTPUT"
 OUTPUT=$(cd "$OUTPUT" && pwd)
 PATCHES="$ROOT/patches/brisk-menu"
-VERSION=0.6.2-2+spaced10.26.8
+VERSION=0.6.2-2+spaced11.26
 for tool in curl sha256sum dpkg-source patch; do
     command -v "$tool" >/dev/null || { echo "Missing build tool: $tool" >&2; exit 1; }
 done
@@ -44,7 +44,7 @@ brisk-menu ($VERSION) unstable; urgency=medium
 
   * Add Properties, Uninstall, Check for Updates and Change Icon menu actions.
   * Correct the desktop-action application-info reference ownership.
-  * Recognize Alacarte in Edit Menus (Spaced #379).
+  * Prefer the shipped Mozo editor in Edit Menus (Spaced #391).
   * Add a persistent main menu icon chooser and default reset (Spaced #379).
 
  -- Spaced Linux Developers <dev@spacedlinux.com>  Fri, 30 Oct 2026 00:00:00 +0000

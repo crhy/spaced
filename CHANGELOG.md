@@ -1,5 +1,63 @@
 # Changelog
 
+## 11.26 - 2026-11-06
+
+Prepared for the first November 2026 ISO and `11.26-1` APT packages.
+
+- Include Spaced Monitor 0.1.8 in both the ISO and signed APT archive, with
+  Fahrenheit temperature support, clearer process names, reliable card
+  maximize/restore interaction and correctly refreshed network addresses.
+  Hardware cards keep updating on systems without a supported GPU, closing
+  the window exits the application, and the Overview scrolls instead of
+  clipping in small windows.
+- Make the desktop theme bridge resilient to monitor restarts and abandoned
+  processes, extend coordinated libadwaita colors across all supported themes,
+  and synchronize RustDesk's supported light/dark preference for native and
+  Flatpak installations (#398, #403).
+- Clean up the entire theme worker process group after a crash, and preserve
+  unrelated RustDesk preferences when updating commented or quoted TOML files.
+- Match Papirus fallback icons to both application and panel brightness, mute
+  disabled labels consistently, and restore visible slider outlines across
+  light and dark themes. Add GTK rendering-state regression checks.
+- Treat the Windows XP and GeoWorks panels as dark, so their tray icons stay
+  visible. Use dark Linux Light volume icons on its light panel, and a dark
+  disk icon in Caja's sidebar for themes with a dark panel over light windows.
+- Refresh exported user-local themes when nested assets change, including
+  same-size CSS updates with preserved timestamps. Retry failed exports
+  instead of recording them as successful and leaving stale theme copies.
+- Rebase the X server on Devuan `2:21.1.25-2devuan1`, retaining Devuan's
+  video-driver ABI compatibility patch while removing the obsolete source URL
+  and duplicate local patch (#401).
+- Measure new Caja desktop icons before positioning them, backporting upstream
+  commit `333e272` so overflowing Gigolo volumes wrap within the active monitor
+  work area. Repair older saved positions against top-panel and per-workspace
+  layouts, and validate Caja and Brisk Menu through the live desktop smoke path
+  (#389, #404).
+- Replace Alacarte with Mozo throughout the default menu, migration, packaging,
+  and Brisk Menu editor integration (#391).
+- Launch executable text files as programs by default, while leaving users free
+  to change Caja's preference (#388).
+- Reset and refresh the X display before LightDM's greeter starts, and use the
+  full-resolution Spaced medallion for the default account avatar (#384, #393).
+- Keep keyboard focus off the Spaced Update What's New expander when the window
+  opens (#392).
+- Install `unrar-free` so Engrampa/Caja can extract RAR archives from the
+  context menu (#400).
+- Retain GDebi as the default `.deb` handler and the GUI workaround for local
+  package installation (#399). Manually running APT on a package in a private
+  directory can still print its harmless `_apt` permissions warning; APT's
+  sandbox remains enabled.
+- Pin and stage SpacedBazaar's signed catalog with its Easy Effects install-state
+  correction, so completed transactions refresh to the installed state.
+  Bazaar 0.1.15 also follows live Spaced light, dark and colored palettes.
+  Easy Effects itself needs PipeWire; 11.26 keeps PulseAudio, so Easy Effects
+  installs but cannot process audio. #397 stays open for a later PipeWire move.
+- Add `pulseaudio-module-bluetooth` so Bluetooth headsets and speakers work
+  with the shipped BlueZ stack, on new installs and through the APT update.
+- Retain the removal of the Brave managed default-browser policy. The separate
+  minimize/draft-loss report could not be reproduced (20 minimize/restore
+  cycles kept drafts intact) and remains open, needing reproduction (#380).
+
 ## 10.26.8 - 2026-10-31
 
 Prepared for the 10.26.8 ISO and `10.26.8-1` APT packages. This release is

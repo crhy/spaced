@@ -57,9 +57,13 @@
             "builder": "scripts/iso/build-local-packages.sh",
             "sources": [
                 "packages/spaced-mate-default-settings",
-                "packages/spaced-meta"
+                "packages/spaced-meta",
+                "packages/spaced-nm-focus",
+                "packages/spaced-themes",
+                "packages/spaced-wallpapers"
             ],
             "stagedDependencies": [
+                "spaced-monitor",
                 "spaced-welcome"
             ],
             "outputDirectory": "build/local-packages"
@@ -77,21 +81,15 @@
                 "reason": "Standalone first-login application packaged independently from desktop defaults"
             },
             {
-                "name": "SpacedBazaar",
-                "architecture": [
-                    "x86_64",
-                    "aarch64"
-                ],
-                "repository": "crhy/spacedbazaar",
+                "name": "spaced-monitor",
+                "architecture": "all",
+                "repository": "crhy/spacedmonitor",
                 "configuration": "config/external-artifacts.conf",
-                "versionVariable": "SPACED_BAZAAR_VERSION",
-                "checksumVariables": [
-                    "SPACED_BAZAAR_SHA256_AMD64",
-                    "SPACED_BAZAAR_SHA256_ARM64"
-                ],
-                "localOverride": "SPACED_BAZAAR_BUNDLE",
+                "versionVariable": "SPACED_MONITOR_VERSION",
+                "checksumVariable": "SPACED_MONITOR_SHA256",
+                "localOverride": "SPACED_MONITOR_DEB",
                 "stagingScript": "scripts/iso/stage-external-artifacts.sh",
-                "reason": "System-wide application catalog installed before the first desktop session"
+                "reason": "Standalone desktop system monitor released from its own repository and published to the signed apt archive"
             },
             {
                 "name": "spaced-github",
@@ -103,7 +101,7 @@
                 "gpgFingerprintVariable": "SPACED_GITHUB_GPG_FINGERPRINT",
                 "localOverride": "SPACED_GITHUB_REMOTE_FILE",
                 "stagingScript": "scripts/iso/stage-external-artifacts.sh",
-                "reason": "Signed first-party Flatpak catalog for CRHY applications"
+                "reason": "Signed first-party Flatpak catalog that delivers SpacedBazaar and other CRHY applications"
             },
             {
                 "name": "xkb-data",

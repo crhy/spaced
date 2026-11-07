@@ -61,10 +61,10 @@ default-layout='spaced-linux'
 
 [org.mate.caja.preferences]
 show-hidden-files=false
-# Double-clicking a .sh or .py file opens it in the default text editor rather
-# than asking whether to execute it (issue #182). Users who want to run a
-# script still have the terminal and Caja's own Behavior preference.
-executable-text-activation='display'
+# Double-clicking an executable text file launches it, matching the explicit
+# executable bit. Users can choose the prompt or editor behavior in Caja's
+# Behavior preference (issue #388).
+executable-text-activation='launch'
 
 [org.mate.caja.desktop]
 # Gigolo's network shares are ordinary gvfs mounts. Keep the desktop showing

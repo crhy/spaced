@@ -53,6 +53,7 @@
       "panel_layout": "spaced-winxp",
       "panel_position": "bottom",
       "panel_size": 30,
+      "panel_dark": true,
       "cairo_dock": false,
       "dark": false
     },
@@ -140,6 +141,7 @@
       "panel_layout": "spaced-geoworks",
       "panel_position": "bottom",
       "panel_size": 30,
+      "panel_dark": true,
       "cairo_dock": false,
       "dark": false
     },

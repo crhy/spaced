@@ -4,3 +4,10 @@
 if [ -r /etc/profile.d/spaced-application-theming.sh ]; then
     . /etc/profile.d/spaced-application-theming.sh
 fi
+
+# Flatpak cannot add a previously absent filesystem grant to a running app.
+# Create the narrow palette directory before any desktop autostarts launch;
+# the theme monitor fills it in once the session settings are available.
+if [ -n "${HOME:-}" ]; then
+    (umask 077; mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/spaced") 2>/dev/null || true
+fi

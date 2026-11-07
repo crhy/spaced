@@ -13,6 +13,13 @@ if [ -f /etc/lightdm/lightdm.conf ]; then
         /etc/lightdm/lightdm.conf
 fi
 
+# Upgrade the old Spaced avatar without replacing administrator customizations.
+# The ISO overlay alone does not update already installed LightDM configs.
+greeter_conf=/etc/lightdm/lightdm-gtk-greeter.conf
+if [ -f "$greeter_conf" ]; then
+    sed -i 's|^default-user-image=/usr/share/icons/hicolor/256x256/apps/spaced-linux\.png$|default-user-image=/usr/share/pixmaps/spaced-medallion.png|' "$greeter_conf"
+fi
+
 if command -v glib-compile-schemas >/dev/null 2>&1; then
     # A malformed schema owned by an unrelated package must not leave the
     # Spaced settings package (and its dependants) unconfigured. dpkg's GLib

@@ -6,8 +6,9 @@ four distribution actions requested in issue #354 and hands the selected
 desktop file to `spaced-app-action`. It also fixes the lifetime of the
 `GDesktopAppInfo` stored by existing desktop actions.
 
-`0002-support-alacarte-menu-editor.patch` also checks for Alacarte when opening
-Edit Menus. Spaced installs Alacarte rather than MenuLibre or Mozo (#379).
+`0002-support-alacarte-menu-editor.patch` prefers Mozo, the MATE-native menu
+editor shipped by Spaced, while retaining MenuLibre and Alacarte as upgrade
+fallbacks (#391).
 
 `0003-configurable-menu-button-icon.patch` adds **Change Menu Icon** to the
 panel menu context menu and a separate **Restore Default Menu Icon** action.
@@ -18,4 +19,4 @@ do not expose custom dialog buttons.
 `sources.sha256` pins the Devuan source archives. Build with `make marco`, or
 prepare the patched source without compiling with
 `scripts/iso/build-brisk-menu.sh --prepare-only`. The package version is
-`0.6.2-2+spaced10.26.8`.
+`0.6.2-2+spaced11.26`.

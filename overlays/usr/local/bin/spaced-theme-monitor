@@ -2,6 +2,12 @@
 # Apply the small set of desktop extras that a MATE metatheme cannot encode.
 # Folder colors are part of each theme's icon theme and wallpaper rendering is
 # owned by MATE; this helper only reacts once when the selected GTK theme changes.
+#
+# --supervise keeps the monitor alive: it holds the singleton lock, runs the
+# monitor as a child, and restarts that child whenever it exits for any reason.
+# Before this existed a monitor that died left the desktop half-following the
+# theme (GTK theme changed but wallpaper/panel/dock/terminal/palette did not)
+# and left its `gsettings monitor` watchers orphaned under PID 1.
 set -u
 
 if [ -z "${XDG_RUNTIME_DIR:-}" ]; then
@@ -26,9 +32,6 @@ STATE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/spaced"
 # Singleton guard.
 LOCK="$XDG_RUNTIME_DIR/spaced-theme-monitor.lock"
 exec 8>"$LOCK" 2>/dev/null || true
-if ! flock -n 8; then
-    exit 0
-fi
 
 get_gtk() {
     gsettings get org.mate.interface gtk-theme 2>/dev/null | tr -d "'"
@@ -104,17 +107,101 @@ apply_for_gtk() {
     /usr/local/bin/spaced-switch-theme "$id" 2>/dev/null || true
 }
 
+# Clean up after an older version of this script. When a previous monitor died
+# it left its `gsettings monitor` watchers running as orphans under PID 1; those
+# keep writing stale values and never exit. Kill only this user's orphans whose
+# command line matches one of the four watched keys EXACTLY. Matching by full
+# command line is unsafe: it can match this script's own command line.
+kill_stale_gsettings_monitors() {
+    local uid pair schema key pid args want
+    uid="$(id -u)"
+    for pair in \
+        "org.mate.interface gtk-theme" \
+        "org.mate.interface icon-theme" \
+        "org.mate.Marco.general theme" \
+        "org.mate.background picture-filename"; do
+        read -r schema key <<<"$pair"
+        want="$(printf 'gsettings\nmonitor\n%s\n%s' "$schema" "$key")"
+        for pid in $(pgrep -u "$uid" -P 1 -x gsettings 2>/dev/null); do
+            [ -r "/proc/$pid/cmdline" ] || continue
+            args="$(tr '\0' '\n' <"/proc/$pid/cmdline" 2>/dev/null)"
+            [ "$args" = "$want" ] && kill "$pid" 2>/dev/null
+        done
+    done
+    return 0
+}
+
+# The supervisor holds the singleton lock and keeps one monitor child alive.
+# The child is told (SPACED_THEME_MONITOR_CHILD=1) to skip the lock because its
+# parent already holds it. Restart 2 s after any exit; back off to 30 s once 5
+# restarts have happened within 10 minutes; never give up.
+supervise() {
+    local child_pid='' status delay cutoff
+    local -a restarts=() kept=()
+    local t
+    supervise_stop() {
+        # Each monitor owns a session/process group. Its watcher wrappers may
+        # outlive a SIGKILLed monitor, so clean the group, not just its leader.
+        if [ -n "$child_pid" ]; then
+            kill -TERM -- "-$child_pid" 2>/dev/null || true
+            wait "$child_pid" 2>/dev/null || true
+        fi
+        return 0
+    }
+    trap 'supervise_stop; exit 0' HUP INT TERM
+    while :; do
+        setsid env SPACED_THEME_MONITOR_CHILD=1 "$0" 8>&- &
+        child_pid=$!
+        wait "$child_pid"
+        status=$?
+        supervise_stop
+        child_pid=''
+        logger -t spaced-theme-monitor \
+            "monitor exited (status $status); restarting in ${delay:-2}s" 2>/dev/null || true
+        restarts+=("$(date +%s)")
+        cutoff=$(( $(date +%s) - 600 ))
+        kept=()
+        for t in "${restarts[@]}"; do
+            [ "$t" -ge "$cutoff" ] && kept+=("$t")
+        done
+        restarts=("${kept[@]}")
+        delay=2
+        [ "${#restarts[@]}" -ge 5 ] && delay=30
+        sleep "$delay"
+    done
+}
+
+# Singleton guard. A child started by the supervisor skips this: the supervisor
+# already holds the lock, and re-acquiring it in the child would deadlock against
+# itself.
+if [ "${SPACED_THEME_MONITOR_CHILD:-}" != "1" ]; then
+    if ! flock -n 8; then
+        exit 0
+    fi
+fi
+
+if [ "${1:-}" = "--supervise" ]; then
+    supervise
+    exit 0
+fi
+
 # Dconf can lose the last session's writes when a newly installed account is
 # first populated from the live user. Keep a tiny, user-owned fallback for the
 # four visual choices users expect to survive a reboot. Restore the metatheme
 # before its extra panel/dock work, then restore the wallpaper so a custom
 # background is not replaced by the metatheme's suggested image.
+kill_stale_gsettings_monitors
 load_theme_ids
 restore_setting org.mate.interface gtk-theme gtk-theme || true
 restore_setting org.mate.interface icon-theme icon-theme || true
 restore_setting org.mate.Marco.general theme window-theme || true
 LAST="$(get_gtk)"
 [ -n "$LAST" ] && apply_for_gtk "$LAST"
+
+# GTK 4 / libadwaita apps ignore the GTK 3 metathemes, so publish the palette
+# once at login as well: the files must exist from the first boot, not only
+# after the first theme change. A failure here must not stop the session.
+/usr/local/bin/spaced-theme-palette "$LAST" 2>/dev/null || true
 restore_setting org.mate.background picture-filename wallpaper || true
 save_desktop_state
 
@@ -125,7 +212,38 @@ watch_setting org.mate.Marco.general theme window-theme 8>&- &
 window_theme_watch_pid=$!
 watch_setting org.mate.background picture-filename wallpaper 8>&- &
 wallpaper_watch_pid=$!
-trap 'kill "$icon_watch_pid" "$window_theme_watch_pid" "$wallpaper_watch_pid" 2>/dev/null || true' EXIT
+
+# No orphans: when the monitor exits, its gsettings watchers must exit too.
+# Each watcher is a subshell whose own `gsettings monitor` is its child, so kill
+# the children (pkill -P) before the watcher. The main gtk-theme watcher is a
+# process substitution; its pid is captured in the loop (main_watch_pid) and
+# killed here. Log every exit: the signal name from the HUP/INT/TERM traps, or
+# the exit status from the EXIT trap. This is how the next failure gets explained.
+main_watch_pid=''
+cleanup_monitor() {
+    local wpid pids=()
+    for wpid in "${icon_watch_pid:-}" "${window_theme_watch_pid:-}" "${wallpaper_watch_pid:-}"; do
+        [ -n "$wpid" ] || continue
+        pkill -P "$wpid" 2>/dev/null
+        pids+=("$wpid")
+    done
+    [ "${#pids[@]}" -gt 0 ] && kill "${pids[@]}" 2>/dev/null
+    if [ -n "${main_watch_pid:-}" ]; then
+        pkill -P "$main_watch_pid" 2>/dev/null
+        kill "$main_watch_pid" 2>/dev/null
+    fi
+    return 0
+}
+monitor_signal() {
+    local sig="$1"
+    logger -t spaced-theme-monitor "monitor received $sig" 2>/dev/null || true
+    cleanup_monitor
+    exit 143
+}
+trap 'monitor_signal HUP' HUP
+trap 'monitor_signal INT' INT
+trap 'monitor_signal TERM' TERM
+trap 'st=$?; cleanup_monitor; logger -t spaced-theme-monitor "monitor exiting (status $st)" 2>/dev/null || true' EXIT
 
 # Use dconf's change notification instead of waking up every two seconds, and
 # let a burst of changes settle before doing any work. Clicking through themes
@@ -134,6 +252,9 @@ trap 'kill "$icon_watch_pid" "$window_theme_watch_pid" "$wallpaper_watch_pid" 2>
 SETTLE_SECONDS=${SPACED_THEME_SETTLE_SECONDS:-1.5}
 pending=''
 while :; do
+    # Capture the main watcher's pid once (the process substitution feeding this
+    # loop); $! is set to it as soon as the loop starts.
+    main_watch_pid="${main_watch_pid:-$!}"
     if [ -n "$pending" ]; then
         IFS= read -r -t "$SETTLE_SECONDS" _
         status=$?

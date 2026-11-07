@@ -1,7 +1,7 @@
 [Icon Theme]
 Name=Spaced Linux Light folder icons
 Comment=Spaced Linux Light folder color over Papirus Dark
-Inherits=Spaced-Menu-On-Light,Papirus-Dark,hicolor
+Inherits=Spaced-Menu-On-Light,Papirus-Light,hicolor
 Directories=48x48/places,scalable/places,scalable/status,scalable/devices,scalable/apps
 
 [48x48/places]

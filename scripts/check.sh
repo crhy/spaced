@@ -30,6 +30,7 @@ for required_package in \
     btop \
     gparted \
     nvtop \
+    pulseaudio-module-bluetooth \
     pulseaudio-utils \
     tzdata \
     firmware-nvidia-graphics \
@@ -127,19 +128,23 @@ for path in (
     assert f"Spaced Linux {version}" in Path(path).read_text(encoding="utf-8"), \
         f"{path} does not identify the current release"
 
-# The website can announce a preview line while linking the last published
-# image. Once the preview label is removed, require every release link to
-# match VERSION so a release cannot ship with stale downloads.
+# A preview must not advertise an image before it passes the release gates.
+# Once the preview label is removed, require every release link to match
+# VERSION so a release cannot ship with stale downloads.
 assert version in Path("website/index.html").read_text(encoding="utf-8"), \
     "website/index.html does not identify the current development line"
 website_home = Path("website/index.html").read_text(encoding="utf-8")
-assert f"spaced-linux-{version}-amd64.iso" in website_home or "releases/download/" in website_home, \
-    "the website's install steps do not link the ISO directly"
 if f"{version} PREVIEW" not in website_home.upper():
     assert f"releases/download/v{version}/spaced-linux-{version}-amd64.iso" in website_home, \
         "the released website ISO link does not match VERSION"
     assert f"releases/tag/v{version}" in website_home, \
         "the released website notes link does not match VERSION"
+else:
+    assert "releases/download/" not in website_home \
+        and f"spaced-linux-{version}-amd64.iso" not in website_home, \
+        "the preview website must not link an unvalidated ISO"
+    assert "SHA-256 <code>" not in website_home, \
+        "the preview website must not advertise an unverified ISO checksum"
 assert "distrowatch.com/table.php?distribution=spaced" in website_home \
     and "distrowatch.com/table.php?distribution=spaced" in Path("README.md").read_text(encoding="utf-8"), \
     "the website and README do not link Spaced Linux on DistroWatch"
@@ -177,7 +182,7 @@ assert {"avahi-daemon", "libnss-mdns", "smbclient", "wsdd"}.issubset(packages), 
 assert {package for package in packages if "systemd" in package} == \
     {"systemd-standalone-sysusers", "systemd-standalone-tmpfiles"}, \
     "a systemd-named package entered the image set"
-assert {"alacarte", "btop", "caja-admin", "eom", "gigolo", "gparted", "nvtop", "timeshift", "zstd"}.issubset(packages), \
+assert {"btop", "caja-admin", "eom", "gigolo", "gparted", "mozo", "nvtop", "timeshift", "unrar-free", "zstd"}.issubset(packages), \
     "administrator, partitioning, Windows-share, or backup desktop integration is missing"
 assert "libfuse2t64" in packages, "legacy AppImages cannot start without FUSE 2 compatibility (issue #153)"
 assert {"gnome-keyring", "libcanberra-gtk3-module", "accountsservice"}.issubset(packages), \
@@ -186,9 +191,10 @@ assert "mate-power-manager" in packages, \
     "MATE Power Management Control Center panel is not included (issue #98)"
 defaults_control = (Path("packages/spaced-mate-default-settings/DEBIAN/control")
                     .read_text(encoding="utf-8"))
-for package in ("accountsservice", "alacarte", "caja-admin", "gigolo", "gnome-keyring",
-                "libcanberra-gtk3-module", "pulseaudio-utils", "timeshift",
-                "tzdata", "wmctrl", "x11-xserver-utils",
+for package in ("accountsservice", "caja-admin", "gigolo", "gnome-keyring", "mozo",
+                "libcanberra-gtk3-module", "pulseaudio-module-bluetooth",
+                "pulseaudio-utils", "timeshift",
+                "tzdata", "unrar-free", "wmctrl", "x11-xserver-utils",
                 "xdg-desktop-portal-gtk"):
     assert package in defaults_control, \
         f"installed-system desktop updates do not depend on {package}"
@@ -467,8 +473,9 @@ for split_control in (themes_control, wallpapers_control):
         "split artwork package lacks the Breaks/Replaces takeover for upgrades"
 assert f"spaced-mate-default-settings (= {package_version})" in meta_control \
     and "spaced-welcome (>= 0.1.21)" in meta_control \
+    and "spaced-monitor (>= 0.1.8)" in meta_control \
     and "libfuse2t64" in meta_control, \
-    "spaced-meta does not pull in the standalone Welcome package and desktop defaults"
+    "spaced-meta does not pull in the standalone applications and desktop defaults"
 # The artwork split moves payload out of spaced-mate-default-settings. No
 # overlay path may be staged into two packages: dpkg refuses to overwrite a
 # file owned by another package.
@@ -499,6 +506,21 @@ assert "spaced-welcome.desktop" not in package_builder \
 artifact_config = Path("config/external-artifacts.conf").read_text(encoding="utf-8")
 artifact_stager_path = Path("scripts/iso/stage-external-artifacts.sh")
 artifact_stager = artifact_stager_path.read_text(encoding="utf-8")
+dependency_manifest = json.loads(Path("dependency.json").read_text(encoding="utf-8"))
+local_packages = dependency_manifest["projectDependencies"]["localDebianPackages"]
+assert set(local_packages["sources"]) == {
+    "packages/spaced-mate-default-settings",
+    "packages/spaced-meta",
+    "packages/spaced-nm-focus",
+    "packages/spaced-themes",
+    "packages/spaced-wallpapers",
+}, "dependency manifest does not list every locally authored Debian package"
+assert set(local_packages["stagedDependencies"]) == {"spaced-monitor", "spaced-welcome"}, \
+    "dependency manifest omits a staged standalone Debian package"
+external_names = {item["name"] for item in
+                  dependency_manifest["projectDependencies"]["externalArtifacts"]}
+assert "SpacedBazaar" not in external_names and "spaced-github" in external_names, \
+    "dependency manifest still describes the retired embedded Bazaar bundle"
 
 def artifact_default(name):
     match = re.search(rf"\$\{{{re.escape(name)}:=([^}}]+)\}}", artifact_config)
@@ -507,6 +529,9 @@ def artifact_default(name):
 
 assert artifact_default("SPACED_WELCOME_REPOSITORY") == "crhy/spacedwelcome"
 assert artifact_default("SPACED_WELCOME_VERSION") == "0.1.21"
+assert artifact_default("SPACED_MONITOR_REPOSITORY") == "crhy/spacedmonitor"
+assert artifact_default("SPACED_MONITOR_VERSION") == "0.1.8"
+assert artifact_default("SPACED_MONITOR_RELEASE_TAG") == "v0.1.8"
 assert artifact_default("SPACED_GITHUB_REMOTE_NAME") == "spaced-github"
 assert artifact_default("SPACED_GITHUB_REMOTE_DESCRIPTOR_URL") == \
     "https://crhy.github.io/spacedbazaar/spaced-github.flatpakrepo"
@@ -514,6 +539,7 @@ assert artifact_default("SPACED_GITHUB_REPO_URL") == \
     "https://crhy.github.io/spacedbazaar/flatpak-repo/"
 for checksum_name in (
     "SPACED_WELCOME_SHA256",
+    "SPACED_MONITOR_SHA256",
     "SPACED_GITHUB_REMOTE_SHA256",
 ):
     value = artifact_default(checksum_name)
@@ -522,7 +548,7 @@ for checksum_name in (
 fingerprint = artifact_default("SPACED_GITHUB_GPG_FINGERPRINT")
 assert fingerprint == "UNRELEASED" or re.fullmatch(r"[0-9a-fA-F]{40}", fingerprint), \
     "spaced-github key is neither release-gated nor fingerprint-pinned"
-for override in ("SPACED_WELCOME_DEB", "SPACED_GITHUB_REMOTE_FILE"):
+for override in ("SPACED_WELCOME_DEB", "SPACED_MONITOR_DEB", "SPACED_GITHUB_REMOTE_FILE"):
     assert override in artifact_stager, f"verified local override is missing: {override}"
 assert "amd64|x86_64" in artifact_stager and "arm64|aarch64" in artifact_stager, \
     "external artifact staging does not map supported Debian architectures"
@@ -535,6 +561,13 @@ assert "dpkg-deb -f" in artifact_stager and "verify_sha256" in artifact_stager \
 assert makefile_text.index("scripts/iso/stage-external-artifacts.sh") < \
     makefile_text.index("scripts/iso/build-local-packages.sh", makefile_text.index("prepare:")), \
     "standalone release artifacts are not staged before local packages"
+prepare_recipe = makefile_text[makefile_text.index("prepare: marco"):
+                               makefile_text.index("lb-config: prepare")]
+for monitor_override in ("SPACED_MONITOR_VERSION", "SPACED_MONITOR_RELEASE_TAG",
+                         "SPACED_MONITOR_URL", "SPACED_MONITOR_DEB",
+                         "SPACED_MONITOR_SHA256"):
+    assert f'{monitor_override}="$({monitor_override})"' in prepare_recipe, \
+        f"ISO preparation does not pass through {monitor_override}"
 release_preflight = Path("scripts/release-preflight.sh").read_text(encoding="utf-8")
 assert "release-preflight: check" in makefile_text \
     and "release: release-preflight" in makefile_text \
@@ -542,6 +575,7 @@ assert "release-preflight: check" in makefile_text \
     "release builds do not run the fail-fast validation gate"
 for release_pin in (
     "SPACED_WELCOME_SHA256",
+    "SPACED_MONITOR_SHA256",
     "SPACED_GITHUB_REMOTE_SHA256",
     "SPACED_GITHUB_GPG_FINGERPRINT",
 ):
@@ -627,11 +661,15 @@ assert theming_xsession_path.is_file() and ". /etc/profile.d/spaced-application-
 lightdm_config = (root / "etc/lightdm/lightdm.conf").read_text(encoding="utf-8")
 assert "session-setup-script=/usr/local/sbin/spaced-lightdm-session-setup" in lightdm_config, \
     "LightDM does not clean up greeter helpers before starting the user session"
+assert "greeter-setup-script=/usr/local/sbin/spaced-lightdm-greeter-setup" in lightdm_config, \
+    "LightDM does not wake and repaint the display before showing the greeter"
 assert "autologin-user=" not in lightdm_config and "greeter-hide-users=false" in lightdm_config, \
     "installed LightDM either retains the live user or hides the remembered user list"
 installed_lightdm = (root / "etc/lightdm/lightdm.conf.d/60-spaced-installed.conf").read_text(encoding="utf-8")
 assert "greeter-hide-users=false" in installed_lightdm, \
     "desktop update package lacks the installed-system LightDM user-list policy"
+assert "greeter-setup-script=/usr/local/sbin/spaced-lightdm-greeter-setup" in installed_lightdm, \
+    "desktop update package lacks the LightDM first-frame repair"
 live_configure = Path("scripts/iso/01-configure.chroot").read_text(encoding="utf-8")
 assert "[LightDM]\n" in live_configure and "[LightDM]\n# Reuse Plymouth" in live_configure \
     and "minimum-vt=1\n\n[Seat:*]" in live_configure, \
@@ -639,6 +677,14 @@ assert "[LightDM]\n" in live_configure and "[LightDM]\n# Reuse Plymouth" in live
 lightdm_setup = (root / "usr/local/sbin/spaced-lightdm-session-setup").read_text(encoding="utf-8")
 assert "at-spi-bus-launcher" in lightdm_setup and "at-spi2-registryd" in lightdm_setup, \
     "LightDM session cleanup does not stop stale greeter accessibility helpers"
+greeter_setup_path = root / "usr/local/sbin/spaced-lightdm-greeter-setup"
+greeter_setup = greeter_setup_path.read_text(encoding="utf-8")
+assert greeter_setup_path.stat().st_mode & 0o111, "LightDM greeter setup is not executable"
+assert 'dpms force on' in greeter_setup and 'xrefresh -display "$DISPLAY"' in greeter_setup, \
+    "LightDM greeter setup does not wake and repaint the first frame"
+greeter_config = (root / "etc/lightdm/lightdm-gtk-greeter.conf").read_text(encoding="utf-8")
+assert "default-user-image=/usr/share/pixmaps/spaced-medallion.png" in greeter_config, \
+    "LightDM still uses the low-resolution fallback account image"
 
 calamares_settings = yaml.safe_load((root / "etc/calamares/settings.conf").read_text(encoding="utf-8"))
 exec_modules = next(phase["exec"] for phase in calamares_settings["sequence"] if "exec" in phase)
@@ -870,8 +916,9 @@ assert "s0_focus_prevention_match = !(class=Nm-applet)" in compiz_text, \
     "Compiz focus-stealing prevention blocks nm-applet's Wi-Fi password dialog (issue #234)"
 
 menu_layout = (root / "etc/skel/.config/menus/mate-applications.menu").read_text(encoding="utf-8")
-assert "<Filename>alacarte.desktop</Filename>" in menu_layout \
-    and "<Filename>menulibre.desktop</Filename>" not in menu_layout, \
+assert "<Filename>mozo.desktop</Filename>" in menu_layout \
+    and "<Filename>menulibre.desktop</Filename>" not in menu_layout \
+    and "<Filename>alacarte.desktop</Filename>" not in menu_layout, \
     "the menu points at an application editor that is not installed (issue #372)"
 mime_defaults = (root / "etc/skel/.config/mimeapps.list").read_text(encoding="utf-8")
 assert "image/svg+xml=eom.desktop" in mime_defaults \
@@ -1072,8 +1119,8 @@ assert "format='12-hour'" in schema_override and "show-date=false" in schema_ove
     "clock does not default to 12-hour time without the date"
 assert "[org.mate.caja.preferences]" in schema_override and "show-hidden-files=false" in schema_override, \
     "Caja does not retain the requested hidden-file default"
-assert "executable-text-activation='display'" in schema_override, \
-    "Double-clicking a script does not open the text editor (issue #182)"
+assert "executable-text-activation='launch'" in schema_override, \
+    "Double-clicking an executable script does not launch it (issue #388)"
 assert "[org.mate.caja.desktop]" in schema_override and "volumes-visible=true" in schema_override, \
     "Mounted network shares are not shown on the desktop (issue #184)"
 
@@ -1172,8 +1219,10 @@ for theme in themes:
     icon_metadata = (icon_root / f"Spaced-Icons-{theme['gtk_theme'].removeprefix('Spaced-')}" / "index.theme")
     menu_variant = "Spaced-Menu-On-Dark" if theme.get("panel_dark", theme["dark"]) else "Spaced-Menu-On-Light"
     icon_metadata_text = icon_metadata.read_text(encoding="utf-8")
-    assert icon_metadata.is_file() and f"Inherits={menu_variant},Papirus-Dark,hicolor" in icon_metadata_text, \
-        f"{theme['name']}: scalable Papirus icons do not precede low-resolution hicolor fallbacks"
+    papirus_variant = ("Papirus-Dark" if theme["dark"] else
+                       "Papirus" if theme.get("panel_dark", False) else "Papirus-Light")
+    assert icon_metadata.is_file() and f"Inherits={menu_variant},{papirus_variant},hicolor" in icon_metadata_text, \
+        f"{theme['name']}: fallback icons must match application surfaces, independently of panel brightness"
     assert "Directories=48x48/places," in icon_metadata_text \
         and "[48x48/places]" in icon_metadata_text, \
         f"{theme['name']}: the exact Brisk raster mark is missing from the active theme index"
@@ -1258,6 +1307,23 @@ assert 'marco-theme-active-opacity", 0.64' in opacity_helper \
     and 'marco-theme-opacity", 0.54' in opacity_helper \
     and 'marco-theme-active-opacity", 1.0' in opacity_helper, \
     "Windows 7 decoration glass or its opaque fallback is missing"
+palette_helper_path = root / "usr/local/bin/spaced-theme-palette"
+palette_helper = palette_helper_path.read_text(encoding="utf-8")
+assert palette_helper_path.stat().st_mode & 0o111, \
+    "libadwaita palette helper is not executable"
+assert '/usr/local/bin/spaced-theme-palette "$gtk_theme" 2>/dev/null || true' in switcher, \
+    "theme switching does not publish the libadwaita palette"
+assert '/usr/local/bin/spaced-theme-palette "$LAST" 2>/dev/null || true' in theme_monitor, \
+    "theme monitor does not publish the libadwaita palette at login"
+assert "window_bg_color" in palette_helper and "card_bg_color" in palette_helper \
+    and "accent_bg_color" in palette_helper, \
+    "libadwaita palette helper does not cover the libadwaita colour names"
+assert "os.replace(" in palette_helper, \
+    "libadwaita palette files are not written atomically"
+assert "RustDesk/RustDesk_local.toml" in palette_helper \
+    and "com.rustdesk.RustDesk/config/RustDesk/RustDesk_local.toml" in palette_helper \
+    and 'theme = "{theme}"' in palette_helper, \
+    "RustDesk is not synchronized with Spaced light/dark themes (issue #403)"
 assert "background-color: #f7f8fa" in win7_gtk \
     and "background-color: #123c5b" in win7_gtk \
     and "color: #17212b" in win7_gtk, \
@@ -1304,6 +1370,27 @@ assert theme_monitor.index("apply_for_gtk \"$LAST\"") < theme_monitor.index(
     "theme monitor must restore a custom wallpaper after metatheme extras"
 assert "gsettings monitor org.mate.background picture-filename" not in theme_monitor, \
     "wallpaper persistence must reuse the generic event-driven monitor"
+
+# th07: the monitor must survive its own death and clean up after it.
+assert "--supervise" in theme_monitor and "SPACED_THEME_MONITOR_CHILD" in theme_monitor, \
+    "theme monitor has no supervisor mode that restarts the monitor child"
+assert "flock -n 8" in theme_monitor, \
+    "theme monitor supervisor does not hold the singleton lock"
+assert "logger -t spaced-theme-monitor" in theme_monitor, \
+    "theme monitor does not log its exits through syslog"
+assert "trap 'monitor_signal HUP' HUP" in theme_monitor \
+    and "trap 'monitor_signal INT' INT" in theme_monitor \
+    and "trap 'monitor_signal TERM' TERM" in theme_monitor, \
+    "theme monitor does not trap and record HUP/INT/TERM"
+assert "pkill -P" in theme_monitor and "main_watch_pid" in theme_monitor, \
+    "theme monitor does not kill its gsettings watchers on exit"
+assert "pkill -f" not in theme_monitor, \
+    "theme monitor must not use pkill -f, which can match its own command line"
+assert "kill_stale_gsettings_monitors" in theme_monitor and "-P 1 -x gsettings" in theme_monitor, \
+    "theme monitor does not clean up gsettings monitors orphaned by an older version"
+theme_monitor_autostart = (root / "etc/xdg/autostart/spaced-theme-monitor.desktop").read_text(encoding="utf-8")
+assert "Exec=/usr/local/bin/spaced-theme-monitor --supervise" in theme_monitor_autostart, \
+    "theme monitor autostart does not run the supervisor"
 
 first_login_repair = (root / "usr/local/bin/spaced-first-login-repair").read_text(encoding="utf-8")
 assert "first-login-repair-v5" in first_login_repair, "first-login repair marker was not advanced"
@@ -1402,17 +1489,33 @@ for mcc_script, needle in (("scripts/iso/build-marco-chroot.sh", "build-mate-con
     assert needle in Path(mcc_script).read_text(encoding="utf-8"), \
         f"{mcc_script} does not build, stage or publish rebuilt MATE Control Center (issue #351)"
 
-xorg_patch = Path("patches/xorg-server/0001-revert-damage-abi-break.patch").read_text(encoding="utf-8")
-assert "-    DamagePtr *pListHead;" in xorg_patch, \
-    "the Xorg patch no longer restores the 21.1.24 DamageRec layout the amdgpu driver needs (issue #298)"
-assert len(Path("patches/xorg-server/sources.sha256").read_text(encoding="utf-8").split()) == 6, \
+xorg_sources = Path("patches/xorg-server/sources.sha256").read_text(encoding="utf-8")
+assert "21.1.25-2devuan1" in xorg_sources and "21.1.25-1devuan1" not in xorg_sources, \
+    "the Xorg build still references the removed Devuan -1 source (issue #401)"
+assert len(xorg_sources.split()) == 6, \
     "the xorg-server source archives are not pinned by SHA-256"
+xorg_build = Path("scripts/iso/build-xorg-server.sh").read_text(encoding="utf-8")
+assert "VERSION=2:21.1.25-2devuan1+spaced11.26" in xorg_build \
+    and 'for patch_file in "$PATCHES"/*.patch' not in xorg_build, \
+    "the Xorg build is not rebased on Devuan's ABI-fixed source (issue #401)"
 for xorg_script, needle in (("scripts/iso/build-marco-chroot.sh", "build-xorg-server.sh"),
                             ("scripts/iso/build-local-packages.sh", "stage-xorg-server.sh"),
                             ("scripts/build-apt-repo.sh", "xorg_artifacts"),
                             ("Makefile", "stage-xorg-server.sh --check")):
     assert needle in Path(xorg_script).read_text(encoding="utf-8"), \
         f"{xorg_script} does not build, stage or publish the rebuilt X server (issue #298)"
+
+caja_overflow_patch = Path("patches/caja/0003-fix-overflowing-desktop-icon-position.patch").read_text(encoding="utf-8")
+assert "333e2728dbebb12110fc9b2c821089eb372ee14e" in caja_overflow_patch, \
+    "the Caja desktop icon fix is not traceable to its upstream commit (issue #389)"
+assert caja_overflow_patch.index("caja_icon_container_update_icon (container, icon);") \
+    < caja_overflow_patch.index("assign_icon_position (container, icon);"), \
+    "Caja must measure new icons before assigning their desktop positions (issue #389)"
+caja_build = Path("scripts/iso/build-caja.sh").read_text(encoding="utf-8")
+caja_stage = Path("scripts/iso/stage-caja.sh").read_text(encoding="utf-8")
+assert "VERSION=1.26.4-3+spaced11.26" in caja_build \
+    and "VERSION=1.26.4-3+spaced11.26" in caja_stage, \
+    "the Caja desktop icon fix is not versioned consistently for 11.26 (issue #389)"
 
 brave_profile = root / "etc/skel/.var/app/com.brave.Browser/config/BraveSoftware/Brave-Browser/Default"
 brave_bookmarks = json.loads((brave_profile / "Bookmarks").read_text(encoding="utf-8"))

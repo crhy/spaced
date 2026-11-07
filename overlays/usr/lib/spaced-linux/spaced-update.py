@@ -46,9 +46,13 @@ APP_CSS = b"""
     font-weight: bold;
 }
 
+/* These labels sit on the window background, so @theme_fg_color is the
+   colour they need; dim with opacity instead of an alpha colour so the
+   dimming stays correct on the card and log surfaces they also land on. */
 .spaced-subtitle,
 .spaced-muted {
-    color: alpha(@theme_fg_color, 0.72);
+    color: @theme_fg_color;
+    opacity: 0.75;
 }
 
 .spaced-count {
@@ -115,8 +119,20 @@ APP_CSS = b"""
     border-color: alpha(@theme_fg_color, 0.18);
 }
 
-/* Header actions are icon controls, not raised text buttons. Keep their idle
-   surface quiet and reveal a compact target only on hover or keyboard focus. */
+/* The header bar paints its own surface, so its labels have to follow the
+   bar's text colour. The theme's window-chrome rule (.titlebar) hands the
+   bar @theme_bg_color - its own background colour - which turns the subtitle
+   set through set_subtitle() into invisible text; pin the bar's foreground
+   to the colour the theme declares for the bar and dim the subtitle with
+   opacity rather than an explicit alpha colour. */
+headerbar {
+    color: @theme_fg_color;
+}
+
+headerbar .subtitle {
+    opacity: 0.75;
+}
+
 headerbar button {
     background-image: none;
     background-color: transparent;
@@ -1777,5 +1793,9 @@ if __name__ == "__main__":
     application = App()
     application.show_all()
     application.os_tab.progress.hide()
+    # pack_end() makes the optional release-notes button the first focusable
+    # action in GTK's traversal order. Put initial keyboard focus on the
+    # useful release check instead of painting "What's new" as selected.
+    application.os_tab.checkbtn.grab_focus()
     application.schedule_autocheck()
     Gtk.main()

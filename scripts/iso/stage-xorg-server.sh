@@ -1,10 +1,11 @@
 #!/bin/bash
-# Stage the rebuilt xorg-server packages (amdgpu ABI fix, issue #298) for the ISO and the APT repository.
+# Stage the rebased xorg-server packages (amdgpu ABI fix, issues #298/#401)
+# for the ISO and the APT repository.
 set -euo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 ARTIFACTS=${SPACED_XORG_ARTIFACT_DIR:-$ROOT/build/xorg-server/artifacts}
 OUTPUT=${LOCAL_PACKAGE_OUTPUT:-$ROOT/build/local-packages}
-VERSION=2:21.1.25-1devuan1+spaced10.26.3
+VERSION=2:21.1.25-2devuan1+spaced11.26
 FILE_VERSION=${VERSION#*:}
 files=()
 # Every binary of the source ships together, so no system mixes the broken

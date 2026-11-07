@@ -73,10 +73,20 @@ try:
     require(code == 0 and 'OpenGL renderer string' in renderer, 'Live desktop has no working GLX renderer')
     report['xset'] = run('xset', 'q')[1]
     report['kernel'] = run('uname', '-r')[1]
-    report['versions'] = run('dpkg-query', '-W', '-f=${binary:Package} ${Version}\n',
-                             'compiz-core', 'compiz-gtk', 'mate-panel', 'libmarco-private2',
+    report['init'] = Path('/proc/1/comm').read_text().strip()
+    require(report['init'] == 'init', 'Live image is not running sysvinit')
+    report['memory'] = Path('/proc/meminfo').read_text()
+    report['uptime'] = Path('/proc/uptime').read_text().strip()
+    code, versions, error = run('dpkg-query', '-W', '-f=${binary:Package} ${Version} ${db:Status-Status}\n',
+                             'compiz-core', 'compiz-gnome', 'mate-panel', 'libmarco-private2',
                              'spaced-meta', 'spaced-mate-default-settings',
-                             'spaced-themes', 'spaced-wallpapers')[1]
+                             'spaced-themes', 'spaced-wallpapers', 'spaced-monitor',
+                             'spaced-welcome', 'mozo', 'unrar-free', 'xserver-xorg-core',
+                             'caja', 'mate-applet-brisk-menu')
+    report['versions'] = versions or error
+    require(code == 0 and all(line.endswith(' installed') for line in versions.splitlines()),
+            'Required release packages are missing or unconfigured')
+    require(Path('/home/user/.config/spaced').is_dir(), 'Live user palette directory is missing')
 except Exception as error:
     report['errors'].append(str(error))
 report['desktop_ready'] = not report['errors']

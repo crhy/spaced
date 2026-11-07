@@ -17,6 +17,7 @@ minimum-vt=1
 autologin-user=user
 autologin-user-timeout=0
 greeter-session=lightdm-gtk-greeter
+greeter-setup-script=/usr/local/sbin/spaced-lightdm-greeter-setup
 session-setup-script=/usr/local/sbin/spaced-lightdm-session-setup
 user-session=mate
 LIGHTDM
