@@ -28,7 +28,7 @@
 
 <p align="center">
   <a href="https://github.com/crhy/spaced/releases"><strong>Download releases</strong></a> ·
-  <a href="CHANGELOG.md"><strong>11.26 release status</strong></a>
+  <a href="CHANGELOG.md"><strong>11.26 changes</strong></a>
 </p>
 
 <p align="center">
@@ -151,11 +151,11 @@ Spaced Linux combines a modern system with visual ideas from the best desktop er
 
 ## Download Spaced Linux
 
-**Spaced Linux 11.26 is the current release candidate.** Follow final validation on the [Spaced Linux releases page](https://github.com/crhy/spaced/releases); the versioned download and checksum will be published only after the image passes the release gates.
+**Spaced Linux 11.26 is the current release.** Download it from the [Spaced Linux 11.26 release page](https://github.com/crhy/spaced/releases/tag/v11.26).
 
 11.26 opens the November 2026 release line. Its changes are listed in the [changelog](CHANGELOG.md).
 
-After publication, verify the download on Linux:
+Verify the download on Linux:
 
 ```bash
 sha256sum -c spaced-linux-11.26-amd64.iso.sha256
@@ -263,7 +263,7 @@ Thank you for helping keep an independent, polished, systemd-free desktop availa
 
 ## Project status
 
-The current development line is **11.26**. Spaced Linux is an independent community project under active development.
+The current release line is **11.26**. Spaced Linux is an independent community project under active development.
 
 ## Contributing
 
