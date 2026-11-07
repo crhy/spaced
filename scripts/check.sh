@@ -651,6 +651,9 @@ assert 'elapsed" -lt 180' in remote_helper and "sleep \"$delay\"" in remote_help
     "login-time signed remote registration does not survive delayed networking"
 assert 'delay=$((delay * 2))' in remote_helper, \
     "offline logins still poll for Flatpak remotes at a fixed interval"
+portal_repair = (root / "etc/X11/Xsession.d/26spaced-portal-db-repair").read_text(encoding="utf-8")
+assert "flatpak/db" in portal_repair and "GVariant|raVGtnai" in portal_repair, \
+    "a damaged portal database still disables every Flatpak file dialog (issue #408)"
 session_reset = (root / "etc/X11/Xsession.d/05spaced-reset-session-env").read_text(encoding="utf-8")
 assert "AT_SPI_BUS_ADDRESS" in session_reset and "var/lib/lightdm" in session_reset \
     and "xprop -root -remove AT_SPI_BUS" in session_reset, \

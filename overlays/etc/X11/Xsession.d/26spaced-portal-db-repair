@@ -1,0 +1,19 @@
+# A Flatpak portal database left empty or truncated (a hard reset while the
+# portal was writing it) stops xdg-document-portal from starting, and with it
+# xdg-desktop-portal. Flatpak apps then fall back to their own sandboxed file
+# dialog, which shows only Downloads and Desktop (issue #408). Move a damaged
+# table aside before anything activates the portals; they recreate it empty.
+spaced_portal_db=${XDG_DATA_HOME:-$HOME/.local/share}/flatpak/db
+if [ -n "${HOME:-}" ] && [ -d "$spaced_portal_db" ]; then
+    for spaced_table in "$spaced_portal_db"/*; do
+        # GLib's atomic-write temporaries and earlier quarantines contain a dot.
+        case ${spaced_table##*/} in *.*) continue ;; esac
+        [ -f "$spaced_table" ] || continue
+        # GVDB files start with "GVariant", or "raVGtnai" when byte-swapped.
+        case $(head -c 8 "$spaced_table" 2>/dev/null) in
+            GVariant|raVGtnai) ;;
+            *) mv -f "$spaced_table" "$spaced_table.corrupt-$(date +%Y%m%d%H%M%S)" 2>/dev/null || true ;;
+        esac
+    done
+fi
+unset spaced_portal_db spaced_table
