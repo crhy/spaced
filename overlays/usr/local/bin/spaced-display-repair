@@ -255,6 +255,9 @@ command -v gdbus >/dev/null 2>&1 || exit 0
         esac
     done
 ) &
-policy_watchers+=("$!")
-wait
+unlock_watcher=$!
+policy_watchers+=("$unlock_watcher")
+# End with the session: when the session bus goes away the unlock watcher
+# exits, and the EXIT trap then stops the remaining watchers.
+wait "$unlock_watcher"
 exit 0
