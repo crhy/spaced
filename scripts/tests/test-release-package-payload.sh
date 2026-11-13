@@ -28,10 +28,11 @@ import yaml
 root, work = map(Path, sys.argv[1:])
 control = (work / 'meta/control').read_text()
 groups = yaml.safe_load((root / 'config/packages.yaml').read_text())
-expected = {p for group, packages in groups.items() if group not in {'installer', 'live'} for p in packages}
+expected = {p for group, packages in groups.items() if group not in {'installer', 'live', 'rescue'} for p in packages}
 expected |= {'linux-image-amd64', 'linux-headers-amd64', 'sysvinit-core', 'devuan-keyring', 'mate-session-manager'}
 actual = {p.strip().split()[0] for p in re.search(r'^Depends: (.+)$', control, re.M)[1].split(',')}
 assert not expected - actual, f'Missing runtime dependencies: {sorted(expected - actual)}'
+assert not set(groups['rescue']) & actual, 'live-only rescue tools must not be spaced-meta dependencies'
 assert not {'calamares', 'calamares-settings-debian', 'live-boot', 'live-config', 'live-config-sysvinit', 'openssh-server'} & actual
 payload = work / 'settings'
 themes = work / 'themes'
