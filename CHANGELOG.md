@@ -13,6 +13,10 @@ Prepared as the 11.26.1 release candidate and `11.26.1-1` APT packages.
   lookup failure (#409). The privileged package build passes all 271
   chroot-safe upstream tests; the installed-VM reboot gate remains recorded in
   the release review.
+- Guarantee that a separate or reused `/home` in Calamares' final partition
+  plan reaches the installed `/etc/fstab` (#413). A post-write guard repairs
+  the one exact missing entry and stops safely if the selected home vanished,
+  became ambiguous or cannot be identified.
 - Repair a damaged Flatpak portal permission database without hiding unrelated
   Caja locations from applications (#408).
 - Keep new, moved and hot-plugged Caja desktop icons inside the current monitor
