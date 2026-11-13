@@ -127,15 +127,20 @@ if { read -r saved_volume saved_mute saved_sink < "$state_file"; } 2>/dev/null \
         [ -n "$unavailable_default" ] || exit 0
     fi
 else
-    read -r current_volume current_mute current_sink < <(read_current) || exit 0
     # Start a new profile at 50%. Later logins restore the saved choice,
     # including intentional mute and zero volume.
-    if [ "$current_volume" -ne 50 ]; then
-        pactl set-sink-volume @DEFAULT_SINK@ 50% >/dev/null 2>&1 || true
+    if read -r current_volume current_mute current_sink < <(read_current); then
+        if [ "$current_volume" -ne 50 ]; then
+            pactl set-sink-volume @DEFAULT_SINK@ 50% >/dev/null 2>&1 || true
+        fi
+        if [ "$current_mute" = yes ]; then
+            pactl set-sink-mute @DEFAULT_SINK@ 0 >/dev/null 2>&1 || true
+        fi
     fi
-    if [ "$current_mute" = yes ]; then
-        pactl set-sink-mute @DEFAULT_SINK@ 0 >/dev/null 2>&1 || true
-    fi
+    # A fresh install can still show only the auto_null dummy sink while the
+    # real card initialises. Quitting here would leave the whole session
+    # recording nothing, so keep the watcher below running: it stores the
+    # output and volume the user picks once a real sink appears.
 fi
 save_state
 trap 'save_state; exit 0' HUP INT TERM

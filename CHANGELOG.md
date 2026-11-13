@@ -62,6 +62,10 @@ tracked in the release review until publication.
   stopping it at logout now closes the settings and screensaver monitors it
   started instead of leaving them running in the session. The "Never" display
   sleep choice is unchanged.
+- Keep login quiet and responsive. A system whose graphics cannot start the
+  desktop no longer burns processor time offering its recovery dialog in a
+  tight loop, and registering the signed application sources at login no longer
+  asks Flatpak the same question twice per source.
 
 ## 11.26 - 2026-11-06
 

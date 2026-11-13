@@ -81,7 +81,13 @@ On physical hardware: the graphics driver failed to load. Run Spaced GPU Driver 
         elif [ "$choice" -eq 1 ] && command -v mate-terminal >/dev/null 2>&1; then
             # Without --disable-factory the call returns at once via an
             # existing terminal server and the dialog would reappear on top.
-            mate-terminal --disable-factory 2>/dev/null || true
+            if ! mate-terminal --disable-factory 2>/dev/null; then
+                # Neither helper did anything useful: both are GTK, so a dying
+                # X server makes each of them exit 1 at once. Back off instead
+                # of forking zenity and mate-terminal back to back at 100 % CPU
+                # for the rest of the session.
+                sleep 2
+            fi
         else
             # zenity itself failed (for example X went away): stop.
             break

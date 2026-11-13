@@ -13,19 +13,28 @@ remote_present() {
 }
 
 add_missing_remotes() {
-    local missing=0 name
+    local missing=0 name registered=''
 
     for name in flathub spaced-github; do
         if remote_present "$name"; then
+            registered="$registered $name"
             continue
         fi
         missing=1
-        "$real_flatpak" remote-add --user --if-not-exists "$name" \
-            "$remote_dir/$name.flatpakrepo" >/dev/null 2>&1 || true
+        if "$real_flatpak" remote-add --user --if-not-exists "$name" \
+            "$remote_dir/$name.flatpakrepo" >/dev/null 2>&1; then
+            # --if-not-exists only fails when the remote really is absent.
+            registered="$registered $name"
+        fi
     done
 
-    remote_present flathub && remote_present spaced-github && return 0
-    return "$missing"
+    # Reuse what the loop already learned. The old final check started the
+    # flatpak CLI twice more on every login, and nine more times per retry
+    # round on a machine that never gets network.
+    for name in flathub spaced-github; do
+        [[ " $registered " == *" $name "* ]] || return "$missing"
+    done
+    return 0
 }
 
 # NetworkManager may still be connecting when desktop autostart runs. Flatpak

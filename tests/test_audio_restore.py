@@ -170,6 +170,17 @@ esac
         self.run_helper()
         self.assertEqual(self.state.read_text(), '50 no headphones\n')
 
+    def test_watcher_starts_while_only_the_dummy_sink_exists(self):
+        # PulseAudio is up but the card has not appeared yet: the default sink
+        # is still auto_null and no state file exists. Quitting here would
+        # leave the whole session recording nothing.
+        self.default.write_text('auto_null\n')
+        self.env.update(NEXT_DEFAULT='speakers', HOLD_SUBSCRIPTION='1')
+        self.run_helper()
+        self.assertTrue((self.root / 'subscribed').exists(),
+                        'the pactl subscribe watcher never started')
+        self.assertEqual(self.state.read_text(), '50 no speakers\n')
+
     def test_failed_query_cannot_truncate_saved_state(self):
         self.state.write_text('50 no headphones\n')
         self.env['FAIL_READ'] = '1'
