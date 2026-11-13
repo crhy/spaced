@@ -170,11 +170,32 @@ for path in (
 assert version in Path("website/index.html").read_text(encoding="utf-8"), \
     "website/index.html does not identify the current development line"
 website_home = Path("website/index.html").read_text(encoding="utf-8")
+# scripts/website-release.sh rewrites exactly this marked block, so the markers
+# must survive every edit to the page.
+for website_marker in ("<!-- release-download:start -->", "<!-- release-download:end -->"):
+    assert website_home.count(website_marker) == 1, \
+        f"website/index.html needs exactly one {website_marker} marker"
 if f"{version} PREVIEW" not in website_home.upper():
     assert f"releases/download/v{version}/spaced-linux-{version}-amd64.iso" in website_home, \
         "the released website ISO link does not match VERSION"
     assert f"releases/tag/v{version}" in website_home, \
         "the released website notes link does not match VERSION"
+    # The published checksum must be the checksum of this release's ISO: exactly
+    # one full SHA-256 on the page, never a hash recorded for an older release,
+    # and equal to the .sha256 file written next to the built ISO when it exists.
+    website_checksums = re.findall(r"SHA-256 <code>([0-9a-f]{64})</code>", website_home)
+    assert website_home.count("SHA-256 <code>") == 1 and len(website_checksums) == 1, \
+        "the released website must show exactly one 64-digit SHA-256 checksum"
+    website_checksum = website_checksums[0]
+    for review in sorted(Path("docs").glob("*-RELEASE-REVIEW.md")):
+        if review.name.startswith(f"{version}-"):
+            continue
+        assert website_checksum not in review.read_text(encoding="utf-8"), \
+            f"the website checksum is an older release checksum from {review.name}"
+    iso_checksum_file = Path(f"build/iso/spaced-linux-{version}-amd64.iso.sha256")
+    if iso_checksum_file.exists():
+        assert website_checksum == iso_checksum_file.read_text(encoding="utf-8").split()[0], \
+            "the website checksum does not match the checksum of the built ISO"
 else:
     assert "releases/download/" not in website_home \
         and f"spaced-linux-{version}-amd64.iso" not in website_home, \

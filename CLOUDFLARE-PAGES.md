@@ -30,11 +30,12 @@ python3 -m http.server 8080 --directory dist
 
 Open `http://localhost:8080`.
 
-## Suggested commit
+## Publishing a release
+
+Build and test the ISO first (`make release`, then the ISO smoke tests). Only then run:
 
 ```bash
-git checkout -b website/cloudflare-redesign
-git add README.md website/ scripts/build-site.sh
-git commit -m "Redesign README and add Cloudflare Pages website"
-git push -u origin website/cloudflare-redesign
+scripts/website-release.sh publish
 ```
+
+It copies the SHA-256 from `build/iso/spaced-linux-<version>-amd64.iso.sha256` into the marked download block of `website/index.html`; commit that file with the release. Merge to `main` only after the GitHub release `v<version>` exists with the ISO attached, because pushing to `main` deploys the site. While the ISO of `VERSION` is still unvalidated, keep the page honest with `scripts/website-release.sh preview`.
