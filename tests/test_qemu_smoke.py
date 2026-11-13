@@ -2,7 +2,6 @@
 import json
 import os
 from pathlib import Path
-import signal
 import subprocess
 import tempfile
 import time
@@ -23,7 +22,10 @@ class QemuSmokeTests(unittest.TestCase):
         self.iso.touch()
         self.env = dict(os.environ, PATH=str(self.bin) + os.pathsep + os.environ['PATH'],
                         SPACED_QEMU_ACCEL='tcg', SPACED_VM_SSH_PORT='65530',
-                        SPACED_ISO_SMOKE_TIMEOUT='2', SPACED_QEMU_FIRMWARE='bios',
+                        SPACED_ISO_SMOKE_TIMEOUT='2',
+                        # Retry pause of the smoke script; the default 5 s would
+                        # make each case wait a whole pause after the timeout.
+                        SPACED_ISO_SMOKE_POLL='0.1', SPACED_QEMU_FIRMWARE='bios',
                         SPACED_QEMU_ARTIFACT_DIR=str(self.root / 'artifacts with spaces'),
                         SPACED_TEST_RECORD=str(self.root / 'qemu.json'))
         for name in ('ssh', 'sshpass'):

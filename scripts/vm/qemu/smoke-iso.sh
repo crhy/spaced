@@ -206,7 +206,7 @@ while (( SECONDS - started < TIMEOUT )); do
         fi
     fi
     echo "Waiting for the $ACCEL/$FIRMWARE live desktop ($((SECONDS - started))s/${TIMEOUT}s)"
-    sleep 5
+    sleep "${SPACED_ISO_SMOKE_POLL:-5}"
 done
 capture_screen || true
 echo "$ACCEL/$FIRMWARE live desktop did not pass within ${TIMEOUT}s" >&2

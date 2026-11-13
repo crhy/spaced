@@ -24,6 +24,7 @@ INSTALLED_THEMES_JSON = Path('/usr/share/spaced-themes/themes.json')
 THEMES_JSON = (INSTALLED_THEMES_JSON
                if INSTALLED_THEMES_JSON.is_file()
                else ROOT / 'overlays/usr/share/spaced-themes/themes.json')
+SHIPPED_THEMES = ROOT / 'overlays/usr/share/themes'
 MIN_RATIO = 4.5
 SUBTITLE_TEXT = 'System and application updates \u00b7 0.2.6'
 
@@ -120,8 +121,6 @@ def measure(path):
 
 
 @unittest.skipIf(shutil.which('xvfb-run') is None, 'needs xvfb-run')
-@unittest.skipIf(not Path('/usr/share/themes/Spaced-Mint').is_dir(),
-                 'needs the Spaced themes installed (CI)')
 @unittest.skipIf(not APP.is_file(), 'needs spaced-update.py')
 @unittest.skipIf(not THEMES_JSON.is_file(), 'needs themes.json')
 class HeaderSubtitleContrastTests(unittest.TestCase):
@@ -133,8 +132,15 @@ class HeaderSubtitleContrastTests(unittest.TestCase):
         script = workdir / 'capture_header.py'
         script.write_text(CAPTURE_SOURCE)
         image = workdir / ('header-%s.ppm' % gtk_theme)
+        # A private XDG home for the render: GTK looks for a theme in ~/.themes,
+        # then $XDG_DATA_HOME/themes, then the system dirs, so the `themes`
+        # symlink under workdir/share makes it paint the CSS that ships in the
+        # ISO instead of a copy installed on the host (~/.local/share/themes,
+        # ~/.themes or /usr/share/themes).
         env = dict(os.environ,
                    GTK_THEME=gtk_theme,
+                   HOME=str(workdir),
+                   XDG_DATA_HOME=str(workdir / 'share'),
                    SPACED_UPDATE_APP=str(APP),
                    SPACED_UPDATE_NO_AUTOCHECK='1',
                    SPACED_CONTRAST_SUBTITLE=SUBTITLE_TEXT)
@@ -145,10 +151,13 @@ class HeaderSubtitleContrastTests(unittest.TestCase):
         return image
 
     def test_header_subtitle_stays_readable_on_every_theme(self):
-        workdir = Path(tempfile.mkdtemp(prefix='contrast-',
-                                        dir=str(ROOT / 'build')
-                                        if (ROOT / 'build').is_dir() else None))
+        self.assertTrue(SHIPPED_THEMES.is_dir(),
+                        'the shipped themes are missing from %s' % SHIPPED_THEMES)
+        workdir = Path(tempfile.mkdtemp(prefix='contrast-'))
         self.addCleanup(shutil.rmtree, workdir, True)
+        themes = workdir / 'share' / 'themes'
+        themes.parent.mkdir(parents=True)
+        themes.symlink_to(SHIPPED_THEMES)
         table = []
         for gtk_theme in self._themes():
             background, text, ratio = measure(str(self._capture(gtk_theme, workdir)))

@@ -68,13 +68,14 @@ check: ## Validate configuration, scripts, themes, and desktop entries
 	$(HOST_RUN) scripts/tests/test-testing-upgrade.sh
 	$(HOST_RUN) scripts/tests/test-prune-apt-repo.sh
 	$(HOST_RUN) scripts/check.sh
-	$(HOST_RUN) env PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests
+	$(HOST_RUN) env PYTHONDONTWRITEBYTECODE=1 xvfb-run -a python3 -m unittest discover -s tests
 	$(HOST_RUN) env PYTHONDONTWRITEBYTECODE=1 xvfb-run -a python3 tests/gtk_desktop.py
 
 clean: ## Remove generated build data for the current release
 	$(ROOT_RUN) rm -rf "$(abspath $(LB_DIR))" "$(abspath $(LOCAL_PACKAGE_DIR))" \
 		"$(abspath $(EXTERNAL_STAGE_DIR))"
 	rm -f $(ISO_DIR)/$(ISO_NAME) $(ISO_DIR)/$(ISO_NAME).sha256
+	find overlays tests scripts -name __pycache__ -prune -exec rm -rf {} +
 
 cache-clean: ## Remove cached live-build packages and bootstrap data
 	$(ROOT_RUN) rm -rf "$(abspath $(CACHE_DIR))" "$(abspath $(EXTERNAL_CACHE_DIR))"
