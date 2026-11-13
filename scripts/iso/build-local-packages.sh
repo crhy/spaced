@@ -134,6 +134,20 @@ copy_overlay_paths() {
     done
 }
 
+# Repository placeholders keep the empty skel directories in git; they must
+# never be installed into a home directory. The settings package stages
+# etc/skel, and `make lb-config` also copies overlays/ 1:1 into the live-build
+# rootfs, whose /etc/skel feeds the live user's home (01-configure.chroot).
+prune_skel_placeholders() {
+    local skel
+    for skel in "$1/etc/skel" \
+        "${SPACED_IMAGE_ROOT:-$ROOT/build/live-build/config/includes.chroot}/etc/skel"; do
+        if [[ -d $skel ]]; then
+            find "$skel" -name .gitkeep -delete
+        fi
+    done
+}
+
 fix_perms() {
     local stage="$1"
     # Do not let a developer checkout's umask leak group-writable modes into
@@ -211,6 +225,7 @@ stage_desktop_defaults() {
     # LightDM, MATE Media, GRUB, and Calamares files remain image-build policy
     # and are migrated narrowly from postinst where necessary.
     copy_overlay_paths "$stage" "${SETTINGS_PATHS[@]}"
+    prune_skel_placeholders "$stage"
 
     # These entrypoints are removed by Calamares. An update must not put the
     # live installer back on an installed system or in a new user's Desktop.

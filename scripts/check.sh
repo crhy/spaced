@@ -58,6 +58,31 @@ do
     fi
 done
 
+# The .gitkeep files that keep empty skel directories in git must be pruned on
+# the way to the image: from the staged settings package (installed /etc/skel)
+# and from the live-build rootfs copy that seeds the live user's home. Run the
+# builder's own prune against throwaway trees so the guard cannot rot.
+eval "$(sed -n '/^prune_skel_placeholders()/,/^}/p' scripts/iso/build-local-packages.sh)"
+if ! declare -f prune_skel_placeholders >/dev/null \
+    || ! grep -Fq 'prune_skel_placeholders "$stage"' scripts/iso/build-local-packages.sh; then
+    echo "scripts/iso/build-local-packages.sh no longer prunes skel placeholders" >&2
+    exit 1
+fi
+skel_stage=$CHECK_TMP/skel-stage
+skel_image=$CHECK_TMP/skel-image
+mkdir -p "$skel_stage/etc/skel/Documents" "$skel_stage/etc/skel/.config/menus" \
+    "$skel_image/etc/skel/Documents"
+touch "$skel_stage/etc/skel/Documents/.gitkeep" "$skel_image/etc/skel/Documents/.gitkeep" \
+    "$skel_stage/etc/skel/.config/menus/mate-applications.menu"
+SPACED_IMAGE_ROOT=$skel_image prune_skel_placeholders "$skel_stage"
+unset SPACED_IMAGE_ROOT
+if [[ -e $skel_stage/etc/skel/Documents/.gitkeep ||
+      -e $skel_image/etc/skel/Documents/.gitkeep ||
+      ! -e $skel_stage/etc/skel/.config/menus/mate-applications.menu ]]; then
+    echo ".gitkeep placeholders can still reach /etc/skel or the live user's home" >&2
+    exit 1
+fi
+
 python3 - <<'PY'
 import glob
 import hashlib
@@ -106,6 +131,16 @@ assert has_exact_field(lsb_release, "DISTRIB_CODENAME", release_code), \
     "lsb-release codename does not match VERSION"
 assert not has_exact_field(f"DISTRIB_RELEASE={version}.0", "DISTRIB_RELEASE", version), \
     "release field matcher accepts a non-exact release"
+# spaced-meta's postinst rewrites both login banners on every configured system,
+# but a held-back or failed package must not leave a getty or pre-auth SSH
+# banner naming a release that does not exist. The overlay carries exactly the
+# text that postinst writes.
+issue = Path("overlays/etc/issue").read_text(encoding="utf-8")
+issue_net = Path("overlays/etc/issue.net").read_text(encoding="utf-8")
+assert issue == f"Spaced Linux {version} \\n \\l\n", \
+    "overlays/etc/issue does not match the login banner written for VERSION"
+assert issue_net == f"Spaced Linux {version}\n", \
+    "overlays/etc/issue.net does not match the login banner written for VERSION"
 branding = Path("overlays/etc/calamares/branding/spaced/branding.desc").read_text(encoding="utf-8")
 def calamares_field_values(key):
     return re.findall(rf"^\s+{key}:\s*(\S+)\s*$", branding, re.MULTILINE)
@@ -263,6 +298,18 @@ assert "dhcpcd-base,ifupdown" in live_build_config, \
     "debootstrap can configure ifupdown before its non-systemd sysusers provider"
 assert "live-media-timeout=" not in live_build_config + live_grub_cfg, \
     "live-media-timeout suppresses scanning and can force an initramfs failure"
+# Ventoy, a GRUB entry on disk and netboot ISOs boot this image through GRUB
+# loopback, where live-boot only finds the image when findiso is passed. The
+# default entry inherits findiso from live-build's @APPEND_LIVE@ (and
+# @APPEND_VERIFY_CHECKSUMS@), so every hand-written entry must carry it too.
+live_append_tokens = {"@APPEND_LIVE@", "@APPEND_VERIFY_CHECKSUMS@"}
+live_linux_lines = [line.strip() for line in live_grub_cfg.splitlines()
+                    if line.strip().startswith("linux ")]
+assert len(live_linux_lines) == 4, "unexpected live GRUB kernel command lines"
+for live_linux in live_linux_lines:
+    assert "findiso=${iso_path}" in live_linux \
+        or live_append_tokens & set(live_linux.split()), \
+        f"live GRUB entry cannot boot from loopback media without findiso: {live_linux}"
 qemu_common = Path("scripts/vm/qemu/common.sh").read_text(encoding="utf-8")
 assert "-rtc base=utc" in qemu_common and "-rtc base=localtime" not in qemu_common, \
     "QEMU must expose a UTC hardware clock to the Linux guest"

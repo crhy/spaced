@@ -81,6 +81,12 @@ tracked in the release review until publication.
   checks that a spreadsheet program is installed before touching the audio, so a
   system without one reports that it is missing and keeps playing sound instead
   of staying muted.
+- Boot the failsafe entries from Ventoy and other loopback media. **Safe
+  Graphics** and **verbose boot** now pass `findiso=` like the default entry
+  instead of stopping with no live file system found. The text login banners now
+  name 11.26.1, and unused Calamares artwork, an invalid MATE monitor file and
+  the repository's `.gitkeep` placeholders no longer reach the image or a new
+  user's home.
 
 ## 11.26 - 2026-11-06
 
