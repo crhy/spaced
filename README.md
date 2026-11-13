@@ -314,6 +314,8 @@ Thank you for helping keep an independent, polished, systemd-free desktop availa
 
 The current release line is **11.26**; the prepared patch release is **11.26.1**. Spaced Linux is an independent community project under active development.
 
+The [11.26.1 release audit roadmap](docs/ROADMAP.md) lists what is still open and planned for later releases.
+
 ## Contributing
 
 Find desktop instructions in [Spaced Help](https://spacedlinux.com/#help) or open **Spaced Linux Help** to reach Welcome's local Help tab. Join the community on [Discord](https://discord.gg/BMW9Y6NB3y) or [Telegram](https://t.me/+pjmFzHo-i9A2ZWY5) for setup questions and testing discussions.

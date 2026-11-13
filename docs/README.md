@@ -26,6 +26,8 @@ folders.
   identity and the OS-inspired themes.
 - [SUBSYSTEMS.md](SUBSYSTEMS.md) — maintenance map connecting implementation,
   delivery and validation for each subsystem.
+- [ROADMAP.md](ROADMAP.md) — the open findings of the 11.26.1 release audit,
+  sorted by area and priority, for later releases.
 - [MATE-theming.md](MATE-theming.md) — canonical theming guide: component
   ownership, runtime switching, source-to-installed workflow, testing.
 - [THEME-COLORS.md](THEME-COLORS.md) — inventory of the color-bearing parts of
