@@ -7,7 +7,7 @@ const lightboxImage=lightbox?.querySelector('img');
 const lightboxCaption=lightbox?.querySelector('p');
 const lightboxClose=lightbox?.querySelector('.lightbox-close');
 
-addEventListener('scroll',()=>header.classList.toggle('scrolled',scrollY>20));
+addEventListener('scroll',()=>header.classList.toggle('scrolled',scrollY>20),{passive:true});
 menu.addEventListener('click',()=>{const open=nav.classList.toggle('open');menu.setAttribute('aria-expanded',String(open))});
 nav.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{nav.classList.remove('open');menu.setAttribute('aria-expanded','false')}));
 

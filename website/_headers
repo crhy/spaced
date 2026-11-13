@@ -3,6 +3,7 @@
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
   Cross-Origin-Opener-Policy: same-origin
+  X-Frame-Options: DENY
 
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
@@ -12,4 +13,9 @@
 # the rule above (which Cloudflare Pages deploy purges cannot reach for
 # already-cached immutable responses).
 /assets/screenshots/*
+  Cache-Control: public, max-age=3600
+
+# Theme renders are re-made per release for the same reason, so they get the
+# same short lifetime instead of the immutable year above.
+/assets/themes/*
   Cache-Control: public, max-age=3600

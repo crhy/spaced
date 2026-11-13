@@ -6,8 +6,15 @@
   <title>Help &amp; community — Spaced Linux</title>
   <meta name="description" content="Spaced Linux desktop shortcuts, software updates, troubleshooting, and community help on Discord and Telegram.">
   <meta name="theme-color" content="#080a0f">
+  <meta property="og:title" content="Spaced Linux Help and Community">
+  <meta property="og:description" content="Desktop shortcuts, update guidance, graphics troubleshooting, and help from other Spaced Linux users.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://spacedlinux.com/help.html">
+  <meta property="og:image" content="https://spacedlinux.com/assets/screenshots/desktop-welcome.webp">
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="canonical" href="https://spacedlinux.com/help.html">
   <link rel="icon" type="image/png" href="/assets/favicon-48.png">
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
   <link rel="stylesheet" href="/styles.css">
   <script defer src="/script.js"></script>
 </head>
@@ -20,6 +27,7 @@
     <a href="/themes.html">Themes</a>
     <a href="/help.html" aria-current="page">Help</a>
     <a href="#community">Community</a>
+    <a href="/#donate">Donate</a>
     <a class="download" href="https://github.com/crhy/spaced/releases">Releases</a>
   </nav>
 </header>
@@ -56,7 +64,7 @@
   <div class="heading"><p class="kicker">KEEP YOUR SYSTEM CURRENT</p><h2>Applications and operating-system updates.</h2></div>
   <div class="grid">
     <article><h3>Install applications</h3><p>Open <strong>SpacedBazaar</strong> to browse and install Flatpak applications. Welcome can install Bazaar and a selection of useful apps after setup.</p></article>
-    <article><h3>Update Spaced Linux</h3><p>Open <strong>SpacedUpdate</strong>, refresh the list, and apply the available updates. A complete update includes native system packages and Flatpak apps and runtimes. Let the operation finish and read any error before retrying.</p></article>
+    <article><h3>Update Spaced Linux</h3><p>Open <strong>Spaced Update</strong>, refresh the list, and apply the available updates. A complete update includes native system packages and Flatpak apps and runtimes. Let the operation finish and read any error before retrying.</p></article>
     <article><h3>Restart when needed</h3><p>A new kernel or graphics driver needs a reboot to become active. Save your work first. If an update reports a failure, keep its log and include it with your support request.</p></article>
   </div>
   <p>Keep a separate backup of personal files before testing a release or changing drivers. Check that your Timeshift snapshots exist and can be restored; a system snapshot is not a backup of your documents.</p>
@@ -87,7 +95,7 @@
     <article><h3>Displays and graphics</h3><p>Include the GPU model, driver, monitor connections, resolution, and refresh rate. Run <code>spaced-graphics-report</code> in a terminal to collect display and driver details. Review the output before sharing it.</p></article>
     <article><h3>Virtual machines</h3><p>Include the VM application and version, BIOS or UEFI firmware, assigned RAM and CPUs, display adapter, and whether hardware acceleration is enabled.</p></article>
     <article><h3>GIMP freezes when changing size units</h3><p>If GIMP freezes when switching from pixels to percent, close it and try <code>flatpak run --env=NO_AT_BRIDGE=1 org.gimp.GIMP</code> in a terminal. This optional workaround disables GIMP’s screen-reader accessibility for that launch; do not use it if you need that support. Starting GIMP normally restores its usual behavior. The underlying bug remains under investigation.</p></article>
-    <article><h3>Updates and applications</h3><p>Include the failing application or package name and the error message. Describe whether it came from SpacedUpdate, SpacedBazaar, or a terminal command.</p></article>
+    <article><h3>Updates and applications</h3><p>Include the failing application or package name and the error message. Describe whether it came from Spaced Update, SpacedBazaar, or a terminal command.</p></article>
   </div>
 </section>
 
@@ -99,7 +107,7 @@
 <footer>
   <div class="brand"><img src="/assets/spaced-icon-96.webp" width="96" height="96" alt=""><span>SPACED <b>LINUX</b></span></div>
   <p>Spaced. Polished. Agile. Compiz. Efficient. Devuan.</p>
-  <div><a href="/">Home</a> · <a href="/themes.html">Themes</a> · <a href="/help.html">Help</a> · <a href="https://github.com/crhy/spaced/releases">Releases</a> · <a href="https://discord.gg/BMW9Y6NB3y">Discord</a> · <a href="https://t.me/+pjmFzHo-i9A2ZWY5">Telegram</a> · <a href="https://github.com/crhy/spaced/issues">Issues</a></div>
+  <div><a href="/">Home</a> · <a href="/themes.html">Themes</a> · <a href="/help.html">Help</a> · <a href="https://github.com/crhy/spaced/releases">Releases</a> · <a href="https://discord.gg/BMW9Y6NB3y">Discord</a> · <a href="https://t.me/+pjmFzHo-i9A2ZWY5">Telegram</a> · <a href="/#donate">Donate</a> · <a href="https://github.com/crhy/spaced/issues">Issues</a></div>
 </footer>
 </body>
 </html>
