@@ -1,4 +1,7 @@
+import contextlib
+import importlib.machinery
 import importlib.util
+import io
 import os
 import sys
 import tempfile
@@ -11,6 +14,7 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 HELPER = ROOT / "overlays/usr/lib/spaced-linux/spaced_wallpaper.py"
 EXTENSION = ROOT / "overlays/usr/share/caja-python/extensions/spaced-set-wallpaper.py"
+DIALOG = ROOT / "overlays/usr/lib/spaced-linux/spaced-wallpaper-dialog"
 sys.dont_write_bytecode = True
 
 
@@ -76,6 +80,33 @@ def load_extension():
         return load(EXTENSION, "spaced_set_wallpaper_test")
 
 
+def load_dialog():
+    """Import the GTK dialog script with stub gi/spaced_wallpaper modules."""
+    gi = types.SimpleNamespace(require_version=lambda *args: None)
+    repository = types.SimpleNamespace(
+        Gdk=types.SimpleNamespace(),
+        GdkPixbuf=types.SimpleNamespace(),
+        Gio=types.SimpleNamespace(),
+        GLib=types.SimpleNamespace(),
+        Gtk=types.SimpleNamespace(),
+    )
+    gi.repository = repository
+    wallpaper_module = types.SimpleNamespace(
+        copy_to_wallpapers=lambda *args: None, default_style=lambda *args: None,
+    )
+    name = "spaced_wallpaper_dialog_test"
+    spec = importlib.util.spec_from_file_location(
+        name, str(DIALOG), loader=importlib.machinery.SourceFileLoader(name, str(DIALOG)))
+    module = importlib.util.module_from_spec(spec)
+    with patch.dict(sys.modules, {
+        "gi": gi,
+        "gi.repository": repository,
+        "spaced_wallpaper": wallpaper_module,
+    }):
+        spec.loader.exec_module(module)
+    return module
+
+
 class File:
     def __init__(self, uri, mime="image/jpeg"):
         self.uri = uri
@@ -111,6 +142,38 @@ class WallpaperMenuTests(unittest.TestCase):
         self.assertEqual(provider.get_file_items(None, [File("file:///tmp/a.txt", "text/plain")]), [])
         self.assertEqual(provider.get_file_items(None, [File("file:///tmp/a.jpg", None)]), [])
         self.assertEqual(provider.get_file_items(None, [File("file:///tmp/a.jpg"), File("file:///tmp/b.jpg")]), [])
+
+
+USAGE_LINE = "usage: spaced-wallpaper-dialog ABSOLUTE-IMAGE-PATH"
+
+
+class WallpaperDialogUsageTests(unittest.TestCase):
+    """A bad command line must explain itself instead of exiting 2 silently."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.dialog = load_dialog()
+
+    def run_main(self, *args):
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr):
+            status = self.dialog.main(["spaced-wallpaper-dialog", *args])
+        return status, stderr.getvalue()
+
+    def test_no_argument_prints_one_usage_line(self):
+        status, stderr = self.run_main()
+        self.assertEqual(status, 2)
+        self.assertEqual(stderr.splitlines(), [USAGE_LINE])
+
+    def test_relative_path_prints_one_usage_line(self):
+        status, stderr = self.run_main("Pictures/photo.jpg")
+        self.assertEqual(status, 2)
+        self.assertEqual(stderr.splitlines(), [USAGE_LINE])
+
+    def test_extra_argument_prints_one_usage_line(self):
+        status, stderr = self.run_main("/home/user/photo.jpg", "extra")
+        self.assertEqual(status, 2)
+        self.assertEqual(stderr.splitlines(), [USAGE_LINE])
 
 
 if __name__ == "__main__":

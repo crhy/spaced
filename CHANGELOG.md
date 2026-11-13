@@ -77,6 +77,10 @@ tracked in the release review until publication.
   silent, **Keep System Running** is remembered so the same modal does not
   return at every login, and the driver manager's **Copy Log** keeps the failure
   reason.
+- Keep the spreadsheet shortcut from silencing the desktop. Ctrl+Alt+C now
+  checks that a spreadsheet program is installed before touching the audio, so a
+  system without one reports that it is missing and keeps playing sound instead
+  of staying muted.
 
 ## 11.26 - 2026-11-06
 

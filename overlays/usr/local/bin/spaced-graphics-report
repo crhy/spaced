@@ -10,6 +10,23 @@ run() {
         printf '%s is not installed.\n' "$1"
     fi
 }
+# Same as run(), but ps exits 1 with no output when none of the listed processes
+# exist, which is a result rather than a failed check.
+run_session_processes() {
+    printf '\n--- %s ---\n' "$*"
+    if ! command -v "$1" >/dev/null 2>&1; then
+        printf '%s is not installed.\n' "$1"
+        return
+    fi
+    rows="$(timeout --kill-after=2 15 "$@" 2>&1)"
+    status=$?
+    if [ "$status" -eq 1 ] && [ -z "$rows" ]; then
+        printf 'No Spaced session processes are running.\n'
+        return
+    fi
+    [ -z "$rows" ] || printf '%s\n' "$rows"
+    [ "$status" -eq 0 ] || printf 'Check unavailable (status %s).\n' "$status"
+}
 run uname -r
 run cat /proc/cmdline
 run lspci -nnk
@@ -25,7 +42,7 @@ run xprop -root _NET_SUPPORTING_WM_CHECK _NET_ACTIVE_WINDOW
 for schema in org.mate.interface org.mate.font-rendering org.mate.power-manager org.mate.session org.mate.screensaver; do
     run gsettings list-recursively "$schema"
 done
-run ps -C compiz,gtk-window-decorator,mate-settings-daemon,mate-power-manager,mate-screensaver -o pid,ppid,etimes,stat,comm
+run_session_processes ps -C compiz,gtk-window-decorator,mate-settings-daemon,mate-power-manager,mate-screensaver -o pid,ppid,etimes,stat,comm
 printf '\n--- Saved screensaver idle preference ---\n'
 state="${XDG_CONFIG_HOME:-$HOME/.config}/spaced/screensaver-idle-activation"
 if [ -r "$state" ]; then

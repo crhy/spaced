@@ -32,9 +32,9 @@ class OpenTargetTests(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
-    def invoke(self, *args):
+    def invoke(self, *args, cwd=None):
         return subprocess.run(
-            ["bash", str(SCRIPT), *args], env=self.env,
+            ["bash", str(SCRIPT), *args], env=self.env, cwd=cwd,
             text=True, capture_output=True, check=False,
         )
 
@@ -106,6 +106,21 @@ class OpenTargetTests(unittest.TestCase):
         folder.mkdir()
         self.invoke(str(folder))
         self.assertEqual(self.calls(), ["xdg-open " + str(folder)])
+
+    def test_relative_name_in_cwd_runs_from_cwd_not_path(self):
+        # A bare name that exists here must run here; bash would otherwise
+        # search PATH and the helper would die with status 127.
+        decoy = self.bin / "rel.sh"
+        decoy.write_text("#!/bin/sh\nprintf 'ran\n' > " + str(self.root / "marker-decoy") + "\n")
+        decoy.chmod(0o755)
+        script = self.root / "rel.sh"
+        script.write_text("#!/bin/sh\nprintf 'ran\n' > " + str(self.root / "marker-relative") + "\n")
+        script.chmod(0o755)
+        result = self.invoke("rel.sh", cwd=self.root)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(self.marker("marker-relative"))
+        self.assertFalse(self.marker("marker-decoy"))
+        self.assertEqual(self.calls(), [])
 
     def test_missing_target_notifies_and_fails(self):
         result = self.invoke("does-not-exist")

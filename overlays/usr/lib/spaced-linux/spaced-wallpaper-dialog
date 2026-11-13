@@ -50,6 +50,7 @@ def screen_size():
 
 def main(argv):
     if len(argv) != 2 or not os.path.isabs(argv[1]):
+        print("usage: spaced-wallpaper-dialog ABSOLUTE-IMAGE-PATH", file=sys.stderr)
         return 2
     source = argv[1]
     try:

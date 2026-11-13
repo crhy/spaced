@@ -55,8 +55,13 @@ case "$target" in
         ;;
 esac
 
-# An existing executable file: run it directly.
+# An existing executable file: run it directly. A bare name must run from the
+# current directory, otherwise bash would search PATH for it.
 if [ -f "$target" ] && [ -x "$target" ]; then
+    case "$target" in
+        */*) : ;;
+        *) target="./$target" ;;
+    esac
     exec "$target"
 fi
 

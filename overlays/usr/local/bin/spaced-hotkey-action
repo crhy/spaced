@@ -30,14 +30,26 @@ set_all_sinks() {
     done
 }
 
-launch_calc() {
+# Prints how a spreadsheet would be started (libreoffice or flatpak), and exits
+# non-zero when no spreadsheet program is installed at all.
+calc_launcher() {
     if command -v libreoffice >/dev/null 2>&1; then
-        exec libreoffice --calc
+        printf 'libreoffice\n'
+        return 0
     fi
     if command -v flatpak >/dev/null 2>&1 \
             && flatpak info org.libreoffice.LibreOffice >/dev/null 2>&1; then
-        exec flatpak run org.libreoffice.LibreOffice --calc
+        printf 'flatpak\n'
+        return 0
     fi
+    return 1
+}
+
+launch_calc() {
+    case "$1" in
+        libreoffice) exec libreoffice --calc ;;
+        flatpak) exec flatpak run org.libreoffice.LibreOffice --calc ;;
+    esac
     notify_missing "LibreOffice Calc"
 }
 
@@ -52,7 +64,13 @@ case "${1:-}" in
     close-window) exec xkill ;;
     mute) set_all_sinks toggle ;;
     lock) exec mate-screensaver-command --lock ;;
-    mute-calc) set_all_sinks 1; launch_calc ;;
+    mute-calc)
+        # Look for the spreadsheet first: muting and then failing would leave the
+        # machine silent with nothing opened.
+        launcher="$(calc_launcher)" || launcher=""
+        [ -n "$launcher" ] && set_all_sinks 1
+        launch_calc "$launcher"
+        ;;
     shortcuts) show_help ;;
     sound) exec mate-volume-control ;;
     *)
