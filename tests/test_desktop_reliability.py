@@ -780,6 +780,116 @@ class ThemeMonitorSupervisionTests(unittest.TestCase):
             time.sleep(0.1)
         return False
 
+    def _lines(self, name):
+        path = self.state / name
+        return path.read_text(encoding='utf-8').splitlines() if path.exists() else []
+
+    def _isolated_script(self):
+        """Point the copied monitor's absolute helper paths and its theme
+        registry into this test's disposable directory, so no shipped helper is
+        ever executed for real."""
+        (self.state / 'themes.json').write_text(
+            '{"themes": [{"id": "spaced-dark", "gtk_theme": "Spaced-Linux-Dark"}]}\n',
+            encoding='utf-8')
+        for name, log in (('spaced-switch-theme', 'switch-calls'),
+                          ('spaced-theme-palette', 'palette-calls')):
+            path = self.bin / name
+            path.write_text('#!/bin/bash\nprintf "%s\\n" "$*" >> '
+                            f'"$TEST_STATE/{log}"\n', encoding='utf-8')
+            path.chmod(0o755)
+        self.script.write_text(
+            (BIN / 'spaced-theme-monitor').read_text(encoding='utf-8')
+            .replace('THEMES_JSON="/usr/share/spaced-themes/themes.json"',
+                     f'THEMES_JSON="{self.state / "themes.json"}"')
+            .replace('/usr/local/bin/spaced-switch-theme',
+                     str(self.bin / 'spaced-switch-theme'))
+            .replace('/usr/local/bin/spaced-theme-palette',
+                     str(self.bin / 'spaced-theme-palette')),
+            encoding='utf-8')
+
+    def _watchers_exit_at_once(self):
+        """A fake gsettings whose `monitor` reaches EOF immediately: the monitor
+        child then exits at once and the supervisor restarts it in a loop."""
+        (self.bin / 'gsettings').write_text(
+            '#!/bin/bash\n'
+            'case "$1" in\n'
+            '  get) printf "'"'"'Spaced-Linux-Dark'"'"'\n" ;;\n'
+            '  monitor) printf "monitor\\n" >> "$TEST_STATE/monitor-calls"; exit 0 ;;\n'
+            '  set) printf "%s\n" "$*" >> "$TEST_STATE/settings-writes" ;;\n'
+            'esac\n', encoding='utf-8')
+        (self.bin / 'gsettings').chmod(0o755)
+
+    def _run_supervisor(self):
+        supervisor = subprocess.Popen([str(self.script), '--supervise'],
+                                      env=self.env, stdout=subprocess.DEVNULL,
+                                      stderr=subprocess.STDOUT)
+
+        def _reap():
+            try:
+                supervisor.terminate()
+                supervisor.wait(timeout=5)
+            except (ProcessLookupError, subprocess.TimeoutExpired):
+                supervisor.kill()
+        self.addCleanup(_reap)
+        return supervisor
+
+    def _logged_exits(self):
+        return [line for line in self._lines('logger-calls')
+                if 'monitor exited' in line]
+
+    def test_a_restarted_monitor_does_not_re_theme_the_desktop(self):
+        # Finding a03-1: a monitor that dies at once used to re-run the whole
+        # login sequence (full spaced-switch-theme run, palette publish, state
+        # save) on every supervisor restart, re-theming the desktop forever.
+        self._isolated_script()
+        self._watchers_exit_at_once()
+        self._run_supervisor()
+
+        # Two logged exits means two children have finished; a child only exits
+        # after its own login sequence would have run.
+        self.assertTrue(self._wait_until(lambda: len(self._logged_exits()) >= 2, 20),
+                        'the supervisor never restarted the exiting monitor twice')
+        # The watchers of both children were re-armed (4 per child), so the
+        # restart really did happen before the assertions below are evaluated.
+        self.assertTrue(self._wait_until(
+            lambda: len(self._lines('monitor-calls')) >= 8, 5),
+            'the restarted monitor never re-armed its gsettings watchers')
+        self.assertEqual(self._lines('switch-calls'), ['spaced-dark'],
+                         'a restarted monitor re-ran the full theme switch')
+        self.assertEqual(len(self._lines('palette-calls')), 1,
+                         'a restarted monitor re-published the palette')
+
+    def test_the_restart_log_names_the_delay_actually_slept(self):
+        # Finding a03-2: the restart message used to report the delay of the
+        # previous restart, so it lied exactly when the 30 s backoff started.
+        self._isolated_script()
+        self._watchers_exit_at_once()
+        # Record the delay the supervisor really sleeps, instead of waiting out
+        # the 30 s backoff for real.
+        (self.bin / 'sleep').write_text(
+            '#!/bin/bash\nprintf "%s\\n" "$1" >> "$TEST_STATE/sleep-calls"\n',
+            encoding='utf-8')
+        (self.bin / 'sleep').chmod(0o755)
+        supervisor = self._run_supervisor()
+
+        # Six restarts: the backoff to 30 s must have kicked in during them. The
+        # sleep call is written right after its log line, so wait for both.
+        self.assertTrue(self._wait_until(
+            lambda: len(self._logged_exits()) >= 6
+            and len(self._lines('sleep-calls')) >= 6, 20),
+            'the supervisor never reached the backoff restarts')
+        supervisor.terminate()
+        supervisor.wait(timeout=5)
+        logged = [line.split('restarting in ')[1][:-1]
+                  for line in self._logged_exits() if 'restarting in ' in line]
+        slept = self._lines('sleep-calls')
+        compared = min(len(logged), len(slept))
+        self.assertGreaterEqual(compared, 6, 'not enough restarts were recorded')
+        self.assertIn('30', slept[:compared],
+                      'the restart backoff to 30s never happened')
+        self.assertEqual(logged[:compared], slept[:compared],
+                         'the restart log names a different delay than it sleeps')
+
     def test_supervision_restarts_a_killed_monitor_and_leaves_no_gsettings(self):
         fifo = self.state / 'monitor-fifo'
         os.mkfifo(str(fifo))

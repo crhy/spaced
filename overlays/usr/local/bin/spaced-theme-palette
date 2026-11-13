@@ -247,16 +247,30 @@ def sync_rustdesk_theme(config_home, home, dark):
                 pass
 
 
+USAGE = ("Usage: spaced-theme-palette <gtk-theme-name> "
+         "[--themes-root=DIR] [--themes-json=FILE]")
+
+
 def main(argv):
     args = [argument for argument in argv[1:] if not argument.startswith("--")]
-    options = {argument[2:].split("=", 1)[0]: argument[2:].split("=", 1)[1]
-               for argument in argv[1:] if argument.startswith("--")}
+    options = {}
+    for argument in argv[1:]:
+        if not argument.startswith("--"):
+            continue
+        # An option must carry its value: "--verbose" (no "=") is a mistyped
+        # call, not a theme name, and must report the usage line instead of
+        # crashing with an IndexError traceback.
+        name, separator, value = argument[2:].partition("=")
+        if not separator:
+            print(f"spaced-theme-palette: --{name} needs a =VALUE", file=sys.stderr)
+            print(USAGE, file=sys.stderr)
+            return 2
+        options[name] = value
     themes_root = options.get("themes-root", os.environ.get("SPACED_THEMES_ROOT", str(THEMES_ROOT)))
     themes_json = options.get("themes-json", os.environ.get("SPACED_THEMES_JSON", str(THEMES_JSON)))
 
     if not args:
-        print("Usage: spaced-theme-palette <gtk-theme-name> "
-              "[--themes-root=DIR] [--themes-json=FILE]", file=sys.stderr)
+        print(USAGE, file=sys.stderr)
         return 2
     gtk_theme = args[0]
 

@@ -66,6 +66,10 @@ tracked in the release review until publication.
   desktop no longer burns processor time offering its recovery dialog in a
   tight loop, and registering the signed application sources at login no longer
   asks Flatpak the same question twice per source.
+- Stop a restarting theme monitor from re-theming the desktop. The monitor is
+  still restarted whenever it dies and re-arms its setting watchers, but only
+  the first monitor of a session restores the panel, dock, wallpaper and
+  palette, so a monitor that keeps crashing no longer rewrites them forever.
 
 ## 11.26 - 2026-11-06
 

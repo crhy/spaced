@@ -134,10 +134,14 @@ kill_stale_gsettings_monitors() {
 # The supervisor holds the singleton lock and keeps one monitor child alive.
 # The child is told (SPACED_THEME_MONITOR_CHILD=1) to skip the lock because its
 # parent already holds it. Restart 2 s after any exit; back off to 30 s once 5
-# restarts have happened within 10 minutes; never give up.
+# restarts have happened within 10 minutes; never give up. Every child after
+# the first also gets SPACED_THEME_MONITOR_RESTART=1, which makes it skip the
+# login sequence below: a monitor that keeps dying must only re-arm its
+# watchers, never re-theme the desktop over and over.
 supervise() {
     local child_pid='' status delay cutoff
     local -a restarts=() kept=()
+    local -a child_env=(SPACED_THEME_MONITOR_CHILD=1)
     local t
     supervise_stop() {
         # Each monitor owns a session/process group. Its watcher wrappers may
@@ -150,14 +154,16 @@ supervise() {
     }
     trap 'supervise_stop; exit 0' HUP INT TERM
     while :; do
-        setsid env SPACED_THEME_MONITOR_CHILD=1 "$0" 8>&- &
+        setsid env "${child_env[@]}" "$0" 8>&- &
         child_pid=$!
         wait "$child_pid"
         status=$?
         supervise_stop
         child_pid=''
-        logger -t spaced-theme-monitor \
-            "monitor exited (status $status); restarting in ${delay:-2}s" 2>/dev/null || true
+        # The next child belongs to the same session: it must not repeat the
+        # login sequence (stale watcher sweep, restores, full theme switch,
+        # palette publish, state save).
+        child_env+=(SPACED_THEME_MONITOR_RESTART=1)
         restarts+=("$(date +%s)")
         cutoff=$(( $(date +%s) - 600 ))
         kept=()
@@ -167,6 +173,9 @@ supervise() {
         restarts=("${kept[@]}")
         delay=2
         [ "${#restarts[@]}" -ge 5 ] && delay=30
+        # Report the delay that is about to be slept, not the one before it.
+        logger -t spaced-theme-monitor \
+            "monitor exited (status $status); restarting in ${delay}s" 2>/dev/null || true
         sleep "$delay"
     done
 }
@@ -185,25 +194,38 @@ if [ "${1:-}" = "--supervise" ]; then
     exit 0
 fi
 
-# Dconf can lose the last session's writes when a newly installed account is
-# first populated from the live user. Keep a tiny, user-owned fallback for the
-# four visual choices users expect to survive a reboot. Restore the metatheme
-# before its extra panel/dock work, then restore the wallpaper so a custom
-# background is not replaced by the metatheme's suggested image.
-kill_stale_gsettings_monitors
-load_theme_ids
-restore_setting org.mate.interface gtk-theme gtk-theme || true
-restore_setting org.mate.interface icon-theme icon-theme || true
-restore_setting org.mate.Marco.general theme window-theme || true
-LAST="$(get_gtk)"
-[ -n "$LAST" ] && apply_for_gtk "$LAST"
+if [ "${SPACED_THEME_MONITOR_RESTART:-}" = "1" ]; then
+    # Restarted inside an already-themed session: only the watchers below need
+    # re-arming. Re-running the login sequence would rewrite the panel, dock,
+    # wallpaper, compositor opacity and palette files once per restart, so a
+    # monitor that dies at once would re-theme the desktop forever. The theme
+    # table and the current value are still read, because the watcher loop
+    # needs both and only acts when something actually changes.
+    load_theme_ids
+    LAST="$(get_gtk)"
+    logger -t spaced-theme-monitor \
+        'monitor restarted by supervisor; skipping the login sequence' 2>/dev/null || true
+else
+    # Dconf can lose the last session's writes when a newly installed account is
+    # first populated from the live user. Keep a tiny, user-owned fallback for the
+    # four visual choices users expect to survive a reboot. Restore the metatheme
+    # before its extra panel/dock work, then restore the wallpaper so a custom
+    # background is not replaced by the metatheme's suggested image.
+    kill_stale_gsettings_monitors
+    load_theme_ids
+    restore_setting org.mate.interface gtk-theme gtk-theme || true
+    restore_setting org.mate.interface icon-theme icon-theme || true
+    restore_setting org.mate.Marco.general theme window-theme || true
+    LAST="$(get_gtk)"
+    [ -n "$LAST" ] && apply_for_gtk "$LAST"
 
-# GTK 4 / libadwaita apps ignore the GTK 3 metathemes, so publish the palette
-# once at login as well: the files must exist from the first boot, not only
-# after the first theme change. A failure here must not stop the session.
-/usr/local/bin/spaced-theme-palette "$LAST" 2>/dev/null || true
-restore_setting org.mate.background picture-filename wallpaper || true
-save_desktop_state
+    # GTK 4 / libadwaita apps ignore the GTK 3 metathemes, so publish the palette
+    # once at login as well: the files must exist from the first boot, not only
+    # after the first theme change. A failure here must not stop the session.
+    /usr/local/bin/spaced-theme-palette "$LAST" 2>/dev/null || true
+    restore_setting org.mate.background picture-filename wallpaper || true
+    save_desktop_state
+fi
 
 # Persist the companion keys even when MATE writes them after gtk-theme.
 watch_setting org.mate.interface icon-theme icon-theme 8>&- &

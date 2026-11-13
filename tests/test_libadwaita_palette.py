@@ -303,6 +303,21 @@ class PaletteGeneratorTests(unittest.TestCase):
         self.assertIn("Usage:", result.stderr)
         self.assertFalse((self.workspace / "config-usage").exists())
 
+    def test_option_without_equals_is_a_clean_usage_error(self):
+        # Finding a03-6: "--verbose Spaced-Linux-Dark" used to die with an
+        # IndexError traceback instead of the usage message.
+        config_home = self.workspace / "config-noequals"
+        result = subprocess.run(
+            [sys.executable, str(HELPER), "--verbose", "Spaced-Linux-Dark",
+             f"--themes-root={THEME_ROOT}"],
+            env={"XDG_CONFIG_HOME": str(config_home),
+                 "PYTHONDONTWRITEBYTECODE": "1"},
+            capture_output=True, text=True, timeout=60)
+        self.assertEqual(2, result.returncode)
+        self.assertIn("Usage:", result.stderr)
+        self.assertNotIn("Traceback", result.stderr)
+        self.assertFalse(config_home.exists())
+
     def test_switcher_and_monitor_publish_the_palette(self):
         switcher = SWITCHER.read_text(encoding="utf-8")
         monitor = MONITOR.read_text(encoding="utf-8")

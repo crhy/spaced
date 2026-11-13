@@ -112,9 +112,18 @@ The system-wide autostart file is:
 /etc/xdg/autostart/spaced-theme-monitor.desktop
 ```
 
-It starts `/usr/local/bin/spaced-theme-monitor`. The monitor:
+It starts `/usr/local/bin/spaced-theme-monitor --supervise`. That first process
+is the supervisor: it holds the single-instance lock
+(`$XDG_RUNTIME_DIR/spaced-theme-monitor.lock`, `flock -n`) and runs the monitor
+as a child in its own session (`setsid`, `SPACED_THEME_MONITOR_CHILD=1` so the
+child skips that lock). When the child exits, the supervisor kills its process
+group and starts a new one 2 s later, backing off to 30 s once 5 restarts have
+happened within 10 minutes; it never gives up, and logs each restart with the
+delay it is about to wait. Every child after the first also gets
+`SPACED_THEME_MONITOR_RESTART=1`, so it skips the login sequence below and only
+re-arms its watchers instead of re-theming the desktop in a loop. The monitor:
 
-- creates a single-instance lock in `XDG_RUNTIME_DIR`;
+- relies on the supervisor's single-instance lock in `XDG_RUNTIME_DIR`;
 - restores saved visual choices from `~/.config/spaced/` at login;
 - monitors GTK, icon, window-theme, and wallpaper settings through `gsettings monitor`;
 - maps the current GTK theme to an entry in `themes.json`;
