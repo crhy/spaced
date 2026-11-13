@@ -14,6 +14,28 @@ physical-hardware checks still required, see the
 bug reports should identify the Spaced version, whether it is a live or
 installed session, and the steps that reproduce the problem.
 
+## Use the live USB to rescue a PC
+
+Boot the Spaced Linux stick and choose **Start Spaced Linux**. Nothing on the
+disk changes until you do it. The live desktop signs itself in, and the file
+`Live session passwords.txt` on the live Desktop repeats the same facts:
+
+- Live user `user`, password `1`. Root account `root`, password `spaced`.
+- `sudo` needs no password in the live session.
+- Those accounts exist only on the live USB. An installed system uses the
+  passwords you choose in the installer, and its root account is locked.
+
+The recovery tools are already installed on the stick:
+
+- **GParted** — see, resize, create and check partitions.
+- **TestDisk** (`testdisk`, `photorec`) — recover lost partitions and files.
+- **ddrescue** — copy a failing drive to a healthy one before doing anything
+  else to it.
+- **smartctl** — read the drive's own health report.
+- `fsck` through `dosfstools`, `exfatprogs` and `ntfs-3g`, plus `cryptsetup`,
+  `lvm2`, `parted` and `rsync` — check FAT/exFAT/NTFS volumes, open encrypted
+  volumes and LVM groups, and copy what you have recovered elsewhere.
+
 ## Troubleshooting guides
 
 - [Network Servers is empty / cannot open a Windows share](troubleshooting/network-servers.md):

@@ -101,6 +101,15 @@ flatpak:
   - xdg-utils
 backup:
   - timeshift
+rescue:
+  - gddrescue
+  - cryptsetup
+  - exfatprogs
+  - lvm2
+  - ntfs-3g
+  - parted
+  - smartmontools
+  - testdisk
 firmware:
   - bluez-firmware
   - firmware-amd-graphics

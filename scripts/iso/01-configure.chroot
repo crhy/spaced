@@ -90,6 +90,18 @@ fi
 
 cp -a /etc/skel/. /home/user/
 find /home/user/Desktop -maxdepth 1 -type f ! -name install-spaced-linux.desktop -delete
+# The live account's passwords have to be obvious, and the recovery tools have
+# to be discoverable. This note lives only in the live user's home: /etc/skel
+# never sees it, and Calamares removes the live account and its Desktop copy.
+cat > "/home/user/Desktop/Live session passwords.txt" <<'LIVE_PASSWORDS'
+Spaced Linux live session: passwords and rescue tools
+Live user "user", password: 1
+Root account "root", password: spaced
+sudo needs no password in the live session.
+These passwords exist only on this live USB; an installed system uses the
+passwords chosen in the installer and locks the root account.
+Rescue tools are included: GParted, TestDisk, ddrescue, smartctl.
+LIVE_PASSWORDS
 chown -R user:user /home/user
 
 # Keep Debian's Calamares module defaults, but never expose its launcher or
@@ -120,6 +132,9 @@ rm -f /etc/modprobe.d/nvidia-installer-disable-nouveau.conf 2>/dev/null || true
 [ ! -e /etc/init.d/smbd ] || update-rc.d smbd defaults
 # Let Windows list this computer under Network (issue #297).
 [ ! -e /etc/init.d/spaced-wsdd ] || update-rc.d spaced-wsdd defaults
+# smartmontools ships a background scanner a desktop does not need; the
+# smartctl command still works from a terminal.
+update-rc.d smartmontools disable 2>/dev/null || true
 [ ! -e /etc/init.d/spaced-first-boot-snapshot ] || \
   update-rc.d spaced-first-boot-snapshot defaults 98
 # Let GRUB discover other installed operating systems.

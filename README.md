@@ -183,7 +183,10 @@ Back up your own files before you install. When you are ready, open
 which asks where Spaced Linux should go. If the stick will not boot, the live
 menu entries and how to read a failed boot are in
 [docs/BOOTING.md](docs/BOOTING.md). The same steps are on the
-[help page](https://spacedlinux.com/help.html).
+[help page](https://spacedlinux.com/help.html). The live session signs in as
+**user** with password **1**, the root account uses **spaced**, and `sudo` needs
+no password there; those passwords exist only on the stick, and an installed
+system uses the ones you choose in the installer.
 
 ### Keep it updated
 

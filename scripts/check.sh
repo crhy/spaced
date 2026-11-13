@@ -30,6 +30,17 @@ for required_package in \
     anacron \
     btop \
     gparted \
+    testdisk \
+    gddrescue \
+    smartmontools \
+    efibootmgr \
+    ntfs-3g \
+    dosfstools \
+    exfatprogs \
+    cryptsetup \
+    lvm2 \
+    rsync \
+    parted \
     nvtop \
     pulseaudio-module-bluetooth \
     pulseaudio-utils \

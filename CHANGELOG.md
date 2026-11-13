@@ -101,6 +101,11 @@ tracked in the release review until publication.
   (`SPACED_APT_VALID_DAYS` overrides it), so a frozen or replayed copy of the
   archive is refused instead of accepted forever. The repository must be
   republished at least every 180 days, even with no package change.
+- Make the live USB a rescue system. The stick now carries GParted, TestDisk,
+  ddrescue, `smartctl`, `cryptsetup`, `lvm2`, `ntfs-3g`, `exfatprogs` and
+  `parted`, and a `Live session passwords.txt` note on the live Desktop states
+  the live user and root passwords. The note and the live accounts disappear
+  from an installed system.
 
 ## 11.26 - 2026-11-06
 

@@ -17,6 +17,11 @@ Firmware (BIOS/UEFI)
   -> MATE session, Compiz window manager
 ```
 
+The live session signs in as `user` (password `1`); the root account uses
+`spaced` and `sudo` needs no password. Those live-only passwords are also on the
+live Desktop in `Live session passwords.txt`, and
+[docs/HELP.md](HELP.md) explains how to rescue a PC from the stick.
+
 ## Removing the installation medium
 
 The live filesystem remains backed by the medium. Removing it can strand
