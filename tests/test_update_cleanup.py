@@ -12,6 +12,7 @@ import importlib.util
 import subprocess
 import sys
 import tempfile
+import types
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -253,6 +254,176 @@ class CleanupGuiMappingTests(unittest.TestCase):
                          ['mate-panel', 'compiz-core'])
         self.assertEqual(spaced_update.App._parse_blocked_packages(''), [])
         self.assertEqual(spaced_update.App._parse_blocked_packages(None), [])
+
+
+@unittest.skipUnless(spaced_update, 'PyGObject/GTK is unavailable')
+class CleanupApplyResultTests(unittest.TestCase):
+    """a01-updater rows 1 and 2: exactly one cleanup outcome is reported.
+
+    App._cleanup_apply_done is driven with a fake app namespace and a stubbed
+    Gtk.MessageDialog, so no window is realised and no display is needed.
+    """
+
+    def apply_done(self, succeeded, kind, message):
+        built, statuses = [], []
+
+        class RecordingDialog:
+            def __init__(self, text=None, **kwargs):
+                self.text = text
+                self.secondary = None
+                built.append(self)
+
+            def format_secondary_text(self, text):
+                self.secondary = text
+
+            def connect(self, *args):
+                pass
+
+            def show_all(self):
+                pass
+
+        app = types.SimpleNamespace(
+            _set_busy=lambda *args: None,
+            _set_status=lambda icon, title, detail: statuses.append(
+                (title, detail)),
+            _parse_blocked_packages=spaced_update.App._parse_blocked_packages,
+        )
+        original = spaced_update.Gtk.MessageDialog
+        try:
+            spaced_update.Gtk.MessageDialog = RecordingDialog
+            spaced_update.App._cleanup_apply_done(app, succeeded, kind, message)
+        finally:
+            spaced_update.Gtk.MessageDialog = original
+        return built, statuses
+
+    def test_cache_only_cleanup_never_claims_packages_were_removed(self):
+        message = ('Cleanup refused automatic removal for safety; cleaning the '
+                   'package cache only.\n'
+                   'Blocked package: mate-panel (matches protected pattern mate-)\n'
+                   'SPACED_STEP:40:Cleaning the package cache\n'
+                   'Package cache cleaned.\n')
+        built, statuses = self.apply_done(True, 'cache-only', message)
+        self.assertEqual([dialog.text for dialog in built],
+                         ['Package cache cleaned'])
+        self.assertEqual([title for title, _ in statuses],
+                         ['Package cache cleaned'])
+        self.assertIn('mate-panel', built[0].secondary)
+
+    def test_failed_cleanup_with_a_long_output_still_reports(self):
+        built, statuses = self.apply_done(False, 'failed', 'dpkg error\n' * 400)
+        self.assertEqual([dialog.text for dialog in built],
+                         ['Cleanup did not complete'])
+        self.assertEqual([title for title, _ in statuses],
+                         ['Cleanup needs attention'])
+        self.assertEqual(len(built[0].secondary), 3001)
+        self.assertTrue(built[0].secondary.endswith('\u2026'))
+
+    def test_full_cleanup_reports_packages_and_cache_removed(self):
+        built, statuses = self.apply_done(True, 'done', 'Cleanup complete.')
+        self.assertEqual([dialog.text for dialog in built], ['Cleanup complete'])
+        self.assertEqual([title for title, _ in statuses], ['Cleanup complete'])
+
+
+@unittest.skipUnless(spaced_update, 'PyGObject/GTK is unavailable')
+class CleanupConfirmationTests(unittest.TestCase):
+    """a01-updater row 5: the confirmation must match what can be cleaned."""
+
+    def show_dialog(self, removes, blocked, cache_bytes):
+        built = []
+
+        class RecordingDialog:
+            def __init__(self, text=None, **kwargs):
+                self.text = text
+                self.secondary = None
+                self.buttons = []
+                self.default = None
+                built.append(self)
+
+            def format_secondary_text(self, text):
+                self.secondary = text
+
+            def add_button(self, label, response):
+                self.buttons.append((label, response))
+
+            def set_default_response(self, response):
+                self.default = response
+
+            def connect(self, *args):
+                pass
+
+            def show_all(self):
+                pass
+
+        app = types.SimpleNamespace(
+            _set_busy=lambda *args: None,
+            _format_cleanup_bytes=spaced_update.App._format_cleanup_bytes,
+            _on_cleanup_response=lambda *args: None,
+        )
+        original = spaced_update.Gtk.MessageDialog
+        try:
+            spaced_update.Gtk.MessageDialog = RecordingDialog
+            spaced_update.App._show_cleanup_dialog(
+                app, removes, blocked, cache_bytes)
+        finally:
+            spaced_update.Gtk.MessageDialog = original
+        return built
+
+    def test_cache_only_confirmation_offers_only_the_cache(self):
+        # The ordinary state after any install: nothing is autoremoveable,
+        # but /var/cache/apt/archives still holds downloads.
+        dialog = self.show_dialog([], [], 4096)[0]
+        self.assertEqual(dialog.text, 'Clean the package cache?')
+        self.assertNotIn('These unused packages will be removed',
+                         dialog.secondary)
+        self.assertIn('4.0 KB', dialog.secondary)
+        self.assertIn(("Clean Package Cache", spaced_update.Gtk.ResponseType.APPLY),
+                      dialog.buttons)
+
+    def test_removal_confirmation_still_lists_the_packages(self):
+        dialog = self.show_dialog([('libfoo1', '1.2.3')], [], 4096)[0]
+        self.assertEqual(dialog.text, 'Clean up unused packages?')
+        self.assertIn('These unused packages will be removed:', dialog.secondary)
+        self.assertIn('libfoo1 (1.2.3)', dialog.secondary)
+        self.assertIn(('Clean Up', spaced_update.Gtk.ResponseType.OK),
+                      dialog.buttons)
+
+
+@unittest.skipUnless(spaced_update, 'PyGObject/GTK is unavailable')
+class InstallWarningTests(unittest.TestCase):
+    """a01-updater row 6: SPACED_WARNING lines must reach the user."""
+
+    def test_selected_install_reports_helper_warnings(self):
+        statuses, logged, calls = [], [], []
+        app = types.SimpleNamespace(
+            _update_warnings=[],
+            setstep=lambda *args: None,
+            logline=lambda line: logged.append(line),
+            show_error=lambda *args: None,
+            back_button=types.SimpleNamespace(show=lambda: None),
+            _set_busy=lambda *args: None,
+            _set_status=lambda icon, title, detail: statuses.append(
+                (title, detail)),
+        )
+
+        def run_cmd(command, *args):
+            calls.append(command)
+            # run_cmd() collects each SPACED_WARNING: line from the helper.
+            app._update_warnings.append('mate-panel is held by the administrator')
+            return 0
+        app.run_cmd = run_cmd
+        original = spaced_update.GLib.idle_add
+        try:
+            spaced_update.GLib.idle_add = lambda function, *args: function(*args)
+            spaced_update.App._install_worker(
+                app, [{'kind': 'apt', 'name': 'mate-panel', 'package': 'mate-panel'}])
+        finally:
+            spaced_update.GLib.idle_add = original
+        self.assertEqual(calls, [['pkexec', spaced_update.HELPER, 'apt-install',
+                                  'mate-panel']])
+        self.assertEqual([title for title, _ in statuses][-1],
+                         'Update finished with warnings')
+        self.assertIn('held by the administrator', statuses[-1][1])
+        self.assertIn('mate-panel is held by the administrator', logged)
 
 
 if __name__ == '__main__':

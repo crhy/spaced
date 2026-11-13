@@ -48,6 +48,11 @@ tracked in the release review until publication.
   "reuse my installation" install can no longer delete the previous system's
   files. Installed systems also no longer inherit the live image's SSH host
   keys, and a slow `update-grub` no longer reports a finished install as failed.
+- Report Spaced Update cleanups truthfully. A cache-only cleanup now says the
+  package cache was cleaned instead of announcing that unused packages were
+  removed, and a failed cleanup always shows its message however long the
+  command output was. A cleanup with only cached downloads to free now asks to
+  clean the package cache, and selected installs report administrator warnings.
 
 ## 11.26 - 2026-11-06
 

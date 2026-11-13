@@ -15,7 +15,8 @@ from gi.repository import Gdk, GLib, Gtk, Pango
 
 
 GITHUB_API = "https://api.github.com/repos/crhy/spaced/releases/latest"
-# Keep this application version in sync with the repository VERSION file.
+# Spaced Update's own release, published from this repository's APT package.
+# It is independent of the distribution version kept in the VERSION file.
 APP_VERSION = "0.2.3"
 HELPER = "/usr/lib/spaced-linux/spaced-update-helper"
 REFRESH_HELPER = "/usr/lib/spaced-linux/spaced-update-refresh"
@@ -650,7 +651,6 @@ class App(Gtk.Window):
         self._busy = False
         self._update_warnings = []
         self._autocheck_scheduled = False
-        self._autocheck_count = 0
         self._release_check_ran = False
 
         provider = Gtk.CssProvider()
@@ -924,7 +924,6 @@ class App(Gtk.Window):
         if self._autocheck_scheduled or self._release_check_ran:
             return
         self._autocheck_scheduled = True
-        self._autocheck_count += 1
         GLib.timeout_add(1500, self._autocheck_now)
 
     def _autocheck_now(self):
@@ -1158,12 +1157,22 @@ class App(Gtk.Window):
             GLib.idle_add(self.setstep, 94, "Finishing and refreshing menus…")
             GLib.idle_add(self.setstep, 100, "Updates installed successfully")
             GLib.idle_add(self.logline, "Finished successfully.")
-            GLib.idle_add(
-                self._set_status,
-                "emblem-ok-symbolic",
-                "Updates installed",
-                "Your selected updates completed successfully.",
-            )
+            if self._update_warnings:
+                for warning in self._update_warnings:
+                    GLib.idle_add(self.logline, warning)
+                GLib.idle_add(
+                    self._set_status,
+                    "dialog-warning-symbolic",
+                    "Update finished with warnings",
+                    " ".join(self._update_warnings),
+                )
+            else:
+                GLib.idle_add(
+                    self._set_status,
+                    "emblem-ok-symbolic",
+                    "Updates installed",
+                    "Your selected updates completed successfully.",
+                )
         except UpdateCancelled as error:
             GLib.idle_add(self.logline, str(error))
             GLib.idle_add(self.show_error, str(error))
@@ -1304,7 +1313,20 @@ class App(Gtk.Window):
             )
             dialog.show_all()
             return
-        if blocked:
+        if not removes and not blocked:
+            dialog = Gtk.MessageDialog(
+                transient_for=self, flags=Gtk.DialogFlags.MODAL,
+                message_type=Gtk.MessageType.QUESTION, buttons=Gtk.ButtonsType.NONE,
+                text="Clean the package cache?",
+            )
+            dialog.format_secondary_text(
+                "No unused packages can be removed safely.\n\n"
+                f"Package cache to free: {self._format_cleanup_bytes(cache_bytes)}."
+            )
+            dialog.add_button("Cancel", Gtk.ResponseType.CANCEL)
+            dialog.add_button("Clean Package Cache", Gtk.ResponseType.APPLY)
+            dialog.set_default_response(Gtk.ResponseType.CANCEL)
+        elif blocked:
             listing = "\n".join(
                 f"{name} \u2014 {reason}" for name, reason in blocked[:25]
             )
@@ -1412,6 +1434,8 @@ class App(Gtk.Window):
 
     def _cleanup_apply_done(self, succeeded, kind, message):
         self._set_busy(False)
+        if len(message) > 3000:
+            message = message[:3000] + "…"
         if succeeded and kind == "cache-only":
             blocked = self._parse_blocked_packages(message)
             if blocked:
@@ -1441,8 +1465,6 @@ class App(Gtk.Window):
                 text="Package cache cleaned",
             )
             dialog.format_secondary_text(detail)
-        if len(message) > 3000:
-            message = message[:3000] + "…"
         elif succeeded:
             self._set_status(
                 "emblem-ok-symbolic",
