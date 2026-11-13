@@ -84,6 +84,7 @@ if [[ -e $skel_stage/etc/skel/Documents/.gitkeep ||
 fi
 
 python3 - <<'PY'
+import configparser
 import glob
 import hashlib
 import json
@@ -1162,6 +1163,12 @@ required_applets = {"BriskMenuFactory::BriskMenu", "WnckletFactory::WindowListAp
                     "WnckletFactory::ShowDesktopApplet"}
 for layout_path in panel_layouts:
     text = layout_path.read_text(encoding="utf-8")
+    # mate-panel refuses a layout it cannot parse, so the gate parses it too:
+    # strict mode turns duplicate sections/keys and stray lines into errors.
+    layout = configparser.ConfigParser(interpolation=None, strict=True)
+    layout.optionxform = str
+    layout.read_string(text, source=str(layout_path))
+    assert layout.sections(), f"{layout_path.name}: is not a panel layout key file"
     missing = required_applets - {a for a in required_applets if a in text}
     assert not missing, f"{layout_path.name}: missing applets {missing}"
     assert "locked=true" in text, f"{layout_path.name}: panel applets are not locked"
@@ -1195,6 +1202,38 @@ assert "executable-text-activation='launch'" in schema_override, \
     "Double-clicking an executable script does not launch it (issue #388)"
 assert "[org.mate.caja.desktop]" in schema_override and "volumes-visible=true" in schema_override, \
     "Mounted network shares are not shown on the desktop (issue #184)"
+
+# glib-compile-schemas --strict --dry-run skips an override directory that holds no
+# .gschema.xml ("No schema files found: doing nothing"), so the shipped overrides are
+# validated here as key files instead: strict parsing, gsettings schema ids as sections,
+# and every value must parse as a GVariant when the GLib bindings are available.
+gvariant_parse = None
+try:
+    import gi
+    gi.require_version("GLib", "2.0")
+    from gi.repository import GLib
+    GLib.Variant.parse(None, "'probe'", None, None)
+    gvariant_parse = GLib.Variant.parse
+except Exception:
+    gvariant_parse = None
+for override_path in sorted((root / "usr/share/glib-2.0/schemas").glob("*.gschema.override")):
+    override = configparser.ConfigParser(interpolation=None, strict=True)
+    override.optionxform = str
+    override.read_string(override_path.read_text(encoding="utf-8"), source=str(override_path))
+    assert override.sections(), f"{override_path.name}: sets no gsettings schema"
+    for section in override.sections():
+        assert re.fullmatch(r"[A-Za-z][A-Za-z0-9._-]*(:/[A-Za-z0-9._/-]*)?", section), \
+            f"{override_path.name}: [{section}] is not a gsettings schema id"
+        assert len(override[section]) > 0, f"{override_path.name}: [{section}] sets no keys"
+        for key, value in override[section].items():
+            if gvariant_parse is None:
+                continue
+            try:
+                gvariant_parse(None, value, None, None)
+            except Exception as parse_error:
+                raise AssertionError(
+                    f"{override_path.name}: {section}/{key}={value} is not a GVariant "
+                    f"({parse_error})")
 
 icon_repair = root / "usr/local/bin/spaced-desktop-icon-repair"
 assert icon_repair.stat().st_mode & 0o111 and "caja-icon-position" in icon_repair.read_text(encoding="utf-8"), \
@@ -1859,6 +1898,15 @@ done < <(find scripts overlays packages live-build/auto -type f \
 find overlays -type f -name '*.py' -print0 | \
     xargs -0 -r env PYTHONPYCACHEPREFIX="$CHECK_TMP/pycache" python3 -m py_compile
 
+# Shipped Python helpers mostly carry no .py suffix, so the pass above misses them.
+# ast.parse checks the syntax without writing bytecode into the overlay tree.
+while IFS= read -r -d '' path; do
+    case "$(head -n 1 "$path" 2>/dev/null || true)" in
+        *python*) python3 -c 'import ast,sys; ast.parse(open(sys.argv[1]).read(), sys.argv[1])' "$path" ;;
+    esac
+done < <(find overlays/usr/local/bin overlays/usr/local/sbin overlays/usr/lib/spaced-linux \
+    overlays/usr/share/caja-python -type f -print0)
+
 if find overlays live-build -type f \
     \( -iname '*.png' -o -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.webp' -o -iname '*.svg' \) \
     -perm /111 -print -quit | grep -q .; then
@@ -1866,13 +1914,15 @@ if find overlays live-build -type f \
     exit 1
 fi
 
-if command -v desktop-file-validate >/dev/null 2>&1; then
-    # Cairo-Dock launcher files intentionally carry its legacy Container,
-    # Order, and "Icon Type" keys, which are not freedesktop desktop keys.
-    find overlays -name '*.desktop' -type f \
-        ! -path '*/cairo-dock/launchers/*' \
-        -exec desktop-file-validate {} +
+if ! command -v desktop-file-validate >/dev/null 2>&1; then
+    echo "desktop-file-validate is missing; install it (make deps / apt install desktop-file-utils)." >&2
+    exit 1
 fi
+# Cairo-Dock launcher files intentionally carry its legacy Container,
+# Order, and "Icon Type" keys, which are not freedesktop desktop keys.
+find overlays -name '*.desktop' -type f \
+    ! -path '*/cairo-dock/launchers/*' \
+    -exec desktop-file-validate {} +
 
 # Spaced Linux must use Devuan repositories exclusively.
 if grep -RInE \
