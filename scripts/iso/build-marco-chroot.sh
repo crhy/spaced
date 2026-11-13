@@ -29,13 +29,18 @@ if [ ! -f "$CHROOT/.spaced-bootstrap-complete" ]; then
 fi
 
 cleanup() {
-    mountpoints=("$CHROOT/workspace" "$CHROOT/proc" "$CHROOT/sys" "$CHROOT/dev")
+    mountpoints=("$CHROOT/workspace" "$CHROOT/proc" "$CHROOT/sys" "$CHROOT/dev" "$CHROOT")
     [[ -z "$BUILD_LINK_TARGET" ]] || mountpoints=("$CHROOT$BUILD_LINK_TARGET" "${mountpoints[@]}")
     for mountpoint in "${mountpoints[@]}"; do
         umount --recursive "$mountpoint" 2>/dev/null || true
     done
 }
 trap cleanup EXIT
+# Make the chroot root a mount point.  Several upstream elogind tests create a
+# nested mount namespace and change the root mount's propagation; a plain
+# chroot into a directory makes those tests abort with EINVAL instead.
+mount --bind "$CHROOT" "$CHROOT"
+mount --make-rslave "$CHROOT"
 mkdir -p "$CHROOT"/{dev,proc,sys,workspace}
 mount --rbind /dev "$CHROOT/dev"
 mount --make-rslave "$CHROOT/dev"

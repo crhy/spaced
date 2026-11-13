@@ -8,6 +8,48 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class ElogindBackportTests(unittest.TestCase):
+    def test_patch_hunk_line_counts_are_valid(self):
+        """Catch malformed patches before the privileged package build does."""
+        hunk_header = re.compile(r"^@@ -(?:\d+)(?:,(\d+))? \+(?:\d+)(?:,(\d+))? @@")
+
+        for patch_path in sorted((ROOT / "patches/elogind").glob("*.patch")):
+            lines = patch_path.read_text().splitlines()
+            hunks = 0
+            index = 0
+            while index < len(lines):
+                match = hunk_header.match(lines[index])
+                if not match:
+                    index += 1
+                    continue
+
+                hunks += 1
+                expected_old = int(match.group(1) or 1)
+                expected_new = int(match.group(2) or 1)
+                actual_old = actual_new = 0
+                index += 1
+                while index < len(lines):
+                    line = lines[index]
+                    if line.startswith("@@ ") or line.startswith("diff --git "):
+                        break
+                    if (actual_old, actual_new) == (expected_old, expected_new):
+                        break
+                    self.assertTrue(
+                        line.startswith((" ", "+", "-", "\\")),
+                        f"{patch_path.name}: malformed hunk line {index + 1}: {line!r}",
+                    )
+                    if line.startswith((" ", "-")):
+                        actual_old += 1
+                    if line.startswith((" ", "+")):
+                        actual_new += 1
+                    index += 1
+
+                self.assertEqual(
+                    (actual_old, actual_new),
+                    (expected_old, expected_new),
+                    f"{patch_path.name}: incorrect line counts in hunk ending near line {index + 1}",
+                )
+            self.assertGreater(hunks, 0, f"{patch_path.name}: patch contains no hunks")
+
     def test_sources_have_pinned_sha256_hashes(self):
         entries = (ROOT / "patches/elogind/sources.sha256").read_text().splitlines()
         self.assertEqual(len(entries), 3)
@@ -45,6 +87,18 @@ class ElogindBackportTests(unittest.TestCase):
         self.assertIn('stage-elogind.sh', local)
         self.assertIn('elogind_artifacts', repo)
         self.assertIn('elogind_*.dsc', repo)
+
+    def test_chroot_supports_mount_namespace_tests(self):
+        chroot = (ROOT / "scripts/iso/build-marco-chroot.sh").read_text()
+        self.assertIn('mount --bind "$CHROOT" "$CHROOT"', chroot)
+        self.assertIn('mount --make-rslave "$CHROOT"', chroot)
+
+    def test_service_free_build_runs_all_non_live_elogind_tests(self):
+        build = (ROOT / "scripts/iso/build-elogind.sh").read_text()
+        self.assertIn('DEB_BUILD_OPTIONS="${DEB_BUILD_OPTIONS:+$DEB_BUILD_OPTIONS }nocheck"', build)
+        self.assertIn('test["name"] != "test-login"', build)
+        self.assertIn('len(tests) != 272 or len(names) != 271', build)
+        self.assertIn('"--no-rebuild", "--print-errorlogs"', build)
 
 
 if __name__ == "__main__":

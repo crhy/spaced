@@ -10,8 +10,9 @@ Prepared as the 11.26.1 release candidate and `11.26.1-1` APT packages.
   for command-line upgrades. APT repository publication must pass historical
   upgrade fixtures so a dependency regression like #415 cannot silently recur.
 - Backport the upstream elogind fixes for the reboot-helper crash and XML entity
-  lookup failure (#409). These patches remain subject to the privileged package
-  build and installed-VM reboot gate recorded in the release review.
+  lookup failure (#409). The privileged package build passes all 271
+  chroot-safe upstream tests; the installed-VM reboot gate remains recorded in
+  the release review.
 - Repair a damaged Flatpak portal permission database without hiding unrelated
   Caja locations from applications (#408).
 - Keep new, moved and hot-plugged Caja desktop icons inside the current monitor

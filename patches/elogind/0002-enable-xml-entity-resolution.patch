@@ -13,14 +13,14 @@ that commit are intentionally omitted.
 
 Signed-off-by: Sven Eden <sven@eden-worx.com>
 ---
- tools/xml_helper.py | 9 ++++++++-
- 1 file changed, 8 insertions(+), 1 deletion(-)
+ tools/xml_helper.py | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
 
 diff --git a/tools/xml_helper.py b/tools/xml_helper.py
 index 6f71350f5b..a9f90f4d14 100755
 --- a/tools/xml_helper.py
 +++ b/tools/xml_helper.py
-@@ -12,7 +12,14 @@ class CustomResolver(tree.Resolver):
+@@ -12,7 +12,13 @@ class CustomResolver(tree.Resolver):
  
          return None
  
@@ -37,4 +37,3 @@ index 6f71350f5b..a9f90f4d14 100755
  
 -- 
 2.47.3
-
