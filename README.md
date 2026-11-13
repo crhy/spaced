@@ -38,7 +38,7 @@
   <img alt="Init system" src="https://img.shields.io/badge/init-sysvinit-555555">
   <img alt="Architecture" src="https://img.shields.io/badge/architecture-amd64-2563eb">
   <img alt="Release" src="https://img.shields.io/badge/release-11.26.1-0ea5e9">
-  <img alt="License" src="https://img.shields.io/badge/license-MIT-black">
+  <img alt="License" src="https://img.shields.io/badge/license-rhY-black">
 </p>
 
 <p align="center">
@@ -311,4 +311,4 @@ Spaced Linux builds on the work of the Devuan, Debian, MATE, Compiz, Calamares, 
 
 ## License
 
-Project-specific build configuration and code are released under the [MIT License](LICENSE). Upstream packages, artwork, themes, fonts, and components retain their respective licenses.
+Project-specific build configuration and code are released under the [rhY license](LICENSE): do whatever you want with it, but if you use this code you must release your modifications. Upstream packages, artwork, themes, fonts, and components retain their respective licenses.
