@@ -1,0 +1,7 @@
+// Apply Spaced's safety policy to every APT transaction, including commands
+// run from a root terminal. The updater also supplies this hook explicitly on
+// older installations until this configuration has been delivered.
+DPkg::Pre-Install-Pkgs {
+  "/usr/lib/spaced-linux/spaced-update-apt-guard";
+};
+DPkg::Tools::Options::/usr/lib/spaced-linux/spaced-update-apt-guard::Version "2";

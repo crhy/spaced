@@ -8,6 +8,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 GUARD = ROOT / 'overlays/usr/lib/spaced-linux/spaced-update-apt-guard'
+APT_HOOK = ROOT / 'overlays/etc/apt/apt.conf.d/60spaced-transaction-guard'
 PIN = ROOT / 'overlays/etc/apt/preferences.d/spaced-xorg-abi'
 BROKEN = '2:21.1.25-1devuan1'
 FIXED = '2:21.1.25-1devuan1+spaced10.26.3'
@@ -47,6 +48,11 @@ class GuardTests(unittest.TestCase):
         for lower, higher in ((BROKEN, FIXED), (FIXED, '2:21.1.25-2devuan1')):
             subprocess.run(['dpkg', '--compare-versions', lower, 'lt', higher], check=True)
 
+    def test_guard_is_enabled_for_all_apt_transactions(self):
+        text = APT_HOOK.read_text()
+        self.assertIn(f'"/{GUARD.relative_to(ROOT / "overlays")}";', text)
+        self.assertIn('spaced-update-apt-guard::Version "2";', text)
+
 
 @unittest.skipUnless(shutil.which('apt-cache'), 'requires apt-cache')
 class PinTests(unittest.TestCase):
@@ -61,6 +67,13 @@ class PinTests(unittest.TestCase):
                 ['apt-cache', '-o', f'Dir::Etc::PreferencesParts={temp}', 'policy'],
                 capture_output=True, text=True, timeout=60)
             self.assertNotIn('E:', result.stderr)
+
+    def test_global_guard_configuration_is_valid_apt_syntax(self):
+        result = subprocess.run(
+            ['apt-config', '-c', str(APT_HOOK), 'dump'],
+            capture_output=True, text=True, timeout=60)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('spaced-update-apt-guard', result.stdout)
 
 
 if __name__ == '__main__':

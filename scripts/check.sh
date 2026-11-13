@@ -216,6 +216,12 @@ assert "stage_desktop_defaults" in local_package_builder and "usr/share/themes" 
 assert "spaced-audio-restore.desktop" in local_package_builder \
     and "spaced-display-repair.desktop" in local_package_builder, \
     "installed-system update package omits audio or display recovery autostarts"
+assert "stage-elogind.sh" in local_package_builder, \
+    "the patched elogind runtime is not staged into images and updates"
+elogind_patch = Path("patches/elogind/0001-fix-poweroff-reboot-segfault.patch").read_text(encoding="utf-8")
+assert "handle_action_to_string(a->handle)" in elogind_patch \
+    and "m->sleep_fork_action = NULL" in elogind_patch, \
+    "elogind immediate-action crash or fork cleanup fix is incomplete"
 assert "spaced-first-boot-snapshot" in local_package_builder \
     and "usr/local/share/applications/mate-about.desktop" in local_package_builder, \
     "installed-system update package omits snapshot or system-info integration"
@@ -316,6 +322,10 @@ assert '$(HOST_RUN) scripts/tests/test-release-package-payload.sh "$(abspath $(A
     "APT repository publication can bypass package payload validation"
 assert '$(HOST_RUN) scripts/tests/test-apt-trust.sh "$(abspath $(APT_REPO_DIR))"' in makefile_text, \
     "APT repository publication can bypass signed candidate validation"
+assert 'scripts/test-upgrade-packages.sh "$(abspath $(APT_REPO_DIR))"' in makefile_text \
+    and "UPGRADE_STATUS_FILES" in makefile_text \
+    and "Refusing publication without an installed-system dpkg status fixture" in makefile_text, \
+    "APT repository publication can bypass rolling-upgrade solver validation"
 for gpu_source in (qemu_common, qemu_smoke, makefile_text):
     assert "virtio-gpu-pci" not in gpu_source and "virtio-vga" not in gpu_source, \
         "test VM must use a single GPU; dual virtio VGA leaves the guest on a black screen"
@@ -472,8 +482,8 @@ for split_control in (themes_control, wallpapers_control):
         and "Replaces: spaced-mate-default-settings (<< 9.26.3-1)" in split_control, \
         "split artwork package lacks the Breaks/Replaces takeover for upgrades"
 assert f"spaced-mate-default-settings (= {package_version})" in meta_control \
-    and "spaced-welcome (>= 0.1.21)" in meta_control \
-    and "spaced-monitor (>= 0.1.8)" in meta_control \
+    and "spaced-welcome (>= 0.1.22)" in meta_control \
+    and "spaced-monitor (>= 0.1.9)" in meta_control \
     and "libfuse2t64" in meta_control, \
     "spaced-meta does not pull in the standalone applications and desktop defaults"
 # The artwork split moves payload out of spaced-mate-default-settings. No
@@ -528,10 +538,10 @@ def artifact_default(name):
     return match.group(1)
 
 assert artifact_default("SPACED_WELCOME_REPOSITORY") == "crhy/spacedwelcome"
-assert artifact_default("SPACED_WELCOME_VERSION") == "0.1.21"
+assert artifact_default("SPACED_WELCOME_VERSION") == "0.1.22"
 assert artifact_default("SPACED_MONITOR_REPOSITORY") == "crhy/spacedmonitor"
-assert artifact_default("SPACED_MONITOR_VERSION") == "0.1.8"
-assert artifact_default("SPACED_MONITOR_RELEASE_TAG") == "v0.1.8"
+assert artifact_default("SPACED_MONITOR_VERSION") == "0.1.9"
+assert artifact_default("SPACED_MONITOR_RELEASE_TAG") == "v0.1.9"
 assert artifact_default("SPACED_GITHUB_REMOTE_NAME") == "spaced-github"
 assert artifact_default("SPACED_GITHUB_REMOTE_DESCRIPTOR_URL") == \
     "https://crhy.github.io/spacedbazaar/spaced-github.flatpakrepo"
@@ -594,9 +604,19 @@ flatpak_wrapper_path = root / "usr/local/bin/flatpak"
 flatpak_wrapper = flatpak_wrapper_path.read_text(encoding="utf-8")
 bazaar_main = yaml.safe_load((root / "etc/bazaar/bazaar.yaml").read_text(encoding="utf-8"))
 bazaar_content = yaml.safe_load((root / "etc/bazaar/config.yaml").read_text(encoding="utf-8"))
+bazaar_blocklist = yaml.safe_load((root / "etc/bazaar/blocklist.yaml").read_text(encoding="utf-8"))
 assert bazaar_main["start-on-curated"] is True \
     and "/run/host/etc/bazaar/config.yaml" in bazaar_main["curated-config-paths"], \
     "SpacedBazaar does not load the Spaced Linux catalog"
+assert "/run/host/etc/bazaar/blocklist.yaml" in bazaar_main["yaml-blocklist-paths"], \
+    "SpacedBazaar does not load the Spaced Linux compatibility blocklist"
+blocked_bazaar_apps = {
+    app_id
+    for rule in bazaar_blocklist["blocklists"]
+    for app_id in rule.get("block", [])
+}
+assert "com.github.wwmm.easyeffects" in blocked_bazaar_apps, \
+    "EasyEffects is offered even though the PulseAudio release cannot run it (issue #397)"
 bazaar_apps = bazaar_content["rows"][0]["section"]["appids"]["list"]
 assert set(bazaar_apps) == {"io.github.crhy.SpacedBazaar", "io.github.crhy.voxa",
                             "io.github.crhy.CardsWithCats",
@@ -1674,6 +1694,7 @@ assert 'wm_name.lower() != "compiz"' in nvidia_postboot \
 
 update_app = (root / "usr/lib/spaced-linux/spaced-update.py").read_text(encoding="utf-8")
 update_helper = (root / "usr/lib/spaced-linux/spaced-update-helper").read_text(encoding="utf-8")
+apt_guard_config = (root / "etc/apt/apt.conf.d/60spaced-transaction-guard").read_text(encoding="utf-8")
 update_refresh_path = root / "usr/lib/spaced-linux/spaced-update-refresh"
 assert update_refresh_path.is_file() and update_refresh_path.stat().st_mode & 0o111, \
     "password-free refresh helper is missing or not executable (issue #277)"
@@ -1701,6 +1722,11 @@ assert 'scope in ("user", "system")' in update_app \
 assert 'apt-refresh' in update_helper and 'flock -n' in update_helper \
     and 'APT::Update::Error-Mode=any' in update_helper, \
     "Spaced Update must serialize transactions and reject incomplete APT indexes"
+assert 'spaced-update-apt-guard";' in apt_guard_config \
+    and 'spaced-update-apt-guard::Version "2";' in apt_guard_config, \
+    "terminal APT transactions do not use Spaced's package safety guard"
+assert update_helper.count("verify_package_health '") == 2 and "dpkg --audit" in update_helper, \
+    "Spaced Update must verify package health before and after changing packages"
 assert "APT::Status-Fd=3" in update_helper and '3>&1' in update_helper \
     and "APT::Status-Fd=1" not in update_helper, \
     "APT progress must not close maintainer-script stdout during updates (issue #373)"

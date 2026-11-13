@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+  <title>Crucible Red Metallic X Cursor</title>
+  <desc>Fresh-forged crimson metal with sharp blade facets and white-hot reflections. Solid black outline inside a solid white outline; transparent background. Cursor hotspot: 32,32.</desc>
+  <defs>
+    <path id="x" d="M15 7 32 24 49 7 57 15 40 32 57 49 49 57 32 40 15 57 7 49 24 32 7 15Z"/>
+    <path id="face" d="M15 8.4 32 25.4 49 8.4 55.6 15 38.6 32 55.6 49 49 55.6 32 38.6 15 55.6 8.4 49 25.4 32 8.4 15Z"/>
+    <clipPath id="clip"><use href="#face"/></clipPath>
+    <linearGradient id="bevel" x1="14" y1="7" x2="50" y2="57" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ae2107"/><stop offset=".25" stop-color="#571308"/><stop offset=".48" stop-color="#d93b0d"/><stop offset=".52" stop-color="#571005"/><stop offset=".8" stop-color="#940d03"/><stop offset="1" stop-color="#2c0904"/>
+    </linearGradient>
+    <!-- Abrupt dark-to-light transitions mimic polished, ground blade facets. -->
+    <linearGradient id="metal" x1="24.7" y1="15.3" x2="15.3" y2="24.7" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#530200"/><stop offset=".18" stop-color="#970401"/><stop offset=".36" stop-color="#df1003"/><stop offset=".47" stop-color="#ff5810"/><stop offset=".495" stop-color="#ffda7d"/><stop offset=".505" stop-color="#fff3bd"/><stop offset=".525" stop-color="#a80901"/><stop offset=".65" stop-color="#4c0301"/><stop offset=".85" stop-color="#ae0701"/><stop offset="1" stop-color="#e91603"/>
+    </linearGradient>
+    <radialGradient id="heat" cx="0" cy="0" r="1" gradientTransform="translate(32 32) scale(23 23)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ff450a" stop-opacity=".15"/><stop offset=".48" stop-color="#ff1500" stop-opacity=".08"/><stop offset="1" stop-color="#ff2500" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <!-- Opaque concentric borders preserve sharp corners and cursor contrast. -->
+  <use href="#x" fill="#fff" stroke="#fff" stroke-width="6" stroke-linejoin="miter"/>
+  <use href="#x" fill="#000" stroke="#000" stroke-width="3" stroke-linejoin="miter"/>
+  <use href="#x" fill="url(#bevel)"/>
+  <!-- Four identical blade arms converge precisely at the center. -->
+  <g clip-path="url(#clip)">
+    <g id="arm">
+      <path d="M15 8.4 32 25.4 32 32 25.4 32 8.4 15Z" fill="url(#metal)"/>
+      <path d="m12 15 12 12m-9-14 12 12m-13-9 10 10" stroke="#ff8c2b" stroke-opacity=".16" stroke-width=".12"/>
+    </g>
+    <use href="#arm" transform="rotate(90 32 32)"/>
+    <use href="#arm" transform="rotate(180 32 32)"/>
+    <use href="#arm" transform="rotate(270 32 32)"/>
+    <path d="M7 7H57V57H7Z" fill="url(#heat)"/>
+  </g>
+</svg>

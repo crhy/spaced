@@ -174,6 +174,22 @@ APT_OPTIONS=(-o DPkg::Lock::Timeout=120 -o Acquire::Retries=3
              -o APT::Update::Error-Mode=any -o Dpkg::Use-Pty=0
              -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold)
 apt_run() { apt-get "${APT_OPTIONS[@]}" "$@"; }
+
+verify_package_health() {
+  local context=$1 audit
+  apt_run check
+  if ! audit=$(dpkg --audit 2>&1); then
+    log "$audit"
+    log "dpkg could not audit package health $context. No further update steps will run."
+    return 1
+  fi
+  if [[ -n ${audit//[[:space:]]/} ]]; then
+    log "$audit"
+    log "The package database is not healthy $context. No further update steps will run."
+    return 1
+  fi
+}
+
 # APT's machine-readable progress shares the log pipe through a dedicated
 # descriptor.  Do not use descriptor 1 as APT::Status-Fd: APT closes the
 # status descriptor before running dpkg, and that would also close stdout in
@@ -185,6 +201,7 @@ apt_run_status() {
 
 if [[ $MODE == all || $MODE == apt-install || $MODE == cleanup-apply ]]; then
   GUARD=/usr/lib/spaced-linux/spaced-update-apt-guard
+  GLOBAL_GUARD_CONFIG=/etc/apt/apt.conf.d/60spaced-transaction-guard
   if [[ ${SPACED_UPDATE_TEST:-} == 1 && -n ${SPACED_UPDATE_TEST_GUARD:-} ]]; then
     # Test hook only: validate a stub guard instead of the installed one.
     # pkexec strips test variables in production, so this cannot redirect
@@ -204,8 +221,16 @@ if [[ $MODE == all || $MODE == apt-install || $MODE == cleanup-apply ]]; then
     log 'The Spaced Update APT guard must be owned by root and not writable by other accounts. Reinstall the native package before retrying.'
     exit 1
   fi
-  APT_OPTIONS+=(-o "DPkg::Pre-Install-Pkgs::=$GUARD"
-               -o "DPkg::Tools::Options::$GUARD::Version=2")
+  # New installations load the guard globally so root-terminal APT commands
+  # receive the same protection. Keep passing it explicitly on old systems
+  # and in tests until the package containing that configuration is installed.
+  if [[ ${SPACED_UPDATE_TEST:-} == 1 ]] ||
+     [[ ! -f $GLOBAL_GUARD_CONFIG || -L $GLOBAL_GUARD_CONFIG ]] ||
+     ! grep -Fq '"/usr/lib/spaced-linux/spaced-update-apt-guard";' "$GLOBAL_GUARD_CONFIG" ||
+     ! grep -Fq 'spaced-update-apt-guard::Version "2";' "$GLOBAL_GUARD_CONFIG"; then
+    APT_OPTIONS+=(-o "DPkg::Pre-Install-Pkgs::=$GUARD"
+                 -o "DPkg::Tools::Options::$GUARD::Version=2")
+  fi
 fi
 
 if [[ $MODE == flatpak-update ]]; then
@@ -269,7 +294,8 @@ fi
 # Do not guess at dependency repairs or force-remove packages on failure.
 step 10 'Completing pending package configuration'
 dpkg --force-confdef --force-confold --configure --pending
-apt_run check
+step 12 'Verifying package database health'
+verify_package_health 'before the update'
 if [[ $MODE == apt-install ]]; then
   TRANSACTION=(--only-upgrade --no-remove install "$@")
 else
@@ -279,7 +305,15 @@ else
 fi
 
 step 15 'Checking the upgrade plan'
-PLAN=$(apt_run --simulate "${TRANSACTION[@]}")
+if PLAN=$(apt_run --simulate "${TRANSACTION[@]}" 2>&1); then
+  :
+else
+  PLAN_STATUS=$?
+  log "$PLAN"
+  log 'APT could not produce a safe upgrade plan. No upgrade packages were installed by this attempt.'
+  log 'The repositories may be between coordinated uploads. Do not force the upgrade from a terminal; wait for the mirrors to settle, refresh, and retry Spaced Update.'
+  exit "$PLAN_STATUS"
+fi
 log "$PLAN"
 while read -r ACTION PACKAGE _; do
   PACKAGE=${PACKAGE%%:*}
@@ -310,6 +344,9 @@ fi
 step 50 'Finalizing package configuration'
 dpkg --force-confdef --force-confold --configure --pending
 dpkg --triggers-only --pending
+
+step 55 'Verifying completed package transactions'
+verify_package_health 'after the update'
 
 # Maintainer scripts normally handle these, but report a failed final refresh.
 # Keep cached downloads and old kernels for recovery; cleanup is not an update.

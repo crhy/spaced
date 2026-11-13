@@ -44,6 +44,8 @@ for path in ('usr/local/bin/install-spaced-linux', 'usr/local/bin/spaced-live-se
     assert not (wallpapers / path).exists(), f'Live-only entrypoint delivered by upgrade: {path}'
 for path in ('usr/lib/spaced-linux/spaced-update.py', 'usr/lib/spaced-linux/spaced-update-helper',
              'usr/lib/spaced-linux/spaced-update-apt-guard', 'usr/lib/spaced-linux/spaced-update-refresh',
+             'usr/lib/spaced-linux/spaced-wallpaper-dialog',
+             'usr/lib/spaced-linux/spaced_wallpaper.py',
              'usr/lib/spaced-linux/migrate-desktop.py',
              'usr/lib/spaced-linux/spaced-nvidia-helper',
              'usr/lib/spaced-linux/spaced-nvidia-installer.py',
@@ -51,6 +53,7 @@ for path in ('usr/lib/spaced-linux/spaced-update.py', 'usr/lib/spaced-linux/spac
              'usr/local/bin/spaced-app-action',
              'usr/local/bin/spaced-hotkey-action',
              'usr/local/bin/spaced-first-login-repair',
+             'etc/apt/apt.conf.d/60spaced-transaction-guard',
              'usr/share/keyrings/spaced-archive-keyring.gpg', 'etc/apt/sources.list.d/spaced-apt.list',
              'etc/lightdm/lightdm.conf.d/60-spaced-installed.conf',
              'etc/X11/xorg.conf.d/20-spaced-amdgpu.conf', 'usr/local/bin/spaced-graphics-report',
@@ -58,6 +61,7 @@ for path in ('usr/lib/spaced-linux/spaced-update.py', 'usr/lib/spaced-linux/spac
               'etc/xdg/autostart/spaced-desktop-icon-repair.desktop',
               'etc/xdg/autostart/spaced-flatpak-desktop-entries.desktop',
               'usr/local/bin/spaced-flatpak-desktop-entries',
+             'usr/share/caja-python/extensions/spaced-set-wallpaper.py',
              'usr/local/sbin/spaced-sync-time', 'usr/local/sbin/spaced-finalize-timezone'):
     assert (payload / path).read_bytes() == (root / 'overlays' / path).read_bytes(), f'Missing/stale overlay: {path}'
 for path in ('postinst', 'triggers'):
@@ -68,7 +72,8 @@ for path in ('usr/share/backgrounds/spaced/spaced-orbit-4k.jpg',
     assert (wallpapers / path).read_bytes() == (root / 'overlays' / path).read_bytes(), f'Missing/stale wallpaper: {path}'
     assert not (payload / path).exists(), f'Wallpaper payload duplicated in settings: {path}'
 for path in ('usr/share/spaced-themes/themes.json',
-             'boot/grub/themes/spaced/theme.txt'):
+             'boot/grub/themes/spaced/theme.txt',
+             'usr/share/icons/Spaced-Cursors/cursors/pirate'):
     assert (themes / path).read_bytes() == (root / 'overlays' / path).read_bytes(), f'Missing/stale theme payload: {path}'
     assert not (payload / path).exists(), f'Theme payload duplicated in settings: {path}'
 for path in ('usr/share/icons/Spaced-Icons-Linux-Dark/index.theme',):

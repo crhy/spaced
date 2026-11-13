@@ -24,7 +24,11 @@ class UpdateRecoveryTests(unittest.TestCase):
         self.command('apt-get', r'''
 printf 'apt-get %s\n' "$*" >> "$TEST_STATE/commands"
 case " $* " in
-  *" --simulate "*) exit 0 ;;
+  *" --simulate "*)
+    if (( SIMULATE_STATUS != 0 )); then
+        printf 'The following packages have unmet dependencies: perl\n'
+    fi
+    exit "$SIMULATE_STATUS" ;;
   *" --download-only "*) exit 0 ;;
 esac
 if [[ " $* " == *" dist-upgrade spaced-meta "* ]]; then
@@ -38,7 +42,17 @@ if [[ " $* " == *" dist-upgrade spaced-meta "* ]]; then
 fi
 exit 0
 ''')
-        self.command('dpkg', 'printf \'dpkg %s\\n\' "$*" >> "$TEST_STATE/commands"')
+        self.command('dpkg', r'''
+printf 'dpkg %s\n' "$*" >> "$TEST_STATE/commands"
+if [[ $1 == --audit ]]; then
+    count=$(cat "$TEST_STATE/audit-count" 2>/dev/null || printf 0)
+    count=$((count+1))
+    printf '%s\n' "$count" > "$TEST_STATE/audit-count"
+    if (( count == AUDIT_FAILURE_AT )); then
+        printf 'package is unpacked but not configured\n'
+    fi
+fi
+''')
         self.command('apt-mark', 'exit 0')
         self.command('update-initramfs', 'exit 0')
         self.command('update-grub', 'exit 0')
@@ -46,6 +60,7 @@ exit 0
         self.env = dict(os.environ,
                         PATH=str(self.fakebin) + os.pathsep + os.environ['PATH'],
                         TEST_STATE=str(self.state), FAIL_INSTALLS='1',
+                        SIMULATE_STATUS='0', AUDIT_FAILURE_AT='0',
                         SPACED_UPDATE_TEST='1',
                         SPACED_UPDATE_TEST_GUARD=str(self.guard))
 
@@ -54,8 +69,10 @@ exit 0
         path.write_text('#!/bin/bash\n' + body + '\n')
         path.chmod(0o755)
 
-    def run_helper(self, failures):
-        env = dict(self.env, FAIL_INSTALLS=str(failures))
+    def run_helper(self, failures, simulation_status=0, audit_failure_at=0):
+        env = dict(self.env, FAIL_INSTALLS=str(failures),
+                   SIMULATE_STATUS=str(simulation_status),
+                   AUDIT_FAILURE_AT=str(audit_failure_at))
         return subprocess.run(['bash', str(HELPER), 'all'], env=env,
                               capture_output=True, text=True, timeout=30)
 
@@ -87,6 +104,28 @@ exit 0
         self.assertEqual((self.state / 'install-count').read_text(), '1\n')
         self.assertNotIn('retrying pending package configuration once',
                          result.stdout)
+
+    def test_failed_plan_explains_repository_transition_without_installing(self):
+        result = self.run_helper(0, simulation_status=100)
+        self.assertEqual(result.returncode, 100)
+        self.assertIn('unmet dependencies: perl', result.stdout)
+        self.assertIn('could not produce a safe upgrade plan', result.stdout)
+        self.assertIn('Do not force the upgrade from a terminal', result.stdout)
+        self.assertFalse((self.state / 'install-count').exists())
+        self.assertFalse(any('--download-only' in line
+                             for line in self.lines('apt-get ')))
+
+    def test_unhealthy_database_is_refused_before_installing(self):
+        result = self.run_helper(0, audit_failure_at=1)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn('not healthy before the update', result.stdout)
+        self.assertFalse((self.state / 'install-count').exists())
+
+    def test_unhealthy_database_after_install_is_reported(self):
+        result = self.run_helper(0, audit_failure_at=2)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn('not healthy after the update', result.stdout)
+        self.assertEqual((self.state / 'install-count').read_text(), '1\n')
 
 
 if __name__ == '__main__':

@@ -4,6 +4,14 @@
 set -euo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 CHROOT="$ROOT/build/marco/chroot"
+BUILD_LINK_TARGET=
+if [[ -L "$ROOT/build" ]]; then
+    BUILD_LINK_TARGET=$(readlink -f "$ROOT/build")
+    [[ -n "$BUILD_LINK_TARGET" && "$BUILD_LINK_TARGET" == /* ]] || {
+        echo "Cannot resolve the build directory symlink safely" >&2
+        exit 1
+    }
+fi
 MIRROR=${SPACED_DEVUAN_MIRROR:-http://mirror.hootsoftware.com/devuan/merged}
 KEYRING=/usr/share/keyrings/devuan-archive-keyring.pgp
 [ -f "$KEYRING" ] || KEYRING="$ROOT/config/keyrings/devuan-archive-keyring.pgp"
@@ -21,7 +29,9 @@ if [ ! -f "$CHROOT/.spaced-bootstrap-complete" ]; then
 fi
 
 cleanup() {
-    for mountpoint in "$CHROOT/workspace" "$CHROOT/proc" "$CHROOT/sys" "$CHROOT/dev"; do
+    mountpoints=("$CHROOT/workspace" "$CHROOT/proc" "$CHROOT/sys" "$CHROOT/dev")
+    [[ -z "$BUILD_LINK_TARGET" ]] || mountpoints=("$CHROOT$BUILD_LINK_TARGET" "${mountpoints[@]}")
+    for mountpoint in "${mountpoints[@]}"; do
         umount --recursive "$mountpoint" 2>/dev/null || true
     done
 }
@@ -33,6 +43,10 @@ mount -t proc proc "$CHROOT/proc"
 mount --rbind /sys "$CHROOT/sys"
 mount --make-rslave "$CHROOT/sys"
 mount --bind "$ROOT" "$CHROOT/workspace"
+if [[ -n "$BUILD_LINK_TARGET" ]]; then
+    mkdir -p "$CHROOT$BUILD_LINK_TARGET"
+    mount --bind "$BUILD_LINK_TARGET" "$CHROOT$BUILD_LINK_TARGET"
+fi
 printf '#!/bin/sh\nexit 101\n' > "$CHROOT/usr/sbin/policy-rc.d"
 chmod 755 "$CHROOT/usr/sbin/policy-rc.d"
 install -Dm0644 "$KEYRING" "$CHROOT/usr/share/keyrings/spaced-devuan-build.pgp"
@@ -81,6 +95,14 @@ if ! "$ROOT/scripts/iso/stage-caja.sh" --check 2>/dev/null; then
     chroot "$CHROOT" /usr/bin/env DEB_BUILD_OPTIONS=parallel=2 \
         bash /workspace/scripts/iso/build-caja.sh --build /workspace/build/caja
 fi
+# Devuan 257.13 dereferences a cleared delayed action after immediate reboot
+# and poweroff requests (#409); build the narrow upstream correction as source.
+if ! "$ROOT/scripts/iso/stage-elogind.sh" --check 2>/dev/null; then
+    chroot "$CHROOT" /usr/bin/env DEBIAN_FRONTEND=noninteractive \
+        apt-get build-dep -y --no-install-recommends elogind
+    chroot "$CHROOT" /usr/bin/env DEB_BUILD_OPTIONS=parallel=2 \
+        bash /workspace/scripts/iso/build-elogind.sh --build /workspace/build/elogind
+fi
 # Brisk's context menu is extended with Spaced package and launcher actions.
 if ! "$ROOT/scripts/iso/stage-brisk-menu.sh" --check 2>/dev/null; then
     chroot "$CHROOT" /usr/bin/env DEBIAN_FRONTEND=noninteractive \
@@ -98,5 +120,5 @@ fi
 if [ -n "${PKEXEC_UID:-}" ]; then
     chown -R "$PKEXEC_UID" "$ROOT/build/marco/artifacts" "$ROOT/build/nm-focus" "$ROOT/build/compiz" \
         "$ROOT/build/compiz-plugins-main" "$ROOT/build/xorg-server" "$ROOT/build/caja" "$ROOT/build/brisk-menu" \
-        "$ROOT/build/mate-control-center"
+        "$ROOT/build/mate-control-center" "$ROOT/build/elogind"
 fi

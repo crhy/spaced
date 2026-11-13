@@ -1,5 +1,38 @@
 # Changelog
 
+## 11.26.1 - 2026-11-13
+
+Prepared as the 11.26.1 release candidate and `11.26.1-1` APT packages.
+
+- Stop an unhealthy APT transaction before it can unpack packages. Spaced
+  Update now preserves and displays failed solver output, checks dependency and
+  dpkg state before and after an update, and installs an APT transaction guard
+  for command-line upgrades. APT repository publication must pass historical
+  upgrade fixtures so a dependency regression like #415 cannot silently recur.
+- Backport the upstream elogind fixes for the reboot-helper crash and XML entity
+  lookup failure (#409). These patches remain subject to the privileged package
+  build and installed-VM reboot gate recorded in the release review.
+- Repair a damaged Flatpak portal permission database without hiding unrelated
+  Caja locations from applications (#408).
+- Keep new, moved and hot-plugged Caja desktop icons inside the current monitor
+  work area, including after the panel layout changes (#406, #407, #412).
+- Restore a purpose-built X cursor for `xkill` (#414). The cursor is installed
+  only as the Xcursor `pirate` action, so ordinary close buttons and pointers
+  are unchanged.
+- Add a Caja **Set as Wallpaper…** action that safely retains a private copy,
+  recommends crop or fit from the image and screen ratios, and lets the user
+  choose the final placement (#303).
+- Hide Easy Effects from Spaced Bazaar while the distribution uses PulseAudio;
+  its required PipeWire audio path is not supported in 11.26.1 (#397).
+- Include Spaced Monitor 0.1.9. It adds About/version information, compact
+  three-column hardware cards, and detailed double-click views (#4, #5, #6).
+  Process stop controls use the existing red X only for protected session or
+  system processes and an orange X for ordinary processes.
+- Include Spaced Welcome 0.1.22. Its reviewed recommended set is Spaced Bazaar,
+  Brave, LibreOffice and VLC; optional audio, RGB, voice and game applications
+  remain individually available. The suggested-install button is visibly
+  highlighted without animation (#11).
+
 ## 11.26 - 2026-11-06
 
 Prepared for the first November 2026 ISO and `11.26-1` APT packages.

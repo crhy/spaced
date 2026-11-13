@@ -71,6 +71,28 @@ class OfflineCajaMetadataTests(unittest.TestCase):
         self.assertEqual(self.repair(), [])
         self.assertFalse(self.path.exists())
 
+    def test_watcher_covers_desktop_files_and_caja_metadata(self):
+        temporary = Path(self.path.parent)
+        config = temporary / ".config"
+        custom_desktop = temporary / "Work Surface"
+        custom_desktop.mkdir()
+        config.mkdir()
+        (config / "user-dirs.dirs").write_text(
+            'XDG_DESKTOP_DIR="$HOME/Work Surface"\n')
+        old_home = os.environ.get("HOME")
+        old_desktop = os.environ.pop("XDG_DESKTOP_DIR", None)
+        try:
+            os.environ["HOME"] = str(temporary)
+            self.assertEqual(REPAIR['watched_directories'](config), (
+                custom_desktop, config / "caja"))
+        finally:
+            if old_home is None:
+                os.environ.pop("HOME", None)
+            else:
+                os.environ["HOME"] = old_home
+            if old_desktop is not None:
+                os.environ["XDG_DESKTOP_DIR"] = old_desktop
+
 
 class GimpFlatpakLaunchTests(unittest.TestCase):
     def setUp(self):

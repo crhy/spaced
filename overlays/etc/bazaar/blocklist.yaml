@@ -1,0 +1,8 @@
+# EasyEffects requires a supported PipeWire session. Spaced Linux 11.26.1 uses
+# PulseAudio, so offering it produces a successful Flatpak install that cannot
+# launch or process audio (issue #397). Remove this entry only with the PipeWire
+# migration and its audio-session integration tests.
+blocklists:
+  - priority: 0
+    block:
+      - com.github.wwmm.easyeffects

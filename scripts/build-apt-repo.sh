@@ -110,6 +110,16 @@ for source in "$caja_artifacts"/caja_*.dsc "$caja_artifacts"/caja_*.orig.tar.* "
     fi
     cp "$source" "$destination"
 done
+# The elogind power-action crash fix is shipped with its complete source.
+elogind_artifacts=${SPACED_ELOGIND_ARTIFACT_DIR:-$ROOT/build/elogind/artifacts}
+for source in "$elogind_artifacts"/elogind_*.dsc "$elogind_artifacts"/elogind_*.orig.tar.* "$elogind_artifacts"/elogind_*.debian.tar.*; do
+    [[ -f "$source" ]] || { echo "Missing corresponding elogind source: $source" >&2; exit 1; }
+    destination="$source_dir/${source##*/}"
+    if [[ -e "$destination" ]] && ! cmp -s "$source" "$destination"; then
+        echo "Refusing to replace published source bytes: $destination" >&2; exit 1
+    fi
+    cp "$source" "$destination"
+done
 # Publish Brisk Menu's context-action source with its replacement binary.
 brisk_artifacts=${SPACED_BRISK_MENU_ARTIFACT_DIR:-$ROOT/build/brisk-menu/artifacts}
 for source in "$brisk_artifacts"/brisk-menu_*.dsc "$brisk_artifacts"/brisk-menu_*.orig.tar.* "$brisk_artifacts"/brisk-menu_*.debian.tar.*; do

@@ -11,7 +11,9 @@ to cover their saved coordinates.
 
 Clearing only the unreachable positions makes Caja auto-place those icons on
 the next desktop refresh. Positions that are still on screen are never
-touched, so a deliberately arranged desktop survives.
+touched, so a deliberately arranged desktop survives. The watcher also
+repairs positions created after login, including late Caja startup metadata
+and files downloaded onto the desktop (issues #407 and #412).
 """
 
 import configparser
@@ -192,12 +194,17 @@ def desktop_directory(config):
     return Path.home() / "Desktop"
 
 
+def watched_directories(config):
+    """Directories whose changes can introduce a newly stranded icon."""
+    return (desktop_directory(config), config / "caja")
+
+
 def watch():
-    """Repair again whenever the monitor layout changes, with no polling."""
+    """Repair after monitor, desktop-file, or Caja metadata changes."""
     import gi
 
     gi.require_version("Gdk", "3.0")
-    from gi.repository import Gdk, GLib
+    from gi.repository import Gdk, Gio, GLib
 
     display = Gdk.Display.get_default()
     if display is None:
@@ -205,6 +212,7 @@ def watch():
     screen = display.get_default_screen()
     loop = GLib.MainLoop()
     pending = 0
+    monitors = []
 
     def settle():
         nonlocal pending
@@ -212,16 +220,35 @@ def watch():
         repair_once()
         return GLib.SOURCE_REMOVE
 
-    def changed(*_args):
-        # Rearranging monitors emits a burst of events. Coalesce them so the
-        # repair runs once, after the new layout has settled.
+    def schedule(delay):
+        # Rearranging monitors, downloading a file, and Caja updating its
+        # metadata can each emit a burst. Run once after the burst settles.
         nonlocal pending
         if pending:
             GLib.source_remove(pending)
-        pending = GLib.timeout_add_seconds(3, settle)
+        pending = GLib.timeout_add_seconds(delay, settle)
 
-    screen.connect("size-changed", changed)
-    screen.connect("monitors-changed", changed)
+    def layout_changed(*_args):
+        schedule(3)
+
+    def icon_changed(*_args):
+        schedule(2)
+
+    screen.connect("size-changed", layout_changed)
+    screen.connect("monitors-changed", layout_changed)
+
+    config = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
+    for directory in watched_directories(config):
+        if not directory.is_dir():
+            continue
+        try:
+            monitor = Gio.File.new_for_path(str(directory)).monitor_directory(
+                Gio.FileMonitorFlags.NONE, None)
+        except GLib.Error:
+            continue
+        monitor.connect("changed", icon_changed)
+        monitors.append(monitor)
+
     repair_once()
     loop.run()
     return 0

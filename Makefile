@@ -81,7 +81,7 @@ cache-clean: ## Remove cached live-build packages and bootstrap data
 
 marco: ## Build patched desktop packages and the nm-applet focus module in an isolated Devuan chroot
 	mkdir -p $(BUILD_DIR)
-	if ! $(HOST_RUN) scripts/iso/stage-marco.sh --check || ! $(HOST_RUN) scripts/iso/stage-compiz.sh --check || ! $(HOST_RUN) scripts/iso/stage-compiz-plugins-main.sh --check || ! $(HOST_RUN) scripts/iso/stage-xorg-server.sh --check || ! $(HOST_RUN) scripts/iso/stage-caja.sh --check || ! $(HOST_RUN) scripts/iso/stage-brisk-menu.sh --check || ! $(HOST_RUN) scripts/iso/stage-mate-control-center.sh --check || [ ! -f $(BUILD_DIR)/nm-focus/libspaced-nm-focus.so ]; then
+	if ! $(HOST_RUN) scripts/iso/stage-marco.sh --check || ! $(HOST_RUN) scripts/iso/stage-compiz.sh --check || ! $(HOST_RUN) scripts/iso/stage-compiz-plugins-main.sh --check || ! $(HOST_RUN) scripts/iso/stage-xorg-server.sh --check || ! $(HOST_RUN) scripts/iso/stage-caja.sh --check || ! $(HOST_RUN) scripts/iso/stage-elogind.sh --check || ! $(HOST_RUN) scripts/iso/stage-brisk-menu.sh --check || ! $(HOST_RUN) scripts/iso/stage-mate-control-center.sh --check || [ ! -f $(BUILD_DIR)/nm-focus/libspaced-nm-focus.so ]; then
 		$(ROOT_RUN) bash "$(abspath scripts/iso/build-marco-chroot.sh)"
 	fi
 
@@ -260,6 +260,7 @@ release: release-preflight ## Test and clean-build the current Spaced Linux ISO
 
 APT_REPO_DIR := spaced-apt
 SPACED_APT_KEEP ?= 2
+UPGRADE_STATUS_FILES ?= $(wildcard build/upgrade-status/*.status)
 
 apt-repo: marco ## Rebuild the update repository into ./spaced-apt (from crhy/spaced-apt)
 	@if [ ! -d "$(APT_REPO_DIR)/.git" ]; then \
@@ -270,8 +271,16 @@ apt-repo: marco ## Rebuild the update repository into ./spaced-apt (from crhy/sp
 	$(HOST_RUN) scripts/build-apt-repo.sh "$(abspath $(APT_REPO_DIR))"
 	$(HOST_RUN) scripts/tests/test-release-package-payload.sh "$(abspath $(APT_REPO_DIR))"
 	$(HOST_RUN) scripts/tests/test-apt-trust.sh "$(abspath $(APT_REPO_DIR))"
+	$(HOST_RUN) scripts/test-upgrade-packages.sh "$(abspath $(APT_REPO_DIR))" \
+		$(foreach status,$(UPGRADE_STATUS_FILES),"$(abspath $(status))")
 
-apt-repo-publish: apt-repo ## Rebuild and publish the update repository to crhy/spaced-apt
+apt-repo-publish: ## Rebuild and publish the update repository to crhy/spaced-apt
+	@if [ -z "$(strip $(UPGRADE_STATUS_FILES))" ]; then \
+		echo 'Refusing publication without an installed-system dpkg status fixture.'; \
+		echo 'Run scripts/tests/collect-upgrade-status.sh on the prior ISO or set UPGRADE_STATUS_FILES.'; \
+		exit 1; \
+	fi
+	$(MAKE) apt-repo UPGRADE_STATUS_FILES="$(UPGRADE_STATUS_FILES)"
 	cd "$(APT_REPO_DIR)" && \
 		git add -A && \
 		git -c user.name="Spaced Linux Release" \

@@ -1,0 +1,120 @@
+#!/usr/bin/python3
+"""Choose a non-distorting MATE wallpaper style and preserve the image."""
+
+import os
+import sys
+
+import gi
+
+gi.require_version("Gdk", "3.0")
+gi.require_version("GdkPixbuf", "2.0")
+gi.require_version("Gtk", "3.0")
+from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk  # noqa: E402
+
+sys.path.insert(0, "/usr/lib/spaced-linux")
+from spaced_wallpaper import copy_to_wallpapers, default_style  # noqa: E402
+
+
+STYLES = (
+    ("Fill screen (crop edges)", "zoom"),
+    ("Fit entire image", "scaled"),
+    ("Stretch to screen", "stretched"),
+    ("Center at original size", "centered"),
+    ("Tile at original size", "wallpaper"),
+)
+
+
+def show_error(parent, message):
+    dialog = Gtk.MessageDialog(
+        transient_for=parent,
+        modal=True,
+        message_type=Gtk.MessageType.ERROR,
+        buttons=Gtk.ButtonsType.CLOSE,
+        text="Could not set the wallpaper",
+    )
+    dialog.format_secondary_text(str(message))
+    dialog.run()
+    dialog.destroy()
+
+
+def screen_size():
+    screen = Gdk.Screen.get_default()
+    if screen is None:
+        return 0, 0
+    monitor = screen.get_primary_monitor()
+    if monitor < 0:
+        monitor = 0
+    geometry = screen.get_monitor_geometry(monitor)
+    return geometry.width, geometry.height
+
+
+def main(argv):
+    if len(argv) != 2 or not os.path.isabs(argv[1]):
+        return 2
+    source = argv[1]
+    try:
+        _image_format, image_width, image_height = GdkPixbuf.Pixbuf.get_file_info(source)
+        if image_width <= 0 or image_height <= 0:
+            raise ValueError("The selected file is not a readable image")
+    except (GLib.Error, OSError, ValueError) as error:
+        show_error(None, error)
+        return 1
+
+    width, height = screen_size()
+    suggested = default_style(image_width, image_height, width, height)
+    dialog = Gtk.Dialog(title="Set as Wallpaper", modal=True)
+    dialog.add_buttons("Cancel", Gtk.ResponseType.CANCEL, "Set Wallpaper", Gtk.ResponseType.OK)
+    dialog.set_default_response(Gtk.ResponseType.OK)
+    dialog.set_resizable(False)
+    box = dialog.get_content_area()
+    box.set_border_width(18)
+    box.set_spacing(12)
+    label = Gtk.Label(
+        label=f"Image: {image_width} × {image_height}    Screen: {width} × {height}",
+        xalign=0,
+    )
+    label.set_line_wrap(True)
+    box.pack_start(label, False, False, 0)
+    chooser = Gtk.ComboBoxText()
+    active = 0
+    for index, (description, value) in enumerate(STYLES):
+        chooser.append(value, description)
+        if value == suggested:
+            active = index
+    chooser.set_active(active)
+    box.pack_start(chooser, False, False, 0)
+    note = Gtk.Label(
+        label="A private copy will be kept in Pictures/Wallpapers so moving the original will not blank the desktop.",
+        xalign=0,
+    )
+    note.set_line_wrap(True)
+    note.set_max_width_chars(58)
+    box.pack_start(note, False, False, 0)
+    dialog.show_all()
+
+    if dialog.run() != Gtk.ResponseType.OK:
+        dialog.destroy()
+        return 0
+    style = chooser.get_active_id()
+    try:
+        pictures = GLib.get_user_special_dir(GLib.UserDirectory.DIRECTORY_PICTURES)
+        if not pictures:
+            pictures = os.path.join(os.path.expanduser("~"), "Pictures")
+        wallpaper = copy_to_wallpapers(source, pictures)
+        settings = Gio.Settings.new("org.mate.background")
+        if not settings.set_string("picture-filename", wallpaper):
+            raise RuntimeError("MATE rejected the wallpaper filename")
+        if not settings.set_string("picture-options", style):
+            raise RuntimeError("MATE rejected the wallpaper style")
+        Gio.Settings.sync()
+    except (GLib.Error, OSError, RuntimeError, ValueError) as error:
+        show_error(dialog, error)
+        dialog.destroy()
+        return 1
+    dialog.destroy()
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv))
+

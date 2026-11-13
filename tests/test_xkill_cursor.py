@@ -21,26 +21,39 @@ class XkillCursorTests(unittest.TestCase):
         self.assertIn("Inherits=Adwaita", INDEX.read_text(encoding="utf-8"),
                       "the cursor theme does not inherit Adwaita")
 
-    def test_highlights_inside_red(self):
+    def test_cursor_has_all_sizes_with_centered_hotspots(self):
         data = CURSOR.read_bytes()
         self.assertEqual(b"Xcur", data[:4], "the xkill cursor is not an XCUR file")
-        size = 64
-        pixels = data[len(data) - size * size * 4:]
-        self.assertEqual(len(pixels), size * size * 4, "no 64 px frame to check")
+        _header, _version, ntoc = struct.unpack_from("<III", data, 4)
+        self.assertEqual(ntoc, 4)
+        frames = {}
+        for index in range(ntoc):
+            chunk_type, nominal_size, position = struct.unpack_from(
+                "<III", data, 16 + index * 12)
+            self.assertEqual(chunk_type, 0xfffd0002)
+            (header, image_type, subtype, version, width, height,
+             xhot, yhot, delay) = struct.unpack_from("<IIIIIIIII", data, position)
+            self.assertGreaterEqual(header, 36)
+            self.assertEqual(image_type, chunk_type)
+            self.assertEqual(subtype, nominal_size)
+            self.assertEqual(version, 1)
+            self.assertEqual(delay, 50)
+            frames[nominal_size] = (width, height, xhot, yhot)
+        self.assertEqual(frames, {
+            24: (24, 24, 12, 12),
+            32: (32, 32, 16, 16),
+            48: (48, 48, 24, 24),
+            64: (64, 64, 32, 32),
+        })
 
-        def at(x, y):
-            i = (y * size + x) * 4
-            b, g, r, a = pixels[i:i + 4]
-            return (r, g, b, a)
-
-        reds = [(x, y) for y in range(size) for x in range(size)
-                if at(x, y)[0] > 150 and at(x, y)[1] < 80]
-        bad = [(x, y) for y in range(size) for x in range(size)
-               if at(x, y)[0] > 200 and at(x, y)[1] > 200 and at(x, y)[2] > 200
-               and at(x, y)[3] > 128
-               and not any(abs(x - rx) <= 3 and abs(y - ry) <= 3 for rx, ry in reds)]
-        self.assertEqual(bad, [],
-                         f"white highlight pixels stick out past the red X: {bad}")
+    def test_build_uses_maintained_svg_source(self):
+        source = ROOT / "branding/cursors/xkillcursor.svg"
+        script = (ROOT / "branding/cursors/build-xkill-cursor.sh").read_text(
+            encoding="utf-8")
+        self.assertTrue(source.is_file())
+        self.assertIn("Cursor hotspot: 32,32", source.read_text(encoding="utf-8"))
+        self.assertIn("source_svg=branding/cursors/xkillcursor.svg", script)
+        self.assertIn("rsvg-convert", script)
 
 
 if __name__ == "__main__":
