@@ -253,6 +253,13 @@ rollback_transaction() {
     if [ -z "$RUN_DIR" ] && [ -f "$CURRENT_RUN_FILE" ]; then
         RUN_DIR="$(cat "$CURRENT_RUN_FILE")"
     fi
+    # A transaction killed before its "after" record left the installer's own
+    # changes on disk; a later recovery must treat it like an in-process failure.
+    if [ "$was_active" -eq 0 ] && [ -n "$RUN_DIR" ] && [ -f "$RUN_DIR/configuration.json" ] &&
+        python3 /usr/lib/spaced-linux/spaced-nvidia-config.py pending "$RUN_DIR/configuration.json"; then
+        was_active=1
+        warning "The previous driver installation was interrupted; recovering its partial changes."
+    fi
     status "Recovering graphics packages and saved configuration"
     printf 'Original operation status: %s\n' "$original_code"
     rollback_step "clear previous recovery verification" rm -f "$RECOVERED_FILE" || failed=1

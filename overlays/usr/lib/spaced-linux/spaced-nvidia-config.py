@@ -86,6 +86,19 @@ def capture(root, manifest):
     write_manifest(manifest, payload)
 
 
+def pending(root, manifest):
+    """Report an interrupted transaction: a backup with no completed record.
+
+    Status 0 means the manifest exists, loads, and has no "after" record, so
+    the installation was killed before it could record its result. Status 1
+    means the transaction completed or no manifest exists. An unreadable or
+    invalid manifest keeps the shared error path (status 52).
+    """
+    if not manifest.exists():
+        raise SystemExit(1)
+    raise SystemExit(0 if "after" not in load_manifest(manifest) else 1)
+
+
 def restore(root, manifest):
     payload = load_manifest(manifest)
     if "after" not in payload:
@@ -124,7 +137,7 @@ def restore(root, manifest):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("backup", "capture", "restore"))
+    parser.add_argument("action", choices=("backup", "capture", "pending", "restore"))
     parser.add_argument("manifest", type=Path)
     parser.add_argument("--root", type=Path, default=Path("/"))
     args = parser.parse_args()

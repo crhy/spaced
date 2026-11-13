@@ -325,6 +325,127 @@ remove_recorded_nvidia_packages nvidia-new
         self.assertNotIn("REAL_PURGE_MUST_NOT_RUN", result.stdout)
 
 
+class InterruptedTransactionTests(unittest.TestCase):
+    """a05-1: a rollback started in a new process must recover an interrupted install."""
+
+    ORIGINAL_GRUB = 'GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"\n'
+    INSTALLER_GRUB = 'GRUB_CMDLINE_LINUX_DEFAULT="quiet splash nvidia-drm.modeset=1 modprobe.blacklist=nouveau"\n'
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.work = Path(self.temp.name)
+        self.root = self.work / "root"
+        self.manifest = self.work / "run" / "configuration.json"
+        (self.root / "etc/default").mkdir(parents=True)
+        (self.root / "etc/default/grub").write_text(self.ORIGINAL_GRUB)
+        self.manifest.parent.mkdir()
+
+    def run_config(self, *args):
+        return subprocess.run([sys.executable, str(LIB / "spaced-nvidia-config.py"), *args],
+                              text=True, capture_output=True)
+
+    def test_pending_reports_an_interrupted_transaction(self):
+        grub = self.root / "etc/default/grub"
+        config.backup(self.root, self.manifest)
+        grub.write_text(self.INSTALLER_GRUB)
+        interrupted = self.run_config("pending", str(self.manifest))
+        self.assertEqual(interrupted.returncode, 0, interrupted.stdout + interrupted.stderr)
+        self.assertEqual(interrupted.stdout, "")
+        config.capture(self.root, self.manifest)
+        completed = self.run_config("pending", str(self.manifest))
+        self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
+        absent = self.run_config("pending", str(self.work / "no-such-manifest.json"))
+        self.assertEqual(absent.returncode, 1, absent.stdout + absent.stderr)
+        broken = self.work / "broken.json"
+        broken.write_text("{ not json")
+        invalid = self.run_config("pending", str(broken))
+        self.assertEqual(invalid.returncode, 52, invalid.stdout + invalid.stderr)
+        self.assertIn("Graphics configuration recovery:", invalid.stdout)
+
+    def test_interrupted_transaction_recovers_after_recording_its_partial_result(self):
+        grub = self.root / "etc/default/grub"
+        config.backup(self.root, self.manifest)
+        grub.write_text(self.INSTALLER_GRUB)
+        policy = self.root / "etc/modprobe.d/zz-spaced-nvidia.conf"
+        policy.parent.mkdir(parents=True)
+        policy.write_text("blacklist nouveau\n")
+        self.assertEqual(self.run_config("restore", str(self.manifest), "--root", str(self.root)).returncode, 52)
+        config.capture(self.root, self.manifest)
+        self.assertTrue(config.restore(self.root, self.manifest))
+        self.assertEqual(grub.read_text(), self.ORIGINAL_GRUB)
+        self.assertFalse(policy.exists())
+
+    def run_interrupted_rollback(self):
+        """Run rollback_transaction with no "after" record and TRANSACTION_ACTIVE=0."""
+        config.backup(self.root, self.manifest)
+        (self.root / "etc/default/grub").write_text(self.INSTALLER_GRUB)
+        policy = self.root / "etc/modprobe.d/zz-spaced-nvidia.conf"
+        policy.parent.mkdir(parents=True, exist_ok=True)
+        policy.write_text("blacklist nouveau\n")
+        (self.manifest.parent / "packages-before.txt").write_text("base-package\n")
+        (self.manifest.parent / "driver-versions-before.txt").write_text("")
+        (self.work / "current-run").write_text(f"{self.manifest.parent}\n")
+        helper = self.work / "helper"
+        source = (LIB / "spaced-nvidia-helper").read_text()
+        source = source.replace("/sbin/reboot", "mock_reboot")
+        source = source.replace("/usr/lib/spaced-linux/spaced-nvidia-config.py",
+                                str(LIB / "spaced-nvidia-config.py"))
+        helper.write_text(source)
+        script = self.work / "run.sh"
+        script.write_text(r'''
+dpkg() { printf 'amd64\n'; }
+source "$TEST_HELPER"
+RUN_DIR=""
+PENDING_FILE="$TEST_ROOT/pending"
+RECOVERED_FILE="$TEST_ROOT/recovered"
+CURRENT_RUN_FILE="$TEST_ROOT/current-run"
+KERNEL=test-kernel
+TRANSACTION_ACTIVE=0
+REBOOT_AFTER=0
+dpkg() { printf 'CALL:dpkg %s\n' "$*"; }
+dpkg-query() { printf 'ii\tnvidia-new\n'; }
+apt-get() { printf 'CALL:apt-get %s\n' "$*"; }
+update-initramfs() { printf 'CALL:update-initramfs %s\n' "$*"; }
+update-grub() { printf 'CALL:update-grub %s\n' "$*"; }
+update-glx() { printf 'CALL:update-glx %s\n' "$*"; }
+dconf() { printf 'CALL:dconf %s\n' "$*"; }
+restore_configuration() {
+    printf 'CALL:restore_configuration\n'
+    python3 "$TEST_CONFIG" restore "$RUN_DIR/configuration.json" --root "$TEST_ROOT/root"
+}
+record_configuration_changes() {
+    printf 'CALL:record_configuration_changes\n'
+    python3 "$TEST_CONFIG" capture "$RUN_DIR/configuration.json" --root "$TEST_ROOT/root"
+}
+rollback_transaction 30
+''')
+        env = os.environ.copy()
+        env.update(TEST_ROOT=str(self.work), TEST_HELPER=str(helper),
+                   TEST_CONFIG=str(LIB / "spaced-nvidia-config.py"))
+        result = subprocess.run(["bash", str(script)], env=env, text=True, capture_output=True)
+        return result, policy
+
+    def test_rollback_in_a_new_process_recovers_an_interrupted_install(self):
+        result, policy = self.run_interrupted_rollback()
+        output = result.stdout + result.stderr
+        self.assertEqual(result.returncode, 0, output)
+        self.assertIn("The previous driver installation was interrupted", output)
+        self.assertIn("CALL:record_configuration_changes", output)
+        self.assertIn("CALL:restore_configuration", output)
+        self.assertIn("SPACED_SUCCESS:restored", output)
+        self.assertEqual((self.root / "etc/default/grub").read_text(), self.ORIGINAL_GRUB)
+        self.assertFalse(policy.exists())
+
+    def test_pending_check_precedes_the_first_recovery_step(self):
+        source = (LIB / "spaced-nvidia-helper").read_text()
+        body = source.split("rollback_transaction() {", 1)[1].split("\n}", 1)[0]
+        first_step = body.index('rollback_step "clear previous recovery verification"')
+        check = body.index("spaced-nvidia-config.py pending")
+        self.assertLess(check, first_step)
+        self.assertIn("was_active=1", body[:first_step])
+
+
 class DriverGuiTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

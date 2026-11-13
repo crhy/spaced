@@ -75,6 +75,12 @@ or run this from the console:
 sudo /usr/lib/spaced-linux/spaced-nvidia-helper --rollback
 ```
 
+Recovery also works when the installation itself was interrupted, for example
+by a power loss or a stopped driver manager: the unfinished transaction is
+recognised and the driver changes it had already made are undone. The helper
+prints `The previous driver installation was interrupted; recovering its
+partial changes.` before restoring them.
+
 The helper records its work under `/var/lib/spaced-nvidia-installer/runs/`.
 Each run contains `configuration.json`, the installed package list and previous
 NVIDIA package versions. Recovery attempts to restore those exact versions,

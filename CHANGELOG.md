@@ -87,6 +87,11 @@ tracked in the release review until publication.
   name 11.26.1, and unused Calamares artwork, an invalid MATE monitor file and
   the repository's `.gitkeep` placeholders no longer reach the image or a new
   user's home.
+- Recover a graphics driver installation that was interrupted. A power loss or a
+  stopped driver install no longer leaves the machine with Nouveau blocked and
+  no automatic way back: **Restore Graphics** now recognises the unfinished
+  transaction, says the previous installation was interrupted, and undoes the
+  driver changes it had already made.
 
 ## 11.26 - 2026-11-06
 
