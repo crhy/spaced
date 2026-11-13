@@ -24,6 +24,14 @@ die() {
 }
 
 case "$DIST" in spaced|spaced-testing) ;; *) die "unknown archive suite: $DIST" ;; esac
+
+# A published archive must expire when it stops being republished, so a frozen,
+# replayed or unsynced copy cannot be installed forever. 180 days is deliberate:
+# Spaced publishes about monthly, and an expired Release breaks apt update.
+VALID_DAYS=${SPACED_APT_VALID_DAYS:-180}
+[[ "$VALID_DAYS" =~ ^[1-9][0-9]*$ ]] ||
+    die "SPACED_APT_VALID_DAYS must be a positive integer, got: $VALID_DAYS"
+
 [[ -d "$OUT/.git" ]] || die "$OUT is not a clone of crhy/spaced-apt; clone it first"
 [[ -f "$DEB" ]] || die "no such package: $DEB"
 
@@ -84,6 +92,7 @@ echo "Signing repository metadata…"
     -o APT::FTPArchive::Release::Codename="$DIST" \
     -o APT::FTPArchive::Release::Architectures="amd64" \
     -o APT::FTPArchive::Release::Components="$COMP" \
+    -o APT::FTPArchive::Release::ValidTime=$((VALID_DAYS * 86400)) \
     release . > "$work/Release")
 gpg --batch --yes --local-user "$SIGNING_KEY" --digest-algo SHA256 \
     --clearsign --output "$work/InRelease" "$work/Release"

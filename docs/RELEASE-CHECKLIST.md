@@ -73,6 +73,10 @@ website that links an absent or wrongly checksummed image. Replace
    already published version, so any content change needs a new package
    revision. To publish one already-built package without a full build, use
    `scripts/publish-apt-package.sh`.
+   The signed `Release` expires 180 days after its `Date`, so republish the
+   repository at least every 180 days even with no package change
+   (`make apt-repo-publish`, or `scripts/publish-apt-package.sh` to re-sign);
+   otherwise `apt update` reports an expired Release file on every system.
    Not before it: **no OS tag and no GitHub release.** A tag without APT
    packages makes every system loop on the upgrade (#209).
 

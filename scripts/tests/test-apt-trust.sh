@@ -15,6 +15,37 @@ source "$ROOT/config/external-artifacts.conf"
 KEY="$ROOT/overlays/usr/share/keyrings/spaced-archive-keyring.gpg"
 [[ -s "$REPO/dists/$SUITE/InRelease" ]]
 
+# A frozen or replayed snapshot of the archive must stop being accepted: the
+# signed Release has to carry an expiry that is still comfortably in the future.
+check_expiry() {
+    local release=$1 release_date valid_until release_epoch valid_epoch now_epoch
+    release_date=$(sed -n 's/^Date: //p' "$release" | head -n1)
+    valid_until=$(sed -n 's/^Valid-Until: //p' "$release" | head -n1)
+    if [ -z "$valid_until" ]; then
+        echo "FAIL: $release has no Valid-Until field" >&2
+        exit 1
+    fi
+    if ! release_epoch=$(date -u -d "$release_date" +%s); then
+        echo "FAIL: unparsable Release Date: $release_date" >&2
+        exit 1
+    fi
+    if ! valid_epoch=$(date -u -d "$valid_until" +%s); then
+        echo "FAIL: unparsable Valid-Until: $valid_until" >&2
+        exit 1
+    fi
+    if [ "$valid_epoch" -le "$release_epoch" ]; then
+        echo "FAIL: Valid-Until ($valid_until) is not after Date ($release_date)" >&2
+        exit 1
+    fi
+    now_epoch=$(date -u +%s)
+    if [ "$valid_epoch" -lt "$((now_epoch + 30 * 86400))" ]; then
+        echo "FAIL: Valid-Until ($valid_until) expires less than 30 days from now" >&2
+        exit 1
+    fi
+    echo "PASS: Release expires on $valid_until"
+}
+check_expiry "$REPO/dists/$SUITE/Release"
+
 new_probe() {
     local name=$1 key=${2:-$KEY}
     PROBE="$WORK/$name"

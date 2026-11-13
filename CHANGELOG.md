@@ -96,6 +96,11 @@ tracked in the release review until publication.
   is now installed, so crash-report pruning, log rotation and the other daily
   jobs run at the first boot after their due time instead of only when the
   machine happens to be awake at the fixed morning `cron` time.
+- Expire the signed update repository when it stops being published. The
+  generated `Release` now carries `Valid-Until` 180 days after its `Date`
+  (`SPACED_APT_VALID_DAYS` overrides it), so a frozen or replayed copy of the
+  archive is refused instead of accepted forever. The repository must be
+  republished at least every 180 days, even with no package change.
 
 ## 11.26 - 2026-11-06
 

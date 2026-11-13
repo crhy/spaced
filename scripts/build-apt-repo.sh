@@ -16,6 +16,15 @@ case "$DIST" in spaced|spaced-testing) ;; *) echo "Unknown Spaced archive suite:
 COMP="main"
 SIGNING_KEY=${SPACED_APT_SIGNING_KEY:-6C16F77C2DAE19D262CFD9F0CC05F885576EBB05}
 
+# A published archive must expire when it stops being republished, so a frozen,
+# replayed or unsynced copy cannot be installed forever. 180 days is deliberate:
+# Spaced publishes about monthly, and an expired Release breaks apt update.
+VALID_DAYS=${SPACED_APT_VALID_DAYS:-180}
+[[ "$VALID_DAYS" =~ ^[1-9][0-9]*$ ]] || {
+    echo "SPACED_APT_VALID_DAYS must be a positive integer, got: $VALID_DAYS" >&2
+    exit 2
+}
+
 mkdir -p "$OUT/dists/$DIST/$COMP/binary-amd64"
 OUT=$(cd "$OUT" && pwd)
 
@@ -164,6 +173,7 @@ apt-ftparchive -o APT::FTPArchive::Release::Origin="Spaced Linux" \
                -o APT::FTPArchive::Release::Codename="$DIST" \
                -o APT::FTPArchive::Release::Architectures="amd64" \
                -o APT::FTPArchive::Release::Components="$COMP" \
+               -o APT::FTPArchive::Release::ValidTime=$((VALID_DAYS * 86400)) \
                release . > "$package_work/Release"
 gpg --batch --yes --local-user "$SIGNING_KEY" --digest-algo SHA256 \
     --clearsign --output "$package_work/InRelease" "$package_work/Release"
