@@ -27,6 +27,7 @@ for required_package in \
     polkitd \
     pkexec \
     chrony \
+    anacron \
     btop \
     gparted \
     nvtop \

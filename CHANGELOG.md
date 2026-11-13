@@ -92,6 +92,10 @@ tracked in the release review until publication.
   no automatic way back: **Restore Graphics** now recognises the unfinished
   transaction, says the previous installation was interrupted, and undoes the
   driver changes it had already made.
+- Run daily maintenance on machines that are switched off at night. `anacron`
+  is now installed, so crash-report pruning, log rotation and the other daily
+  jobs run at the first boot after their due time instead of only when the
+  machine happens to be awake at the fixed morning `cron` time.
 
 ## 11.26 - 2026-11-06
 

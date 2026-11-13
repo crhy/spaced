@@ -153,6 +153,7 @@ system:
   - usbutils
   - openssh-client
   - fastfetch
+  - anacron
   - chrony
   - tzdata
   - dkms
