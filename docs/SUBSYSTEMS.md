@@ -1,8 +1,10 @@
 # Spaced Linux subsystem maintenance map
 
-Updated 23 October 2026 after 10.26.6. This map connects implementation,
-delivery and validation; historical release reviews remain unchanged.
-Start with the [current issue audit](10.26.6-POST-RELEASE-AUDIT.md),
+Updated 13 November 2026 for the 11.26.1 candidate. This map connects
+implementation, delivery and validation; historical release reviews remain
+unchanged. Start with the [11.26.1 release review](11.26.1-RELEASE-REVIEW.md),
+the [11.26 release review](11.26-RELEASE-REVIEW.md), and the
+[10.26.6 post-release audit](10.26.6-POST-RELEASE-AUDIT.md) as history, plus the
 [resolution record](FIXES.md) and [Compiz guide](COMPIZ.md).
 
 | Subsystem | Source / delivery | Findings and validation boundary |

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Spaced Linux: a Devuan Ceres-based distribution with a MATE desktop, Flatpak-primary application model, and Windows XP-style desktop layout.
+Spaced Linux: a Devuan Ceres-based distribution with a MATE desktop, Flatpak-primary application model, and the Spaced Linux Dark theme with a 30 px bottom panel.
 
 ## Key Architecture
 
@@ -14,8 +14,9 @@ Spaced Linux: a Devuan Ceres-based distribution with a MATE desktop, Flatpak-pri
 
 ## Desktop Layout
 
-Single panel (bottom by default; top for Android and Mac OS X, which also
-enable the cairo-dock at the bottom). Windows XP style:
+Single panel, 30 px at the bottom by default. Mac OS X and Android move it to
+the top and also enable the cairo-dock at the bottom; Ubuntu uses a 72 px panel
+at the left. Default arrangement:
 ```
 [Brisk Menu] [Window List] ........ [Volume] [Notification Area] [Clock] [Show Desktop]
 ```
@@ -59,8 +60,9 @@ Two components sit below the line name:
   evidence. Record later fixes under a new revision section (for example
   `9.26.2-2`), and say where a change is delivered (APT package revision,
   Welcome release, or Bazaar Flatpak).
-- `components/spacedwelcome` and `components/spacedbazaar` are separate
-  repositories. Commit, PR and release there; see `docs/FIXES.md`.
+- `crhy/spacedwelcome` and `crhy/spacedbazaar` are separate repositories, and
+  this repository holds no copy of their source. Commit, PR and release there;
+  see `docs/FIXES.md`.
 - Publishing a patch release or package revision includes `make
   apt-repo-publish` to `crhy/spaced-apt`. Spaced Update offers any newer GitHub
   release tag, so a tag without APT packages makes every system loop on the

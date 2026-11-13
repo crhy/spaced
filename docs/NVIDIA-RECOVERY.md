@@ -92,11 +92,14 @@ successful module build; a package download alone does not establish it.
 
 | Code | Meaning |
 | --- | --- |
+| 3 | Administrator authentication is required |
 | 10 | Secure Boot enabled; disable it before using this installer |
 | 11–15 | Unsupported architecture, absent GPU/user, or insufficient disk space |
 | 16–17 | Repository refresh failed or another graphics transaction is running |
+| 18 | No AMD graphics device was detected |
 | 20–23 | Headers, prerequisites, verified repository keyring, or assistant unavailable |
 | 24 | Unsupported/unknown GPU or invalid package recommendation |
+| 25 | An NVIDIA driver is already running successfully and was left unchanged; use the explicit Replace Driver action |
 | 30 | Driver APT transaction failed; review the separate recovery result |
 | 40–47 | Module, initramfs, Xorg, Compiz or GRUB verification failed |
 | 50–51 | No verified reboot state or saved recovery transaction |

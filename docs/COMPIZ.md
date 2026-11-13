@@ -8,7 +8,8 @@ See the [release evidence](10.26.6-RELEASE-REVIEW.md) and
 ## Which Compiz, and who owns what?
 
 Spaced ships the Reloaded C implementation, Debian/Ceres `2:0.8.18-9`
-rebuilt as `2:0.8.18-9+spaced10.26.6`. Ubuntu's C++ 0.9 implementation is a
+rebuilt as `2:0.8.18-9+spaced10.26.7`. That suffix follows the Compiz package
+build, not the OS release. Ubuntu's C++ 0.9 implementation is a
 different codebase; patches and plugin compatibility cannot be assumed to
 transfer between them. Marco remains a packaged dependency and supplies
 decoration-theme code through libmarco. A Marco theme setting does not mean
@@ -70,8 +71,8 @@ The active plugin list is:
 
 ```text
 core ccp commands decoration fade firepaint glib matecompat minimize
-mousepoll move neg obs place png regex resize screenshot snap svg workarounds
-cube 3d focuspoll rotate scale ezoom switcher
+mousepoll move neg obs place png regex resize screenshot snap svg thumbnail
+workarounds cube 3d focuspoll rotate scale ezoom switcher
 ```
 
 Sections for `wobbly`, `animation` and `expo` exist, but those plugins are not
@@ -91,10 +92,10 @@ The two screenshot paths have different behavior. Issue
 [#305](https://github.com/crhy/spaced/issues/305) requests feedback for the
 Compiz path; documenting the MATE shortcut does not resolve it.
 
-## Two shipped fixes
+## Three shipped fixes
 
-Both patches are in [the patch queue](../patches/compiz/README.md), currently
-marked `Forwarded: no`.
+All three patches are in [the patch queue](../patches/compiz/README.md),
+currently marked `Forwarded: no`.
 
 1. **Title-bar hit geometry (10.26.2 onward).** The GTK decorator applied an
    extra invisible-border offset to coordinates already adjusted by
@@ -111,6 +112,11 @@ marked `Forwarded: no`.
    diagnostic stack identified this path during a VirtualBox Windows 7 theme
    switch. The diagnostic run completed 39 theme changes after the fix;
    final release checks covered 13 themes in each of four VM configurations.
+3. **Screenshot filenames (10.26.7).** `0003-screenshot-timestamp-filenames.patch`
+   replaces Compiz's directory-dependent `screenshot1.png` sequence with
+   `screenshot-YYYY-MM-DD_HH-MM-SS.png`; captures made in the same second get
+   `-2`, `-3`, and so on instead of replacing an existing file (issue
+   [#362](https://github.com/crhy/spaced/issues/362)).
 
 An X server grab defers other clients' requests and close-down processing;
 it is neither a thread mutex nor a GPU completion fence. See the primary

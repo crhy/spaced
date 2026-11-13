@@ -73,6 +73,11 @@ Two further gaps matter for this issue specifically:
 
 ## 2. Launch path: desktop file to Calamares, and what can freeze the session silently
 
+Superseded in 11.26.1: the #192 helper is now the Python restart guard
+`overlays/usr/local/bin/spaced-reboot-after-install`, covered by
+`tests/test_reboot_after_install.py`, and live-user removal moved to
+`overlays/etc/calamares/modules/shellprocess@spaced-remove-live-user.conf`.
+
 Chain:
 
 1. `overlays/etc/skel/Desktop/install-spaced-linux.desktop:7` —
@@ -132,14 +137,15 @@ plausibility for "click does nothing"):
   explain only the installer.
 
 The #192 "remove installation media" helper is **exonerated for the launch
-failure**. `overlays/usr/local/bin/spaced-reboot-after-install` is a 14-line
-`zenity --question` dialog wired solely as
+failure**. `overlays/usr/local/bin/spaced-reboot-after-install` is a 267-line
+Python restart guard wired solely as
 `restartNowCommand` in `overlays/etc/calamares/modules/finished.conf:1-4`, i.e.
 it runs only on Calamares' Finished page after a completed install, and is
 deleted from installed systems
-(`shellprocess@spaced-cleanup.conf:18`). It cannot run at launcher time. (Side
-note, not this issue: if `zenity` were missing it exits 1 at line 13 and never
-reboots; a Cancel answer also skips the `exec /sbin/reboot` on line 10.)
+(`shellprocess@spaced-cleanup.conf:19`). It cannot run at launcher time. (Side
+note, not this issue: it ignores `SIGTERM`, arms its resident memory guard
+before the prompt grabs input, and still reboots when the guard or the prompt
+fails — see `tests/test_reboot_after_install.py`.)
 
 ## 3. Graphics: VMSVGA without 3D, Compiz, and the "visible but frozen" mode
 

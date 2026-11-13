@@ -12,13 +12,12 @@ anything) is hardcoded to a UID, the upsides/downsides of guaranteeing
 - Live-session user `user` **is 1000:1000** (created first in a fresh
   chroot with plain `useradd`, and `user` is also live-config's Debian
   default name).
-- First **installed** user is **probably 1001:1001, not 1000:1000**,
+- The first **installed** user was **1001:1001, not 1000:1000**,
   even though every default in the chain "wants" 1000. The baked-in live
-  `user` (UID 1000) is copied into the install target by unpackfs and is
-  still present when Calamares creates the new account, so `useradd`
-  skips to the next free ID. This needs a 5-minute verification on a real
-  install (commands in §5); if confirmed, the fix is small (two options
-  in §4).
+  `user` (UID 1000) copied into the install target by unpackfs was still
+  present when Calamares created the new account, so `useradd` skipped to
+  the next free ID. 11.26.1 removes that account before the users job
+  (§4), and `scripts/check.sh:889` keeps that ordering.
 - Nothing in this repository hardcodes UID 1000, so honoring the request
   would not break any overlay, script, or test found here.
 
@@ -65,8 +64,8 @@ on Debian — sudo, etc.).
 
 The install target is a copy of the live squashfs (unpackfs runs before
 the users job in the exec sequence,
-`overlays/etc/calamares/settings.conf:36-60` — `unpackfs` at line 40,
-`users` at line 48, cleanup last at line 56). That squashfs contains a
+`overlays/etc/calamares/settings.conf:40-66` — `unpackfs` at line 44,
+`users` at line 54, cleanup at line 62). That squashfs contains a
 baked-in `user` account because the live-build hook creates one at image
 build time:
 
@@ -74,20 +73,22 @@ build time:
 id -u user >/dev/null 2>&1 || useradd -m -s /bin/bash user
 ```
 
-(`scripts/iso/01-configure.chroot:53-54`, installed as a live hook by
-`Makefile:120-122`). Plain `useradd` in a fresh debootstrap chroot yields
-UID/GID 1000 — the first non-system account. So when the `users` job runs
+(`scripts/iso/01-configure.chroot:64`, installed as a live hook by
+`Makefile:133-135`). Plain `useradd` in a fresh debootstrap chroot yields
+UID/GID 1000 — the first non-system account. So when the `users` job ran
 `useradd -m -U <newlogin>` inside the target, UID 1000 (and the `user`
-name) are already taken and the new account most likely lands on
-**UID 1001 with primary group GID 1001**. Only afterwards does
-`spaced-cleanup` remove the live account:
+name) were already taken and the new account landed on
+**UID 1001 with primary group GID 1001**. Since 11.26.1 a dedicated
+instance removes the live account before the `users` job:
 
 ```sh
-if [ 'USER' != 'user' ] && id user >/dev/null 2>&1; then userdel -r user; fi
+if id user >/dev/null 2>&1; then if [ "$(stat -c %d /)" = "$(stat -c %d /home)" ]; then userdel -r user; else userdel user; fi; fi
 ```
 
-(`overlays/etc/calamares/modules/shellprocess@spaced-cleanup.conf:21`;
-context in lines 9-11). No `unpackfs.conf` is shipped in this repository
+(`overlays/etc/calamares/modules/shellprocess@spaced-remove-live-user.conf:17`,
+ordered at `overlays/etc/calamares/settings.conf:53`; the home directory is
+deleted only when `/home` sits on the root filesystem, so a reused `/home`
+partition keeps its files). No `unpackfs.conf` is shipped in this repository
 to exclude the live account from the copy, so whatever
 `calamares-settings-debian` provides by default applies — and the default
 is a full copy (the cleanup job itself assumes live files such as
@@ -135,10 +136,10 @@ occupant is the live user described above.
 
 Edge case worth knowing (not changed, just observed): if the person
 installing chooses the login name `user`, the `useradd` in the target
-collides with the baked-in live account (username already in use), and
-the cleanup job's guard compares the literal string `'USER'` to `'user'`,
-so it always deletes a `user` account when one exists. A follow-up check
-of that quoting is advisable but out of scope here.
+collides with the baked-in live account (username already in use). Since
+11.26.1 the removal runs first and is not name-guarded, so that account is
+removed and then created fresh from `/etc/skel`
+(`overlays/etc/calamares/modules/shellprocess@spaced-remove-live-user.conf:11-12`).
 
 ## 3. Upsides and downsides of guaranteeing 1000:1000
 
@@ -189,6 +190,13 @@ Downsides and limits (why "guarantee" is a strong word):
 
 ## 4. Conclusion and minimal change
 
+Status in 11.26.1: **Option B is implemented.** A `shellprocess@spaced-remove-live-user`
+instance runs `userdel` in the target ahead of `users`
+(`overlays/etc/calamares/settings.conf:53` before `:54`), the groups Calamares
+adds are pre-created as system groups (`scripts/iso/01-configure.chroot:59-60`,
+`overlays/etc/calamares/modules/users.conf:5-26`), and `scripts/check.sh:889`
+fails the build if that ordering regresses.
+
 > **Verified on a real install (2026-09-14):** a Spaced Linux 9.26.2 system
 > installed with Calamares has its first user at **UID 1001, GID 1002**, and
 > no account at UID 1000. The `scanner` group holds GID 1001, so two separate
@@ -204,7 +212,8 @@ Downsides and limits (why "guarantee" is a strong word):
   closed as "already the case" — but it also needs no new ID-management
   machinery, because stock Debian policy already yields 1000 the moment
   the slot is free.
-- **Minimal change (after verifying §5 confirms 1001):** pick one —
+- **Minimal change (after verifying §5 confirms 1001):** pick one (11.26.1 took
+  Option B) —
   - **Option A (recommended): stop baking the live user into the
     squashfs.** Drop the account-creation block
     (`scripts/iso/01-configure.chroot:53-59`) and the baked-home
@@ -217,13 +226,15 @@ Downsides and limits (why "guarantee" is a strong word):
     /etc/skel/. /home/user`, Desktop pruning, and `chown` lines assume a
     baked-in home and must become conditional, and LightDM autologin plus
     the Calamares desktop icon must be re-tested on the live session.
-  - **Option B: delete the live user from the target *before* the users
-    job.** Add a `shellprocess` instance ordered ahead of `users` in
-    `overlays/etc/calamares/settings.conf:36-60` that runs
-    `userdel -r user` inside the target (same chrooted mechanism the
-    existing cleanup job uses). Smaller diff, but it leaves a baked-in
-    account in every live boot and depends on job ordering surviving
-    future `calamares-settings-debian` updates.
+  - **Option B (implemented in 11.26.1): delete the live user from the target
+    *before* the users job.** The `shellprocess@spaced-remove-live-user`
+    instance in `overlays/etc/calamares/settings.conf:53` runs
+    `userdel -r user` inside the target, guarded so a separate reused `/home`
+    partition is never deleted
+    (`overlays/etc/calamares/modules/shellprocess@spaced-remove-live-user.conf:12-17`).
+    Smaller diff than Option A, but it still leaves a baked-in account in every
+    live boot and depends on job ordering surviving future
+    `calamares-settings-debian` updates.
   - Either way, add a release-time assertion: install in a VM and check
     `id <newuser>` is `uid=1000 gid=1000` (§5). Do **not** patch a
     numeric `-u 1000` anywhere — Calamares offers no such option, and a

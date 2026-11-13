@@ -170,7 +170,7 @@ This controls labels, menus, applet plugs, buttons, and related child widgets.
 
 ### Explicit MATE toplevel background
 
-Five themes currently set a `panel_color` in `themes.json`:
+Six themes currently set a `panel_color` in `themes.json`:
 
 | Theme | Explicit toplevel background |
 |---|---|

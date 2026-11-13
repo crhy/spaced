@@ -53,7 +53,7 @@ descriptors; neither path disables GPG verification.
 ## Boot and first-login order
 
 1. `scripts/iso/stage-external-artifacts.sh` downloads or accepts local
-   overrides for Welcome, SpacedBazaar, and the `spaced-github` descriptor.
+   overrides for Welcome, Monitor, and the `spaced-github` descriptor.
 2. Every input is SHA-256 verified. The script also checks the Debian package
    name/version/architecture, descriptor repository URL, and signing-key
    fingerprint.
@@ -61,12 +61,10 @@ descriptors; neither path disables GPG verification.
    and `spaced-meta` depends on it explicitly.
 4. The verified remote descriptor is incorporated into
    `spaced-mate-default-settings`, so APT upgrades retain the source policy.
-5. The live-build chroot hook registers the system remotes and installs the
-   pinned SpacedBazaar bundle system-wide. It verifies the application ID and
-   its `spaced-github` update origin before removing the bootstrap bundle.
-6. Only after the image boots does the standalone Welcome package's autostart
-   entry run. SpacedBazaar is therefore present in both the live and installed
-   filesystem before Welcome appears.
+5. The live-build chroot hook registers both signed system remotes and installs
+   no application or runtime into the live filesystem.
+6. The standalone Welcome package installs SpacedBazaar and the optional app
+   catalog for the user, and only does so after Calamares has completed.
 
 Calamares copies the configured live root, including `/var/lib/flatpak`, into
 the target. No systemd unit is involved; the only per-user setup is a normal
@@ -130,13 +128,12 @@ updated through the Spaced APT repository and the `spaced-meta` dependency.
   file.
 - Run `make prepare` with released pins; no override or `UNRELEASED` value may
   be necessary.
-- In the chroot, verify both system remotes, the SpacedBazaar app ID, and its
-  `spaced-github` origin.
-- Boot the live ISO offline and confirm SpacedBazaar launches before any
-  first-login downloads.
+- In the chroot, verify both system remotes exist and that no application
+  Flatpak is embedded.
+- Boot the live ISO offline and confirm Welcome offers to install SpacedBazaar.
 - Boot online and confirm both user remotes appear after login.
-- Search for and install Voxa, Scum with Cats, Brutal Chess, and Spaced
-  Update from SpacedBazaar and from standalone Welcome.
+- Search for and install Voxa, Cards With Cats, Brutal Chess, and rhYciv from
+  SpacedBazaar and from standalone Welcome.
 - Open each Welcome Help & Apps choice and confirm SpacedBazaar navigates to
   the exact suggested application without starting an installation.
 - Publish a newer test commit to a staging repository and confirm `flatpak

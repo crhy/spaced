@@ -120,7 +120,7 @@ Every theme uses the same panel applet composition:
 The panel is 30 px high by default.
 
 - Android and macOS place it at the top and use Cairo Dock at the bottom.
-- Ubuntu uses a thick 64 px panel at the left, with the standard Spaced applets arranged vertically.
+- Ubuntu uses a thick 72 px panel at the left, with the standard Spaced applets arranged vertically.
 - Windows 7 uses a 40 px bottom panel; other themes keep the 30 px default.
 - Themes other than Android and macOS do not use Cairo Dock.
 - Theme switching moves and resizes the existing panel rather than replacing it.
@@ -197,7 +197,7 @@ Spaced asks LibreOffice and Qt Widgets applications to integrate with GTK3.
 
 Current limitations are intentional and must be documented:
 
-- Qt Quick Controls are globally configured as Universal Dark with a fixed gray accent;
+- Qt Quick Controls are globally configured as Universal with `Theme=System` and a neutral `#cfd3d8` accent, so they follow the session light/dark preference;
 - GTK4 and libadwaita applications do not consume the Spaced GTK3 engine;
 - Flatpak theme propagation mainly benefits GTK3 applications that permit host themes;
 - third-party applications may supply their own colors and CSS.

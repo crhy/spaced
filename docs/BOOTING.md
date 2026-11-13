@@ -38,7 +38,7 @@ is hand-written and must be kept consistent with `live-build/auto/config`'s
 
 | Entry | Command line | Purpose |
 |---|---|---|
-| Start Spaced Linux | `@APPEND_LIVE@` (`boot=live components quiet loglevel=3 vt.global_cursor_default=0 username=user hostname=spaced`) | Quiet hardware-agnostic boot with no splash daemon; live-boot rescans media for up to 60 seconds |
+| Start Spaced Linux | `@APPEND_LIVE@` (`boot=live components quiet loglevel=3 vt.global_cursor_default=0 username=user hostname=spaced`) | Quiet hardware-agnostic boot with no splash daemon; live-boot keeps its own default medium wait, with no `live-media-timeout=` |
 | safe graphics | `boot=live components nosplash nomodeset` + nouveau/`nvidia-drm.modeset=0` | Drives that hang on kernel modeset; text console |
 | verbose boot | `boot=live components noplymouth console=tty0 noquiet loglevel=7` | Full VGA boot log for diagnosis |
 | Verify the boot medium | `@APPEND_VERIFY_CHECKSUMS@` | `live-boot` medium integrity check |
@@ -66,9 +66,10 @@ present in stock Devuan:
 
 Spaced omits Plymouth because the normal boot is already short, keeping the
 default console quiet and hiding its cursor until LightDM takes over. Spaced
-also gives live-boot up to 60 seconds to discover the boot medium. This
-does not alter a normal boot; it prevents a slow USB controller or flash drive
-from dropping into initramfs before `/run/live/medium` appears.
+also sets no `live-media-timeout=`, so live-boot keeps its own default wait for
+the boot medium. This does not alter a normal boot; it prevents a slow USB
+controller or flash drive from dropping into initramfs before
+`/run/live/medium` appears.
 
 All three are now forbidden (see "Hardening" below). Other intentional
 differences (autologin LightDM, `nouveau.modeset=0`/blacklist in the safe

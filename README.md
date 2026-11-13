@@ -267,7 +267,7 @@ The current release line is **11.26**; the prepared patch release is **11.26.1**
 
 ## Contributing
 
-Find desktop instructions in [Spaced Help](https://spacedlinux.com/#help) or open **About Spaced Linux** to reach Welcome's local Help tab. Join the community on [Discord](https://discord.gg/BMW9Y6NB3y) or [Telegram](https://t.me/+pjmFzHo-i9A2ZWY5) for setup questions and testing discussions.
+Find desktop instructions in [Spaced Help](https://spacedlinux.com/#help) or open **Spaced Linux Help** to reach Welcome's local Help tab. Join the community on [Discord](https://discord.gg/BMW9Y6NB3y) or [Telegram](https://t.me/+pjmFzHo-i9A2ZWY5) for setup questions and testing discussions.
 
 Bug reports, documentation improvements, Compiz refinements, theme work, package suggestions, hardware testing, accessibility improvements, and build fixes are welcome.
 
