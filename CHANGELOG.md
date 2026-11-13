@@ -57,6 +57,11 @@ tracked in the release review until publication.
   migration, crash-directory creation, daemon core-limit append or Samba
   usershare tweak no longer leaves the desktop or release metapackage
   unconfigured, so the next upgrade is not blocked (#415).
+- Quiet the display power watcher and end it cleanly. It reconciles the X
+  display power state every five minutes instead of every thirty seconds, and
+  stopping it at logout now closes the settings and screensaver monitors it
+  started instead of leaving them running in the session. The "Never" display
+  sleep choice is unchanged.
 
 ## 11.26 - 2026-11-06
 

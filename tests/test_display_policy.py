@@ -1,8 +1,10 @@
 """Display policy regressions without a live X server or session bus."""
 import os
 from pathlib import Path
+import signal
 import subprocess
 import tempfile
+import time
 import unittest
 
 
@@ -218,8 +220,82 @@ esac''')
 
     def test_watch_mode_periodically_reconciles_driver_dpms_changes(self):
         helper = (BIN / 'spaced-display-repair').read_text()
-        self.assertIn('while sleep 30; do', helper)
+        self.assertIn('while sleep 300; do', helper)
         self.assertIn('apply_power_policy\n    done &', helper)
+        # The reconcile must not re-probe the schema every round: the probe runs
+        # once per run and the watchers check that cached result instead.
+        body = helper.split('apply_power_policy() {', 1)[1].split('\n}\n', 1)[0]
+        self.assertNotIn('list-schemas', body)
+        self.assertEqual(helper.count('grep -qx org.mate.power-manager'), 1)
+
+    def monitor_pids(self):
+        path = self.state / 'monitor-pids'
+        if not path.exists():
+            return []
+        return [int(line) for line in path.read_text().split()]
+
+    def live_pids(self, pids):
+        return [pid for pid in pids if Path(f'/proc/{pid}').is_dir()]
+
+    def stop_watcher(self, watcher):
+        # Tear down by PID only: the watcher's own cleanup should have done it,
+        # and a failing test must not leave monitors behind on this machine.
+        for pid in self.monitor_pids():
+            try:
+                os.kill(pid, signal.SIGKILL)
+            except (ProcessLookupError, PermissionError):
+                pass
+        try:
+            os.killpg(watcher.pid, signal.SIGKILL)
+        except (ProcessLookupError, PermissionError):
+            pass
+        try:
+            watcher.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            pass
+
+    def test_watch_mode_cleanup_ends_its_monitor_children(self):
+        # Logout must not leave the gsettings/gdbus monitors that the watchers
+        # forked holding a session-bus connection: the cleanup kills the
+        # children (pkill -P) before the watcher leaders, as spaced-theme-monitor
+        # does.
+        self.command('gsettings', '''case "$1" in
+  list-schemas) cat "$TEST_STATE/schemas" ;;
+  get)
+    case "$2 $3" in
+      "org.mate.power-manager sleep-display-"*) cat "$TEST_STATE/timeout" ;;
+      "org.mate.screensaver idle-activation-enabled") cat "$TEST_STATE/idle" ;;
+      *) exit 1 ;;
+    esac ;;
+  monitor)
+    printf '%s\\n' "$$" >> "$TEST_STATE/monitor-pids"
+    exec sleep 300 ;;
+  *) exit 1 ;;
+esac''')
+        self.command('gdbus', '''case "$1" in
+  monitor)
+    printf '%s\\n' "$$" >> "$TEST_STATE/monitor-pids"
+    exec sleep 300 ;;
+  *) exit 0 ;;
+esac''')
+        watcher = subprocess.Popen([str(BIN / 'spaced-display-repair'), '--watch'],
+                                   env=self.env, stdout=subprocess.DEVNULL,
+                                   stderr=subprocess.DEVNULL,
+                                   start_new_session=True)
+        self.addCleanup(self.stop_watcher, watcher)
+        # Two sleep-display monitors, one screensaver monitor, one gdbus monitor.
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline and len(self.monitor_pids()) < 4:
+            time.sleep(0.1)
+        started = self.monitor_pids()
+        self.assertEqual(len(started), 4, 'watch mode never started all four monitors')
+        watcher.send_signal(signal.SIGTERM)
+        watcher.wait(timeout=5)
+        deadline = time.monotonic() + 3
+        while time.monotonic() < deadline and self.live_pids(started):
+            time.sleep(0.1)
+        self.assertEqual(self.live_pids(started), [],
+                         'stopping the watcher left a gsettings/gdbus monitor alive')
 
     def test_watch_mode_only_transitions_change_idle(self):
         helper = (BIN / 'spaced-display-repair').read_text()

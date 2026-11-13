@@ -124,7 +124,9 @@ discard_stale_screensaver_state() (
 apply_power_policy() {
     local mode=${1:-} prev=${2:-} new=${3:-}
     local timeout
-    gsettings list-schemas 2>/dev/null | grep -qx org.mate.power-manager || return 0
+    # The org.mate.power-manager schema is probed once per run (see
+    # power_policy_schema below) and every caller checks that first, so a
+    # reconcile round no longer forks gsettings and grep just to re-read it.
     timeout=$(display_sleep_timeout) || return 0
     if [[ "$timeout" =~ ^0+$ ]]; then
         # Never: no blanking, no DPMS, no matter what X defaulted to.
@@ -137,7 +139,7 @@ apply_power_policy() {
         xset +dpms 2>/dev/null || true
     fi
     # Issue #219: only a real display-sleep transition may change
-    # idle-activation-enabled. Startup, unlock and the 30-second reconcile
+    # idle-activation-enabled. Startup, unlock and the periodic reconcile
     # only reapply xset above (and drop a stale marker when already on).
     if [ "$mode" = transition ]; then
         sync_screensaver_idle "$prev" "$new"
@@ -156,7 +158,17 @@ fi
 [ -n "${DISPLAY:-}" ] || exit 0
 command -v xrandr >/dev/null 2>&1 || exit 0
 repair_outputs
-command -v xset >/dev/null 2>&1 && apply_power_policy
+# Probe the power-manager schema once per run. apply_power_policy used to
+# re-probe it on every reconcile round, which forked two extra processes for a
+# state that only changes when the schema itself does.
+power_policy_schema=0
+if command -v gsettings >/dev/null 2>&1 \
+    && gsettings list-schemas 2>/dev/null | grep -qx org.mate.power-manager; then
+    power_policy_schema=1
+fi
+if [ "$power_policy_schema" = 1 ] && command -v xset >/dev/null 2>&1; then
+    apply_power_policy
+fi
 
 [ "${1:-}" = --watch ] || exit 0
 
@@ -165,8 +177,26 @@ command -v xset >/dev/null 2>&1 && apply_power_policy
 # Never boundary may change idle-activation-enabled (issue #219); the monitor
 # can emit the current value immediately and can fire without a change.
 policy_watchers=()
-if command -v gsettings >/dev/null 2>&1 && command -v xset >/dev/null 2>&1 \
-    && gsettings list-schemas 2>/dev/null | grep -qx org.mate.power-manager; then
+
+# No orphans: every watcher below is a subshell or pipeline whose own
+# `gsettings monitor` / `gdbus monitor` is its child, so killing only the
+# leaders left up to four monitors holding a session-bus connection after
+# logout. Kill the children first (pkill -P), then the leaders, exactly as
+# spaced-theme-monitor does; never pkill -f, which can match this script.
+cleanup_watchers() {
+    local wpid pids=()
+    for wpid in "${policy_watchers[@]}"; do
+        [ -n "$wpid" ] || continue
+        pkill -P "$wpid" 2>/dev/null
+        pids+=("$wpid")
+    done
+    [ "${#pids[@]}" -gt 0 ] && kill "${pids[@]}" 2>/dev/null
+    return 0
+}
+trap 'cleanup_watchers' EXIT
+trap 'exit 143' HUP INT TERM
+
+if [ "$power_policy_schema" = 1 ] && command -v xset >/dev/null 2>&1; then
     for key in sleep-display-ac sleep-display-battery; do
         (
         prev_raw=$(gsettings get org.mate.power-manager "$key" 2>/dev/null) || prev_raw=""
@@ -201,21 +231,30 @@ if command -v gsettings >/dev/null 2>&1 && command -v xset >/dev/null 2>&1 \
     # Some drivers and power-manager events can restore X's default DPMS
     # state without changing either GSettings key. Reconcile infrequently so
     # Never remains authoritative without racing normal timeout management.
-    while sleep 30; do
+    while sleep 300; do
         apply_power_policy
     done &
     policy_watchers+=("$!")
-    trap 'kill "${policy_watchers[@]}" 2>/dev/null || true' EXIT
 fi
 
 command -v gdbus >/dev/null 2>&1 || exit 0
-gdbus monitor --session --dest org.mate.ScreenSaver \
-    --object-path /org/mate/ScreenSaver 2>/dev/null |
-while IFS= read -r event; do
-    case "$event" in
-        *'ActiveChanged (false,'*)
-            repair_outputs
-            command -v xset >/dev/null 2>&1 && apply_power_policy
-            ;;
-    esac
-done
+# Run the unlock watcher as a tracked child so cleanup_watchers ends its
+# `gdbus monitor` as well, and wait for it in the background: a trapped signal
+# interrupts `wait` at once instead of after a foreground pipeline finishes.
+(
+    gdbus monitor --session --dest org.mate.ScreenSaver \
+        --object-path /org/mate/ScreenSaver 2>/dev/null |
+    while IFS= read -r event; do
+        case "$event" in
+            *'ActiveChanged (false,'*)
+                repair_outputs
+                if [ "$power_policy_schema" = 1 ] && command -v xset >/dev/null 2>&1; then
+                    apply_power_policy
+                fi
+                ;;
+        esac
+    done
+) &
+policy_watchers+=("$!")
+wait
+exit 0
