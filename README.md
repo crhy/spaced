@@ -317,7 +317,7 @@ Find desktop instructions in [Spaced Help](https://spacedlinux.com/#help) or ope
 
 Bug reports, documentation improvements, Compiz refinements, theme work, package suggestions, hardware testing, accessibility improvements, and build fixes are welcome.
 
-Report a bug in an [issue](https://github.com/crhy/spaced/issues): give the Spaced version, say whether it is a live or installed session, and list the steps that reproduce the problem.
+Report a bug in an [issue](https://github.com/crhy/spaced/issues): give the Spaced version, say whether it is a live or installed session, and list the steps that reproduce the problem. Report a security problem through [SECURITY.md](SECURITY.md) instead of a public issue.
 
 Send a pull request with a short description of what changed and how it was tested.
 
@@ -337,7 +337,9 @@ The theme documentation is split by purpose:
 
 Run `make check` before committing theme or documentation changes.
 
-For maintenance across the distribution, see the [subsystem map](docs/SUBSYSTEMS.md),
+For maintenance across the distribution, see [CONTRIBUTING.md](CONTRIBUTING.md),
+the [documentation index](docs/README.md), the [user upgrade guide](docs/UPGRADE.md),
+the [subsystem map](docs/SUBSYSTEMS.md),
 [Compiz architecture and upstream strategy](docs/COMPIZ.md), and
 [10.26.6 post-release issue audit](docs/10.26.6-POST-RELEASE-AUDIT.md).
 
