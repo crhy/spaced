@@ -31,6 +31,7 @@ for required_package in \
     btop \
     gparted \
     testdisk \
+    photorec \
     gddrescue \
     smartmontools \
     efibootmgr \
@@ -819,7 +820,7 @@ assert {"calamares", "calamares-settings-debian", "openssh-server", "live-config
     "installed system retains live-only packages"
 # The rescue tools belong to the live USB only: the installer removes them, and
 # spaced-meta must not pull them back onto an updated installed system.
-assert {"gddrescue", "exfatprogs", "lvm2", "smartmontools", "testdisk", "gparted"}.issubset(removed_after_install), \
+assert {"gddrescue", "exfatprogs", "lvm2", "smartmontools", "testdisk", "photorec", "gparted"}.issubset(removed_after_install), \
     "installed system retains the live-only rescue tools"
 assert not {"cryptsetup", "ntfs-3g", "parted"}.intersection(removed_after_install), \
     "installed system loses partitioning or encryption tools other packages need"

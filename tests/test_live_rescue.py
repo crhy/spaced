@@ -25,7 +25,7 @@ PASSWORD_FILE = "Live session passwords.txt"
 
 # Every recovery tool the live image must carry (audit f22 step 2).
 RESCUE_TOOLS = (
-    "gparted", "testdisk", "gddrescue", "smartmontools", "efibootmgr", "ntfs-3g",
+    "gparted", "testdisk", "photorec", "gddrescue", "smartmontools", "efibootmgr", "ntfs-3g",
     "dosfstools", "exfatprogs", "cryptsetup", "lvm2", "rsync", "parted",
 )
 
@@ -33,7 +33,7 @@ RESCUE_TOOLS = (
 # Recovery tools that must never reach the installed disk (audit f24): the
 # installer removes them and spaced-meta must not depend on them.
 LIVE_ONLY_RESCUE = (
-    "gddrescue", "exfatprogs", "lvm2", "smartmontools", "testdisk", "gparted",
+    "gddrescue", "exfatprogs", "lvm2", "smartmontools", "testdisk", "photorec", "gparted",
 )
 # Already present on an installed 11.26 system because other packages need them.
 INSTALLED_TOOLS = ("cryptsetup", "ntfs-3g", "parted")

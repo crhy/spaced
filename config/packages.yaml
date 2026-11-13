@@ -109,6 +109,7 @@ rescue:
   - parted
   - smartmontools
   - testdisk
+  - photorec
   - gparted
 firmware:
   - bluez-firmware
