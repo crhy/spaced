@@ -27,7 +27,6 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/crhy/spaced/releases"><strong>Download releases</strong></a> ·
   <a href="CHANGELOG.md"><strong>11.26.1 changes</strong></a>
 </p>
 
@@ -163,6 +162,53 @@ sha256sum -c spaced-linux-11.26.1-amd64.iso.sha256
 
 Test release images in a virtual machine or on non-critical hardware before adopting them for daily use.
 
+### What you need
+
+- A 64-bit (amd64) PC with BIOS or UEFI firmware.
+- One USB stick of 2 GB or more. Everything on the stick is erased.
+- The ISO is about 1.6 GB.
+- Tested configuration: 4 GB RAM, 4 CPU cores, 25 GB of free disk space, and a
+  1440×900 display. That is the virtual machine this release is tested in, not
+  a measured minimum.
+- The NVIDIA driver installer needs Secure Boot switched off in the firmware.
+
+### Try it and install it
+
+Write the ISO to the stick with Rufus on Windows, or balenaEtcher on Windows,
+Mac, or Linux. Restart with the stick plugged in, choose it in the boot menu
+(often F12, F9, or Esc), and pick **Start Spaced Linux**. The live desktop runs
+from the stick and changes nothing on your disk, so you can look around first.
+Back up your own files before you install. When you are ready, open
+**Install Spaced Linux** on the live desktop; it starts the Calamares installer,
+which asks where Spaced Linux should go. If the stick will not boot, the live
+menu entries and how to read a failed boot are in
+[docs/BOOTING.md](docs/BOOTING.md). The same steps are on the
+[help page](https://spacedlinux.com/help.html).
+
+### Keep it updated
+
+Open **Spaced Update** from the menu. It refreshes the APT package lists,
+upgrades the system from Devuan and the signed Spaced Linux repository, and
+updates Flatpak apps and runtimes. In a terminal the equivalent is:
+
+```bash
+sudo apt update && sudo apt full-upgrade
+```
+
+Restart after a kernel or graphics driver update, because the new one is not
+used until the machine restarts.
+
+### Get help or report a bug
+
+Ask on [Discord](https://discord.gg/BMW9Y6NB3y) or
+[Telegram](https://t.me/+pjmFzHo-i9A2ZWY5), or read the
+[help page](https://spacedlinux.com/help.html). For a bug, open a
+[GitHub issue](https://github.com/crhy/spaced/issues) with: the Spaced version
+(`cat /etc/os-release`), whether you are on a live USB or an installed system,
+the steps that reproduce it, what you expected instead, and the output of
+`spaced-graphics-report` for any display problem. Report security problems
+through [SECURITY.md](SECURITY.md) instead of a public issue.
+
 ## Build Spaced Linux
 
 A Devuan- or Debian-based build host is recommended.
@@ -271,7 +317,9 @@ Find desktop instructions in [Spaced Help](https://spacedlinux.com/#help) or ope
 
 Bug reports, documentation improvements, Compiz refinements, theme work, package suggestions, hardware testing, accessibility improvements, and build fixes are welcome.
 
-Open an [issue](https://github.com/crhy/spaced/issues) or submit a pull request describing what changed and how it was tested.
+Report a bug in an [issue](https://github.com/crhy/spaced/issues): give the Spaced version, say whether it is a live or installed session, and list the steps that reproduce the problem.
+
+Send a pull request with a short description of what changed and how it was tested.
 
 The [application delivery architecture](docs/APPLICATION-DELIVERY.md) documents
 the standalone Welcome package, post-install SpacedBazaar, signed first-party
