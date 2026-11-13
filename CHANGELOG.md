@@ -43,6 +43,11 @@ tracked in the release review until publication.
   highlighted without animation (#11).
 - Pin the released Welcome and Monitor source archives by SHA-256 and reject a
   release build if either component tag, version or archive digest drifts.
+- Protect a reused `/home` during installation. The live account is now removed
+  without its home directory whenever `/home` is a separate partition, so a
+  "reuse my installation" install can no longer delete the previous system's
+  files. Installed systems also no longer inherit the live image's SSH host
+  keys, and a slow `update-grub` no longer reports a finished install as failed.
 
 ## 11.26 - 2026-11-06
 

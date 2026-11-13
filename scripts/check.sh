@@ -824,6 +824,8 @@ assert "userdel -r user" in remove_live_user and "groupdel user" in remove_live_
     "Calamares does not remove the live account before creating the user (issue #227)"
 assert "userdel" not in cleanup, \
     "Calamares cleanup deletes an account after the installed user was created"
+assert "rm -f /etc/ssh/ssh_host_*" in cleanup, \
+    "installed systems must not inherit the live image's SSH host keys"
 configure_chroot = Path("scripts/iso/01-configure.chroot").read_text(encoding="utf-8")
 assert "for group in autologin bluetooth lpadmin netdev scanner; do" in configure_chroot \
     and 'groupadd --system "$group"' in configure_chroot \

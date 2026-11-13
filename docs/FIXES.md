@@ -199,3 +199,11 @@ Delivered in the 10.26.6 ISO and `10.26.6-1` settings package.
 - `inode/directory` must name `caja-folder-handler.desktop` in the shipped
   `mimeapps.list`. Otherwise any Flatpak that claims folders (VSCodium does)
   becomes the default, and Gigolo's "Open" launches it (issue #297).
+- A reused-home install deleted the previous system's files. The unpacked live
+  image always carries the live account `user`, and Calamares removed it with
+  `userdel -r` after `mount`, so the recursive delete ran against a separate,
+  unformatted `/home` partition. Never run `userdel -r` in the target while a
+  separate `/home` is mounted: compare the device numbers of `/` and `/home`
+  and drop only the account when they differ (#413).
+  `tests/test_calamares_live_user.py` runs the real script line against fake
+  `id`, `userdel` and `stat` commands.
