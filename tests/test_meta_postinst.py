@@ -6,6 +6,7 @@ commands, so nothing on the host is changed.
 import os
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -111,6 +112,75 @@ class SmbdBootTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             self.assertEqual(self.run_block(Path(temp), status_ok=True), [
                 'update-rc.d smbd defaults', 'update-rc.d smbd enable', 'init status'])
+
+
+REAL_SED = shutil.which('sed')
+PACKAGE_VERSION = '11.26.1-1'
+
+# Every absolute path the postinst writes or tests, so the whole script can run
+# against a scratch root. The identity writes stay fatal; only optional steps
+# are expected to survive a failure.
+FAKE_PATHS = (
+    '/usr/lib/os-release', '/etc/os-release', '/etc/lsb-release', '/etc/issue.net',
+    '/etc/issue', '/etc/samba/smb.conf', '/var/lib/spaced-linux', '/etc/init.d/smbd',
+    '/etc/NetworkManager/dispatcher.d/90-spaced-samba-ready',
+    '/usr/lib/spaced-linux/spaced-home-traverse',
+)
+
+
+def in_fake_root(script, root):
+    """Rewrite the postinst's absolute paths into a scratch root in one pass."""
+    pattern = re.compile('|'.join(re.escape(path) for path in sorted(FAKE_PATHS, key=len, reverse=True)))
+    return pattern.sub(lambda match: f'{root}{match.group(0)}', script)
+
+
+class FullConfigureTests(unittest.TestCase):
+    """Issue #415: a failed optional step must not leave spaced-meta unconfigured."""
+
+    def configure(self, temp, sed_body):
+        root = temp / 'root'
+        for directory in ('etc/samba', 'usr/lib', 'var/lib'):
+            (root / directory).mkdir(parents=True)
+        (root / 'etc/samba/smb.conf').write_text(DEBIAN_SMB_CONF)
+        bin_dir = temp / 'bin'
+        bin_dir.mkdir()
+        stubs = {'dpkg-query': f"echo '{PACKAGE_VERSION}'",
+                 'getent': 'exit 1',  # no sambashare group, so that block is skipped
+                 'sed': sed_body}
+        for name, body in stubs.items():
+            stub = bin_dir / name
+            stub.write_text(f'#!/bin/sh\n{body}\n')
+            stub.chmod(0o755)
+        env = dict(os.environ, PATH=f'{bin_dir}{os.pathsep}{os.environ["PATH"]}',
+                   TMPDIR=str(temp))
+        result = subprocess.run(['sh', '-c', in_fake_root(POSTINST, root), 'sh', 'configure'],
+                                env=env, capture_output=True, text=True)
+        return result, root
+
+    def assert_release_identity_written(self, root):
+        for path in ('etc/os-release', 'usr/lib/os-release'):
+            self.assertIn('PRETTY_NAME="Spaced Linux 11.26.1"', (root / path).read_text())
+        self.assertIn('DISTRIB_RELEASE=11.26.1', (root / 'etc/lsb-release').read_text())
+        self.assertTrue((root / 'etc/issue').read_text().startswith('Spaced Linux 11.26.1'))
+        self.assertIn('Spaced Linux 11.26.1', (root / 'etc/issue.net').read_text())
+
+    def test_usershare_tweak_failure_still_configures_the_release(self):
+        # a08-01: sed -i can fail on a read-only or unwritable /etc/samba; the
+        # metapackage must still reach exit 0 so apt keeps working.
+        with tempfile.TemporaryDirectory() as temp:
+            result, root = self.configure(Path(temp), 'echo "sed: cannot rename: Read-only file system" >&2; exit 4')
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn('Read-only file system', result.stderr)
+            self.assertEqual((root / 'etc/samba/smb.conf').read_text(), DEBIAN_SMB_CONF)
+            self.assert_release_identity_written(root)
+
+    def test_working_sed_still_enables_user_shares(self):
+        with tempfile.TemporaryDirectory() as temp:
+            result, root = self.configure(Path(temp), f'exec "{REAL_SED}" "$@"')
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn('   usershare max shares = 100\n',
+                          (root / 'etc/samba/smb.conf').read_text().split('[printers]')[0])
+            self.assert_release_identity_written(root)
 
 
 if __name__ == '__main__':

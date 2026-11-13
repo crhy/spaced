@@ -10,14 +10,14 @@ if [ -f /etc/lightdm/lightdm.conf ]; then
     sed -i \
         -e '/^autologin-user=user$/d' \
         -e '/^autologin-user-timeout=0$/d' \
-        /etc/lightdm/lightdm.conf
+        /etc/lightdm/lightdm.conf || true
 fi
 
 # Upgrade the old Spaced avatar without replacing administrator customizations.
 # The ISO overlay alone does not update already installed LightDM configs.
 greeter_conf=/etc/lightdm/lightdm-gtk-greeter.conf
 if [ -f "$greeter_conf" ]; then
-    sed -i 's|^default-user-image=/usr/share/icons/hicolor/256x256/apps/spaced-linux\.png$|default-user-image=/usr/share/pixmaps/spaced-medallion.png|' "$greeter_conf"
+    sed -i 's|^default-user-image=/usr/share/icons/hicolor/256x256/apps/spaced-linux\.png$|default-user-image=/usr/share/pixmaps/spaced-medallion.png|' "$greeter_conf" || true
 fi
 
 if command -v glib-compile-schemas >/dev/null 2>&1; then
@@ -68,7 +68,7 @@ fi
 # re-run the live-image hooks, so create the directory and apply the pattern
 # here instead of waiting for the next boot. It is world-writable with the
 # sticky bit because the kernel writes each core as the crashing user.
-install -d -m 1777 /var/crash
+install -d -m 1777 /var/crash || true
 if [ -r /etc/sysctl.d/60-spaced-coredump.conf ] && command -v sysctl >/dev/null 2>&1; then
     sysctl -q -p /etc/sysctl.d/60-spaced-coredump.conf >/dev/null 2>&1 || true
 fi
@@ -84,7 +84,7 @@ fi
 # rc is #!/bin/sh, and dash counts ulimit -c in 512-byte blocks (bash uses
 # 1024), so 1048576 blocks is the same 512 MB the PAM limit grants.
 if [ -f /etc/default/rcS ] && ! grep -q '^ulimit -c ' /etc/default/rcS; then
-    cat >> /etc/default/rcS <<'SPACED_CORE_LIMIT'
+    cat >> /etc/default/rcS <<'SPACED_CORE_LIMIT' || true
 
 # Added by spaced-mate-default-settings: allow a bounded core dump from
 # daemons, which sysvinit starts without PAM. 512-byte blocks under dash.

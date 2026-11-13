@@ -53,6 +53,10 @@ tracked in the release review until publication.
   removed, and a failed cleanup always shows its message however long the
   command output was. A cleanup with only cached downloads to free now asks to
   clean the package cache, and selected installs report administrator warnings.
+- Keep an update from stalling on one cosmetic step. A failed LightDM settings
+  migration, crash-directory creation, daemon core-limit append or Samba
+  usershare tweak no longer leaves the desktop or release metapackage
+  unconfigured, so the next upgrade is not blocked (#415).
 
 ## 11.26 - 2026-11-06
 

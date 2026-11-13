@@ -49,7 +49,7 @@ printf 'Spaced Linux %s\n' "$VERSION" > /etc/issue.net
 smb_conf=/etc/samba/smb.conf
 if [ "$1" = configure ] && [ -f "$smb_conf" ] \
     && ! grep -Eq '^[[:space:]]*usershare max shares[[:space:]]*=' "$smb_conf"; then
-    sed -i '/^\[global\]/a\   usershare max shares = 100' "$smb_conf"
+    sed -i '/^\[global\]/a\   usershare max shares = 100' "$smb_conf" || true
 fi
 
 # Caja's Sharing Options need sambashare membership (issue #253). Calamares
