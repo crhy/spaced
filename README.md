@@ -186,7 +186,10 @@ menu entries and how to read a failed boot are in
 [help page](https://spacedlinux.com/help.html). The live session signs in as
 **user** with password **1**, the root account uses **spaced**, and `sudo` needs
 no password there; those passwords exist only on the stick, and an installed
-system uses the ones you choose in the installer.
+system uses the ones you choose in the installer. The stick is also a rescue
+system: its recovery tools (GParted, TestDisk, ddrescue, `smartctl`) stay on
+the stick, and the installer removes them so an installed system does not get
+them.
 
 ### Keep it updated
 

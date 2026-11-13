@@ -75,7 +75,6 @@ applications:
   - eom
   - gdebi
   - gdebi-core
-  - gparted
   - pluma
   - engrampa
   - unrar-free
@@ -110,6 +109,7 @@ rescue:
   - parted
   - smartmontools
   - testdisk
+  - gparted
 firmware:
   - bluez-firmware
   - firmware-amd-graphics

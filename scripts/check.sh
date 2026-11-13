@@ -817,6 +817,15 @@ calamares_packages = yaml.safe_load((root / "etc/calamares/modules/packages.conf
 removed_after_install = set(calamares_packages["operations"][0]["remove"])
 assert {"calamares", "calamares-settings-debian", "openssh-server", "live-config-sysvinit", "squashfs-tools"}.issubset(removed_after_install), \
     "installed system retains live-only packages"
+# The rescue tools belong to the live USB only: the installer removes them, and
+# spaced-meta must not pull them back onto an updated installed system.
+assert {"gddrescue", "exfatprogs", "lvm2", "smartmontools", "testdisk", "gparted"}.issubset(removed_after_install), \
+    "installed system retains the live-only rescue tools"
+assert not {"cryptsetup", "ntfs-3g", "parted"}.intersection(removed_after_install), \
+    "installed system loses partitioning or encryption tools other packages need"
+meta_group_filter = re.search(r"if group not in \{([^}]*)\}", local_package_builder)
+assert meta_group_filter and "'rescue'" in meta_group_filter.group(1), \
+    "spaced-meta still depends on the live-only rescue package group"
 assert "/usr/local/bin/install-spaced-linux" in cleanup \
     and "/home/*/Desktop/install-spaced-linux.desktop" in cleanup \
     and "/usr/share/spaced-themes/cairo-dock/launchers/04-install.desktop" in cleanup \

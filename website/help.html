@@ -101,7 +101,7 @@
 </section>
 
 <section class="section" id="rescue">
-  <div class="heading"><p class="kicker">THE LIVE USB IS ALSO A RESCUE STICK</p><h2>Boot it, look, change nothing.</h2><p>Start the Spaced Linux stick and choose <strong>Start Spaced Linux</strong>. Nothing on the disk changes until you do it. The live desktop signs itself in, and <code>Live session passwords.txt</code> on the live Desktop repeats the same logins.</p></div>
+  <div class="heading"><p class="kicker">THE LIVE USB IS ALSO A RESCUE STICK</p><h2>Boot it, look, change nothing.</h2><p>Start the Spaced Linux stick and choose <strong>Start Spaced Linux</strong>. Nothing on the disk changes until you do it. The live desktop signs itself in, and <code>Live session passwords.txt</code> on the live Desktop repeats the same logins.</p><p>The rescue tools below are on the stick only: the installer removes them, so an installed system never gets them, and <strong>GParted</strong> is no exception.</p></div>
   <div class="grid">
     <article><h3>Live passwords</h3><p>Live user <code>user</code>, password <code>1</code>. Root account <code>root</code>, password <code>spaced</code>. <code>sudo</code> asks for no password in the live session. Those accounts exist only on the live USB: an installed system uses the passwords you choose in the installer and locks its root account.</p></article>
     <article><h3>Partitions and volumes</h3><p><strong>GParted</strong> shows, resizes and checks partitions. <code>parted</code>, <code>dosfstools</code>, <code>exfatprogs</code> and <code>ntfs-3g</code> cover the command-line checks, and <code>cryptsetup</code> and <code>lvm2</code> open encrypted volumes and LVM groups.</p></article>

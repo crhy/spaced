@@ -278,7 +278,7 @@ import yaml
 root, control = map(Path, sys.argv[1:])
 groups = yaml.safe_load((root / 'config/packages.yaml').read_text())
 runtime = {package for group, packages in groups.items()
-           if group not in {'installer', 'live'} for package in packages}
+           if group not in {'installer', 'live', 'rescue'} for package in packages}
 runtime.update({'linux-image-amd64', 'linux-headers-amd64', 'sysvinit-core',
                 'devuan-keyring', 'mate-session-manager'})
 text = control.read_text()

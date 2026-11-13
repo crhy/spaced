@@ -25,7 +25,9 @@ disk changes until you do it. The live desktop signs itself in, and the file
 - Those accounts exist only on the live USB. An installed system uses the
   passwords you choose in the installer, and its root account is locked.
 
-The recovery tools are already installed on the stick:
+The recovery tools are on the stick only. The installer removes them, so an
+installed system never gets them; an installed system keeps the GParted it
+already has.
 
 - **GParted** — see, resize, create and check partitions.
 - **TestDisk** (`testdisk`, `photorec`) — recover lost partitions and files.

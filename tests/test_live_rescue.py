@@ -10,11 +10,16 @@ import re
 import subprocess
 import unittest
 
+import yaml
+
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE_LIST = ROOT / "scripts" / "iso" / "package-list.sh"
 LIVE_HOOK = ROOT / "scripts" / "iso" / "01-configure.chroot"
 SKEL = ROOT / "overlays" / "etc" / "skel"
+PACKAGES_YAML = ROOT / "config" / "packages.yaml"
+LOCAL_PACKAGES = ROOT / "scripts" / "iso" / "build-local-packages.sh"
+CALAMARES_PACKAGES = ROOT / "overlays" / "etc" / "calamares" / "modules" / "packages.conf"
 
 PASSWORD_FILE = "Live session passwords.txt"
 
@@ -25,6 +30,15 @@ RESCUE_TOOLS = (
 )
 
 
+# Recovery tools that must never reach the installed disk (audit f24): the
+# installer removes them and spaced-meta must not depend on them.
+LIVE_ONLY_RESCUE = (
+    "gddrescue", "exfatprogs", "lvm2", "smartmontools", "testdisk", "gparted",
+)
+# Already present on an installed 11.26 system because other packages need them.
+INSTALLED_TOOLS = ("cryptsetup", "ntfs-3g", "parted")
+
+
 def generated_packages():
     result = subprocess.run(
         ["bash", str(PACKAGE_LIST)],
@@ -33,6 +47,25 @@ def generated_packages():
         check=True,
     )
     return {line.strip() for line in result.stdout.splitlines() if line.strip()}
+
+
+def installer_removed_packages():
+    """The packages Calamares' apt backend removes from the installed system."""
+    config = yaml.safe_load(CALAMARES_PACKAGES.read_text(encoding="utf-8"))
+    removed = set()
+    for operation in config["operations"]:
+        removed.update(operation.get("remove", ()))
+    return removed
+
+
+def meta_runtime_groups():
+    """The package groups build-local-packages.sh feeds into spaced-meta Depends."""
+    match = re.search(r"if group not in \{([^}]*)\}", LOCAL_PACKAGES.read_text(encoding="utf-8"))
+    if not match:
+        raise AssertionError("build-local-packages.sh has no 'if group not in {...}' group filter")
+    excluded = {name.strip().strip("'\"") for name in match.group(1).split(",")}
+    groups = yaml.safe_load(PACKAGES_YAML.read_text(encoding="utf-8"))
+    return {group: set(packages) for group, packages in groups.items() if group not in excluded}
 
 
 def chpasswd_password(account):
@@ -108,6 +141,31 @@ class LiveRescueTests(unittest.TestCase):
                 continue
             self.assertNotIn(PASSWORD_FILE.encode(), path.read_bytes(),
                              f"{path.relative_to(ROOT)} would give an installed system the note")
+
+
+class RescueStaysOnTheLiveUsbTests(unittest.TestCase):
+    """The rescue tools belong to the live USB, not to the installed desktop."""
+
+    def test_installer_removes_every_live_only_rescue_tool(self):
+        removed = installer_removed_packages()
+        missing = sorted(set(LIVE_ONLY_RESCUE) - removed)
+        self.assertEqual(missing, [],
+                         "the installed system keeps a live-only rescue tool: " + ", ".join(missing))
+
+    def test_installer_keeps_tools_installed_packages_depend_on(self):
+        removed = installer_removed_packages()
+        self.assertEqual(sorted(set(INSTALLED_TOOLS) & removed), [],
+                         "the installer removes a tool other installed packages need")
+
+    def test_spaced_meta_does_not_depend_on_the_rescue_group(self):
+        rescue = set(yaml.safe_load(PACKAGES_YAML.read_text(encoding="utf-8"))["rescue"])
+        self.assertTrue(rescue, "config/packages.yaml has no rescue group")
+        self.assertIn("gparted", rescue, "GParted is not part of the live-only rescue group")
+        runtime = {package for group in meta_runtime_groups().values() for package in group}
+        forced = sorted(rescue & runtime)
+        self.assertEqual(forced, [],
+                         "an update would pull the rescue tools onto the disk: " + ", ".join(forced))
+        self.assertIn("anacron", runtime, "a real runtime package left the spaced-meta Depends set")
 
 
 if __name__ == "__main__":
