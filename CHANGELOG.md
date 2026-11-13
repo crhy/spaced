@@ -2,7 +2,11 @@
 
 ## 11.26.1 - 2026-11-13
 
-Prepared as the 11.26.1 release candidate and `11.26.1-1` APT packages.
+Prepared as the 11.26.1 release candidate and `11.26.1-1` APT packages. The
+full source preflight passes 318 unit tests and three GTK integration tests;
+the signed repository candidate passes package, dependency, trust/tamper and
+historical full-upgrade checks. Final installed-system and ISO gates remain
+tracked in the release review until publication.
 
 - Stop an unhealthy APT transaction before it can unpack packages. Spaced
   Update now preserves and displays failed solver output, checks dependency and
@@ -37,6 +41,8 @@ Prepared as the 11.26.1 release candidate and `11.26.1-1` APT packages.
   Brave, LibreOffice and VLC; optional audio, RGB, voice and game applications
   remain individually available. The suggested-install button is visibly
   highlighted without animation (#11).
+- Pin the released Welcome and Monitor source archives by SHA-256 and reject a
+  release build if either component tag, version or archive digest drifts.
 
 ## 11.26 - 2026-11-06
 

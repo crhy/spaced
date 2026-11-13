@@ -104,13 +104,16 @@ the shutdown. Upstream uses the already-validated action argument instead.
 list the correction in 257.14, together with related fork-failure cleanup.
 Do not attribute the kernel's CPU number to defective hardware.
 
-There is no elogind source in this repository to patch. The inspected local
-APT cache offered only `257.13-1`; that is not a refreshed repository availability
-check. The appropriate package-level resolution is a Devuan-compatible release
-containing upstream #341, or a reviewed backport to the distro source package.
-Check package changelogs/source for the fix rather than relying solely on the
-version number. Validate the complete elogind/libelogind/PAM package set in a
-sysvinit VM before adoption; do not binary-patch elogind, replace the poweroff
+Spaced Linux 11.26.1 carries a source-level Devuan-compatible backport as
+`257.13-1+spaced11.26.1`. `scripts/iso/build-elogind.sh` verifies the pristine
+Devuan source hashes, applies the exact upstream immediate-action and fork
+cleanup changes plus the related XML entity-resolution fix, builds the complete
+elogind/libelogind/PAM set, and retains the corresponding source artifacts for
+the APT archive. The privileged Ceres build ran all 271 chroot-safe upstream
+tests: 268 passed and three skipped; only the test requiring a live elogind
+daemon is excluded from the build environment. The release review separately
+requires repeated reboot testing after installing this coordinated package set
+in a disposable sysvinit VM. Do not binary-patch elogind, replace the poweroff
 command, mask failures, disable logind power policy, or add arbitrary delays.
 
 ### Verify existing diagnostic work before trying to reproduce
