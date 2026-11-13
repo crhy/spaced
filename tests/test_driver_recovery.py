@@ -17,6 +17,21 @@ config = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(config)
 
 
+def load_postboot():
+    """Load the login checker with a stub gi, exactly as the shipped tests do."""
+    postboot_spec = importlib.util.spec_from_file_location("postboot", LIB / "spaced-nvidia-postboot.py")
+    module = importlib.util.module_from_spec(postboot_spec)
+    gi = types.SimpleNamespace(require_version=lambda *_: None)
+    with patch.object(sys, "path", [str(LIB), *sys.path]), patch.dict(
+        sys.modules, {"gi": gi, "gi.repository": types.SimpleNamespace(Gtk=object)}
+    ):
+        postboot_spec.loader.exec_module(module)
+    return module
+
+
+postboot = load_postboot()
+
+
 class ConfigurationRecoveryTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
@@ -330,6 +345,16 @@ class DriverGuiTests(unittest.TestCase):
         window.show_error.assert_called_once_with("Graphics recovery is incomplete.")
         window.progress.set_text.assert_called_once_with("Graphics recovery is incomplete")
 
+    def test_helper_error_lines_reach_the_copied_log(self):
+        window = MagicMock()
+        line = "SPACED_ERROR:52:Graphics recovery is incomplete. Repair the failed steps before rebooting."
+        self.assertFalse(self.gui.Installer.process_line(window, line))
+        self.assertEqual(window.last_error_code, 52)
+        self.assertEqual(window.last_error, "Graphics recovery is incomplete. Repair the failed steps before rebooting.")
+        window.append_log.assert_called_once_with(
+            "ERROR: Graphics recovery is incomplete. Repair the failed steps before rebooting."
+        )
+
     def test_busy_window_does_not_start_second_operation(self):
         window = MagicMock()
         window.running = True
@@ -350,6 +375,182 @@ class DriverGuiTests(unittest.TestCase):
                     self.gui.Installer.run_action(window, "--install")
                 command = popen.call_args.args[0]
                 self.assertEqual("--replace-working-driver" in command, expected)
+
+
+class PostbootProbeTimeoutTests(unittest.TestCase):
+    """a05-5: the repeated login probes must stay short and bounded."""
+
+    def test_cheap_probes_use_the_short_timeout(self):
+        seen = {}
+
+        def fake_run(command, timeout=postboot.FULL_TIMEOUT):
+            seen.setdefault(command[0], []).append(timeout)
+            return 1, "", "unavailable"
+
+        with patch.object(postboot, "run", side_effect=fake_run):
+            postboot.collect_checks(postboot.QUICK_TIMEOUT)
+        self.assertEqual(seen["pgrep"], [postboot.QUICK_TIMEOUT] * 3)
+        self.assertEqual(seen["wmctrl"], [postboot.QUICK_TIMEOUT])
+        self.assertEqual(seen["sh"], [postboot.QUICK_TIMEOUT])
+        self.assertEqual(seen["glxinfo"], [postboot.FULL_TIMEOUT])
+        self.assertEqual(seen["env"], [postboot.FULL_TIMEOUT])
+        self.assertEqual(seen["nvidia-smi"], [postboot.FULL_TIMEOUT])
+
+    def test_transient_failures_stop_at_the_absolute_deadline(self):
+        class FakeTime:
+            def __init__(self):
+                self.now = 0.0
+
+            def monotonic(self):
+                return self.now
+
+            def sleep(self, seconds):
+                self.now += seconds
+
+        clock = FakeTime()
+        rounds = []
+
+        def failing_round(quick_timeout=None):
+            rounds.append(quick_timeout)
+            clock.now += 10  # a half-broken desktop burns seconds on every probe set
+            return (
+                ["Compiz is not the active window manager.", "MATE panel is not running."],
+                "startup details",
+            )
+
+        with patch.object(postboot, "collect_checks", side_effect=failing_round), patch.object(postboot, "time", clock):
+            failures, details = postboot.wait_for_session()
+        self.assertLess(len(rounds), 45)
+        self.assertLessEqual(len(rounds), postboot.SESSION_DEADLINE // 10 + 2)
+        self.assertLessEqual(clock.now, postboot.SESSION_DEADLINE + 10)
+        self.assertEqual(set(rounds), {postboot.QUICK_TIMEOUT})
+        self.assertEqual(failures, ["Compiz is not the active window manager.", "MATE panel is not running."])
+        self.assertEqual(details, "startup details")
+
+    def test_permanent_failure_returns_without_retrying(self):
+        rounds = []
+
+        def failing_round(quick_timeout=None):
+            rounds.append(quick_timeout)
+            return ["The core nvidia module is not loaded."], "startup details"
+
+        with patch.object(postboot, "collect_checks", side_effect=failing_round), patch.object(postboot, "time") as clock:
+            failures, _ = postboot.wait_for_session()
+        self.assertEqual(len(rounds), 1)
+        clock.sleep.assert_not_called()
+        self.assertEqual(failures, ["The core nvidia module is not loaded."])
+
+
+class PostbootLoginCostTests(unittest.TestCase):
+    """a02-7: a login with no pending driver install must not touch GTK."""
+
+    def run_postboot(self):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        work = Path(temp.name)
+        pending = work / "state" / "reboot-required"
+        (work / "gi").mkdir()
+        (work / "gi" / "__init__.py").write_text("raise ImportError('GTK must not be imported at login')\n")
+        (work / "spaced_nvidia_state.py").write_text(
+            "from pathlib import Path\n\n"
+            f"PENDING = Path({str(pending)!r})\n\n"
+            "def ack_path(pending=PENDING):\n    return pending.with_name('acknowledged')\n\n"
+            "def awaiting_reboot(pending=PENDING):\n    return False\n\n"
+            "def marker_id(pending=PENDING):\n    return 'testmarker'\n"
+        )
+        script = work / "spaced-nvidia-postboot.py"
+        script.write_text((LIB / "spaced-nvidia-postboot.py").read_text(encoding="utf-8"))
+        env = os.environ.copy()
+        env["PYTHONPATH"] = str(work)
+        env["HOME"] = str(work / "home")
+        env.pop("DISPLAY", None)
+        return subprocess.run([sys.executable, str(script)], env=env, cwd=str(work),
+                              text=True, capture_output=True, timeout=60)
+
+    def test_login_without_a_pending_install_never_imports_gtk(self):
+        result = self.run_postboot()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(result.stderr, "")
+
+    def test_gtk_is_still_loaded_when_a_dialog_is_needed(self):
+        gi = MagicMock()
+        repository = MagicMock()
+        self.assertFalse(hasattr(postboot, "Gtk"))
+        with patch.dict(sys.modules, {"gi": gi, "gi.repository": repository}):
+            gtk = postboot.load_gtk()
+        gi.require_version.assert_called_once_with("Gtk", "3.0")
+        self.assertIs(gtk, repository.Gtk)
+
+
+class PostbootRecoveryResultTests(unittest.TestCase):
+    """a05-2 / a05-9: the recovery request must report its own result."""
+
+    def run_recovery(self, returncode, stdout):
+        result = MagicMock(returncode=returncode, stdout=stdout)
+        with patch.object(postboot.subprocess, "run", return_value=result) as run, \
+                patch.object(postboot, "show_recovery_error") as shown:
+            postboot.run_recovery("tester")
+        return run, shown
+
+    def test_incomplete_recovery_shows_the_helper_error(self):
+        run, shown = self.run_recovery(
+            52,
+            "SPACED_STATUS:Restoring the saved graphics configuration\n"
+            "SPACED_ERROR:52:Graphics recovery is incomplete. Repair the failed steps before rebooting.\n",
+        )
+        self.assertEqual(
+            run.call_args.args[0],
+            ["pkexec", postboot.HELPER, "--rollback", "--reboot-after", "--desktop-user", "tester"],
+        )
+        shown.assert_called_once_with(
+            "Graphics recovery is incomplete. Repair the failed steps before rebooting."
+        )
+
+    def test_dismissed_authentication_shows_a_status_message(self):
+        _, shown = self.run_recovery(126, "pkexec: Authentication failed\n")
+        self.assertEqual(shown.call_count, 1)
+        self.assertIn("126", shown.call_args.args[0])
+
+    def test_successful_recovery_shows_no_error(self):
+        _, shown = self.run_recovery(0, "SPACED_SUCCESS:restored\n")
+        shown.assert_not_called()
+
+    def show_failure_with(self, response, pending, repository):
+        repository.Gtk.MessageDialog.return_value.run.return_value = response
+        with patch.dict(sys.modules, {"gi": MagicMock(), "gi.repository": repository}), \
+                patch.object(postboot, "PENDING", pending), \
+                patch.object(postboot, "run_recovery") as recovery:
+            postboot.show_failure(["Nouveau is still loaded after the NVIDIA reboot."], "startup details")
+        return recovery
+
+    def test_keep_running_acknowledges_the_failed_verification(self):
+        with tempfile.TemporaryDirectory() as directory:
+            work = Path(directory)
+            (work / "home").mkdir()
+            pending = work / "reboot-required"
+            pending.write_text("boot_id=test-boot\n")
+            repository = MagicMock()
+            with patch.dict(os.environ, {"HOME": str(work / "home")}):
+                recovery = self.show_failure_with(repository.Gtk.ResponseType.CANCEL, pending, repository)
+                acknowledgement = postboot.ack_path(pending)
+                self.assertTrue(acknowledgement.is_file())
+                self.assertEqual(acknowledgement.read_text(encoding="utf-8"), "startup details\n")
+                log = work / "home/.cache/spaced-nvidia-installer" / f"failed-{postboot.marker_id(pending)}.log"
+                self.assertEqual(log.read_text(encoding="utf-8"), "startup details\n")
+            recovery.assert_not_called()
+
+    def test_restore_button_runs_the_helper_without_acknowledging(self):
+        with tempfile.TemporaryDirectory() as directory:
+            work = Path(directory)
+            (work / "home").mkdir()
+            pending = work / "reboot-required"
+            pending.write_text("boot_id=test-boot\n")
+            repository = MagicMock()
+            with patch.dict(os.environ, {"HOME": str(work / "home")}), \
+                    patch.object(postboot.pwd, "getpwuid", return_value=MagicMock(pw_name="tester")):
+                recovery = self.show_failure_with(repository.Gtk.ResponseType.OK, pending, repository)
+                self.assertFalse(postboot.ack_path(pending).exists())
+            recovery.assert_called_once_with("tester")
 
 
 if __name__ == "__main__":

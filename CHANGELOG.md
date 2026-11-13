@@ -70,6 +70,13 @@ tracked in the release review until publication.
   still restarted whenever it dies and re-arms its setting watchers, but only
   the first monitor of a session restores the panel, dock, wallpaper and
   palette, so a monitor that keeps crashing no longer rewrites them forever.
+- Make the NVIDIA startup report quick and honest. It stops re-checking a
+  half-started desktop after one minute instead of possibly an hour, a login with
+  no pending driver install no longer loads the dialog toolkit, **Restore
+  Graphics and Reboot** now reports why the recovery stopped instead of staying
+  silent, **Keep System Running** is remembered so the same modal does not
+  return at every login, and the driver manager's **Copy Log** keeps the failure
+  reason.
 
 ## 11.26 - 2026-11-06
 

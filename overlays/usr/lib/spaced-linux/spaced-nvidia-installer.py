@@ -300,6 +300,7 @@ class Installer(Gtk.Window):
                 except ValueError:
                     self.last_error_code = None
                 self.last_error = fields[2]
+                self.append_log("ERROR: " + fields[2])
         elif line.startswith("SPACED_SUCCESS:"):
             self.append_log("Requested graphics operation completed.")
         else:
