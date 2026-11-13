@@ -311,4 +311,4 @@ Spaced Linux builds on the work of the Devuan, Debian, MATE, Compiz, Calamares, 
 
 ## License
 
-Project-specific build configuration and code are released under the [rhY license](LICENSE): do whatever you want with it, but if you use this code you must release your modifications. Upstream packages, artwork, themes, fonts, and components retain their respective licenses.
+Project-specific build configuration and code are released under the [rhY License 1.0](LICENSE): do whatever you want with it, but if you share it, or anything built from it, you must share your complete source under the same terms. The GNU GPL, version 3 or later, is the fallback. Upstream packages, artwork, themes, fonts, and components retain their respective licenses.
