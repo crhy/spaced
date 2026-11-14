@@ -24,8 +24,8 @@ open a terminal and run `sudo reboot`.
   on screen, `xkill` has its cursor back, and right-clicking an image offers
   **Set as Wallpaper…**.
 
-**Not tested:** all of it ran in virtual machines — no physical PC, real GPU,
-multi-monitor setup or real USB stick. **Found a problem?** Open an issue at
+**Not tested much on real hardware:** nearly all testing ran in virtual
+machines, with no real GPU matrix, multi-monitor setup or physical USB boot. **Found a problem?** Open an issue at
 <https://github.com/crhy/spaced/issues> with your Spaced version and the steps
 to reproduce it. Thanks to the people who reported these issues and sent logs,
 screenshots and the cursor artwork.

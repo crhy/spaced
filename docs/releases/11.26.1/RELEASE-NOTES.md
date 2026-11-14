@@ -57,22 +57,29 @@ sudo apt update && sudo apt full-upgrade
 Restart your PC right after this update: it replaces the kernel and the login
 service (elogind), and apps can lose network access and sound until you
 restart. If **Restart** in the menu asks for your password or does nothing, open
-a terminal and run `sudo reboot`. The `11.26.1-1` packages and the
+a terminal and run `sudo reboot`. The packages and the
 `257.13-1+spaced11.26.1` elogind set come from the signed Spaced repository.
+
+A follow-up package revision, `11.26.1-2`, adds a session guard: later updates
+of the login service no longer interrupt a running desktop. It arrives through
+Spaced Update and needs no new ISO.
 
 ## Known limits
 
-- Every test ran in QEMU or VirtualBox: no physical PC, real GPU, multi-monitor
-  setup or physical USB stick.
+- Nearly all testing ran in QEMU or VirtualBox. The update has been applied on
+  one physical PC, which is how the restart requirement above was found; no real
+  GPU matrix, multi-monitor setup or physical USB boot was tested.
 - The interrupted NVIDIA driver rollback is covered by automated tests only.
 - The 11.26 → 11.26.1 upgrade ran in a live session, where `update-grub` cannot
   finish; every package step completed, but the upgraded system was never booted.
-- Icon placement on multiple monitors, and the look of the `xkill` cursor, the
-  Monitor cards and the Welcome button, have not been checked by eye.
+- The `xkill` cursor and the Spaced Monitor stop buttons were checked in live
+  screenshots. Icon placement on multiple monitors and the Welcome button have
+  not been checked by eye.
 - Still open and important (`docs/ROADMAP.md` High): the live image shares one
   set of SSH host keys; Spaced Update can wait with no Cancel button and can
   leave a root helper running after a timeout; a maintainer script can open a
-  private home during an unattended update; NVIDIA stays enabled after install.
+  private home during an unattended update; NVIDIA's package repository stays
+  enabled after a driver install.
 
 Full change list: [CHANGELOG.md](../../../CHANGELOG.md). Planned next:
 [docs/ROADMAP.md](../../../docs/ROADMAP.md). Test evidence, including what was
