@@ -36,7 +36,7 @@
   <img alt="Compiz" src="https://img.shields.io/badge/window%20manager-Compiz-5b5bd6">
   <img alt="Init system" src="https://img.shields.io/badge/init-sysvinit-555555">
   <img alt="Architecture" src="https://img.shields.io/badge/architecture-amd64-2563eb">
-  <img alt="Release" src="https://img.shields.io/badge/release-11.26.2%20preview-0ea5e9">
+  <img alt="Release" src="https://img.shields.io/badge/release-11.26.2-0ea5e9">
   <img alt="License" src="https://img.shields.io/badge/license-rhY-black">
 </p>
 
@@ -150,7 +150,7 @@ Spaced Linux combines a modern system with visual ideas from the best desktop er
 
 ## Download Spaced Linux
 
-**Spaced Linux 11.26.2 is being validated.** Until its ISO is published, download the current stable ISO and checksum from the [latest Spaced Linux release page](https://github.com/crhy/spaced/releases/latest).
+**Spaced Linux 11.26.2 is the current release.** Download the ISO and checksum from the [Spaced Linux 11.26.2 release page](https://github.com/crhy/spaced/releases/tag/v11.26.2).
 
 11.26.2 is a quick regression-fix update to the November 2026 release line. Its changes are listed in the [changelog](CHANGELOG.md).
 
@@ -204,11 +204,11 @@ sudo apt update && sudo apt full-upgrade
 Restart after a kernel or graphics driver update, because the new one is not
 used until the machine restarts.
 
-Restart your PC right after the 11.26.1 update. 11.26.1 is a large update: it
-replaces the kernel and the login service (elogind). Save your work before you
-start. Once the update finishes, apps can lose network access and sound until
-you restart. If **Restart** in the menu asks for your password or does nothing,
-open a terminal and run `sudo reboot`.
+Restart your PC right after the 11.26.1 or 11.26.2 update. Both update the
+login service (elogind), and 11.26.1 also replaces the kernel. Save your work
+before you start. Once the update finishes, apps can lose network access and
+sound until you restart. If **Restart** in the menu asks for your password or
+does nothing, open a terminal and run `sudo reboot`.
 
 ### Get help or report a bug
 
@@ -321,7 +321,7 @@ Thank you for helping keep an independent, polished, systemd-free desktop availa
 
 ## Project status
 
-The **11.26.2** release candidate is being validated for the **11.26** line. Spaced Linux is an independent community project under active development.
+The current release is **11.26.2** on the **11.26** line. Spaced Linux is an independent community project under active development.
 
 The [11.26.1 release audit roadmap](docs/ROADMAP.md) lists what is still open and planned for later releases.
 
