@@ -89,6 +89,8 @@ class ReuseHomeScriptTests(unittest.TestCase):
         self.assertIn('RESULT: FAIL fstab_home=', text)
         self.assertIn('keep_olduser=', text)
         self.assertIn('rescue_tools_installed=', text)
+        self.assertIn('spaced-linux-11.26-amd64)', text)
+        self.assertNotIn('*11.26.1*)', text)
 
     def test_gui_helpers_are_used_and_reject_bad_arguments_without_a_vm(self):
         gui_text = GUI.read_text(encoding='utf-8')

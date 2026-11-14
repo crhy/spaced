@@ -50,7 +50,7 @@ VM_RUN := $(HOST_RUN) env SPACED_VM_SSH_PORT=$(VM_SSH_PORT) SPACED_VM_XRES=$(VM_
 ISO_SMOKE_RUN := $(HOST_RUN) env SPACED_ISO_SMOKE_TIMEOUT=$(ISO_SMOKE_TIMEOUT) SPACED_VM_THEME_TESTS=$(SPACED_VM_THEME_TESTS)
 VBOX_RUN := $(ISO_SMOKE_RUN) SPACED_VBOX_SSH_PORT=$(VBOX_SSH_PORT)
 
-.PHONY: help check deps clean cache-clean marco prepare lb-config lb-build iso-build iso-test iso-smoke iso-smoke-kvm iso-smoke-kvm-efi iso-smoke-kvm-4k iso-smoke-virtualbox iso-smoke-virtualbox-efi vbox-smoke vbox-smoke-default iso-test-safe iso-test-safe-1024 iso-test-safe-1080 vm-create vm-install vm-start vm-stop release-preflight release apt-repo apt-repo-publish
+.PHONY: help check deps clean cache-clean marco prepare lb-config lb-build iso-build iso-test iso-smoke iso-smoke-kvm iso-smoke-kvm-efi iso-smoke-kvm-4k iso-smoke-virtualbox iso-smoke-virtualbox-efi samba-network-gate vbox-smoke vbox-smoke-default iso-test-safe iso-test-safe-1024 iso-test-safe-1080 vm-create vm-install vm-start vm-stop release-preflight release apt-repo apt-repo-publish
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -180,7 +180,7 @@ iso-test: ## Boot the current release ISO in KVM
 	test -f $(ISO_DIR)/$(ISO_NAME) || { echo "Missing $(ISO_DIR)/$(ISO_NAME)"; exit 1; }
 	$(VM_RUN) scripts/vm/qemu/test-iso.sh $(abspath $(ISO_DIR)/$(ISO_NAME))
 
-iso-smoke: iso-smoke-kvm iso-smoke-kvm-efi iso-smoke-virtualbox iso-smoke-virtualbox-efi ## Smoke-test the ISO in KVM and VirtualBox BIOS/EFI
+iso-smoke: iso-smoke-kvm iso-smoke-kvm-efi iso-smoke-virtualbox iso-smoke-virtualbox-efi samba-network-gate ## Smoke-test the ISO in KVM/VirtualBox and two-machine Samba
 
 iso-smoke-kvm: ## Headlessly boot the ISO in KVM and wait for live SSH
 	test -f $(ISO_DIR)/$(ISO_NAME) || { echo "Missing $(ISO_DIR)/$(ISO_NAME)"; exit 1; }
@@ -201,6 +201,10 @@ iso-smoke-virtualbox: ## Headlessly boot the ISO in VirtualBox BIOS mode
 iso-smoke-virtualbox-efi: ## Headlessly boot the ISO in VirtualBox EFI mode
 	test -f $(ISO_DIR)/$(ISO_NAME) || { echo "Missing $(ISO_DIR)/$(ISO_NAME)"; exit 1; }
 	$(VBOX_RUN) SPACED_VBOX_FIRMWARE=efi scripts/vm/virtualbox/smoke-iso.sh $(abspath $(ISO_DIR)/$(ISO_NAME))
+
+samba-network-gate: ## Boot two live ISOs and prove SMB/GVfs file copies across their LAN
+	test -f $(ISO_DIR)/$(ISO_NAME) || { echo "Missing $(ISO_DIR)/$(ISO_NAME)"; exit 1; }
+	$(ISO_SMOKE_RUN) scripts/vm/qemu/samba-network-gate.sh $(abspath $(ISO_DIR)/$(ISO_NAME))
 
 vbox-smoke: iso-smoke-virtualbox iso-smoke-virtualbox-efi ## VirtualBox smoke with VBoxSVGA (BIOS+EFI) plus installer launch check
 

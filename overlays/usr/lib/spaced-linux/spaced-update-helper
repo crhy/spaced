@@ -154,6 +154,33 @@ case "$MODE" in
   *) log "Unknown update mode: $MODE"; exit 2 ;;
 esac
 
+# The patched elogind runtime is published as one coordinated set. In
+# particular, libpam-elogind depends on the exact elogind version and elogind
+# depends on the exact libelogind0 version. A selected-update click can name
+# just one row, so include every installed member or APT can reject the partial
+# plan while the complete update would be valid (issue #419).
+if [[ $MODE == apt-install ]]; then
+  SELECTED_PACKAGES=("$@")
+  ELOGIND_SET_SELECTED=0
+  for PACKAGE in "${SELECTED_PACKAGES[@]}"; do
+    case "${PACKAGE%%:*}" in
+      elogind|libelogind0|libelogind-compat|libpam-elogind)
+        ELOGIND_SET_SELECTED=1 ;;
+    esac
+  done
+  if (( ELOGIND_SET_SELECTED )); then
+    for PACKAGE in elogind libelogind0 libelogind-compat libpam-elogind; do
+      [[ $(dpkg-query -W -f='${db:Status-Status}' "$PACKAGE" 2>/dev/null || true) == installed ]] || continue
+      ALREADY_SELECTED=0
+      for SELECTED in "${SELECTED_PACKAGES[@]}"; do
+        [[ ${SELECTED%%:*} == "$PACKAGE" ]] && ALREADY_SELECTED=1
+      done
+      (( ALREADY_SELECTED )) || SELECTED_PACKAGES+=("$PACKAGE")
+    done
+    set -- "${SELECTED_PACKAGES[@]}"
+  fi
+fi
+
 # Serialize privileged operations across windows and the native/Flatpak app.
 # APT also takes its own locks, including against unrelated package managers.
 # The read-only cleanup plan takes no lock; cleanup-apply serializes like updates.
@@ -352,7 +379,17 @@ verify_package_health 'after the update'
 # Keep cached downloads and old kernels for recovery; cleanup is not an update.
 step 65 'Refreshing boot files'
 if command -v update-initramfs >/dev/null 2>&1; then update-initramfs -u -k all; fi
-if command -v update-grub >/dev/null 2>&1; then update-grub; fi
+ROOT_FSTYPE=$(findmnt -n -o FSTYPE / 2>/dev/null || true)
+if [[ $ROOT_FSTYPE == overlay ]]; then
+  # A live session has no installed boot filesystem for grub-probe to resolve;
+  # its root is the live-boot .overlay mount. Package maintainer scripts have
+  # already refreshed anything they own, and update-initramfs above is still
+  # useful for validating the installed kernels. Do not turn a completed live
+  # package transaction into a false update failure (issue #419).
+  log 'Skipping GRUB refresh for the live overlay root.'
+elif command -v update-grub >/dev/null 2>&1; then
+  update-grub
+fi
 
 if [[ $MODE == all ]] && command -v flatpak >/dev/null 2>&1; then
   step 80 'Updating system Flatpak apps and runtimes'

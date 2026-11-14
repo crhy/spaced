@@ -249,10 +249,18 @@ cleanup_monitor() {
         pkill -P "$wpid" 2>/dev/null
         pids+=("$wpid")
     done
-    [ "${#pids[@]}" -gt 0 ] && kill "${pids[@]}" 2>/dev/null
+    if [ "${#pids[@]}" -gt 0 ]; then
+        kill "${pids[@]}" 2>/dev/null
+        # A killed child is still a zombie until its parent collects it. This
+        # monitor owns the watcher wrappers, so reap every one before exiting.
+        for wpid in "${pids[@]}"; do
+            wait "$wpid" 2>/dev/null || true
+        done
+    fi
     if [ -n "${main_watch_pid:-}" ]; then
         pkill -P "$main_watch_pid" 2>/dev/null
         kill "$main_watch_pid" 2>/dev/null
+        wait "$main_watch_pid" 2>/dev/null || true
     fi
     return 0
 }

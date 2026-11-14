@@ -273,8 +273,9 @@ check_peer() {
     fi
 
     # The path Caja and Gigolo use (GVfs), not smbclient.
-    local uri="smb://$address/$share" mounted=0
-    if gio mount -a "$uri" </dev/null >/dev/null 2>&1 || gio info "$uri" >/dev/null 2>&1; then
+    local uri="smb://$address/$share" mounted=0 gvfs_error
+    if gvfs_error=$(gio mount -a "$uri" </dev/null 2>&1) \
+        || gvfs_error=$(gio info "$uri" 2>&1); then
         mounted=1
         if gio list "$uri" >/dev/null 2>&1; then
             pass "GVfs (Caja/Gigolo) opens $uri as guest"
@@ -294,7 +295,13 @@ check_peer() {
             fail "GVfs mounted $uri but cannot list it"
         fi
     else
-        info "GVfs anonymous mount of $uri refused; open it in Caja with a user name to test authenticated GVfs"
+        if [ "${SPACED_REQUIRE_GVFS_GUEST:-0}" = 1 ]; then
+            fail "GVfs anonymous mount of $uri failed for a required guest share"
+            printf '%s\n' "$gvfs_error" | detail
+        else
+            info "GVfs anonymous mount of $uri refused; open it in Caja with a user name to test authenticated GVfs"
+            printf '%s\n' "$gvfs_error" | detail
+        fi
     fi
     [ "$mounted" -eq 0 ] || gio mount -u "$uri" >/dev/null 2>&1
 
@@ -302,19 +309,28 @@ check_peer() {
     gio list network:/// >/dev/null 2>&1
     sleep 30
     local browse
-    browse=$(gio list -a standard::display-name network:/// 2>/dev/null)
+    browse=$(gio list -a standard::display-name,standard::target-uri network:/// 2>/dev/null)
     printf '%s\n' "$browse" | detail
     # Match by name even when the peer was given as an address.
     local name names=${host%%.*}
     case $host in
-        [0-9]*) names=no-name-for-this-address
+        [0-9]*)
+                names=no-name-for-this-address
                 for name in $(getent hosts "$address" | cut -d' ' -f2-) \
                     $(nmblookup -A "$address" 2>/dev/null | awk '/<00>/ && !/GROUP/ {print $1; exit}'); do
                     names="$names|${name%%.*}"
                 done ;;
     esac
-    if printf '%s\n' "$browse" | grep -Eqi -- "$names"; then
-        pass "$host appears in Network (Caja's Browse Network)"
+    local expected_browse_name=${SPACED_EXPECT_BROWSE_NAME:-}
+    if printf '%s\n' "$browse" | grep -Fqi -- "standard::target-uri=smb://$address"; then
+        pass "$host appears in Network with target $address (Caja's Browse Network)"
+    elif [ -n "$expected_browse_name" ] \
+        && printf '%s\n' "$browse" | grep -Fqi -- "standard::display-name=$expected_browse_name"; then
+        pass "$expected_browse_name appears in Network (Caja's Browse Network)"
+    elif printf '%s\n' "$browse" | grep -Eqi -- "$names"; then
+        pass "$host appears by name in Network (Caja's Browse Network)"
+    elif [ "${SPACED_REQUIRE_NETWORK_BROWSE:-0}" = 1 ]; then
+        fail "$host does not appear in Network (Caja's Browse Network)"
     else
         warn "$host does not appear in Network (pass the peer's NAME.local to match by name); direct addresses still work"
     fi

@@ -1,9 +1,9 @@
 #!/bin/bash
-# Spaced Linux 11.26.1 release check (issues #209 and #415): really upgrade a
-# running 11.26 system to 11.26.1 from the signed candidate repository.
+# Spaced Linux patch-release check (issues #209, #415 and #419): really upgrade
+# an older released system from the signed candidate repository.
 #
 # scripts/test-upgrade-packages.sh only asks APT's solver what it would do.
-# This test does it for real: it boots the released 11.26 live ISO headless in
+# This test does it for real: it boots the supplied released live ISO headless in
 # QEMU, serves the signed candidate repository from the host over HTTP on
 # 127.0.0.1 (QEMU user networking reaches the host loopback through 10.0.2.2),
 # and rewrites ONLY the URL of the guest's Spaced APT source, keeping suite,
@@ -25,7 +25,7 @@ usage() {
     cat >&2 <<'USAGE'
 Usage: upgrade-test.sh OLD_ISO REPO_DIR
 
-Boot OLD_ISO (the released 11.26 live ISO) headless in QEMU (KVM, BIOS,
+Boot OLD_ISO (an older released Spaced ISO) headless in QEMU (KVM, BIOS,
 -boot order=d, no disk, VNC only, 8 GB RAM) and upgrade the running live system
 to the signed candidate repository REPO_DIR:
 
@@ -120,6 +120,7 @@ OUT=$(cd "$OUT" && pwd)
 rm -f "$OUT/qemu.log" "$OUT/qemu-serial.log" "$OUT/http-server.log" \
       "$OUT/apt-update.txt" "$OUT/full-upgrade-before.txt" \
       "$OUT/full-upgrade-after.txt" "$OUT/upgrade.log" "$OUT/upgrade.status" \
+      "$OUT/upgrade-retry.log" "$OUT/upgrade-retry.status" \
       "$OUT/sources-before.txt" "$OUT/sources-after.txt" \
       "$OUT/packages-before.tsv" "$OUT/packages-after.tsv" \
       "$OUT/new-packages.txt" "$OUT/before-state.txt" "$OUT/after-state.txt"
@@ -404,43 +405,66 @@ else
     echo "INFO: upgrade_command=$UPGRADE_COMMAND"
     echo "INFO: $HELPER is not runnable in the old image, so the plain non-interactive full-upgrade is used instead"
 fi
-# The transaction is started detached from the ssh connection: upgrading
-# network-manager or dbus can drop the session, and a killed helper would leave
-# the guest half-upgraded.  The status file marks the end of the transaction.
-printf '%s\n' \
-    '#!/bin/sh' \
-    'export DEBIAN_FRONTEND=noninteractive' \
-    "rm -f $GUEST_WORK/upgrade.status $GUEST_WORK/upgrade.log" \
-    "timeout $UPGRADE_TIMEOUT $UPGRADE_COMMAND > $GUEST_WORK/upgrade.log 2>&1" \
-    "printf '%s\n' \$? > $GUEST_WORK/upgrade.status" \
-    | guest_ssh "cat > $GUEST_WORK/upgrade.sh"
-guest_ssh "rm -f $GUEST_WORK/upgrade.status"
-guest_ssh "chmod +x $GUEST_WORK/upgrade.sh; setsid $GUEST_WORK/upgrade.sh >/dev/null 2>&1 < /dev/null & echo started"
-echo "Upgrade transaction started (timeout ${UPGRADE_TIMEOUT}s); log: $OUT/upgrade.log"
-started=$SECONDS
-upgrade_done=no
-while (( SECONDS - started < UPGRADE_TIMEOUT + 180 )); do
-    if ! kill -0 "$QEMU_PID" 2>/dev/null; then
-        echo "The VM exited during the upgrade; see $OUT/qemu.log" >&2
-        exit 2
+run_guest_upgrade() {
+    local command=$1 label=$2 started upgrade_done status
+    # The transaction is detached from ssh: upgrading network-manager or dbus
+    # can drop the session, and a killed helper would leave dpkg half-upgraded.
+    # A status file written by our direct child marks the real end.
+    printf '%s\n' \
+        '#!/bin/sh' \
+        'export DEBIAN_FRONTEND=noninteractive' \
+        "rm -f $GUEST_WORK/$label.status $GUEST_WORK/$label.log" \
+        "timeout $UPGRADE_TIMEOUT $command > $GUEST_WORK/$label.log 2>&1" \
+        "printf '%s\n' \$? > $GUEST_WORK/$label.status" \
+        | guest_ssh "cat > $GUEST_WORK/$label.sh"
+    guest_ssh "rm -f $GUEST_WORK/$label.status"
+    guest_ssh "chmod +x $GUEST_WORK/$label.sh; setsid $GUEST_WORK/$label.sh >/dev/null 2>&1 < /dev/null & echo started" >&2
+    echo "Upgrade transaction '$label' started (timeout ${UPGRADE_TIMEOUT}s); log: $OUT/$label.log" >&2
+    started=$SECONDS
+    upgrade_done=no
+    while (( SECONDS - started < UPGRADE_TIMEOUT + 180 )); do
+        if ! kill -0 "$QEMU_PID" 2>/dev/null; then
+            echo "The VM exited during the upgrade; see $OUT/qemu.log" >&2
+            exit 2
+        fi
+        if guest_ssh "test -f $GUEST_WORK/$label.status" 2>/dev/null; then
+            upgrade_done=yes
+            break
+        fi
+        echo "Upgrade '$label' running ($((SECONDS - started))s/${UPGRADE_TIMEOUT}s)" >&2
+        sleep 20
+    done
+    if [ "$upgrade_done" != yes ]; then
+        echo "The upgrade transaction '$label' did not finish within ${UPGRADE_TIMEOUT}s" >&2
     fi
-    if guest_ssh "test -f $GUEST_WORK/upgrade.status" 2>/dev/null; then
-        upgrade_done=yes
-        break
-    fi
-    echo "Upgrade running ($((SECONDS - started))s/${UPGRADE_TIMEOUT}s)"
-    sleep 20
-done
-if [ "$upgrade_done" != yes ]; then
-    echo "The upgrade transaction did not finish within ${UPGRADE_TIMEOUT}s" >&2
-fi
-guest_ssh "cat $GUEST_WORK/upgrade.log" > "$OUT/upgrade.log" 2>&1 || true
-UPGRADE_STATUS=$(guest_ssh "cat $GUEST_WORK/upgrade.status" 2>/dev/null | tr -dc '0-9') || true
-UPGRADE_STATUS=${UPGRADE_STATUS:-timeout}
+    guest_ssh "cat $GUEST_WORK/$label.log" > "$OUT/$label.log" 2>&1 || true
+    status=$(guest_ssh "cat $GUEST_WORK/$label.status" 2>/dev/null | tr -dc '0-9') || true
+    printf '%s' "${status:-timeout}"
+}
+
+UPGRADE_STATUS=$(run_guest_upgrade "$UPGRADE_COMMAND" upgrade)
 echo "INFO: upgrade_status=$UPGRADE_STATUS (log: $OUT/upgrade.log)"
 grep -E '^SPACED_STEP:' "$OUT/upgrade.log" | tail -n 4 | sed 's/^/INFO: /' || true
 if [ "$UPGRADE_STATUS" = 0 ]; then
     pass 'd: the updater action exited 0 (the Update System action)'
+elif [ "$helper_present" -eq 1 ] &&
+     grep -qE "grub-probe: error: failed to get canonical path of .overlay." "$OUT/upgrade.log" &&
+     grep -qE '^SPACED_STEP:65:' "$OUT/upgrade.log" &&
+     guest_ssh "grep -Fq 'Skipping GRUB refresh for the live overlay root.' $HELPER"; then
+    # The old helper process cannot replace itself while it runs. Its only
+    # known live-ISO failure happens after a healthy APT transaction, at the
+    # meaningless live-overlay GRUB refresh. Exercise the helper just installed
+    # by that transaction and require it to complete; this is deliberately not
+    # used for any other error signature.
+    echo 'INFO: old_helper_overlay_grub_failure=exact; retrying once with the installed candidate helper'
+    RETRY_STATUS=$(run_guest_upgrade "$HELPER all" upgrade-retry)
+    echo "INFO: candidate_helper_retry_status=$RETRY_STATUS (log: $OUT/upgrade-retry.log)"
+    if [ "$RETRY_STATUS" = 0 ]; then
+        pass 'd: the installed candidate updater completed the live-overlay retry'
+    else
+        fail "d: the installed candidate updater completed the live-overlay retry (exit $RETRY_STATUS)"
+        tail -n 16 "$OUT/upgrade-retry.log" | sed 's/^/       | /'
+    fi
 else
     fail "d: the updater action exited 0 (the Update System action; exit $UPGRADE_STATUS)"
     # Everything the failing step printed, which is what the user would see.
@@ -448,7 +472,7 @@ else
         tail -n 12 | sed 's/^/       | /'
     grep -iE '^(E:|dpkg:|error)' "$OUT/upgrade.log" | tail -n 6 | sed 's/^/       | /' || true
     if grep -qE "grub-probe: error: failed to get canonical path of .overlay." "$OUT/upgrade.log" &&
-       grep -qE '^SPACED_STEP:50:' "$OUT/upgrade.log"; then
+       grep -qE '^SPACED_STEP:65:' "$OUT/upgrade.log"; then
         echo 'INFO: upgrade_failure_cause=step 65 update-grub in a LIVE session: grub-probe cannot'
         echo 'INFO:   resolve the overlay root of the live medium. Every APT/dpkg step of the'
         echo 'INFO:   transaction had already completed; see the e: checks below for the result.'

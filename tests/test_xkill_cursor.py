@@ -21,6 +21,13 @@ class XkillCursorTests(unittest.TestCase):
         self.assertIn("Inherits=Adwaita", INDEX.read_text(encoding="utf-8"),
                       "the cursor theme does not inherit Adwaita")
 
+    def test_every_spaced_metatheme_keeps_the_xkill_cursor(self):
+        themes = sorted((OVERLAY / "usr/share/themes").glob("Spaced-*/index.theme"))
+        self.assertTrue(themes)
+        for theme in themes:
+            with self.subTest(theme=theme.parent.name):
+                self.assertIn("CursorTheme=Spaced-Cursors", theme.read_text(encoding="utf-8"))
+
     def test_cursor_has_all_sizes_with_centered_hotspots(self):
         data = CURSOR.read_bytes()
         self.assertEqual(b"Xcur", data[:4], "the xkill cursor is not an XCUR file")

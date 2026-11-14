@@ -323,6 +323,26 @@ esac''')
                 self.assertEqual(self.writes('dpi-reads'), [])
                 marker.unlink()
 
+    def test_first_login_repairs_only_spaced_theme_adwaita_cursor(self):
+        self.command('python3', 'exit 0')
+        self.command('gsettings', '''case "$1 $2 $3" in
+  "get org.mate.interface gtk-theme") printf "'Spaced-Linux-Dark'\\n" ;;
+  "get org.mate.peripherals-mouse cursor-theme") cat "$TEST_STATE/cursor" ;;
+  "set org.mate.peripherals-mouse cursor-theme") printf '%s\\n' "$*" >> "$TEST_STATE/settings-writes" ;;
+  "list-schemas  ") exit 0 ;;
+  *) exit 1 ;;
+esac''')
+        self.write('cursor', "'Adwaita'\n")
+        self.run_helper('spaced-first-login-repair')
+        self.assertEqual(self.writes(), [
+            'set org.mate.peripherals-mouse cursor-theme Spaced-Cursors'])
+
+        (self.state / 'settings-writes').unlink()
+        (self.state / '.config/spaced/first-login-repair-v5').unlink()
+        self.write('cursor', "'Bibata-Modern-Ice'\n")
+        self.run_helper('spaced-first-login-repair')
+        self.assertEqual(self.writes(), [])
+
     def test_graphics_report_collects_policy_without_writes(self):
         self.command('timeout', 'printf "%s\\n" "${*:3}" >> "$TEST_STATE/report-commands"')
         for command in ['uname', 'cat', 'lspci', 'lsusb', 'lsmod', 'glxinfo',

@@ -115,7 +115,7 @@ class SmbdBootTests(unittest.TestCase):
 
 
 REAL_SED = shutil.which('sed')
-PACKAGE_VERSION = '11.26.1-2'
+PACKAGE_VERSION = '11.26.2-1'
 
 # Every absolute path the postinst writes or tests, so the whole script can run
 # against a scratch root. The identity writes stay fatal; only optional steps
@@ -159,10 +159,10 @@ class FullConfigureTests(unittest.TestCase):
 
     def assert_release_identity_written(self, root):
         for path in ('etc/os-release', 'usr/lib/os-release'):
-            self.assertIn('PRETTY_NAME="Spaced Linux 11.26.1"', (root / path).read_text())
-        self.assertIn('DISTRIB_RELEASE=11.26.1', (root / 'etc/lsb-release').read_text())
-        self.assertTrue((root / 'etc/issue').read_text().startswith('Spaced Linux 11.26.1'))
-        self.assertIn('Spaced Linux 11.26.1', (root / 'etc/issue.net').read_text())
+            self.assertIn('PRETTY_NAME="Spaced Linux 11.26.2"', (root / path).read_text())
+        self.assertIn('DISTRIB_RELEASE=11.26.2', (root / 'etc/lsb-release').read_text())
+        self.assertTrue((root / 'etc/issue').read_text().startswith('Spaced Linux 11.26.2'))
+        self.assertIn('Spaced Linux 11.26.2', (root / 'etc/issue.net').read_text())
 
     def test_usershare_tweak_failure_still_configures_the_release(self):
         # a08-01: sed -i can fail on a read-only or unwritable /etc/samba; the

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Spaced Linux 11.26.1 release check: boot the released live ISO headless in
+# Spaced Linux release check: boot the candidate live ISO headless in
 # KVM/BIOS the way scripts/vm/qemu/smoke-iso.sh does, wait for live SSH and for
 # the live desktop (mate-panel, caja, compiz), then verify what is really on the
 # image: the version strings, the pinned external packages, the rescue tools,
@@ -15,7 +15,7 @@ usage() {
 Usage: live-checks.sh ISO
 
 Boot the live ISO headless in QEMU (KVM, BIOS, -boot order=d, no disk, VNC only),
-wait for live SSH and for mate-panel, caja and compiz, then run the 11.26.1 live
+wait for live SSH and for mate-panel, caja and compiz, then run the candidate live
 checks over SSH: /etc/os-release and /etc/issue versions, pinned package
 versions (elogind, spaced-welcome, spaced-monitor, anacron, spaced-meta), the
 rescue tools on PATH, the live password note, smartd, .gitkeep and monitors.xml
@@ -346,14 +346,22 @@ check "a: /etc/issue mentions $RELEASE_VERSION" \
       "grep -qF -- '$RELEASE_VERSION' /etc/issue"
 
 # b. package versions, including the independently released components
-check 'b: elogind version ends with +spaced'"$RELEASE_VERSION" "
-got=\$(dpkg-query -W -f='\${Version}' elogind)
-case \"\$got\" in
-    *+spaced$RELEASE_VERSION) exit 0 ;;
+# shellcheck disable=SC2016  # the $... below runs in the guest, not here
+check 'b: the four elogind packages are one patched lockstep version' '
+packages="elogind libelogind0 libelogind-compat libpam-elogind"
+versions=$(dpkg-query -W -f="\${Version}\n" $packages)
+count=$(printf "%s\n" "$versions" | sort -u | wc -l)
+version=$(printf "%s\n" "$versions" | head -n 1)
+test "$count" -eq 1 || {
+    dpkg-query -W -f="\${Package} \${Version}\n" $packages >&2
+    exit 1
+}
+case "$version" in
+    *+spaced'"$RELEASE_VERSION"') exit 0 ;;
 esac
-echo \"elogind version is '\$got', expected a +spaced$RELEASE_VERSION suffix\" >&2
+echo "elogind package version is $version; expected a +spaced'"$RELEASE_VERSION"' build" >&2
 exit 1
-"
+'
 check_pkg_version spaced-welcome "$WELCOME_VERSION"
 check_pkg_version spaced-monitor "$MONITOR_VERSION"
 check_pkg_installed anacron
@@ -414,6 +422,12 @@ count=$(dmesg | grep -ci segfault || true)
 test "${count:-0}" -eq 0 || { dmesg | grep -i segfault >&2; exit 1; }
 '
 check 'h: /etc/ssh/ssh_host_ed25519_key exists' 'test -f /etc/ssh/ssh_host_ed25519_key'
+check 'h: theme monitoring has no zombie process' "
+found=\$(ps -eo stat=,comm=,args= | awk '
+    \$1 ~ /^Z/ && (\$2 ~ /gsettings|spaced-theme/ || \$0 ~ /spaced-theme-monitor/) { print }
+')
+test -z \"\$found\" || { printf '%s\\n' \"\$found\" >&2; exit 1; }
+"
 
 # i. numbers a human records (never pass/fail)
 echo "INFO: memory_used_mib=$(guest_ssh 'free -m' 2>/dev/null | awk '/^Mem:/{print $3}')"

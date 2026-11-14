@@ -11,7 +11,9 @@ OUTPUT=${2:-$ROOT/build/elogind}
 mkdir -p "$OUTPUT"
 OUTPUT=$(cd "$OUTPUT" && pwd)
 PATCHES="$ROOT/patches/elogind"
-VERSION=257.13-1+spaced11.26.1
+BASE_VERSION=257.13-1
+RELEASE_VERSION=$(<"$ROOT/VERSION")
+VERSION="${BASE_VERSION}+spaced${RELEASE_VERSION}"
 for tool in curl sha256sum dpkg-source patch; do
     command -v "$tool" >/dev/null || { echo "Missing build tool: $tool" >&2; exit 1; }
 done

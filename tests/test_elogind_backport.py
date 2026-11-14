@@ -73,12 +73,19 @@ class ElogindBackportTests(unittest.TestCase):
     def test_build_and_stage_versions_match_and_future_release_supersedes(self):
         build = (ROOT / "scripts/iso/build-elogind.sh").read_text()
         stage = (ROOT / "scripts/iso/stage-elogind.sh").read_text()
-        versions = [re.search(r"^VERSION=(\S+)$", text, re.M).group(1) for text in (build, stage)]
-        self.assertEqual(versions, ["257.13-1+spaced11.26.1"] * 2)
+        release = (ROOT / "VERSION").read_text().strip()
+        versions = []
+        for text in (build, stage):
+            base = re.search(r"^BASE_VERSION=(\S+)$", text, re.M).group(1)
+            self.assertIn('RELEASE_VERSION=$(<"$ROOT/VERSION")', text)
+            self.assertIn('VERSION="${BASE_VERSION}+spaced${RELEASE_VERSION}"', text)
+            versions.append(f"{base}+spaced{release}")
+        self.assertEqual(versions, [f"257.13-1+spaced{release}"] * 2)
         # Debian compares the upstream 257.14 component before the local suffix.
         self.assertLess(tuple(map(int, versions[0].split("-", 1)[0].split("."))), (257, 14))
         for package in ("elogind", "libelogind0", "libelogind-compat", "libpam-elogind"):
             self.assertIn(package, stage)
+        self.assertIn('! -name "${package}_${FILE_VERSION}_amd64.deb" -delete', stage)
 
     def test_source_and_binary_publication_are_mandatory(self):
         local = (ROOT / "scripts/iso/build-local-packages.sh").read_text()

@@ -9,5 +9,5 @@ Name=Android
 GtkTheme=Spaced-Android
 MetacityTheme=Spaced-Android
 IconTheme=Spaced-Icons-Android
-CursorTheme=Adwaita
+CursorTheme=Spaced-Cursors
 BackgroundColor=#303030

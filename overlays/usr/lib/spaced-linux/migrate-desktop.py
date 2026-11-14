@@ -169,10 +169,12 @@ def migrate_compiz_focus(path):
 
 
 def migrate_firepaint(path):
-    """Apply the Spaced fire-writing defaults for Compiz's firepaint plug-in (#353)."""
+    """Enable fire writing and apply the Spaced firepaint defaults (#353, #419)."""
     if not path.exists():
         return
     parser = read_ini(path)
+    if not parser.has_section("core"):
+        parser.add_section("core")
     if not parser.has_section("firepaint"):
         parser.add_section("firepaint")
     defaults = {
@@ -184,6 +186,18 @@ def migrate_firepaint(path):
         "as_clear_button": "<Shift><Super>Button3",
     }
     changed = False
+    serialized = parser["core"].get("as_active_plugins", "")
+    plugins = serialized.split(";")
+    if serialized and "firepaint" not in plugins:
+        # Match the new-account profile without disturbing the user's other
+        # plug-ins. Firepaint has no dependency on later effects.
+        try:
+            plugins.insert(plugins.index("workarounds"), "firepaint")
+        except ValueError:
+            insert_at = len(plugins) - 1 if plugins[-1] == "" else len(plugins)
+            plugins.insert(insert_at, "firepaint")
+        parser["core"]["as_active_plugins"] = ";".join(plugins)
+        changed = True
     for key, value in defaults.items():
         if key not in parser["firepaint"]:
             parser["firepaint"][key] = value
@@ -293,10 +307,12 @@ def migrate(config):
         if not focus_marker.exists():
             migrate_compiz_focus(config / "compiz/compizconfig/Default.ini")
             atomic_write(focus_marker, "10.26\n")
-        firepaint_marker = state / "desktop-migration-10.26-firepaint-v1"
+        # The 10.26 migration wrote the settings but forgot to activate the
+        # plug-in. Use a new marker so already-upgraded accounts are repaired.
+        firepaint_marker = state / "desktop-migration-11.26.2-firepaint-v2"
         if not firepaint_marker.exists():
             migrate_firepaint(config / "compiz/compizconfig/Default.ini")
-            atomic_write(firepaint_marker, "10.26\n")
+            atomic_write(firepaint_marker, "11.26.2\n")
         previews_marker = state / "desktop-migration-10.26-window-previews-v1"
         if not previews_marker.exists():
             migrate_window_previews(config / "compiz/compizconfig/Default.ini")

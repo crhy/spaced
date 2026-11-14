@@ -141,6 +141,14 @@ class UpgradeTestScriptTests(unittest.TestCase):
         # non-interactive full-upgrade named in the task.
         self.assertIn('apt-get -y -o Dpkg::Options::=--force-confold full-upgrade', text)
 
+    def test_live_overlay_retry_is_exact_and_uses_candidate_helper(self):
+        text = SCRIPT.read_text(encoding='utf-8')
+        self.assertIn("failed to get canonical path of .overlay.", text)
+        self.assertIn("grep -qE '^SPACED_STEP:65:'", text)
+        self.assertIn("Skipping GRUB refresh for the live overlay root.", text)
+        self.assertIn('run_guest_upgrade "$HELPER all" upgrade-retry', text)
+        self.assertIn('candidate_helper_retry_status=', text)
+
     def test_guest_is_an_8_gigabyte_live_system(self):
         text = SCRIPT.read_text(encoding='utf-8')
         self.assertIn('SPACED_QEMU_RAM:-8192', text)

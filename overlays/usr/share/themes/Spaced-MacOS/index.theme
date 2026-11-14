@@ -9,5 +9,5 @@ Name=Mac OS X
 GtkTheme=Spaced-MacOS
 MetacityTheme=Spaced-MacOS
 IconTheme=Spaced-Icons-MacOS
-CursorTheme=Adwaita
+CursorTheme=Spaced-Cursors
 BackgroundColor=#dce8f5

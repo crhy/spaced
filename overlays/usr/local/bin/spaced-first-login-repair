@@ -5,6 +5,19 @@ if [ -f /usr/lib/spaced-linux/migrate-desktop.py ]; then
 fi
 # Run new migrations even when the older panel repair already completed.
 /usr/local/bin/spaced-flatpak-theme-migration 2>/dev/null || true
+# Spaced metathemes shipped CursorTheme=Adwaita through 11.26.1, which replaced
+# the distribution's red xkill cursor when an existing user selected a theme.
+# Repair only that known old value while a Spaced metatheme is active; leave an
+# explicitly selected cursor theme alone.
+if command -v gsettings >/dev/null 2>&1; then
+  gtk_theme=$(gsettings get org.mate.interface gtk-theme 2>/dev/null || printf "''")
+  cursor_theme=$(gsettings get org.mate.peripherals-mouse cursor-theme 2>/dev/null || printf "''")
+  case "$gtk_theme:$cursor_theme" in
+    "'Spaced-"*"':'Adwaita'")
+      gsettings set org.mate.peripherals-mouse cursor-theme 'Spaced-Cursors' 2>/dev/null || true
+      ;;
+  esac
+fi
 marker="$HOME/.config/spaced/first-login-repair-v5"
 [ -e "$marker" ] && exit 0
 mkdir -p "$(dirname "$marker")"

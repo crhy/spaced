@@ -4,7 +4,7 @@
   </a>
 </p>
 
-<h1 align="center">Spaced Linux 11.26.1</h1>
+<h1 align="center">Spaced Linux 11.26.2</h1>
 
 <p align="center"><strong>Spaced. Polished. Agile. Compiz. Efficient. Devuan.</strong></p>
 
@@ -27,7 +27,7 @@
 </p>
 
 <p align="center">
-  <a href="CHANGELOG.md"><strong>11.26.1 changes</strong></a>
+  <a href="CHANGELOG.md"><strong>11.26.2 changes</strong></a>
 </p>
 
 <p align="center">
@@ -36,7 +36,7 @@
   <img alt="Compiz" src="https://img.shields.io/badge/window%20manager-Compiz-5b5bd6">
   <img alt="Init system" src="https://img.shields.io/badge/init-sysvinit-555555">
   <img alt="Architecture" src="https://img.shields.io/badge/architecture-amd64-2563eb">
-  <img alt="Release" src="https://img.shields.io/badge/release-11.26.1-0ea5e9">
+  <img alt="Release" src="https://img.shields.io/badge/release-11.26.2%20preview-0ea5e9">
   <img alt="License" src="https://img.shields.io/badge/license-rhY-black">
 </p>
 
@@ -150,14 +150,14 @@ Spaced Linux combines a modern system with visual ideas from the best desktop er
 
 ## Download Spaced Linux
 
-**Spaced Linux 11.26.1 is the current release.** Download the ISO and its checksum from the [Spaced Linux 11.26.1 release page](https://github.com/crhy/spaced/releases/tag/v11.26.1).
+**Spaced Linux 11.26.2 is being validated.** Until its ISO is published, download the current stable ISO and checksum from the [latest Spaced Linux release page](https://github.com/crhy/spaced/releases/latest).
 
-11.26.1 updates the November 2026 release line. Its changes are listed in the [changelog](CHANGELOG.md).
+11.26.2 is a quick regression-fix update to the November 2026 release line. Its changes are listed in the [changelog](CHANGELOG.md).
 
 Verify the download on Linux:
 
 ```bash
-sha256sum -c spaced-linux-11.26.1-amd64.iso.sha256
+sha256sum -c spaced-linux-<version>-amd64.iso.sha256
 ```
 
 Test release images in a virtual machine or on non-critical hardware before adopting them for daily use.
@@ -321,7 +321,7 @@ Thank you for helping keep an independent, polished, systemd-free desktop availa
 
 ## Project status
 
-The current release is **11.26.1**, the first patch release of the **11.26** line. Spaced Linux is an independent community project under active development.
+The **11.26.2** release candidate is being validated for the **11.26** line. Spaced Linux is an independent community project under active development.
 
 The [11.26.1 release audit roadmap](docs/ROADMAP.md) lists what is still open and planned for later releases.
 

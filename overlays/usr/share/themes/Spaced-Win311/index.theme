@@ -9,5 +9,5 @@ Name=Windows 3.11
 GtkTheme=Spaced-Win311
 MetacityTheme=Spaced-Win311
 IconTheme=Spaced-Icons-Win311
-CursorTheme=Adwaita
+CursorTheme=Spaced-Cursors
 BackgroundColor=#008080

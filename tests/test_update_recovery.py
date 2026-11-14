@@ -55,12 +55,15 @@ fi
 ''')
         self.command('apt-mark', 'exit 0')
         self.command('update-initramfs', 'exit 0')
-        self.command('update-grub', 'exit 0')
+        self.command('findmnt', 'printf "%s\\n" "$ROOT_FSTYPE"')
+        self.command('update-grub',
+                     'printf "update-grub\\n" >> "$TEST_STATE/commands"')
         self.command('flatpak', 'exit 0')
         self.env = dict(os.environ,
                         PATH=str(self.fakebin) + os.pathsep + os.environ['PATH'],
                         TEST_STATE=str(self.state), FAIL_INSTALLS='1',
                         SIMULATE_STATUS='0', AUDIT_FAILURE_AT='0',
+                        ROOT_FSTYPE='ext4',
                         SPACED_UPDATE_TEST='1',
                         SPACED_UPDATE_TEST_GUARD=str(self.guard))
 
@@ -104,6 +107,19 @@ fi
         self.assertEqual((self.state / 'install-count').read_text(), '1\n')
         self.assertNotIn('retrying pending package configuration once',
                          result.stdout)
+
+    def test_grub_refresh_runs_for_an_installed_root(self):
+        result = self.run_helper(0)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(len(self.lines('update-grub')), 1)
+
+    def test_grub_refresh_is_skipped_for_a_live_overlay_root(self):
+        self.env['ROOT_FSTYPE'] = 'overlay'
+        result = self.run_helper(0)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('Skipping GRUB refresh for the live overlay root.',
+                      result.stdout)
+        self.assertEqual(self.lines('update-grub'), [])
 
     def test_failed_plan_explains_repository_transition_without_installing(self):
         result = self.run_helper(0, simulation_status=100)

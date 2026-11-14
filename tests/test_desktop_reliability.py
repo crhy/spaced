@@ -131,7 +131,7 @@ class MigrationTests(unittest.TestCase):
         migration.migrate(self.config)
         updated = migration.read_ini(profile)
         self.assertEqual(updated['core']['as_active_plugins'],
-                         'core;ccp;focuspoll;rotate;thumbnail;')
+                         'core;ccp;focuspoll;rotate;firepaint;thumbnail;')
         self.assertFalse(updated.has_section('focus'))
         self.assertEqual(updated['core']['s0_focus_prevention_match'], '!(class=Nm-applet)')
         before = profile.read_bytes()
@@ -187,6 +187,30 @@ class MigrationTests(unittest.TestCase):
                            ('as_clear_button', '<Shift><Super>Button3')):
             self.assertEqual(updated['firepaint'][key], value)
 
+    def test_firepaint_is_activated_for_an_existing_profile(self):
+        # Issue #419: 10.26 wrote firepaint settings but never loaded the plug-in.
+        profile = self.config / 'compiz/compizconfig/Default.ini'
+        profile.parent.mkdir(parents=True)
+        profile.write_text(
+            '[core]\nas_active_plugins=core;ccp;commands;workarounds;cube;\n')
+        migration.migrate_firepaint(profile)
+        plugins = migration.read_ini(profile)['core']['as_active_plugins'].split(';')
+        self.assertEqual(plugins, [
+            'core', 'ccp', 'commands', 'firepaint', 'workarounds', 'cube', ''])
+
+    def test_firepaint_activation_is_idempotent(self):
+        profile = self.config / 'compiz/compizconfig/Default.ini'
+        profile.parent.mkdir(parents=True)
+        profile.write_text(
+            '[core]\nas_active_plugins=core;firepaint;workarounds;\n'
+            '[firepaint]\ns0_fire_size=3.000000\n')
+        migration.migrate_firepaint(profile)
+        first = profile.read_bytes()
+        migration.migrate_firepaint(profile)
+        self.assertEqual(profile.read_bytes(), first)
+        self.assertEqual(
+            migration.read_ini(profile)['core']['as_active_plugins'].split(';').count('firepaint'), 1)
+
     def test_firepaint_defaults_apply_once_and_never_overwrite(self):
         # Issue #353: the firepaint defaults are gated by their own marker.
         profile = self.config / 'compiz/compizconfig/Default.ini'
@@ -200,7 +224,7 @@ class MigrationTests(unittest.TestCase):
         for key in ('s0_fire_size', 's0_fire_color', 's0_fire_life',
                     's0_bg_brightness', 's0_num_particles', 'as_clear_button'):
             self.assertIn(key, updated['firepaint'])
-        marker = state / 'desktop-migration-10.26-firepaint-v1'
+        marker = state / 'desktop-migration-11.26.2-firepaint-v2'
         self.assertTrue(marker.exists())
         marker_mtime = marker.stat().st_mtime_ns
         before = (profile.read_bytes(), profile.stat().st_mtime_ns)
@@ -940,6 +964,15 @@ class ThemeMonitorSupervisionTests(unittest.TestCase):
         self.assertTrue(self._wait_until(
             lambda: len(self._fake_gsettings_procs()) == 0, 5),
             'stopping the supervisor left an orphaned gsettings process')
+
+    def test_cleanup_reaps_every_watcher_it_kills(self):
+        # Issue #419: merely killing the watcher wrappers leaves defunct
+        # children until their monitor parent exits. Keep the waits explicit so
+        # a future cleanup refactor cannot reintroduce live-session zombies.
+        text = (BIN / 'spaced-theme-monitor').read_text(encoding='utf-8')
+        cleanup = text.split('cleanup_monitor() {', 1)[1].split('\n}', 1)[0]
+        self.assertIn('wait "$wpid"', cleanup)
+        self.assertIn('wait "$main_watch_pid"', cleanup)
 
 
 class WindowManagerNoticeTests(unittest.TestCase):

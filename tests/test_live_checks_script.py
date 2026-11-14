@@ -1,4 +1,4 @@
-"""Argument and text checks for the 11.26.1 live-ISO check script.
+"""Argument and text checks for the release-candidate live-ISO check script.
 
 These cases never start QEMU: every invocation below exits during argument
 handling, so no VM, network, root, display or hardware is needed.
@@ -65,6 +65,12 @@ class LiveChecksScriptTests(unittest.TestCase):
         self.assertIn('RESULT: PASS passed=$PASSED failed=$FAILED', text)
         self.assertIn('RESULT: FAIL passed=$PASSED failed=$FAILED', text)
         self.assertIn('INFO:', text)
+
+    def test_elogind_lockstep_check_preserves_dpkg_format_variables(self):
+        text = SCRIPT.read_text(encoding='utf-8')
+        self.assertIn('-f="\\${Version}\\n"', text)
+        self.assertIn('-f="\\${Package} \\${Version}\\n"', text)
+        self.assertIn("*+spaced'\"$RELEASE_VERSION\"'", text)
 
 
 if __name__ == '__main__':

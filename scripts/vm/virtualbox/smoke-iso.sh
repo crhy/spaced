@@ -226,6 +226,30 @@ if [ -n "$mate_pid" ] && [ -r "/proc/$mate_pid/environ" ]; then
 else
     echo "no live session environ to query wmctrl with"
 fi
+echo "--- window-manager processes ---"
+ps -eo user:12,pid,ppid,state,etimes,rss,args --forest \
+    | grep -E '(^USER|mate-session|spaced-window-manager|compiz|marco|gtk-window-decorator)' \
+    | grep -v '[g]rep -E' || true
+for pid in $(pgrep -u user -f 'spaced-window-manager|compiz|marco' 2>/dev/null || true); do
+    echo "--- /proc/$pid/status ---"
+    sed -n '1,12p;/^PPid:/p;/^State:/p;/^VmRSS:/p;/^Threads:/p' "/proc/$pid/status" 2>/dev/null || true
+    echo "children=$(cat "/proc/$pid/task/$pid/children" 2>/dev/null || true)"
+    echo "wchan=$(cat "/proc/$pid/wchan" 2>/dev/null || true)"
+done
+echo "--- session configuration ---"
+if [ -n "$mate_pid" ] && [ -r "/proc/$mate_pid/environ" ]; then
+    dbus=$(tr '\0' '\n' < "/proc/$mate_pid/environ" 2>/dev/null | sed -n 's/^DBUS_SESSION_BUS_ADDRESS=//p' | head -n 1)
+    runuser -u user -- env DBUS_SESSION_BUS_ADDRESS="$dbus" \
+        dconf read /org/mate/session/required-components/windowmanager 2>&1 || true
+fi
+echo "--- memory and OOM evidence ---"
+free -m 2>&1 || true
+grep -E 'MemTotal|MemFree|MemAvailable|SwapTotal|SwapFree|CommitLimit|Committed_AS' /proc/meminfo || true
+dmesg 2>/dev/null | grep -Ei 'out of memory|oom-kill|killed process' | tail -n 30 || true
+grep -Ehi 'out of memory|oom-kill|killed process' /var/log/kern.log /var/log/syslog /var/log/messages 2>/dev/null \
+    | tail -n 30 || true
+echo "--- session errors ---"
+tail -n 100 /home/user/.xsession-errors 2>/dev/null || true
 REMOTE
 )
     printf '%s\n' "$probe_output" >> "$WM_DIAGNOSIS"

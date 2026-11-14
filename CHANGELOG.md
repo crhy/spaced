@@ -1,5 +1,43 @@
 # Changelog
 
+## 11.26.2 - 2026-11-14
+
+Built as the 11.26.2 ISO and `11.26.2-1` APT packages. This quick patch
+release repairs the regressions reported after 11.26.1 in issue #419.
+
+**Fixes**
+
+- Make selected elogind updates atomic in Spaced Update. Selecting any one of
+  `elogind`, `libelogind0`, `libelogind-compat` or `libpam-elogind` now adds
+  every installed member of that exact-version family to the same transaction,
+  instead of asking APT to solve an invalid partial upgrade. Other selected
+  packages are unchanged, and the existing session guard still prevents an
+  elogind update from tearing down the running desktop. The backport version is
+  derived from the OS version so all four packages in this ISO and its signed
+  repository carry the exact `+spaced11.26.2` suffix.
+- Turn Compiz Fire Writing back on for upgraded accounts. The versioned,
+  idempotent desktop migration activates `firepaint` without replacing any
+  other Compiz plug-in choice and fills in only missing Fire Writing settings.
+- Keep the red Spaced `xkill` cursor when a Spaced metatheme is selected. Every
+  Spaced metatheme now names `Spaced-Cursors`; existing accounts are migrated
+  only when a Spaced GTK theme is paired with the old `Adwaita` cursor, so a
+  deliberately selected custom cursor is preserved.
+- Reap the settings watchers stopped by the theme monitor. Its shutdown path
+  now waits for every child it kills, and the live-image gate checks that theme
+  switching does not leave zombie `gsettings` or theme-monitor processes.
+- Add an isolated two-machine Samba release gate. It boots two copies of the
+  candidate ISO, creates and discovers a usershare on one live desktop, and
+  verifies SMB and Caja/GVfs file round trips from the other before the ISO can
+  pass `make iso-smoke`.
+- Let Spaced Update finish successfully when it is exercised from a live USB.
+  It still refreshes every installed initramfs, but skips `update-grub` for the
+  live session's overlay root because that root has no installed boot device
+  for `grub-probe` to resolve. Installed systems continue to refresh GRUB.
+
+The one report that Wi-Fi asked for its saved password again could not be
+reproduced and has no evidence of a stored-connection change, so 11.26.2 does
+not claim a speculative Wi-Fi credential fix.
+
 ## 11.26.1-2 - 2026-11-13
 
 Delivered to installed systems through the `11.26.1-2` APT packages

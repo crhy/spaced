@@ -14,8 +14,8 @@
 #     /dev/vda2 at /home, and the old home directories must still be there.
 #
 # On 11.26 the expected outcome is FAIL (no /home line in fstab, and the old
-# /home/user directory is deleted by "userdel -r user"); 11.26.1 adds the
-# spacedfstabguard module and must PASS.
+# /home/user directory is deleted by "userdel -r user"); 11.26.1 and later add
+# the spacedfstabguard module and must PASS.
 set -euo pipefail
 
 usage() {
@@ -610,7 +610,10 @@ case "$KEEP_USER" in "KEEP-USER-$MARKER") keep_user=ok ;; esac
 echo "INFO: fstab_home_ok=$fstab_ok home_uuid=$HOME_UUID"
 rescue_ok=yes
 case "$ISO_NAME" in
-    *11.26.1*)
+    spaced-linux-11.26-amd64)
+        # The original 11.26 image predates the live-only rescue-tool rule.
+        ;;
+    *)
         if [ "$RESCUE" != none ]; then
             rescue_ok=no
             echo "INFO: rescue tools are live-only and must not be installed: $RESCUE"

@@ -9,5 +9,5 @@ Name=Ubuntu
 GtkTheme=Spaced-Ubuntu
 MetacityTheme=Spaced-Ubuntu
 IconTheme=Spaced-Icons-Ubuntu
-CursorTheme=Adwaita
+CursorTheme=Spaced-Cursors
 BackgroundColor=#5e2750
