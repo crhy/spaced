@@ -13,3 +13,5 @@ Working notes, decisions and standing orders for this project, kept by Claude Co
 - [strata-vs-avalon-ab](strata-vs-avalon-ab.md): Strata vs Avalon A/B = both engines build Spaced Monitor from the same 9 tasks; setup, files and how to resume (2026-10-31)
 - [notes-live-on-github](notes-live-on-github.md): rhY's rule (2026-11-01): all Spaced/theme data and every memory note must be on GitHub; upload each note to its repo's docs/notes/ right after writing it.
 - [spaced-no-prs-batch-into-release](spaced-no-prs-batch-into-release.md): No PRs for Spaced fixes; fixes go on branches with a crhy/spaced issue and all ship together in the next release (2026-11-07).
+- [spaced-11261-release-state](spaced-11261-release-state.md): Spaced Linux 11.26.1 was published on 2026-11-13 with APT revision 11.26.1-2; the elogind-upgrade session loss found afterwards and what is still open.
+- [spaced-rhy-decisions-11261](spaced-rhy-decisions-11261.md): Product decisions rhY made during the 11.26.1 release: licence, live ISO root login, rescue tools live-only, Samba, anacron, APT expiry.
