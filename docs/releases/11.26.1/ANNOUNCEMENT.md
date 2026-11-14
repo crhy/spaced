@@ -6,6 +6,12 @@ A patch release: the same desktop you know, with fewer sharp edges.
 update && sudo apt full-upgrade`, then reboot. **Starting fresh?** Write the ISO
 to a stick and check it with `sha256sum -c spaced-linux-11.26.1-amd64.iso.sha256`.
 
+**Restart your PC right after this update.** 11.26.1 is a large update: it
+replaces the kernel and the login service (elogind). Save your work before you
+start. Once the update finishes, apps can lose network access and sound until
+you restart. If **Restart** in the menu asks for your password or does nothing,
+open a terminal and run `sudo reboot`.
+
 **What you will notice**
 
 - Rebooting and powering off no longer crash the session manager.

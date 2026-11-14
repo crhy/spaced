@@ -65,8 +65,8 @@
   <div class="heading"><p class="kicker">KEEP YOUR SYSTEM CURRENT</p><h2>Applications and operating-system updates.</h2></div>
   <div class="grid">
     <article><h3>Install applications</h3><p>Open <strong>SpacedBazaar</strong> to browse and install Flatpak applications. Welcome can install Bazaar and a selection of useful apps after setup.</p></article>
-    <article><h3>Update Spaced Linux</h3><p>Open <strong>Spaced Update</strong>, refresh the list, and apply the available updates. A complete update includes native system packages and Flatpak apps and runtimes. Let the operation finish and read any error before retrying.</p></article>
-    <article><h3>Restart when needed</h3><p>A new kernel or graphics driver needs a reboot to become active. Save your work first. If an update reports a failure, keep its log and include it with your support request.</p></article>
+    <article><h3>Update Spaced Linux</h3><p>Open <strong>Spaced Update</strong>, refresh the list, and apply the available updates. A complete update includes native system packages and Flatpak apps and runtimes. Let the operation finish and read any error before retrying. Save your work before you start: a large update needs a restart right afterwards.</p></article>
+    <article><h3>Restart when needed</h3><p><strong>Restart your PC right after a large update such as 11.26.1.</strong> It replaces the kernel and the login service (elogind). Once the update finishes, apps can lose network access and sound until you restart. If <strong>Restart</strong> in the menu asks for your password or does nothing, open a terminal and run <code>sudo reboot</code>. A new kernel or graphics driver also needs a reboot to become active. If an update reports a failure, keep its log and include it with your support request.</p></article>
   </div>
   <p>Keep a separate backup of personal files before testing a release or changing drivers. Check that your Timeshift snapshots exist and can be restored; a system snapshot is not a backup of your documents.</p>
 </section>

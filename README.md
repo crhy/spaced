@@ -204,6 +204,12 @@ sudo apt update && sudo apt full-upgrade
 Restart after a kernel or graphics driver update, because the new one is not
 used until the machine restarts.
 
+Restart your PC right after the 11.26.1 update. 11.26.1 is a large update: it
+replaces the kernel and the login service (elogind). Save your work before you
+start. Once the update finishes, apps can lose network access and sound until
+you restart. If **Restart** in the menu asks for your password or does nothing,
+open a terminal and run `sudo reboot`.
+
 ### Get help or report a bug
 
 Ask on [Discord](https://discord.gg/BMW9Y6NB3y) or

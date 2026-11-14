@@ -7,6 +7,12 @@ Delivered to installed systems through the `11.26.1-2` APT packages
 `spaced-nm-focus`). The 11.26.1 ISO and the reported release version are
 unchanged, so no new ISO is required.
 
+**Known issue:** restart your PC right after the 11.26.1 update. 11.26.1 is a
+large update: it replaces the kernel and the login service (elogind). Save your
+work before you start. Once the update finishes, apps can lose network access
+and sound until you restart. If **Restart** in the menu asks for your password
+or does nothing, open a terminal and run `sudo reboot`.
+
 - Keep the desktop alive through a login-service update. An `elogind` package
   upgrade used to stop and start the login service, which dropped the running
   session, emptied your session folder under `/run/user`, and left Flatpak

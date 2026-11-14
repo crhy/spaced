@@ -5,6 +5,12 @@ crash that hit reboot and power-off, keeps a reused home partition through
 installation, refuses to unpack packages while the package system is unhealthy,
 and turns the live USB into a rescue stick.
 
+**Restart your PC right after this update.** 11.26.1 is a large update: it
+replaces the kernel and the login service (elogind). Save your work before you
+start. Once the update finishes, apps can lose network access and sound until
+you restart. If **Restart** in the menu asks for your password or does nothing,
+open a terminal and run `sudo reboot`.
+
 ## Highlights
 
 - **An install that reuses your home keeps it.** A separate or reused `/home`
@@ -48,8 +54,11 @@ Open **Spaced Update**, check **OS Release**, and install. Or in a terminal:
 sudo apt update && sudo apt full-upgrade
 ```
 
-Reboot afterwards. The `11.26.1-1` packages and the `257.13-1+spaced11.26.1`
-elogind set come from the signed Spaced repository.
+Restart your PC right after this update: it replaces the kernel and the login
+service (elogind), and apps can lose network access and sound until you
+restart. If **Restart** in the menu asks for your password or does nothing, open
+a terminal and run `sudo reboot`. The `11.26.1-1` packages and the
+`257.13-1+spaced11.26.1` elogind set come from the signed Spaced repository.
 
 ## Known limits
 

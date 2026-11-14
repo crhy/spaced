@@ -14,6 +14,15 @@ physical-hardware checks still required, see the
 bug reports should identify the Spaced version, whether it is a live or
 installed session, and the steps that reproduce the problem.
 
+## Restart after a large update
+
+Restart your PC right after the 11.26.1 update. 11.26.1 is a large update: it
+replaces the kernel and the login service (elogind). Save your work before you
+start. Once the update finishes, apps can lose network access and sound until
+you restart. If **Restart** in the menu asks for your password or does nothing,
+open a terminal and run `sudo reboot`. The update guide is
+[UPGRADE.md](UPGRADE.md).
+
 ## Use the live USB to rescue a PC
 
 Boot the Spaced Linux stick and choose **Start Spaced Linux**. Nothing on the

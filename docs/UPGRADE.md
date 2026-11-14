@@ -13,9 +13,11 @@ are listed separately, and the progress page runs "Update system packages" and
 the installed version next to the latest published release, with **Check
 Release** and **Update System**.
 
-Let the run finish and read every message before you try again. Keep a separate
-backup of your own files first; a Timeshift snapshot is not a backup of your
-documents.
+Let the run finish and read every message before you try again. Save your work
+before you start: a large update needs a restart right afterwards, as
+[Restart after a kernel or driver update](#restart-after-a-kernel-or-driver-update)
+explains. Keep a separate backup of your own files first; a Timeshift snapshot is
+not a backup of your documents.
 
 ## The same thing in a terminal
 
@@ -80,6 +82,12 @@ flatpak update
 ```
 
 ## Restart after a kernel or driver update
+
+Restart your PC right after the 11.26.1 update. 11.26.1 is a large update: it
+replaces the kernel and the login service (elogind). Save your work before you
+start. Once the update finishes, apps can lose network access and sound until
+you restart. If **Restart** in the menu asks for your password or does nothing,
+open a terminal and run `sudo reboot`.
 
 A new kernel or graphics driver is not used until the machine restarts. Spaced
 Update refreshes the boot files at the end of a run, but the running system
