@@ -27,6 +27,21 @@ if command -v glib-compile-schemas >/dev/null 2>&1; then
     glib-compile-schemas /usr/share/glib-2.0/schemas || true
 fi
 
+# A package upgrade must never stop the login service that owns the running
+# desktop session: the distribution's elogind prerm/postinst call
+# "invoke-rc.d elogind stop" and "start" on every upgrade, which drops the
+# session, empties /run/user/<uid> and leaves Flatpak applications without name
+# resolution or sound until the PC is restarted. invoke-rc.d asks
+# /usr/sbin/policy-rc.d first, so install the Spaced session guard unless the
+# administrator already keeps a policy of their own.
+spaced_guard=/usr/lib/spaced-linux/spaced-policy-rc.d
+policy_rc_d=/usr/sbin/policy-rc.d
+if [ ! -e "$policy_rc_d" ] && [ ! -L "$policy_rc_d" ]; then
+    ln -s "$spaced_guard" "$policy_rc_d" || true
+elif [ "$(readlink "$policy_rc_d" 2>/dev/null)" != "$spaced_guard" ]; then
+    echo "spaced-mate-default-settings: another policy-rc.d is present, so the Spaced session guard was not installed." >&2 || true
+fi
+
 # Early installers also wrote a deb822 copy of the repository. Remove it only
 # when it is an exact duplicate; customized sources belong to the administrator.
 if [ -x /usr/lib/spaced-linux/spaced-clean-duplicate-apt-source ]; then

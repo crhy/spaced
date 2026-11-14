@@ -1,5 +1,26 @@
 # Changelog
 
+## 11.26.1-2 - 2026-11-13
+
+Delivered to installed systems through the `11.26.1-2` APT packages
+(`spaced-meta`, `spaced-mate-default-settings`, `spaced-themes`,
+`spaced-nm-focus`). The 11.26.1 ISO and the reported release version are
+unchanged, so no new ISO is required.
+
+- Keep the desktop alive through a login-service update. An `elogind` package
+  upgrade used to stop and start the login service, which dropped the running
+  session, emptied your session folder under `/run/user`, and left Flatpak
+  applications such as Brave without name resolution or sound until the PC was
+  restarted. A Spaced session guard now refuses only those stop or restart
+  requests while a desktop is running; the updated login service starts at the
+  next restart.
+- The guard leaves every other service alone, always allows a start, is never
+  installed over a policy script the administrator already owns, and is removed
+  together with the package that installed it.
+- An update that replaces the kernel or the login service still needs a PC
+  restart right afterwards, exactly as the 11.26.1 notes say; this revision only
+  stops the update from breaking the session you are already using.
+
 ## 11.26.1 - 2026-11-13
 
 Built as the 11.26.1 ISO and `11.26.1-1` APT packages. The source gate runs 429

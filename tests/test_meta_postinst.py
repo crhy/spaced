@@ -115,7 +115,7 @@ class SmbdBootTests(unittest.TestCase):
 
 
 REAL_SED = shutil.which('sed')
-PACKAGE_VERSION = '11.26.1-1'
+PACKAGE_VERSION = '11.26.1-2'
 
 # Every absolute path the postinst writes or tests, so the whole script can run
 # against a scratch root. The identity writes stay fatal; only optional steps

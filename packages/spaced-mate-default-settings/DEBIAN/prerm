@@ -1,0 +1,13 @@
+#!/bin/sh
+set -e
+
+# Remove only the session-guard symlink this package created. An administrator's
+# own /usr/sbin/policy-rc.d, or one left by another package, is never deleted.
+if [ "${1:-}" = remove ]; then
+    policy_rc_d=/usr/sbin/policy-rc.d
+    if [ "$(readlink "$policy_rc_d" 2>/dev/null)" = /usr/lib/spaced-linux/spaced-policy-rc.d ]; then
+        rm -f "$policy_rc_d" || true
+    fi
+fi
+
+exit 0
