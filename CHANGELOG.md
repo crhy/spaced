@@ -26,6 +26,10 @@ or does nothing, open a terminal and run `sudo reboot`.
 - An update that replaces the kernel or the login service still needs a PC
   restart right afterwards, exactly as the 11.26.1 notes say; this revision only
   stops the update from breaking the session you are already using.
+- The website now tells people the install stick is also a rescue disk. The home
+  page has a section for it - what it can fix, the tools it carries, a screenshot
+  of GParted on the live stick taken from the released ISO, and a link to the
+  rescue guide - and the download steps say the same ISO works as a rescue stick.
 
 ## 11.26.1 - 2026-11-13
 
