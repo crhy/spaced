@@ -1,5 +1,40 @@
 # Changelog
 
+## 11.26.1-3 - 2026-11-14
+
+Not built yet. The 11.26.1 ISO and the reported release version are unchanged.
+
+- **Spaced Update no longer waits for a full package audit it does not need.**
+  dpkg 1.23.12 (the dpkg in 11.26.1) extended `dpkg --audit` with a
+  database-contents audit: it now opens the files list of every installed
+  package, 2402 extra file opens for the 1201 packages of the live image. On the
+  live squashfs image one audit costs 7.2 s and 166 MB of CD reads, and Spaced
+  Update checked package health twice per transaction - measured 7.5 s of the
+  whole run in the 11.26.1 live session. The helper now screens the same
+  conditions first (one read of `/var/lib/dpkg/status` plus one listing of
+  `/var/lib/dpkg/info`: 161 ms cold, 14 ms warm on the same image) and runs the
+  full `dpkg --audit` whenever the screen sees an incomplete package state, a
+  package without its files list, or anything it cannot read. Measured in the
+  live VM with the shipped helper and the fixed one: 7468 ms -> 273 ms cold,
+  153 ms -> 40 ms warm, and a deliberately broken database still stops the
+  transaction with the dpkg report (`bash has no files list in the package
+  database`, then `The package database is not healthy before the update.`).
+  Nothing else about the update changed: `apt-get check` still runs in both
+  places, and dpkg remains the authority that decides whether an update proceeds.
+- **The live-image check now measures a real idle desktop.** `scripts/vm/qemu/live-checks.sh`
+  waits 60 s after the desktop is up and then fails if the live session still
+  uses 5 % CPU or more over the next 60 s, or if `spaced-theme-monitor` reads
+  1 KB/s or more from its watchers. This exists because the 11.26.1 measurement
+  run reported a 6-12 % "idle" CPU and a flood of theme-monitor reads that do
+  not exist: the measurement window started the moment mate-panel appeared, so
+  it measured the login burst (29.8 % CPU and 17 495 context switches/s between
+  uptime 23 s and 38 s, then 0.05 % and 156/s for the rest of the session, with
+  zero dconf change notifications in 60 s). No desktop code was changed for it:
+  the churn could not be reproduced, and a problem that cannot be reproduced is
+  not fixed.
+- Undo: revert this commit. The update helper goes back to running `dpkg --audit`
+  twice per transaction and the live-image check back to its previous 35 checks.
+
 ## 11.26.1-2 - 2026-11-13
 
 Delivered to installed systems through the `11.26.1-2` APT packages

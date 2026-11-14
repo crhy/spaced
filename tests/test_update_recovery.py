@@ -21,6 +21,18 @@ class UpdateRecoveryTests(unittest.TestCase):
         self.guard = self.state / 'spaced-update-apt-guard'
         self.guard.write_text('#!/bin/bash\nexit 0\n')
         self.guard.chmod(0o755)
+        # A dpkg database the cheap screen can read. It is healthy unless a test
+        # breaks it: Spaced Update only runs the slow `dpkg --audit` when the
+        # screen finds something (dpkg 1.23.12 reads one control file per
+        # installed package, 7 s on the live image).
+        self.admindir = self.state / 'dpkg'
+        (self.admindir / 'info').mkdir(parents=True)
+        (self.admindir / 'updates').mkdir()
+        self.healthy_status = ('Package: spaced-meta\n'
+                               'Status: install ok installed\n'
+                               'Architecture: amd64\n\n')
+        self.write_status(self.healthy_status)
+        (self.admindir / 'info' / 'spaced-meta.list').write_text('/usr/bin/spaced\n')
         self.command('apt-get', r'''
 printf 'apt-get %s\n' "$*" >> "$TEST_STATE/commands"
 case " $* " in
@@ -61,8 +73,12 @@ fi
                         PATH=str(self.fakebin) + os.pathsep + os.environ['PATH'],
                         TEST_STATE=str(self.state), FAIL_INSTALLS='1',
                         SIMULATE_STATUS='0', AUDIT_FAILURE_AT='0',
+                        DPKG_ADMINDIR=str(self.admindir),
                         SPACED_UPDATE_TEST='1',
                         SPACED_UPDATE_TEST_GUARD=str(self.guard))
+
+    def write_status(self, text):
+        (self.admindir / 'status').write_text(text)
 
     def command(self, name, body):
         path = self.fakebin / name
@@ -70,6 +86,13 @@ fi
         path.chmod(0o755)
 
     def run_helper(self, failures, simulation_status=0, audit_failure_at=0):
+        if audit_failure_at:
+            # The screen must notice the broken database, otherwise the full
+            # audit (and with it the failure the test injects) never runs.
+            self.write_status(self.healthy_status +
+                              'Package: brokenpkg\n'
+                              'Status: install ok half-installed\n'
+                              'Architecture: amd64\n\n')
         env = dict(self.env, FAIL_INSTALLS=str(failures),
                    SIMULATE_STATUS=str(simulation_status),
                    AUDIT_FAILURE_AT=str(audit_failure_at))
@@ -118,14 +141,38 @@ fi
     def test_unhealthy_database_is_refused_before_installing(self):
         result = self.run_helper(0, audit_failure_at=1)
         self.assertEqual(result.returncode, 1)
+        self.assertIn('brokenpkg has the incomplete package state', result.stdout)
         self.assertIn('not healthy before the update', result.stdout)
         self.assertFalse((self.state / 'install-count').exists())
+
+    def test_healthy_database_skips_the_slow_full_audit(self):
+        # dpkg 1.23.12's audit opens one control file per installed package: on
+        # the live image it costs 7.2 s per call, twice per transaction.
+        result = self.run_helper(0)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(self.lines('dpkg --audit'), [])
+        self.assertEqual((self.state / 'install-count').read_text(), '1\n')
+
+    def test_missing_files_list_is_screened_and_audited(self):
+        (self.admindir / 'info' / 'spaced-meta.list').unlink()
+        result = self.run_helper(0)
+        self.assertIn('spaced-meta has no files list in the package database',
+                      result.stdout)
+        self.assertIn('Running the full dpkg audit', result.stdout)
+        self.assertEqual(len(self.lines('dpkg --audit')), 2)
 
     def test_unhealthy_database_after_install_is_reported(self):
         result = self.run_helper(0, audit_failure_at=2)
         self.assertEqual(result.returncode, 1)
         self.assertIn('not healthy after the update', result.stdout)
         self.assertEqual((self.state / 'install-count').read_text(), '1\n')
+
+    def test_incomplete_database_directory_falls_back_to_the_audit(self):
+        (self.admindir / 'updates').rmdir()
+        result = self.run_helper(0)
+        self.assertIn('is incomplete', result.stdout)
+        self.assertEqual(len(self.lines('dpkg --audit')), 2)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
 
 if __name__ == '__main__':

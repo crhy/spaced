@@ -4,7 +4,9 @@
 # the live desktop (mate-panel, caja, compiz), then verify what is really on the
 # image: the version strings, the pinned external packages, the rescue tools,
 # the live password note, the smartd/apt/skel state, the xkill cursor of issue
-# #414, and two screenshots for a human (xkill.png, monitor.png).
+# #414, and two screenshots for a human (xkill.png, monitor.png). The last check
+# waits for the session to settle and then proves the idle desktop really is
+# idle, so a login-path helper that spins cannot ship again.
 #
 # Output: one PASS:/FAIL: line per check, INFO: lines for the numbers a human
 # records, and a final "RESULT: PASS|FAIL passed=<n> failed=<n>".
@@ -20,8 +22,13 @@ checks over SSH: /etc/os-release and /etc/issue versions, pinned package
 versions (elogind, spaced-welcome, spaced-monitor, anacron, spaced-meta), the
 rescue tools on PATH, the live password note, smartd, .gitkeep and monitors.xml
 leftovers, the apt transaction guard, the xkill cursor, segfaults in dmesg, the
-live SSH host key, resource numbers, and two QMP screenshots (xkill.png,
-monitor.png).
+live SSH host key, resource numbers, two QMP screenshots (xkill.png, monitor.png)
+and an idle-desktop window that fails when the live session keeps using CPU or
+when spaced-theme-monitor keeps reading from its gsettings watchers.
+
+Environment: SPACED_VM_SSH_PORT (2231), SPACED_QEMU_VNC_DISPLAY (43),
+SPACED_LIVE_IDLE_SETTLE_SECONDS (60), SPACED_LIVE_IDLE_WINDOW_SECONDS (60),
+SPACED_LIVE_IDLE_CPU_LIMIT (5), SPACED_LIVE_IDLE_RCHAR_LIMIT (1024).
 
 Exit codes: 0 = PASS, 1 = FAIL, 2 = could not run.
 Artifacts: build/vm-tests/v03/<iso-name>/
@@ -430,6 +437,123 @@ else
     FAILED=$((FAILED + 2))
     echo 'FAIL: j: xkill screenshot captured (no live desktop to screenshot)'
     echo 'FAIL: j: monitor screenshot captured (no live desktop to screenshot)'
+fi
+
+# k. the live desktop must really go idle. The window only starts after the
+# session has been quiet for IDLE_SETTLE_SECONDS, because the first ~40 s after
+# login are the desktop starting: measured on the 11.26.1 ISO, 29.8 % CPU and
+# 17 495 context switches/s between uptime 23 s and 38 s, then 0.05 % and 156/s
+# for the rest of the session. Measuring straight after mate-panel appears
+# measures the login burst, not the idle session, and is why 11.26.1 was first
+# reported with a 6-12 % "idle" CPU that does not exist.
+IDLE_SETTLE_SECONDS=${SPACED_LIVE_IDLE_SETTLE_SECONDS:-60}
+IDLE_WINDOW_SECONDS=${SPACED_LIVE_IDLE_WINDOW_SECONDS:-60}
+IDLE_CPU_LIMIT=${SPACED_LIVE_IDLE_CPU_LIMIT:-5}
+IDLE_RCHAR_LIMIT=${SPACED_LIVE_IDLE_RCHAR_LIMIT:-1024}
+
+# One python3 process in the guest: it reads /proc/stat and the rchar of every
+# spaced-theme-monitor process, sleeps, and reads them again. Nothing is
+# installed, written or restarted in the guest, and no extra process is forked
+# inside the measured window.
+IDLE_PROBE=$(cat <<'PY'
+import os
+import sys
+import time
+
+
+def cpu():
+    fields = open('/proc/stat').readline().split()
+    return sum(int(x) for x in fields[1:]), int(fields[4]) + int(fields[5])
+
+
+def ctxt():
+    for line in open('/proc/stat'):
+        if line.startswith('ctxt '):
+            return int(line.split()[1])
+    return 0
+
+
+def watchers():
+    found = {}
+    for pid in os.listdir('/proc'):
+        if not pid.isdigit():
+            continue
+        try:
+            with open('/proc/%s/cmdline' % pid, 'rb') as handle:
+                cmd = handle.read().replace(b'\0', b' ').decode('utf-8', 'replace')
+        except OSError:
+            continue
+        if 'spaced-theme-monitor' not in cmd:
+            continue
+        rchar = 0
+        try:
+            for line in open('/proc/%s/io' % pid):
+                if line.startswith('rchar:'):
+                    rchar = int(line.split()[1])
+                    break
+        except OSError:
+            pass
+        found[pid] = rchar
+    return found
+
+
+window = int(sys.argv[1])
+total0, idle0 = cpu()
+ctxt0 = ctxt()
+watch0 = watchers()
+time.sleep(window)
+total1, idle1 = cpu()
+ctxt1 = ctxt()
+watch1 = watchers()
+total = total1 - total0
+read_delta = 0
+for pid, rchar in watch1.items():
+    read_delta += rchar - watch0.get(pid, rchar)
+print('idle_cpu_percent=%.2f' % (100.0 * (total - (idle1 - idle0)) / max(total, 1)))
+print('context_switches_per_s=%.1f' % ((ctxt1 - ctxt0) / window))
+print('theme_monitor_rchar_per_s=%.1f' % (read_delta / window))
+print('theme_monitor_processes=%d' % len(watch1))
+PY
+)
+
+if [ "$DESKTOP_READY" != yes ]; then
+    FAILED=$((FAILED + 1))
+    echo 'FAIL: k: live desktop idle window measured (no live desktop to measure)'
+else
+    echo "Waiting ${IDLE_SETTLE_SECONDS}s for the live session to settle" 1>&2
+    sleep "$IDLE_SETTLE_SECONDS"
+    idle_out=$(guest_ssh "python3 - $IDLE_WINDOW_SECONDS" <<<"$IDLE_PROBE" 2>&1) &&
+        idle_status=0 || idle_status=$?
+    if [ "$idle_status" -ne 0 ] || ! grep -q '^idle_cpu_percent=' <<<"$idle_out"; then
+        FAILED=$((FAILED + 1))
+        echo 'FAIL: k: live desktop idle window measured'
+        while IFS= read -r line; do
+            [ -n "$line" ] && echo "       | $line"
+        done <<<"$idle_out"
+    else
+        while IFS= read -r line; do
+            # ssh's known-hosts notice arrives on stderr and is merged above.
+            [[ "$line" == 'Warning: Permanently added'* ]] && continue
+            [ -n "$line" ] && echo "INFO: $line"
+        done <<<"$idle_out"
+        idle_cpu=$(sed -n 's/^idle_cpu_percent=//p' <<<"$idle_out")
+        idle_rchar=$(sed -n 's/^theme_monitor_rchar_per_s=//p' <<<"$idle_out")
+        idle_watchers=$(sed -n 's/^theme_monitor_processes=//p' <<<"$idle_out")
+        if awk -v v="$idle_cpu" -v limit="$IDLE_CPU_LIMIT" 'BEGIN { exit !(v < limit) }'; then
+            PASSED=$((PASSED + 1))
+            echo "PASS: k: live desktop idle CPU ${idle_cpu}% is below ${IDLE_CPU_LIMIT}%"
+        else
+            FAILED=$((FAILED + 1))
+            echo "FAIL: k: live desktop idle CPU ${idle_cpu}% is not below ${IDLE_CPU_LIMIT}%"
+        fi
+        if awk -v v="$idle_rchar" -v limit="$IDLE_RCHAR_LIMIT" 'BEGIN { exit !(v < limit) }'; then
+            PASSED=$((PASSED + 1))
+            echo "PASS: k: spaced-theme-monitor reads ${idle_rchar} B/s, below ${IDLE_RCHAR_LIMIT} B/s (${idle_watchers} processes)"
+        else
+            FAILED=$((FAILED + 1))
+            echo "FAIL: k: spaced-theme-monitor reads ${idle_rchar} B/s, not below ${IDLE_RCHAR_LIMIT} B/s"
+        fi
+    fi
 fi
 
 echo "Artifacts: $OUT"
