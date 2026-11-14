@@ -6,6 +6,7 @@ handling, and the OCR word matcher of gui.sh is exercised through a synthetic
 tesseract TSV file.
 """
 from pathlib import Path
+import re
 import shlex
 import shutil
 import subprocess
@@ -51,6 +52,13 @@ class ReuseHomeScriptTests(unittest.TestCase):
         shellcheck = shutil.which('shellcheck')
         if shellcheck is None:
             self.skipTest('shellcheck is not installed')
+        # The scripts are kept clean against shellcheck 0.10+; older releases
+        # (for example 0.9 on CI runners) report differently.
+        version = subprocess.run([shellcheck, '--version'], text=True,
+                                 capture_output=True, timeout=30).stdout
+        found = re.search(r'version: (\d+)\.(\d+)', version)
+        if not found or (int(found[1]), int(found[2])) < (0, 10):
+            self.skipTest('shellcheck 0.10 or newer is required')
         for script in (GUI, SCRIPT):
             with self.subTest(script=script.name):
                 result = subprocess.run([shellcheck, str(script)], text=True,

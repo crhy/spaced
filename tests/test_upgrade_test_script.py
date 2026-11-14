@@ -6,6 +6,8 @@ script is exercised against a throwaway directory instead of /etc/apt.  No VM,
 network, root, display or hardware is needed.
 """
 from pathlib import Path
+import atexit
+import re
 import os
 import shutil
 import subprocess
@@ -14,7 +16,12 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / 'scripts/vm/qemu/upgrade-test.sh'
-ISO = 'build/iso/spaced-linux-11.26-amd64.iso'
+# A placeholder is enough: these tests only exercise argument checking, and
+# must not depend on a release image being present under build/.
+_ISO_DIR = tempfile.mkdtemp(prefix='spaced-upgrade-iso-')
+ISO = str(Path(_ISO_DIR) / 'placeholder.iso')
+Path(ISO).write_bytes(b'')
+atexit.register(shutil.rmtree, _ISO_DIR, ignore_errors=True)
 SHIPPED_SOURCE = ROOT / 'overlays/etc/apt/sources.list.d/spaced-apt.list'
 
 
@@ -94,6 +101,13 @@ class UpgradeTestScriptTests(unittest.TestCase):
         shellcheck = shutil.which('shellcheck')
         if shellcheck is None:
             self.skipTest('shellcheck is not installed')
+        # The scripts are kept clean against shellcheck 0.10+; older releases
+        # (for example 0.9 on CI runners) report differently.
+        version = subprocess.run([shellcheck, '--version'], text=True,
+                                 capture_output=True, timeout=30).stdout
+        found = re.search(r'version: (\d+)\.(\d+)', version)
+        if not found or (int(found[1]), int(found[2])) < (0, 10):
+            self.skipTest('shellcheck 0.10 or newer is required')
         result = subprocess.run([shellcheck, str(SCRIPT)], text=True,
                                 capture_output=True, timeout=120)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)

@@ -4,6 +4,7 @@ These cases never start QEMU: every invocation below exits during argument
 handling, so no VM, network, root, display or hardware is needed.
 """
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import unittest
@@ -38,6 +39,13 @@ class LiveChecksScriptTests(unittest.TestCase):
         shellcheck = shutil.which('shellcheck')
         if shellcheck is None:
             self.skipTest('shellcheck is not installed')
+        # The scripts are kept clean against shellcheck 0.10+; older releases
+        # (for example 0.9 on CI runners) report differently.
+        version = subprocess.run([shellcheck, '--version'], text=True,
+                                 capture_output=True, timeout=30).stdout
+        found = re.search(r'version: (\d+)\.(\d+)', version)
+        if not found or (int(found[1]), int(found[2])) < (0, 10):
+            self.skipTest('shellcheck 0.10 or newer is required')
         result = subprocess.run([shellcheck, str(SCRIPT)], text=True,
                                 capture_output=True, timeout=120)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
