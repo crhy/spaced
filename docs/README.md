@@ -58,10 +58,14 @@ folders.
 Per-release evidence, newest first. A review records what was tested at the time
 and is not amended afterwards.
 
-- [11.26.1-RELEASE-REVIEW.md](11.26.1-RELEASE-REVIEW.md) — candidate evidence
-  for 11.26.1.
+- [11.26.1-RELEASE-REVIEW.md](11.26.1-RELEASE-REVIEW.md) — final review of
+  11.26.1: the ISO and its checksum, per-issue evidence, test results and what
+  was not tested.
+- [11.26.1-ISSUE-STATUS.md](11.26.1-ISSUE-STATUS.md) — one section per issue
+  11.26.1 delivers: what changed, which file proves it, and where it shipped.
 - [11.26.1-PAUSE-HANDOFF.md](11.26.1-PAUSE-HANDOFF.md) — exact state at the
-  11.26.1 pause, including the required resume order.
+  11.26.1 pause, including the required resume order; historical, superseded by
+  the review above.
 - [11.26-RELEASE-REVIEW.md](11.26-RELEASE-REVIEW.md) — 11.26 publication review.
 - [10.26.8-RELEASE-REVIEW.md](10.26.8-RELEASE-REVIEW.md) — 10.26.8 review,
   accepted with limited scope.
@@ -96,5 +100,7 @@ and is not amended afterwards.
 - [9.26-ISSUE-STATUS.md](9.26-ISSUE-STATUS.md) — 9.26 issue status.
 - [8.26-TRIAGE.md](8.26-TRIAGE.md) — 8.26 issue triage.
 
+`releases/11.26.1/` holds that release's GitHub release text
+(`RELEASE-NOTES.md`) and its Discussions announcement (`ANNOUNCEMENT.md`);
 `releases/10.26.6/` holds that release's announcement and change list, and
 `font-comparison/` holds the font comparison artwork.

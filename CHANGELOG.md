@@ -2,25 +2,15 @@
 
 ## 11.26.1 - 2026-11-13
 
-Prepared as the 11.26.1 release candidate and `11.26.1-1` APT packages. The
-full source preflight passes 318 unit tests and three GTK integration tests;
-the signed repository candidate passes package, dependency, trust/tamper and
-historical full-upgrade checks. Final installed-system and ISO gates remain
-tracked in the release review until publication.
+Built as the 11.26.1 ISO and `11.26.1-1` APT packages. The source gate runs 429
+unit tests and three GTK integration tests; the signed repository candidate
+passes payload, 157 runtime dependency, trust/tamper and historical full-upgrade
+checks. The ISO passed four live boot smoke tests, 35 live-image checks and a
+five-round reboot loop; the VM upgrade, the installer reuse run and what is
+still untested are in `docs/11.26.1-RELEASE-REVIEW.md`.
 
-- Stop an unhealthy APT transaction before it can unpack packages. Spaced
-  Update now preserves and displays failed solver output, checks dependency and
-  dpkg state before and after an update, and installs an APT transaction guard
-  for command-line upgrades. APT repository publication must pass historical
-  upgrade fixtures so a dependency regression like #415 cannot silently recur.
-- Backport the upstream elogind fixes for the reboot-helper crash and XML entity
-  lookup failure (#409). The privileged package build passes all 271
-  chroot-safe upstream tests; the installed-VM reboot gate remains recorded in
-  the release review.
-- Guarantee that a separate or reused `/home` in Calamares' final partition
-  plan reaches the installed `/etc/fstab` (#413). A post-write guard repairs
-  the one exact missing entry and stops safely if the selected home vanished,
-  became ambiguous or cannot be identified.
+**Fixes**
+
 - Repair a damaged Flatpak portal permission database without hiding unrelated
   Caja locations from applications (#408).
 - Keep new, moved and hot-plugged Caja desktop icons inside the current monitor
@@ -41,22 +31,6 @@ tracked in the release review until publication.
   Brave, LibreOffice and VLC; optional audio, RGB, voice and game applications
   remain individually available. The suggested-install button is visibly
   highlighted without animation (#11).
-- Pin the released Welcome and Monitor source archives by SHA-256 and reject a
-  release build if either component tag, version or archive digest drifts.
-- Protect a reused `/home` during installation. The live account is now removed
-  without its home directory whenever `/home` is a separate partition, so a
-  "reuse my installation" install can no longer delete the previous system's
-  files. Installed systems also no longer inherit the live image's SSH host
-  keys, and a slow `update-grub` no longer reports a finished install as failed.
-- Report Spaced Update cleanups truthfully. A cache-only cleanup now says the
-  package cache was cleaned instead of announcing that unused packages were
-  removed, and a failed cleanup always shows its message however long the
-  command output was. A cleanup with only cached downloads to free now asks to
-  clean the package cache, and selected installs report administrator warnings.
-- Keep an update from stalling on one cosmetic step. A failed LightDM settings
-  migration, crash-directory creation, daemon core-limit append or Samba
-  usershare tweak no longer leaves the desktop or release metapackage
-  unconfigured, so the next upgrade is not blocked (#415).
 - Quiet the display power watcher and end it cleanly. It reconciles the X
   display power state every five minutes instead of every thirty seconds, and
   stopping it at logout now closes the settings and screensaver monitors it
@@ -81,12 +55,33 @@ tracked in the release review until publication.
   checks that a spreadsheet program is installed before touching the audio, so a
   system without one reports that it is missing and keeps playing sound instead
   of staying muted.
-- Boot the failsafe entries from Ventoy and other loopback media. **Safe
-  Graphics** and **verbose boot** now pass `findiso=` like the default entry
-  instead of stopping with no live file system found. The text login banners now
-  name 11.26.1, and unused Calamares artwork, an invalid MATE monitor file and
-  the repository's `.gitkeep` placeholders no longer reach the image or a new
-  user's home.
+- Straighten three small desktop helpers. A shortcut that names a program in the
+  current folder now runs that file instead of a program of the same name found
+  elsewhere, the graphics report says "no Spaced session processes are running"
+  instead of calling that a failed check, and a misused wallpaper dialog now
+  prints how it is used.
+
+**Safety and reliability**
+
+- Stop an unhealthy APT transaction before it can unpack packages. Spaced
+  Update now preserves and displays failed solver output, checks dependency and
+  dpkg state before and after an update, and installs an APT transaction guard
+  for command-line upgrades. APT repository publication must pass historical
+  upgrade fixtures so a dependency regression like #415 cannot silently recur.
+- Keep an update from stalling on one cosmetic step. A failed LightDM settings
+  migration, crash-directory creation, daemon core-limit append or Samba
+  usershare tweak no longer leaves the desktop or release metapackage
+  unconfigured, so the next upgrade is not blocked (#415).
+- Report Spaced Update cleanups truthfully. A cache-only cleanup now says the
+  package cache was cleaned instead of announcing that unused packages were
+  removed, and a failed cleanup always shows its message however long the
+  command output was. A cleanup with only cached downloads to free now asks to
+  clean the package cache, and selected installs report administrator warnings.
+- Backport the upstream elogind fixes for the reboot-helper crash and XML entity
+  lookup failure (#409). The privileged package build passes all 271
+  chroot-safe upstream tests, and the installed-VM reboot gate is recorded in
+  the release review: the 11.26 image segfaulted in every reboot round, the
+  11.26.1 image rebooted five rounds and powered off with no segfault.
 - Recover a graphics driver installation that was interrupted. A power loss or a
   stopped driver install no longer leaves the machine with Nouveau blocked and
   no automatic way back: **Restore Graphics** now recognises the unfinished
@@ -101,14 +96,56 @@ tracked in the release review until publication.
   (`SPACED_APT_VALID_DAYS` overrides it), so a frozen or replayed copy of the
   archive is refused instead of accepted forever. The repository must be
   republished at least every 180 days, even with no package change.
+
+**Live USB and installer**
+
+- Guarantee that a separate or reused `/home` in Calamares' final partition
+  plan reaches the installed `/etc/fstab` (#413). A post-write guard repairs
+  the one exact missing entry and stops safely if the selected home vanished,
+  became ambiguous or cannot be identified.
+- Protect a reused `/home` during installation. The live account is now removed
+  without its home directory whenever `/home` is a separate partition, so a
+  "reuse my installation" install can no longer delete the previous system's
+  files. Installed systems also no longer inherit the live image's SSH host
+  keys, and a slow `update-grub` no longer reports a finished install as failed.
+- Boot the failsafe entries from Ventoy and other loopback media. **Safe
+  Graphics** and **verbose boot** now pass `findiso=` like the default entry
+  instead of stopping with no live file system found. The text login banners now
+  name 11.26.1, and unused Calamares artwork, an invalid MATE monitor file and
+  the repository's `.gitkeep` placeholders no longer reach the image or a new
+  user's home.
 - Make the live USB a rescue system. The stick carries GParted, TestDisk,
-  ddrescue, `smartctl`, `cryptsetup`, `lvm2`, `ntfs-3g`, `exfatprogs` and
-  `parted`, and a `Live session passwords.txt` note on the live Desktop states
-  the live user and root passwords. The rescue tools stay on the stick: the
-  installer removes them and updates no longer pull them in, so an installed
+  PhotoRec, ddrescue, `smartctl`, `cryptsetup`, `lvm2`, `ntfs-3g`, `exfatprogs`
+  and `parted`, and a `Live session passwords.txt` note on the live Desktop
+  states the live user and root passwords. The rescue tools stay on the stick:
+  the installer removes them and updates no longer pull them in, so an installed
   system does not get them, including GParted, which earlier releases also
   installed to the disk; installed systems keep the GParted they have. The
   note and the live accounts disappear from an installed system.
+
+**Under the hood**
+
+- The release gate now runs every test in the tree, and four holes found in it
+  were closed, so a shipped script or desktop file that stops matching its
+  documentation fails the build instead of passing unnoticed.
+- The privileged elogind package build now runs its upstream test suite the same
+  way every time, so the 271-test result can be reproduced rather than taken on
+  trust.
+- Pin the released Welcome and Monitor source archives by SHA-256 and reject a
+  release build if either component tag, version or archive digest drifts.
+- Four new installed-system tests record how a release is proved: a reboot loop
+  that looks for the elogind crash, a live-ISO check of what is on the image,
+  a full Calamares install that reuses a `/home` partition, and a real upgrade
+  from the previous release against the signed candidate repository.
+- The website may only advertise a download once the ISO behind it exists and
+  its checksum is read from that ISO; the page now also carries smaller images
+  and corrected help text, headers and links.
+- Documentation was corrected to match what the tree actually does, and the
+  missing pieces were written: an upgrade guide, a release checklist,
+  contributing and security policies, a documentation index, a bug report
+  template, and a roadmap of everything the 11.26.1 audit left open.
+- Spaced's own sources moved to the rhY License 1.0, with the GNU GPL-3.0-or-later
+  as an alternative, so the freedoms stay with the same terms or with GPL.
 
 ## 11.26 - 2026-11-06
 
