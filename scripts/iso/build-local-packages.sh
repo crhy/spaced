@@ -73,6 +73,7 @@ SETTINGS_PATHS=(
     usr/share/applications/spaced-gpu-driver-manager.desktop
     usr/share/applications/spaced-sharing-password.desktop
     usr/share/applications/spaced-update.desktop
+    usr/share/applications/spaced-wine-run.desktop
     usr/share/applications/spaced-window-manager.desktop
     usr/share/caja-python/extensions/spaced-change-theme.py
     usr/share/caja-python/extensions/spaced-set-wallpaper.py
