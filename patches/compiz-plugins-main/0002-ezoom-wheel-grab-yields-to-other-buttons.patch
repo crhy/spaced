@@ -1,0 +1,85 @@
+Description: Let the zoom wheel grab yield to other buttons on the same chord
+Author: Spaced Linux Developers <dev@spacedlinux.com>
+Forwarded: no
+
+ The 0001 smooth-scroll fix takes a screen-wide pointer grab as soon as the
+ configured wheel modifier chord (Shift+Super in the Spaced profile) is held,
+ which is required to beat XI2 fractional scroll events to Qt clients. That
+ grab also outlives a whole mouse button press, and Compiz plug-ins that bind
+ another button to the same chord refuse to start while any screen grab exists
+ (firepaint.c: otherScreenGrabExist (s, NULL)). Shift+Super+left-drag therefore
+ painted nothing on Spaced, while Ctrl+Alt+Shift+left-drag worked because that
+ chord takes no grab.
+
+ Release the wheel grab for the duration of a press on a button that is not
+ one of the configured wheel buttons, and take it again after that button
+ comes back up if the chord is still held and no other plug-in holds a grab.
+ Wheel scrolling keeps its suppression; Fire Writing keeps its shortcut.
+--- a/src/ezoom/ezoom.c
++++ b/src/ezoom/ezoom.c
+@@ -2395,6 +2395,26 @@
+     zoomAreaToWindow (w);
+ }
+ 
++/* True when the pressed button is one of the configured wheel buttons. */
++static Bool
++zoomWheelButton (CompDisplay *d,
++		 unsigned int button)
++{
++	int i;
++	ZOOM_DISPLAY (d);
++
++	for (i = DOPT_IN; i <= DOPT_OUT; i++)
++	{
++		CompAction *action = &zd->opt[i].value.action;
++
++		if ((action->type & CompBindingTypeButton)
++		    && action->button.button == button)
++			return TRUE;
++	}
++
++	return FALSE;
++}
++
+ /* A passive Button4/5 grab starts only after XI2 smooth-scroll valuators
+  * have already reached clients such as Qt. Grab when the configured modifier
+  * chord becomes active, before the first fractional scroll event arrives.
+@@ -2469,6 +2489,26 @@
+         ((XkbAnyEvent *) event)->xkb_type == XkbStateNotify)
+         zoomUpdateWheelGrab (d, ((XkbStateNotifyEvent *) event)->mods);
+ 
++    /* Spaced: the wheel chord is shared with other shortcuts (Shift+Super
++     * starts Fire Writing). A screen grab held across a whole button press
++     * makes those shortcuts refuse to start, because they check
++     * otherScreenGrabExist. Release the grab for the duration of a non-wheel
++     * button press; it is taken again below when the button comes back up. */
++    if (event->type == ButtonPress)
++    {
++        s = findScreenAtDisplay (d, ((XButtonEvent *) event)->root);
++        if (s)
++        {
++            ZOOM_SCREEN (s);
++            if (zs->wheelGrabIndex
++                && !zoomWheelButton (d, ((XButtonEvent *) event)->button))
++            {
++                removeScreenGrab (s, zs->wheelGrabIndex, NULL);
++                zs->wheelGrabIndex = 0;
++            }
++        }
++    }
++
+     switch (event->type) {
+ 	case MotionNotify:
+ 	    mev =  (XMotionEvent *) event;
+@@ -2506,6 +2546,11 @@
+     UNWRAP (zd, d, handleEvent);
+     (*d->handleEvent) (d, event);
+     WRAP (zd, d, handleEvent, zoomHandleEvent);
++
++    /* Restore wheel suppression for a chord that is still held: the button
++     * is back up and any other plug-in has released its own grab. */
++    if (event->type == ButtonRelease)
++        zoomUpdateWheelGrab (d, ((XButtonEvent *) event)->state);
+ }
+ 
+ static Bool

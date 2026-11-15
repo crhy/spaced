@@ -1606,6 +1606,20 @@ for compiz_script, needle in (("scripts/iso/build-marco-chroot.sh", "build-compi
     assert needle in Path(compiz_script).read_text(encoding="utf-8"), \
         f"{compiz_script} does not build, stage or publish the rebuilt Compiz (issue #279)"
 
+# Shift+Super+left-drag paints fire only if the ezoom wheel grab, which is taken
+# for that chord alone, steps aside for a press on another button.
+assert "as_initiate_button = <Shift><Super>Button1" in compiz_text, \
+    "Compiz Fire Writing no longer starts with Shift+Super+left-drag"
+ezoom_yield_patch = Path("patches/compiz-plugins-main/0002-ezoom-wheel-grab-yields-to-other-buttons.patch").read_text(encoding="utf-8")
+assert all(needle in ezoom_yield_patch for needle in
+           ("if (event->type == ButtonPress)",
+            "removeScreenGrab (s, zs->wheelGrabIndex, NULL);",
+            "if (event->type == ButtonRelease)")), \
+    "the ezoom wheel grab no longer yields to other buttons on its chord"
+assert "as_zoom_in_button = <Shift><Super>Button4" in compiz_text \
+    and "as_zoom_out_button = <Shift><Super>Button5" in compiz_text, \
+    "the ezoom wheel chord that takes the grab has moved"
+
 brisk_patch = Path("patches/brisk-menu/0001-add-spaced-context-actions.patch").read_text(encoding="utf-8")
 assert all(action in brisk_patch for action in
            ("_Properties", "_Uninstall", "Check for _Updates", "Change _Icon")), \

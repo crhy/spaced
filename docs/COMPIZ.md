@@ -84,6 +84,7 @@ uses four horizontal workspaces and one vertical workspace. Useful defaults:
 | Move window | Alt + left drag, `move` |
 | Resize window | Super + right drag, `resize` |
 | Zoom | Shift + Super + wheel, or Up/Down, `ezoom` |
+| Fire Writing | Shift + Super + left drag, `firepaint` (clear: Shift + Super + right drag) |
 | Compiz screenshot selection | Ctrl + Shift + left drag, `screenshot` |
 | MATE screenshot selection | Shift + Print, `mate-screenshot --area` |
 | Terminal | Ctrl + Alt + T, `matecompat` |
@@ -117,6 +118,45 @@ currently marked `Forwarded: no`.
    `screenshot-YYYY-MM-DD_HH-MM-SS.png`; captures made in the same second get
    `-2`, `-3`, and so on instead of replacing an existing file (issue
    [#362](https://github.com/crhy/spaced/issues/362)).
+
+## How a mouse shortcut reaches a plug-in
+
+Compiz 0.8 never calls `XGrabButton` for a configured shortcut, so no X client
+sees a `GrabButton` request when CCSM changes one. The path is:
+
+1. Core selects **XI** button/key events on the root window
+   (`src/display.c:2732` selects the core mask, and `xi2CoreMask()` returns 0
+   when the XI extension is present; `xi2SelectInput()` then selects
+   `XI_ButtonPress`/`XI_ButtonRelease`). Core also selects core button masks
+   on its screen-edge windows and takes an `AnyButton`/`AnyModifier` passive
+   grab on every managed client window and decoration frame
+   (`src/window.c:2269`, `src/window.c:1286`).
+2. The X server activates the topmost matching passive grab, or falls back to
+   the XI mask on the root window, and delivers one event to Compiz.
+3. `handleActionEvent()` in `src/event.c` matches the event against every
+   plug-in's bindings. Button matching is exact on the non-ignored modifier
+   bits: `(bindMods & modMask) == (event->state & modMask)` (`src/event.c:333`),
+   where `ignoredModMask` is CapsLock plus NumLock/ScrollLock
+   (`src/display.c:1274`). A binding that names Shift+Super therefore still
+   matches a `Shift+NumLock+Super` press.
+4. The plug-in's initiate runs. Effects that need the pointer usually call
+   `pushScreenGrab()` (`src/screen.c:2890`, a pointer grab retargeted to the
+   invisible grab window plus a keyboard grab) and refuse to start when another
+   plug-in already holds one, through `otherScreenGrabExist()`
+   (`src/screen.c:3011`). Passing only `NULL` means "any grab blocks me".
+
+A grab is held for the whole press-and-release cycle, so a plug-in that grabs
+for a *modifier chord* alone hides every other button on that chord. That is
+the cause of the Fire Writing regression: the ezoom wheel fix
+(`patches/compiz-plugins-main/0001-ezoom-consume-smooth-scroll.patch`) takes a
+screen grab named `ezoom-wheel` as soon as Shift+Super is held, and
+`firepaint.c:477` refuses to initiate while any grab exists. `0002-ezoom-wheel
+-grab-yields-to-other-buttons.patch` releases that grab while a non-wheel button
+is pressed and re-acquires it when the button comes back up. Symptom to
+recognise: the shortcut works when a different chord is configured, the press
+reaches Compiz in `xrecord`, and no `GrabPointer`/`GrabKeyboard` request is
+made for the effect. Check `strings /usr/lib/compiz/libezoom.so | grep ezoom-wheel`
+to confirm which ezoom build is installed.
 
 An X server grab defers other clients' requests and close-down processing;
 it is neither a thread mutex nor a GPU completion fence. See the primary

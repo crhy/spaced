@@ -33,6 +33,19 @@ release repairs the regressions reported after 11.26.1 in issue #419.
   It still refreshes every installed initramfs, but skips `update-grub` for the
   live session's overlay root because that root has no installed boot device
   for `grub-probe` to resolve. Installed systems continue to refresh GRUB.
+- Turn Shift+Super+left-drag back into Fire Writing. The Enhanced Zoom smooth-scroll
+  fix takes a screen-wide pointer grab as soon as the Shift+Super wheel chord is
+  held, which is needed to beat fractional scroll events to Qt clients, but a
+  Compiz grab outlives a whole button press and plug-ins refuse to start while
+  another screen grab exists. Fire Writing's own Shift+Super shortcut therefore
+  painted nothing over the wallpaper or over windows, while Ctrl+Alt+Shift+left-drag
+  worked because that chord takes no grab. The rebuilt
+  `compiz-plugins-main` (`2:0.8.18-8+spaced11.26`) releases the wheel grab for
+  the duration of a press on a button that is not a configured wheel button and
+  takes it again when that button comes back up, so wheel scrolling stays
+  suppressed and fire paints again. The seeded profile now states the shortcut
+  explicitly, and the desktop migration restores it for accounts that carry the
+  recorded Ctrl+Alt+Shift workaround without touching any other binding.
 
 The one report that Wi-Fi asked for its saved password again could not be
 reproduced and has no evidence of a stored-connection change, so 11.26.2 does
