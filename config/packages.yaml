@@ -102,7 +102,6 @@ backup:
   - timeshift
 rescue:
   - gddrescue
-  - cryptsetup
   - exfatprogs
   - lvm2
   - ntfs-3g
@@ -131,6 +130,13 @@ printing:
   - cups-filters
   - cups-ipp-utils
   - system-config-printer
+# An encrypted root only boots if the installed initramfs can unlock LUKS.
+# cryptsetup-initramfs is only a Recommends of cryptsetup, and live-build runs
+# with --apt-recommends false, so it must be named here to reach the image,
+# the installed system and later updates (issue #420).
+encryption:
+  - cryptsetup
+  - cryptsetup-initramfs
 system:
   - accountsservice
   - libfuse2t64

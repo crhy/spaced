@@ -126,6 +126,29 @@ still carries the nouveau X driver and NVIDIA firmware for installed use; only
 the early kernel-time force is gone. The safe graphics entry explicitly sets
 `nouveau.modeset=0` for hardware that needs it.
 
+### Encrypted installs — `ALERT! /dev/mapper/luks-… does not exist` (#420)
+
+**Symptom:** an install with an encrypted root reaches GRUB, then reports
+`Gave up waiting for root file system device` and `Dropping to a shell!` inside
+the initramfs. In that shell `blkid` shows the partition as `crypto_LUKS`, `lsblk`
+shows no `dm`/mapper device, and `crypto_keyfile.bin` sits in the initramfs root.
+
+**Cause:** the keyfile was staged and packed, but nothing in the installed
+initramfs opens the LUKS container. The cryptroot hook, the in-initramfs
+`cryptroot` script and the `dm_crypt` module copy all come from
+`cryptsetup-initramfs`, which is only a *Recommends* of `cryptsetup`; `live-build/auto/config`
+builds the image with `--apt-recommends false`, so the package never reached the
+image, and `cryptsetup` itself sat in the live-only `rescue` group, which
+`spaced-meta` must not depend on.
+
+**Resolution:** `cryptsetup` and `cryptsetup-initramfs` now sit in the installed
+`encryption` group of `config/packages.yaml`, so both reach the image, the installed
+system and the metapackage Depends. `spacedfstabguard` also requires a `crypttab`
+line naming `/crypto_keyfile.bin` for every planned LUKS volume and copies the
+keyfile into the target if Calamares' `fstab` module did not.
+
+**Rule:** boot behaviour of an installed system may never depend on a Recommends.
+
 ## Hardening (how these cannot come back)
 
 `scripts/check.sh` now fails the build if any of the following regress in
@@ -137,6 +160,9 @@ the early kernel-time force is gone. The safe graphics entry explicitly sets
 - Addition of `live-media-timeout=`; in the shipped live-boot version this
   delays scanning instead of extending it and can suppress every scan
 - A `virtio-gpu-pci` / `virtio-vga` test-VM GPU (must stay a single `-vga std`)
+- `cryptsetup-initramfs` leaving the installed package set, or `luksbootkeyfile`,
+  `initramfscfg` or `initramfs` leaving the Calamares exec sequence
+  (`tests/test_luks_boot.py`)
 
 `make check` runs this gate before any ISO is produced. If you are changing
 boot configuration, run:

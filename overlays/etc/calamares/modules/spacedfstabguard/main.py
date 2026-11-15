@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Guarantee that Calamares keeps a planned separate /home in fstab."""
+"""Guarantee the installed fstab and crypttab match the final partition plan.
+
+Issue #413: a planned separate /home must appear in the installed fstab.
+Issue #420: every planned LUKS volume must appear in the installed crypttab
+naming the boot keyfile, or the installed initramfs has nothing to unlock and
+the system drops to an (initramfs) shell on first boot.
+"""
 
 import os
 
@@ -12,16 +18,21 @@ FS_MAP = {
     "linuxswap": "swap",
 }
 
+# luksbootkeyfile writes this on the installer, fstab copies it into the target
+# and initramfscfg packs it into the initramfs (KEYFILE_PATTERN). The cryptroot
+# hook only unlocks a volume whose crypttab line names it.
+KEYFILE = "/crypto_keyfile.bin"
+
 
 def pretty_name():
-    return "Verifying the home partition."
+    return "Verifying the partition plan."
 
 
-def _error(detail):
+def _error(detail, title="Partition configuration error", untouched="the existing home partition"):
     libcalamares.utils.warning(detail)
     return (
-        "Home partition configuration error",
-        detail + " The installation has stopped without changing the existing home partition.",
+        title,
+        detail + " The installation has stopped without changing {}.".format(untouched),
     )
 
 
@@ -46,6 +57,97 @@ def _device(partition):
     if uuid:
         return "UUID=" + uuid
     return partition.get("device")
+
+
+def _luks_partitions(partitions):
+    return [p for p in partitions if p.get("luksMapperName")]
+
+
+def _crypttab_source(partition):
+    """Identify the encrypted container itself, not the filesystem inside it."""
+    for key in ("luksUuid", "partUuid", "uuid"):
+        value = partition.get(key)
+        if value:
+            return "UUID=" + value
+    return partition.get("device") or None
+
+
+def _crypttab_mappers(path):
+    mappers = set()
+    if not os.path.isfile(path):
+        return mappers
+    with open(path, encoding="utf-8") as handle:
+        for raw_line in handle:
+            line = raw_line.strip()
+            if line and not line.startswith("#"):
+                mappers.add(line.split()[0])
+    return mappers
+
+
+def _ensure_boot_keyfile(root, source=KEYFILE):
+    """The target must own the keyfile before update-initramfs packs it."""
+    target = os.path.join(root, KEYFILE.lstrip("/"))
+    if os.path.isfile(target):
+        return True
+    if not os.path.isfile(source):
+        return False
+    with open(source, "rb") as handle, open(target, "wb") as destination:
+        destination.write(handle.read())
+    os.chmod(target, 0o400)
+    return True
+
+
+def _ensure_crypttab(root, partitions):
+    """Add only the crypttab lines the final plan requires and Calamares lost."""
+    luks = _luks_partitions(partitions)
+    if not luks:
+        return None
+
+    planned = {}
+    for partition in luks:
+        mapper = partition["luksMapperName"]
+        source = _crypttab_source(partition)
+        if not source:
+            return _error(
+                "The encrypted volume {} has no usable LUKS identifier, so the "
+                "installed system could never unlock it.".format(mapper),
+                untouched="the existing crypttab",
+            )
+        planned[mapper] = source
+
+    path = os.path.join(root, "etc", "crypttab")
+    missing = [m for m in planned if m not in _crypttab_mappers(path)]
+    if not missing:
+        return None
+    if not _ensure_boot_keyfile(root):
+        # Not fatal: cryptroot falls back to asking for the passphrase at boot,
+        # which is still a bootable system, unlike a missing crypttab entry.
+        libcalamares.utils.warning(
+            "No {} in the installed system, so the encrypted volumes will ask "
+            "for their passphrase at boot.".format(KEYFILE)
+        )
+
+    needs_newline = os.path.isfile(path) and os.path.getsize(path)
+    if needs_newline:
+        with open(path, "rb") as existing:
+            existing.seek(-1, os.SEEK_END)
+            needs_newline = existing.read(1) != b"\n"
+
+    with open(path, "a", encoding="utf-8") as crypttab:
+        if needs_newline:
+            crypttab.write("\n")
+        for mapper in missing:
+            # Calamares' own field widths, keyfile auth, "luks" options.
+            crypttab.write("{:<41} {:<38} {:<20} luks\n".format(
+                mapper, planned[mapper], KEYFILE
+            ))
+        crypttab.flush()
+        os.fsync(crypttab.fileno())
+
+    libcalamares.utils.debug(
+        "Repaired a missing crypttab entry for: {}".format(", ".join(missing))
+    )
+    return None
 
 
 def _append_home(path, partition):
@@ -84,25 +186,29 @@ def run():
         return _error(
             "Calamares promised to reuse a home partition, but the final partition plan lost it."
         )
-    if not homes:
-        return None
-    if len(homes) != 1:
+    if len(homes) > 1:
         return _error("The final partition plan contains more than one /home partition.")
-
-    home = homes[0]
-    if home.get("fs", "").lower() == "zfs":
-        return None
 
     root = storage.value("rootMountPoint")
     if not root:
         return _error("Calamares did not provide the target system mount point.")
+
+    crypttab_error = _ensure_crypttab(root, partitions)
+
+    if not homes:
+        return crypttab_error
+
+    home = homes[0]
+    if home.get("fs", "").lower() == "zfs":
+        return crypttab_error
+
     fstab_path = os.path.join(root, "etc", "fstab")
     if not os.path.isfile(fstab_path):
-        return _error("Calamares did not create the target system's /etc/fstab.")
+        return crypttab_error or _error("Calamares did not create the target system's /etc/fstab.")
 
     try:
         if "/home" in _fstab_mounts(fstab_path):
-            return None
+            return crypttab_error
         if not _append_home(fstab_path, home):
             return _error("The planned /home partition has no usable filesystem identifier.")
     except OSError as error:
@@ -111,4 +217,4 @@ def run():
     libcalamares.utils.debug(
         "Repaired a missing /home entry in the target system's /etc/fstab."
     )
-    return None
+    return crypttab_error
