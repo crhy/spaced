@@ -1,0 +1,81 @@
+From: Spaced Linux Developers <dev@spacedlinux.com>
+Subject: firepaint: step aside for keyboard shortcuts that need a grab
+
+Fire Writing holds a Compiz screen grab for the whole stroke, and Compiz
+turns that into an X pointer and keyboard grab on its grab window (src/screen.c
+pushScreenGrab). The X server keeps one grab at a time, so while a stroke is
+in progress another client's XGrabPointer/XGrabKeyboard returns
+GrabAlreadyGrabbed. mate-screenshot selects its area with exactly such a
+grab (mate-utils screenshot-utils.c gdk_seat_grab), so Shift+Print produces
+no image at all: mate-screenshot either quits with a zero sized rectangle or
+sits waiting for pointer events that are retargeted to Compiz.
+
+Release the fire grab when a key event arrives, and take it again on the next
+button press. The fire already on screen is unaffected: its points and
+particles live in the screen privates, and the next press resumes the stroke.
+
+--- a/src/firepaint/firepaint.c
++++ b/src/firepaint/firepaint.c
+@@ -770,6 +770,32 @@
+ }
+ 
+ 
++/* Spaced: a keyboard shortcut may launch an external tool that needs a
++ * pointer and keyboard grab of its own (Shift+Print runs mate-screenshot).
++ * The X server keeps one grab at a time, so ours must step aside for the
++ * whole key action; the next button press takes it back for the stroke.
++ */
++static void
++fireYieldGrab (CompScreen *s)
++{
++    FIRE_SCREEN (s);
++
++    if (fs->grabIndex)
++    {
++	removeScreenGrab (s, fs->grabIndex, NULL);
++	fs->grabIndex = 0;
++    }
++}
++
++static void
++fireTakeGrab (CompScreen *s)
++{
++    FIRE_SCREEN (s);
++
++    if (!fs->grabIndex && !otherScreenGrabExist (s, "firepaint", NULL))
++	fs->grabIndex = pushScreenGrab (s, None, "firepaint");
++}
++
+ static void
+ fireHandleEvent (CompDisplay *d,
+ 		 XEvent      *event)
+@@ -781,6 +807,13 @@
+     switch (event->type)
+     {
+ 
++    case KeyPress:
++    case KeyRelease:
++	s = findScreenAtDisplay (d, event->xkey.root);
++	if (s)
++	    fireYieldGrab (s);
++	break;
++
+     case MotionNotify:
+ 	s = findScreenAtDisplay (d, event->xmotion.root);
+ 	if (s)
+@@ -800,6 +833,15 @@
+     UNWRAP (fd, d, handleEvent);
+     (*d->handleEvent) (d, event);
+     WRAP (fd, d, handleEvent, fireHandleEvent);
++
++    /* A press of the initiate button takes the grab again through fireInitiate;
++     * any other press restores it here after a key shortcut released it. */
++    if (event->type == ButtonPress)
++    {
++	s = findScreenAtDisplay (d, ((XButtonEvent *) event)->root);
++	if (s)
++	    fireTakeGrab (s);
++    }
+ }
+ 
+ static Bool

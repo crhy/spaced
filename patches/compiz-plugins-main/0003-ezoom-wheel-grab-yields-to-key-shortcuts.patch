@@ -1,0 +1,43 @@
+From: Spaced Linux Developers <dev@spacedlinux.com>
+Subject: ezoom: let the wheel grab step aside for keyboard shortcuts
+
+Patch 0001 takes a screen-wide grab for the Shift+Super chord alone, and patch
+0002 releases it for the duration of a press on a button that is not a wheel
+button. A key shortcut is not a button: after a Fire Writing stroke ends, the
+chord is still held and 0002 takes the wheel grab back, so Shift+Print still
+produces no image while the fire burns. mate-screenshot selects its area with
+an X pointer and keyboard grab (mate-utils screenshot-utils.c gdk_seat_grab),
+and the X server keeps one grab at a time, so its request returns
+GrabAlreadyGrabbed while Compiz holds one.
+
+Release the wheel grab for a key press and key release. Wheel suppression is
+unchanged: the button paths added by 0001 and 0002 take the grab back, and a
+wheel press is a button press.
+
+--- a/src/ezoom/ezoom.c
++++ b/src/ezoom/ezoom.c
+@@ -2509,6 +2509,24 @@
+         }
+     }
+ 
++    /* Spaced: a keyboard shortcut may launch an external tool that needs a
++     * pointer and keyboard grab of its own (Shift+Print runs mate-screenshot).
++     * The X server keeps one grab at a time, so the wheel grab must step aside
++     * for the whole key action; the button paths above take it back. */
++    if (event->type == KeyPress || event->type == KeyRelease)
++    {
++        s = findScreenAtDisplay (d, ((XKeyEvent *) event)->root);
++        if (s)
++        {
++            ZOOM_SCREEN (s);
++            if (zs->wheelGrabIndex)
++            {
++                removeScreenGrab (s, zs->wheelGrabIndex, NULL);
++                zs->wheelGrabIndex = 0;
++            }
++        }
++    }
++
+     switch (event->type) {
+ 	case MotionNotify:
+ 	    mev =  (XMotionEvent *) event;

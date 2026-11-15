@@ -93,9 +93,9 @@ The two screenshot paths have different behavior. Issue
 [#305](https://github.com/crhy/spaced/issues/305) requests feedback for the
 Compiz path; documenting the MATE shortcut does not resolve it.
 
-## Three shipped fixes
+## Four shipped fixes
 
-All three patches are in [the patch queue](../patches/compiz/README.md),
+All four patches are in [the patch queue](../patches/compiz/README.md),
 currently marked `Forwarded: no`.
 
 1. **Title-bar hit geometry (10.26.2 onward).** The GTK decorator applied an
@@ -118,6 +118,9 @@ currently marked `Forwarded: no`.
    `screenshot-YYYY-MM-DD_HH-MM-SS.png`; captures made in the same second get
    `-2`, `-3`, and so on instead of replacing an existing file (issue
    [#362](https://github.com/crhy/spaced/issues/362)).
+4. **Screenshots over a fire grab (11.26.2).** `0004-screenshot-works-over-fire-grab.patch`
+   lets the screenshot plug-in initiate while Fire Writing or the Spaced zoom
+   wheel holds a grab. See the grab section below.
 
 ## How a mouse shortcut reaches a plug-in
 
@@ -165,6 +168,49 @@ Keep the interval short. Before upstream submission, examine GLX stalls,
 already-invalid pixmaps, every failure path and the fatal fallback inside
 `bindPixmapToTexture`. Successful theme cycling is regression evidence,
 not proof that every driver/lifetime failure is covered.
+
+### A grab also hides keyboard shortcuts, and what to do about it
+
+A Compiz grab is an X server grab: `pushScreenGrab()` sends `XGrabPointer`
+plus `XGrabKeyboard` against the invisible grab window (`src/screen.c:2890`).
+The X server keeps **one** grab at a time, so while Compiz holds one, another
+client's own grab request returns `GrabAlreadyGrabbed` (`src/display.c:1447`
+counts Compiz's grabs in `grabRequestCount` and `XserverWindow.c:104` refuses
+the second). `mate-screenshot --area` selects its rectangle with exactly such
+a request (`mate-utils screenshot-utils.c: gdk_seat_grab`), so with Fire Writing
+on screen Shift+Print produced no file at all: the process either quit on a
+zero sized rectangle or waited for pointer events retargeted to Compiz.
+
+Three changes, in three queues, close it:
+
+- `patches/compiz-plugins-main/0003-ezoom-wheel-grab-yields-to-key-shortcuts.patch`
+  releases `ezoom-wheel` for a key press and key release. The button paths from
+  0001 and 0002 take it back, and a wheel press is a button press, so wheel
+  suppression is unchanged.
+- `patches/compiz-plugins-extra/0001-firepaint-yields-grab-to-key-shortcuts.patch`
+  does the same for the `firepaint` grab, which outlives the whole stroke. It is
+  retaken on the next button press; the fire already on screen is untouched,
+  because points and particles live in the screen privates.
+- `patches/compiz/0004-screenshot-works-over-fire-grab.patch` lets the Compiz
+  screenshot plug-in's own drag start over those two grabs:
+  `otherScreenGrabExist (s, "screenshot", "firepaint", "ezoom-wheel", NULL)`.
+  This is safe here and only here: `shotPaintScreen` reads the composed
+  framebuffer *after* `paintScreen`, and `firePaintOutput` draws the particles
+  into that framebuffer, so the fire is part of the captured image. A grab held
+  by another **X client** would still break the selection; that is not what
+  `otherScreenGrabExist` reports.
+
+The profile has to cooperate. Compiz matches a shortcut's modifiers exactly
+(`src/event.c:333`), so while the Shift+Super chord is still held, a `<Shift>Print`
+binding does not fire. The shipped profile therefore binds `<Print>`,
+`<Shift>Print`, `<Super>Print` and `<Shift><Super>Print>`, and
+`migrate-desktop.py` adds the same four to existing accounts in vacant command
+slots without touching a Print key the user already claimed.
+
+Do not "fix" this by removing the chord grab: that re-breaks issue #371 smooth
+scrolling, and dropping the button rule from 0002 re-breaks Fire Writing itself.
+Evidence for this change is a `mate-screenshot` that writes a file whose pixels
+differ from a capture taken after Shift+Super+right-drag cleared the fire.
 
 ## Startup checks and the internal fallback distinction
 
@@ -231,6 +277,10 @@ matching binary packages: `compiz`, `compiz-core`, `compiz-gnome`,
 `compiz-mate`, `compiz-plugins`, `libdecoration0t64`.
 `compiz-plugins-extra` is separately packaged; a core change also needs an
 ABI and plugin compatibility check against the installed extra plugins.
+`scripts/iso/build-compiz-plugins-extra.sh` and
+`scripts/iso/stage-compiz-plugins-extra.sh` do the same for
+`compiz-plugins-extra` `2:0.8.18-5+spaced11.26.2`, whose queue is
+`patches/compiz-plugins-extra/`.
 
 For each change, start from a fresh seeded profile and also test a migrated,
 customized profile. Record package versions and immutable source revision.
@@ -241,6 +291,7 @@ customized profile. Record package versions and immutable source revision.
 | Pixmap lifetime | Rapid repeated theme changes and window create/destroy; no GLX errors, fallback or stuck server |
 | Session recovery | Controlled abnormal exit, clean logout, X shutdown; one decorator, bounded restarts, no lock leak |
 | Effects and input | Cube, zoom, switcher, screenshot, move/resize, panel/menu shortcuts still usable |
+| Screenshot while fire burns | Print and Shift+Print write a file with the fire visible, mid-stroke and after; Ctrl+Shift+drag too, with Shift+Super held |
 | Renderer matrix | Software rendering and affected Intel/AMD/NVIDIA hardware reported separately; include multi-monitor and suspend/resume |
 | Upgrade | All matching packages installed, old profile customization retained, session restart tested |
 

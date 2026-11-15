@@ -40,12 +40,27 @@ release repairs the regressions reported after 11.26.1 in issue #419.
   another screen grab exists. Fire Writing's own Shift+Super shortcut therefore
   painted nothing over the wallpaper or over windows, while Ctrl+Alt+Shift+left-drag
   worked because that chord takes no grab. The rebuilt
-  `compiz-plugins-main` (`2:0.8.18-8+spaced11.26`) releases the wheel grab for
+  `compiz-plugins-main` (`2:0.8.18-8+spaced11.26.2`) releases the wheel grab for
   the duration of a press on a button that is not a configured wheel button and
   takes it again when that button comes back up, so wheel scrolling stays
   suppressed and fire paints again. The seeded profile now states the shortcut
   explicitly, and the desktop migration restores it for accounts that carry the
   recorded Ctrl+Alt+Shift workaround without touching any other binding.
+- Take a screenshot while Fire Writing is burning. A Compiz screen grab is an
+  X server grab, and the X server keeps one grab at a time, so Fire Writing's
+  stroke-long `firepaint` grab and the Shift+Super `ezoom-wheel` grab both made
+  `mate-screenshot` fail: its `--area` selection asks for its own pointer and
+  keyboard grab and got `GrabAlreadyGrabbed`, so Print and Shift+Print wrote no
+  file. The rebuilt `compiz-plugins-extra` (`2:0.8.18-5+spaced11.26.2`) and
+  `compiz-plugins-main` release those grabs for a key press and key release and
+  take them again on the next button press, and the rebuilt Compiz core lets the
+  Compiz screenshot plug-in's own Ctrl+Shift+drag start over them - the fire is
+  in the picture, because the capture is read back from the framebuffer the
+  particles were drawn into. The seeded profile binds `<Print>`, `<Shift>Print>`,
+  `<Super>Print` and `<Shift><Super>Print` - the Super pair is needed because
+  Compiz matches a shortcut's modifiers exactly, so a plain `<Shift>Print` binding
+  cannot fire while the Shift+Super chord is still held - and the desktop
+  migration adds the same four to existing accounts in vacant command slots.
 
 The one report that Wi-Fi asked for its saved password again could not be
 reproduced and has no evidence of a stored-connection change, so 11.26.2 does

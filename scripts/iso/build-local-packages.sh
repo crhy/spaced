@@ -300,6 +300,7 @@ stage_meta
 "$ROOT/scripts/iso/stage-marco.sh"
 "$ROOT/scripts/iso/stage-compiz.sh"
 "$ROOT/scripts/iso/stage-compiz-plugins-main.sh"
+"$ROOT/scripts/iso/stage-compiz-plugins-extra.sh"
 "$ROOT/scripts/iso/stage-xorg-server.sh"
 "$ROOT/scripts/iso/stage-caja.sh"
 "$ROOT/scripts/iso/stage-elogind.sh"

@@ -109,6 +109,16 @@ for source in "$compiz_plugins_main_artifacts"/compiz-plugins-main_*.dsc "$compi
     fi
     cp "$source" "$destination"
 done
+# Publish the Fire Writing grab fix with its corresponding sources.
+compiz_plugins_extra_artifacts=${SPACED_COMPIZ_PLUGINS_EXTRA_ARTIFACT_DIR:-$ROOT/build/compiz-plugins-extra/artifacts}
+for source in "$compiz_plugins_extra_artifacts"/compiz-plugins-extra_*.dsc "$compiz_plugins_extra_artifacts"/compiz-plugins-extra_*.orig.tar.* "$compiz_plugins_extra_artifacts"/compiz-plugins-extra_*.debian.tar.*; do
+    [[ -f "$source" ]] || { echo "Missing corresponding Compiz extra plug-ins source: $source" >&2; exit 1; }
+    destination="$source_dir/${source##*/}"
+    if [[ -e "$destination" ]] && ! cmp -s "$source" "$destination"; then
+        echo "Refusing to replace published source bytes: $destination" >&2; exit 1
+    fi
+    cp "$source" "$destination"
+done
 # Publish the corresponding Caja source alongside the rebuilt binaries.
 caja_artifacts=${SPACED_CAJA_ARTIFACT_DIR:-$ROOT/build/caja/artifacts}
 for source in "$caja_artifacts"/caja_*.dsc "$caja_artifacts"/caja_*.orig.tar.* "$caja_artifacts"/caja_*.debian.tar.*; do

@@ -1620,6 +1620,38 @@ assert "as_zoom_in_button = <Shift><Super>Button4" in compiz_text \
     and "as_zoom_out_button = <Shift><Super>Button5" in compiz_text, \
     "the ezoom wheel chord that takes the grab has moved"
 
+# Print and Shift+Print must still produce an image while Fire Writing or the
+# zoom wheel holds a screen grab, and the shortcuts must be reachable while the
+# Shift+Super chord is held (issue f051).
+for print_key, print_command in (("<Print>", "mate-screenshot"),
+                                 ("<Shift>Print", "mate-screenshot --area"),
+                                 ("<Super>Print", "mate-screenshot"),
+                                 ("<Shift><Super>Print", "mate-screenshot --area")):
+    assert re.search(rf"^as_command\d+ = {re.escape(print_command)}\r?\n"
+                     rf"as_run_command\d+_key = {re.escape(print_key)}$",
+                     compiz_text, re.MULTILINE), \
+        f"the Compiz profile no longer binds {print_key} to {print_command}"
+assert 'otherScreenGrabExist (s, "screenshot", "firepaint", "ezoom-wheel", NULL)' \
+    in Path("patches/compiz/0004-screenshot-works-over-fire-grab.patch") \
+    .read_text(encoding="utf-8"), \
+    "the Compiz screenshot plug-in no longer starts over the fire and wheel grabs"
+for grab_patch, needles in (("patches/compiz-plugins-extra/0001-firepaint-yields-grab-to-key-shortcuts.patch",
+                            ("case KeyPress:", "fireYieldGrab (s);", "fireTakeGrab (s);")),
+                           ("patches/compiz-plugins-main/0003-ezoom-wheel-grab-yields-to-key-shortcuts.patch",
+                            ("if (event->type == KeyPress || event->type == KeyRelease)",
+                             "removeScreenGrab (s, zs->wheelGrabIndex, NULL);"))):
+    grab_text = Path(grab_patch).read_text(encoding="utf-8")
+    assert all(needle in grab_text for needle in needles), \
+        f"{grab_patch} no longer lets the grab step aside for a key shortcut"
+assert len(Path("patches/compiz-plugins-extra/sources.sha256").read_text(encoding="utf-8").split()) == 6, \
+    "the Compiz extra plug-in source archives are not pinned by SHA-256"
+for extra_script, needle in (("scripts/iso/build-marco-chroot.sh", "build-compiz-plugins-extra.sh"),
+                             ("scripts/iso/build-local-packages.sh", "stage-compiz-plugins-extra.sh"),
+                             ("scripts/build-apt-repo.sh", "compiz-plugins-extra_*.dsc"),
+                             ("Makefile", "stage-compiz-plugins-extra.sh --check")):
+    assert needle in Path(extra_script).read_text(encoding="utf-8"), \
+        f"{extra_script} does not build, stage or publish rebuilt Compiz extra plug-ins (issue f051)"
+
 brisk_patch = Path("patches/brisk-menu/0001-add-spaced-context-actions.patch").read_text(encoding="utf-8")
 assert all(action in brisk_patch for action in
            ("_Properties", "_Uninstall", "Check for _Updates", "Change _Icon")), \

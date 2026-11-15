@@ -129,16 +129,27 @@ def migrate_compiz(path):
     if parser["screenshot"].get("as_initiate_button", "") in ("", "<Super>Button1"):
         parser["screenshot"]["as_initiate_button"] = "<Control><Shift>Button1"
         changed = True
-    # Use a vacant command slot and leave any user-assigned Shift+Print alone.
-    bound = any(value in ("<Shift>Print", "<Shift>PrintScreen")
-                for section in parser.sections() for value in parser[section].values())
-    if not bound:
+    # Print takes a whole-desktop shot and Shift+Print selects an area. Use a
+    # vacant command slot and leave any user-assigned Print key alone. The Super
+    # variants cover the case where the Fire Writing or Enhanced Zoom modifier
+    # chord is still held: Compiz matches a shortcut's modifiers exactly (src
+    # /event.c), so <Shift>Print does not fire while Shift+Super is down.
+    for command_text, key in (
+        ("mate-screenshot", "<Print>"),
+        ("mate-screenshot --area", "<Shift>Print"),
+        ("mate-screenshot", "<Super>Print"),
+        ("mate-screenshot --area", "<Shift><Super>Print"),
+    ):
+        variants = (key, key.replace("Print", "PrintScreen"))
+        if any(value in variants
+               for section in parser.sections() for value in parser[section].values()):
+            continue
         for slot in range(12):
-            command, key = f"as_command{slot}", f"as_run_command{slot}_key"
-            if parser["commands"].get(command, "") or parser["commands"].get(key, ""):
+            command, run_key = f"as_command{slot}", f"as_run_command{slot}_key"
+            if parser["commands"].get(command, "") or parser["commands"].get(run_key, ""):
                 continue
-            parser["commands"][command] = "mate-screenshot --area"
-            parser["commands"][key] = "<Shift>Print"
+            parser["commands"][command] = command_text
+            parser["commands"][run_key] = key
             changed = True
             break
     if changed:

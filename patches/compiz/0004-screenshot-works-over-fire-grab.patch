@@ -1,0 +1,30 @@
+From: Spaced Linux Developers <dev@spacedlinux.com>
+Subject: screenshot: start while Fire Writing or the zoom wheel holds a grab
+
+The screenshot plug-in refuses to initiate while any screen grab other than
+its own exists. Spaced binds Shift+Super+left-drag to Fire Writing and Shift+Super
+to the zoom wheel, and both hold a screen grab for their shortcut
+(firepaint.c: pushScreenGrab (s, None, "firepaint")), so Ctrl+Shift+left-drag
+selects nothing while fire is being painted. The capture itself is safe over
+another plug-in's grab: shotPaintScreen reads the composed framebuffer after
+paintScreen, and the fire particles are drawn into that framebuffer by
+firePaintOutput, so the fire is part of the image. Only a grab held by another
+X client can break the selection, and that is not what otherScreenGrabExist
+reports. Let the screenshot plug-in coexist with the two Spaced grabs.
+
+--- a/plugins/screenshot.c
++++ b/plugins/screenshot.c
+@@ -91,7 +91,12 @@
+     {
+ 	SHOT_SCREEN (s);
+ 
+-	if (otherScreenGrabExist (s, "screenshot", NULL))
++	/* Spaced: Fire Writing (firepaint) and the Spaced zoom wheel hold a
++	 * screen grab for their own shortcut. A screenshot must still work
++	 * over them: the image is read back from the composed framebuffer
++	 * (shotPaintScreen), so the fire is part of the picture. Only a grab
++	 * held by another X client can break the selection. */
++	if (otherScreenGrabExist (s, "screenshot", "firepaint", "ezoom-wheel", NULL))
+ 	    return FALSE;
+ 
+ 	if (!ss->grabIndex)

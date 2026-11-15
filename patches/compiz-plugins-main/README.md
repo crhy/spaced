@@ -1,7 +1,7 @@
 # Compiz main plugins
 
 Rebuild Devuan's `compiz-plugins-main` 0.8.18-8 as
-`2:0.8.18-8+spaced11.26`. `sources.sha256` pins the source descriptor and
+`2:0.8.18-8+spaced11.26.2`. `sources.sha256` pins the source descriptor and
 archives; the build script verifies them before extraction and applies the
 tracked quilt patches. The ISO and APT repository use the same runtime package.
 
@@ -24,6 +24,16 @@ and no other plug-in holds a grab. Wheel suppression is unchanged; see
 [the Compiz notes](../../docs/COMPIZ.md).
 
 Build with `make marco`; stage with `scripts/iso/stage-compiz-plugins-main.sh`.
+`0003-ezoom-wheel-grab-yields-to-key-shortcuts.patch` is the same yielding rule
+applied to keys instead of buttons. The wheel grab is taken for a modifier
+chord, and Spaced binds that chord (Shift+Super) to screenshot shortcuts as
+well. A grab outlives the key press that triggered it, and a client that needs
+its own pointer or keyboard grab - `mate-screenshot --area` selects its area
+with one - gets `GrabAlreadyGrabbed` while the grab is held, so Shift+Print
+produced no image while Enhanced Zoom was on screen. The grab is released for
+a key press and key release and taken again on the next button press, which
+leaves wheel suppression and the zoom action itself unchanged.
+See [the manual regression probe](../../tests/manual/ezoom/README.md).
 See [the manual regression probe](../../tests/manual/ezoom/README.md).
 The test must check both application event suppression and visible desktop
 zoom: suppressing the application alone would conceal a broken zoom action.

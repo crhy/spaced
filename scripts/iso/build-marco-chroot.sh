@@ -86,6 +86,13 @@ if ! "$ROOT/scripts/iso/stage-compiz-plugins-main.sh" --check 2>/dev/null; then
     chroot "$CHROOT" /usr/bin/env DEB_BUILD_OPTIONS=parallel=2 \
         bash /workspace/scripts/iso/build-compiz-plugins-main.sh --build /workspace/build/compiz-plugins-main
 fi
+# Fire Writing must not hold the only screen grab while a screenshot shortcut runs.
+if ! "$ROOT/scripts/iso/stage-compiz-plugins-extra.sh" --check 2>/dev/null; then
+    chroot "$CHROOT" /usr/bin/env DEBIAN_FRONTEND=noninteractive \
+        apt-get build-dep -y --no-install-recommends compiz-plugins-extra
+    chroot "$CHROOT" /usr/bin/env DEB_BUILD_OPTIONS=parallel=2 \
+        bash /workspace/scripts/iso/build-compiz-plugins-extra.sh --build /workspace/build/compiz-plugins-extra
+fi
 # The X server with the amdgpu ABI fix (issue #298) is built here as well.
 if ! "$ROOT/scripts/iso/stage-xorg-server.sh" --check 2>/dev/null; then
     chroot "$CHROOT" /usr/bin/env DEBIAN_FRONTEND=noninteractive \
@@ -124,6 +131,6 @@ if ! "$ROOT/scripts/iso/stage-mate-control-center.sh" --check 2>/dev/null; then
 fi
 if [ -n "${PKEXEC_UID:-}" ]; then
     chown -R "$PKEXEC_UID" "$ROOT/build/marco/artifacts" "$ROOT/build/nm-focus" "$ROOT/build/compiz" \
-        "$ROOT/build/compiz-plugins-main" "$ROOT/build/xorg-server" "$ROOT/build/caja" "$ROOT/build/brisk-menu" \
+        "$ROOT/build/compiz-plugins-main" "$ROOT/build/compiz-plugins-extra" "$ROOT/build/xorg-server" "$ROOT/build/caja" "$ROOT/build/brisk-menu" \
         "$ROOT/build/mate-control-center" "$ROOT/build/elogind"
 fi
