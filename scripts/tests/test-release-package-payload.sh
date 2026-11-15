@@ -87,6 +87,7 @@ source = (payload / 'etc/apt/sources.list.d/spaced-apt.list').read_text()
 assert 'trusted=yes' not in source
 assert 'signed-by=/usr/share/keyrings/spaced-archive-keyring.gpg' in source
 preferences = '\n'.join(p.read_text() for p in (payload / 'etc/apt/preferences.d').iterdir() if p.is_file())
-assert 'systemd-sysv' in preferences and 'Pin-Priority: -1' in preferences
+assert 'Package: systemd systemd-*' in preferences and 'Pin-Priority: -1' in preferences
+assert 'systemd-standalone-sysusers systemd-standalone-tmpfiles' in preferences
 print(f'Package payload and {len(expected)} runtime dependency checks passed.')
 PY
