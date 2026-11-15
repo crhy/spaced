@@ -143,7 +143,10 @@ class HeaderSubtitleContrastTests(unittest.TestCase):
                    XDG_DATA_HOME=str(workdir / 'share'),
                    SPACED_UPDATE_APP=str(APP),
                    SPACED_UPDATE_NO_AUTOCHECK='1',
-                   SPACED_CONTRAST_SUBTITLE=SUBTITLE_TEXT)
+                   SPACED_CONTRAST_SUBTITLE=SUBTITLE_TEXT,
+                   # The render imports the shipped app from overlays/, and scripts/check.sh
+                   # refuses any __pycache__ there: the image must not carry bytecode.
+                   PYTHONDONTWRITEBYTECODE='1')
         result = subprocess.run(['xvfb-run', '-a', 'python3', str(script), str(image)],
                                 env=env, timeout=60, capture_output=True)
         self.assertEqual(result.returncode, 0,

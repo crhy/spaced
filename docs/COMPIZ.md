@@ -92,6 +92,11 @@ The two screenshot paths have different behavior. Issue
 [#305](https://github.com/crhy/spaced/issues/305) requests feedback for the
 Compiz path; documenting the MATE shortcut does not resolve it.
 
+Watch the Compiz tutorial: [Compiz on Spaced Linux: a 5-minute tour](https://youtu.be/csKKNzKwrMg)
+shows these bindings while their effect is on screen — moving and resizing, Alt+Tab and
+the window spread, the workspace cube, zoom, transparency and inverted colours, the
+built-in shortcuts, fire painting and CompizConfig Settings Manager.
+
 ## Three shipped fixes
 
 All three patches are in [the patch queue](../patches/compiz/README.md),
