@@ -83,6 +83,7 @@ SETTINGS_PATHS=(
     usr/share/keyrings/spaced-archive-keyring.gpg
     usr/share/mate-panel/layouts
     usr/share/pixmaps
+    usr/share/spaced-linux
     usr/share/spaced-xsessions
     usr/share/polkit-1/actions/com.spacedlinux.nvidia.policy
     usr/share/polkit-1/actions/com.spacedlinux.sharing.policy

@@ -1,0 +1,304 @@
+#!/bin/bash
+# Spaced issue #417, report half: tell a migrating user which graphical
+# applications their old desktop offered, which of them Spaced Linux will not
+# give back, why each one is missing, and the exact command they can run to get
+# it back.
+#
+# READ-ONLY by design: this tool never installs, queues, removes, enables or
+# launches anything, and it never claims that anything was installed. It prints
+# commands for the user to run themselves. The Bazaar install queue, the
+# uninstall list and the migration assistant itself are still undecided (issue
+# #417); only this report ships.
+#
+# The inventory lives under $HOME/.local/share/spaced-linux/ so it survives the
+# reused-home install path (scripts/vm/qemu/install-reuse-home.sh).
+set -u
+
+INVENTORY_DEFAULT="${XDG_DATA_HOME:-${HOME:-/}/.local/share}/spaced-linux/migration-inventory.txt"
+APP_SET=${SPACED_APP_SET:-/usr/share/spaced-linux/app-set.txt}
+
+usage() {
+    cat <<'USAGE'
+Usage: spaced-migration-report [--snapshot [FILE]] [--inventory FILE|-] [--quiet]
+
+  --snapshot [FILE]   Enumerate the .desktop applications on this machine
+                      ($HOME/.local/share/applications, every directory in
+                      XDG_DATA_DIRS, and /var/lib/flatpak/exports/share/applications)
+                      and write "Name<TAB>Exec<TAB>source" lines to
+                      $HOME/.local/share/spaced-linux/migration-inventory.txt,
+                      or to FILE. Run this on the old system, before migrating.
+  --inventory FILE    Read that inventory instead of the default file ("-" reads
+                      stdin).
+  --quiet             Print only the number of applications that are gone.
+  --help              Print this help.
+
+Without --snapshot the saved inventory is compared with the applications present
+now and with the Spaced application set (SPACED_APP_SET, default
+/usr/share/spaced-linux/app-set.txt). Every application that is gone is printed
+as "name, why, reinstall command".
+
+Nothing is installed, queued or changed: the reinstall commands are printed for
+you to run. The report exits 0 even when applications are missing.
+USAGE
+}
+
+# "<name>\t<exec>\t<source>" for one .desktop file; nothing at all for a file
+# with no [Desktop Entry] name and exec, so a malformed entry contributes no
+# line to the inventory.
+parse_desktop() {
+    local file="$1" parsed
+    parsed=$(awk '
+        /^[[:space:]]*\[/ { in_section = ($0 ~ /^\[Desktop Entry\][[:space:]]*$/) }
+        in_section && /^Name=/ { name = substr($0, 6) }
+        in_section && /^Exec=/ { exec = substr($0, 6) }
+        END { if (name != "" && exec != "") printf "%s\t%s", name, exec }
+    ' "$file" 2>/dev/null)
+    [ -n "$parsed" ] || return 1
+    printf '%s\t%s\n' "$parsed" "$file"
+}
+
+# Directories that hold menu entries on this machine.
+scan_dirs() {
+    printf '%s\n' "${HOME:-/}/.local/share/applications"
+    if [ -n "${XDG_DATA_DIRS:-}" ]; then
+        printf '%s\n' "$XDG_DATA_DIRS" | tr ':' '\n' | while IFS= read -r dir; do
+            [ -n "$dir" ] && printf '%s/applications\n' "$dir"
+        done
+    fi
+    printf '%s\n' /var/lib/flatpak/exports/share/applications
+}
+
+# Every .desktop file under those directories, sorted for stable output.
+desktop_files() {
+    local dir
+    while IFS= read -r dir; do
+        [ -d "$dir" ] || continue
+        find "$dir" -type f -name '*.desktop' 2>/dev/null | LC_ALL=C sort
+    done < <(scan_dirs)
+}
+
+# Menu names compare case- and punctuation-insensitively: "KDE Plasma Screen
+# Locker" and "kde-plasma-screen-locker" name the same application.
+normalize() {
+    printf '%s\n' "$1" | LC_ALL=C tr 'A-Z-_' 'a-z  ' | tr -d '[:punct:][:space:]'
+}
+
+# The package Spaced requests for a menu name, from the shipped application set.
+app_set_package() {
+    local key
+    key=$(normalize "$1")
+    [ -n "$key" ] || return 1
+    [ -r "$APP_SET" ] || return 1
+    awk -F'\t' -v want="$key" '
+        {
+            name = $1
+            gsub(/[-_]/, " ", name)
+            gsub(/[^a-z0-9]/, "", name)
+            if (name == want) { print $1; exit }
+        }
+    ' "$APP_SET"
+}
+
+# A Flatpak application id: the one its Exec line runs, or the entry file name
+# when that is already an id.
+flatpak_id() {
+    local exec_line="$1" source="$2" base id
+    id=$(printf '%s\n' "$exec_line" | awk '
+        $1 == "flatpak" && $2 == "run" {
+            for (field = 3; field <= NF; field++)
+                if ($field ~ /\./ && $field !~ /^[-%]/) { print $field; exit }
+        }')
+    if [ -z "$id" ]; then
+        base=${source##*/}
+        base=${base%.desktop}
+        case "$base" in
+            *.*) id=$base ;;
+        esac
+    fi
+    [ -n "$id" ] || return 1
+    printf '%s\n' "$id"
+}
+
+package_installed() {
+    command -v dpkg-query >/dev/null 2>&1 || return 1
+    [ "$(dpkg-query -W -f='${db:Status-Status}' "$1" 2>/dev/null)" = "installed" ]
+}
+
+apt_candidate() {
+    command -v apt-cache >/dev/null 2>&1 || return 1
+    apt-cache policy "$1" 2>/dev/null | awk '
+        /Candidate:/ {
+            value = $2
+            if (value != "" && value != "none" && value != "(none)" && value != "N/A") { print value; exit }
+        }
+    '
+}
+
+flatpak_offers() {
+    command -v flatpak >/dev/null 2>&1 || return 1
+    flatpak info --remote flathub "$1" >/dev/null 2>&1
+}
+
+snapshot() {
+    local output="$INVENTORY_DEFAULT" tmp kept count
+    if [ "$#" -gt 0 ] && [ -n "${1:-}" ]; then
+        output="$1"
+    fi
+    tmp=$(mktemp) || return 1
+    kept=$(mktemp) || {
+        rm -f "$tmp"
+        return 1
+    }
+    while IFS= read -r file; do
+        parse_desktop "$file" >> "$tmp"
+    done < <(desktop_files)
+    # The same application can appear in the user, system and Flatpak menus;
+    # keep the first (highest priority) entry for each name.
+    awk -F'\t' '!seen[$1]++' "$tmp" > "$kept"
+    count=$(grep -c '' "$kept" || true)
+    if [ "$output" = "-" ]; then
+        cat "$kept"
+    else
+        mkdir -p "$(dirname "$output")" || {
+            rm -f "$tmp" "$kept"
+            return 1
+        }
+        cat "$kept" > "$output" || {
+            rm -f "$tmp" "$kept"
+            return 1
+        }
+    fi
+    rm -f "$tmp" "$kept"
+    if [ "$QUIET" = 1 ]; then
+        printf '%s\n' "$count"
+    else
+        printf 'Captured %s applications to %s\n' "$count" "$output"
+    fi
+}
+
+report() {
+    local inventory="$INVENTORY_DEFAULT" lines
+    if [ "$#" -gt 0 ] && [ -n "${1:-}" ]; then
+        inventory="$1"
+    fi
+    if [ "$inventory" = "-" ]; then
+        lines=$(cat)
+    elif [ -r "$inventory" ]; then
+        lines=$(<"$inventory")
+    else
+        printf 'No inventory captured yet: %s\n' "$inventory"
+        printf 'Run "spaced-migration-report --snapshot" on the old system first; '
+        printf 'the file lives under your home, so a reused home keeps it.\n'
+        return 0
+    fi
+
+    local current_names="" file parsed
+    while IFS= read -r file; do
+        parsed=$(parse_desktop "$file") || continue
+        current_names+=$(normalize "${parsed%%$'\t'*}")
+        current_names+=$'\n'
+    done < <(desktop_files)
+
+    local name exec_line source key pkg id reason command apt_name lost=0 kept=0
+    if [ "$QUIET" != 1 ]; then
+        printf 'Spaced Linux migration report (read-only; nothing installed or queued)\n'
+        printf 'Inventory: %s\n' "$inventory"
+    fi
+    while IFS=$'\t' read -r name exec_line source; do
+        [ -n "$name" ] || continue
+        key=$(normalize "$name")
+        if [ -n "$key" ] && grep -qxF "$key" <<< "$current_names"; then
+            kept=$((kept + 1))
+            continue
+        fi
+        pkg=$(app_set_package "$name")
+        if [ -n "$pkg" ] && package_installed "$pkg"; then
+            kept=$((kept + 1))
+            continue
+        fi
+        id=$(flatpak_id "$exec_line" "$source")
+        if [ -n "$pkg" ]; then
+            apt_name="$pkg"
+            reason="Spaced ships it as $pkg but it is not installed"
+        else
+            apt_name=$(printf '%s\n' "$name" | tr '[:upper:] ' '[:lower:]-')
+            reason="Spaced does not ship it"
+        fi
+        command=""
+        if [ -n "$apt_name" ] && [ -n "$(apt_candidate "$apt_name")" ]; then
+            command="sudo apt install $apt_name"
+        elif [ -n "$id" ] && flatpak_offers "$id"; then
+            command="flatpak install --user flathub $id"
+            [ -n "$pkg" ] || reason="only in Flathub"
+        fi
+        lost=$((lost + 1))
+        if [ "$QUIET" = 1 ]; then
+            continue
+        fi
+        if [ -n "$command" ]; then
+            printf '%s\t%s\t%s\n' "$name" "$reason" "$command"
+        else
+            printf '%s\t%s\t%s\n' "$name" "$reason" \
+                "not in Devuan or Flathub: keep the .desktop out of your menu"
+        fi
+    done <<< "$lines"
+
+    if [ "$QUIET" = 1 ]; then
+        printf '%s\n' "$lost"
+        return 0
+    fi
+    printf '\nLost applications: %s. Still in this menu: %s. ' "$lost" "$kept"
+    printf 'Nothing was installed or queued.\n'
+}
+
+QUIET=0
+SNAPSHOT=0
+INVENTORY=""
+TARGET=""
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --snapshot)
+            SNAPSHOT=1
+            shift
+            ;;
+        --inventory)
+            shift
+            INVENTORY="${1:-}"
+            if [ -z "$INVENTORY" ]; then
+                usage >&2
+                exit 2
+            fi
+            shift
+            ;;
+        --quiet)
+            QUIET=1
+            shift
+            ;;
+        --help)
+            usage
+            exit 0
+            ;;
+        --*)
+            usage >&2
+            exit 2
+            ;;
+        *)
+            # The optional FILE of --snapshot.
+            if [ "$SNAPSHOT" = 1 ] && [ -z "$TARGET" ]; then
+                TARGET="$1"
+                shift
+            else
+                usage >&2
+                exit 2
+            fi
+            ;;
+    esac
+done
+
+if [ "$SNAPSHOT" = 1 ]; then
+    snapshot "${TARGET:-$INVENTORY}"
+    exit 0
+fi
+report "$INVENTORY"
+exit 0

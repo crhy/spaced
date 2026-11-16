@@ -71,6 +71,34 @@ do
     fi
 done
 
+# Issue #417: the migration report compares a saved inventory against the
+# application set Spaced installs. config/packages.yaml is build-side only, so
+# that set ships as overlays/usr/share/spaced-linux/app-set.txt and must stay
+# generated from the config, the same way the package list above must stay
+# non-empty.
+generated_app_set=$(scripts/gen-app-set.sh -)
+committed_app_set=overlays/usr/share/spaced-linux/app-set.txt
+
+if [[ -z "$generated_app_set" ]]; then
+    echo "scripts/gen-app-set.sh produced an empty application set" >&2
+    exit 1
+fi
+if [[ "$generated_app_set" != "$(cat "$committed_app_set" 2>/dev/null)" ]]; then
+    echo "$committed_app_set is stale; run scripts/gen-app-set.sh" >&2
+    exit 1
+fi
+
+migration_report=overlays/usr/local/bin/spaced-migration-report
+if [[ ! -x "$migration_report" ]]; then
+    echo "$migration_report is missing or not executable" >&2
+    exit 1
+fi
+if [[ "$(bash "$migration_report" --bogus-argument 2>&1 >/dev/null)" != *"Usage: spaced-migration-report"* ]] \
+    || bash "$migration_report" --bogus-argument >/dev/null 2>&1; then
+    echo "spaced-migration-report does not print Usage: and exit 2 for an unknown argument" >&2
+    exit 1
+fi
+
 # The .gitkeep files that keep empty skel directories in git must be pruned on
 # the way to the image: from the staged settings package (installed /etc/skel)
 # and from the live-build rootfs copy that seeds the live user's home. Run the
