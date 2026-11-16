@@ -193,6 +193,29 @@ For other themes it writes `type = none`, allowing GTK CSS to provide the outer 
 
 The toplevel background and GTK widget CSS are independent. Diagnose the outer panel surface separately from applet and button surfaces.
 
+### Applet host surfaces (issue #387)
+
+The Menu, clock/date, volume and show-desktop applets run in separate processes,
+so each arrives wrapped in its own host widget. `spaced-overrides.css` gives those
+hosts `@panel_bg_color`, and every selectable theme then clears them again in its
+own `gtk-3.0/gtk.css`, after the `@import` lines:
+
+```text
+.mate-panel-menu-bar #PanelApplet, .gnome-panel-menu-bar #PanelApplet,
+#MatePanelWidget #PanelApplet, PanelApplet, MatePanelApplet, NaTrayApplet,
+#PanelPlug, #PanelPlug > box, #PanelPlug > widget,
+#PanelApplet, #PanelApplet > box, #PanelApplet > widget
+```
+
+Those hosts take `background-color: transparent`, `background-image: none`,
+`border-color: transparent` and `box-shadow: none`, and keep the theme's own
+`@panel_fg_color` for their labels. A translucent panel fill or a `type image`
+panel picture therefore reaches the applet sections instead of stopping at their
+edge. Only the hosts clear: applet buttons such as `#PanelApplet button`,
+`#PanelPlug button` and `button.brisk-button` keep their own surfaces, and the
+theme's `.mate-panel` fill is untouched. `scripts/check.sh` and
+`tests/test_panel_applet_surfaces.py` fail if a theme loses that rule.
+
 ### GTK2 panel colors
 
 Legacy panel-related GTK2 widgets use `panel_bg_color` and `panel_fg_color` from the active theme's `gtk-2.0/gtkrc`.

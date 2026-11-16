@@ -72,6 +72,23 @@
     color: @panel_fg_color;
 }
 
+/* Issue #387: the Menu, clock/date, volume and show-desktop applets run out
+ * of process. Clear only the host surfaces so the cyan menu bar fill, or a
+ * panel picture the user sets, reaches the applet edges; the themed applet
+ * buttons above keep their own surfaces. */
+.mate-panel-menu-bar #PanelApplet,
+.gnome-panel-menu-bar #PanelApplet,
+#MatePanelWidget #PanelApplet,
+PanelApplet, MatePanelApplet, NaTrayApplet,
+#PanelPlug, #PanelPlug > box, #PanelPlug > widget,
+#PanelApplet, #PanelApplet > box, #PanelApplet > widget {
+    background-color: transparent;
+    background-image: none;
+    color: @panel_fg_color;
+    border-color: transparent;
+    box-shadow: none;
+}
+
 .mate-panel-menu-bar label,
 .gnome-panel-menu-bar label,
 #PanelApplet label,
