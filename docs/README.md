@@ -38,6 +38,12 @@ folders.
   upstream strategy.
 - [APPLICATION-DELIVERY.md](APPLICATION-DELIVERY.md) — Welcome, SpacedBazaar,
   the signed Flatpak catalog, release pins and end-to-end tests.
+- [VOXA-GREETER-CONTRACT.md](VOXA-GREETER-CONTRACT.md) — the staged contract the
+  11.26.1 review requires before any Spaced Welcome Voxa greeter work (#283):
+  milestones M0-M5, offline/online behaviour, microphone consent and retention,
+  model and resource ceilings, the no-audio path, privileged and app-install
+  actions, cancellation and rollback, sysvinit service lifecycle, the Never list,
+  and which repository and release carries each milestone.
 - [FIXES.md](FIXES.md) — current resolutions of recurring issues across
   releases.
 - [SESSION-REGRESSIONS.md](SESSION-REGRESSIONS.md) — session regression

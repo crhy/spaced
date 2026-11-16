@@ -1,5 +1,26 @@
 # Changelog
 
+## Unreleased
+
+Documentation only. No behaviour change, no package change, no image change.
+
+**Added**
+
+- `docs/VOXA-GREETER-CONTRACT.md`: the staged contract the 11.26.1 review requires
+  before any Spaced Welcome Voxa greeter work (issue #283). It names the first
+  milestone exactly as the review recommends - an explicitly opt-in greeter that
+  performs no privileged or background installs until the user approves a visible
+  plan - then fixes milestones M0-M5, offline and online behaviour, microphone
+  consent and retention, model selection and resource limits, accessibility and
+  the no-audio path, privileged hardware and application-install actions,
+  cancellation and rollback, the sysvinit service lifecycle, an absolute Never
+  list, and which repository and release carries each milestone. The greeter
+  itself remains in `crhy/spacedwelcome` and stays blocked behind this contract;
+  nothing in this repository ships a Welcome change. Wired into `docs/README.md`,
+  the Welcome and Voxa rows of `docs/SUBSYSTEMS.md`, `docs/APPLICATION-DELIVERY.md`
+  and a `scripts/check.sh` assertion, so the contract cannot silently disappear
+  from the maintainer-facing index.
+
 ## 11.26.2 - 2026-11-14
 
 Built as the 11.26.2 ISO and `11.26.2-1` APT packages. This quick patch
