@@ -3,7 +3,7 @@
 See [Compiz architecture and upstream strategy](../../docs/COMPIZ.md) for
 the rendering/lifetime model, internal Marco fallback, diagnostic commands,
 verification matrix and recommendation to submit these as independent
-upstream fixes after rebasing and validation. Both patches remain downstream;
+upstream fixes after rebasing and validation. All four patches remain downstream;
 this documentation does not claim an upstream submission.
 
 Spaced 10.26.7 rebuilds Debian/Ceres `compiz 2:0.8.18-9` as
@@ -11,7 +11,8 @@ Spaced 10.26.7 rebuilds Debian/Ceres `compiz 2:0.8.18-9` as
 shipped in 10.26.2 (issue [#279](https://github.com/crhy/spaced/issues/279))
 and protects decoration pixmaps during theme changes. It also gives Compiz
 screenshots sortable date-and-time filenames (issue
-[#362](https://github.com/crhy/spaced/issues/362)).
+[#362](https://github.com/crhy/spaced/issues/362)) and lets a screenshot
+selection start while fire painting holds its screen grab.
 
 With a Marco theme the decorator "compensated" for Marco's invisible resize
 border by moving the click area of every right-hand title-bar button left by
@@ -32,6 +33,17 @@ patch when upstream provides equivalent protection for this lifetime race.
 The third patch replaces Compiz's directory-dependent `screenshot1.png`
 sequence with `screenshot-YYYY-MM-DD_HH-MM-SS.png`; captures made in the same
 second receive `-2`, `-3`, and so on instead of replacing an existing file.
+
+The fourth patch is about grabs, not filenames. `shotInitiate` in
+`plugins/screenshot.c` refused to start whenever any plug-in other than
+`screenshot` already held a screen grab, and fire painting holds one for the
+whole stroke (`pushScreenGrab (s, None, "firepaint")`), so Ctrl + Shift +
+left drag did nothing at all while fire was being drawn. The core already
+nests a second screen grab onto a held one (`XChangeActivePointerGrab`) and
+restores the outer grab when the selection ends, and firepaint only adds
+points and paints particles, so the refusal now accepts a `firepaint` grab.
+The capture is a `glReadPixels` taken after the whole paint chain, and Compiz
+renders into the root window, so the fire is inside the saved image.
 
 Source archives and Debian packaging come from
 `https://mirror.hootsoftware.com/devuan/merged/pool/DEBIAN/main/c/compiz/`;
