@@ -1,4 +1,4 @@
-# Diagnosing mounted-share icons, GIMP crashes, and video wallpaper
+# Diagnosing mounted-share icons, GIMP crashes, video wallpaper, and the Orca Slicer wizard
 
 Investigation date: 2026-09-12. These findings and source fixes are not release
 approval. Reproduce on the affected machine before attributing a failure to a
@@ -243,16 +243,68 @@ Track any integration separately from regression closure.
    clean stop/restart with no orphaned processes or permanent setting changes.
    Restore static wallpaper when disabled. No such acceptance test ran here.
 
+## Orca Slicer blank setup wizard (#423)
+
+### Evidence and disposition
+
+The report carries no log, screenshot or driver detail, but it names the two
+variables the reporter already verified as a workaround: `WEBKIT_DISABLE_COMPOSITING_MODE=1`
+and `WEBKIT_DISABLE_DMABUF_RENDERER=1`, applied to `com.orcaslicer.OrcaSlicer`. Nothing in
+this repository set them, so a fresh account met a blank wizard until it copied
+that workaround by hand, and the reporter's own request was for the distribution
+to ship it.
+
+**Disposition: shipped in the tree; application validation remains open.**
+`overlays/usr/local/bin/spaced-flatpak-app-env` applies the pair with
+`flatpak override --user` for that one application id. It writes its versioned
+marker (`${XDG_CONFIG_HOME:-$HOME/.config}/spaced/flatpak-app-env-11.26.3`) **before**
+calling `flatpak`, so a failed override is logged once and never repeats at
+login — the defect recorded for the older theme migration in
+[ROADMAP.md](../ROADMAP.md). `spaced-first-login-repair` calls the helper above
+its own `first-login-repair-v5` marker check, which covers accounts that already
+finished that repair as well as accounts created later, and the Flatpak wrapper
+calls it after an `install` that names Orca, in the same session.
+
+### Manual route when the next login is too slow
+
+In a terminal belonging to the affected session. Nothing is downloaded and no
+application is started:
+
+```sh
+flatpak override --user \
+    --env=WEBKIT_DISABLE_COMPOSITING_MODE=1 \
+    --env=WEBKIT_DISABLE_DMABUF_RENDERER=1 \
+    com.orcaslicer.OrcaSlicer
+flatpak override --user --show com.orcaslicer.OrcaSlicer
+```
+
+`--show` must print an `[Environment]` section holding exactly those two lines,
+and repeating the first command is safe. Apply the pair to Orca only: the two
+variables disable GPU rendering paths for whatever application is launched, so
+exporting them globally or adding other application ids is not a fix. The
+override is per-user, so a root-owned `--system` installation of Orca is not
+covered by it.
+
+### What still needs a real desktop
+
+The setup wizard, the 3D preview, slicing and the Device tab must be confirmed
+in a live MATE session on the affected hardware. This checkout has no Orca
+install and no desktop session, so those four checks stay open, as does whether
+other WebKit-based Flatpaks need the same pair.
+
 ## Repository-only validation
 
 ```sh
 python3 -B -m unittest discover -s tests -p 'test_external_desktop_boundaries.py' -v
 python3 -B -m unittest discover -s tests -p 'test_desktop_reliability.py' -k DesktopIcon -v
+python3 -B -m unittest discover -s tests -p 'test_orca_flatpak_env.py' -v
 ```
 
 The added tests cover selective offline metadata editing, monitor gaps,
-idempotence, malformed/missing metadata, and the GIMP launch boundary. They
-never connect to a share, start Caja/GIMP, alter a real desktop, or exercise a
-GPU. Passing them must not close any of these three issues. Real Caja cache
-invalidation, the reported GIMP crash, and multi-monitor video performance
-remain the explicit external validation work above.
+idempotence, malformed/missing metadata, and the GIMP launch boundary, and the Orca override arguments, marker order and
+login ordering. They
+never connect to a share, start Caja/GIMP/Orca, alter a real desktop, or exercise a
+GPU. Passing them must not close any of these issues. Real Caja cache
+invalidation, the reported GIMP crash, multi-monitor video performance, and the
+Orca wizard, 3D preview, slicing and Device tab remain the explicit external
+validation work above.

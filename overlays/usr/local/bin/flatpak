@@ -38,11 +38,27 @@ ensure_remote() {
     "$real_flatpak" remote-add --user --if-not-exists "$name" "$descriptor"
 }
 
+apply_app_env() {
+    local argument
+
+    # An Orca installed in this session gets its WebKit environment now instead
+    # of at the next login (#423). Only the Orca application id triggers this.
+    for argument in "$@"; do
+        case $argument in
+            com.orcaslicer.OrcaSlicer|com.orcaslicer.OrcaSlicer/*|com.orcaslicer.OrcaSlicer:*)
+                SPACED_FLATPAK_REAL="$real_flatpak" /usr/local/bin/spaced-flatpak-app-env || true
+                return 0
+                ;;
+        esac
+    done
+}
+
 run_install() {
     local status
 
     if "$real_flatpak" "$@"; then
         refresh_desktop_menus
+        apply_app_env "$@"
         return 0
     else
         status=$?

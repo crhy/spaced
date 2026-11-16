@@ -1,0 +1,28 @@
+#!/bin/bash
+# Orca Slicer's WebKit setup wizard paints a blank page unless its Flatpak is
+# started with the software compositing and DMA-BUF renderer paths disabled
+# (#423). Apply that pair once per account, to Orca only.
+set -euo pipefail
+
+flatpak_binary=${SPACED_FLATPAK_REAL:-/usr/bin/flatpak}
+state_dir=${SPACED_APP_STATE_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/spaced}
+marker="$state_dir/flatpak-app-env-11.26.3"
+
+[ ! -e "$marker" ] || exit 0
+# No Flatpak command yet: leave the marker unwritten so a later login can still
+# apply the override. This costs no fork and touches no application.
+[ -x "$flatpak_binary" ] || exit 0
+
+# Write the marker before the override (docs/ROADMAP.md a02-13): a failing
+# override must not repeat at every login, and it is still reported once.
+mkdir -p "$state_dir"
+touch "$marker"
+
+if ! "$flatpak_binary" override --user \
+    --env=WEBKIT_DISABLE_COMPOSITING_MODE=1 \
+    --env=WEBKIT_DISABLE_DMABUF_RENDERER=1 \
+    com.orcaslicer.OrcaSlicer; then
+    logger -t spaced-flatpak-app-env \
+        "Could not set the WebKit overrides for com.orcaslicer.OrcaSlicer" || true
+    exit 1
+fi

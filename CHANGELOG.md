@@ -1,5 +1,23 @@
 # Changelog
 
+## 11.26.3 - Unreleased
+
+Fixes collected after the published 11.26.2 release. Delivered to installed
+systems through the next `spaced-mate-default-settings` package revision, and
+carried by the next ISO.
+
+**Fixes**
+
+- Fix the Orca Slicer Flatpak's blank setup wizard out of the box (#423). The
+  reporter's verified workaround sets `WEBKIT_DISABLE_COMPOSITING_MODE=1` and
+  `WEBKIT_DISABLE_DMABUF_RENDERER=1` for `com.orcaslicer.OrcaSlicer`; the
+  distribution now applies that pair itself. A versioned per-account helper
+  writes its marker before calling `flatpak override --user`, so a failed
+  override is reported once instead of repeating at every login. Existing and
+  new accounts are covered by the login repair path, and an Orca installed in
+  the current session is fixed by the Flatpak wrapper without waiting for the
+  next login. No other application id is touched.
+
 ## 11.26.2 - 2026-11-14
 
 Built as the 11.26.2 ISO and `11.26.2-1` APT packages. This quick patch

@@ -5,6 +5,10 @@ if [ -f /usr/lib/spaced-linux/migrate-desktop.py ]; then
 fi
 # Run new migrations even when the older panel repair already completed.
 /usr/local/bin/spaced-flatpak-theme-migration 2>/dev/null || true
+# Give the Orca Slicer Flatpak the WebKit environment its setup wizard needs (#423).
+# The helper writes its own marker first, so a failure is reported once instead of
+# at every login; keep stderr so that single report is visible.
+/usr/local/bin/spaced-flatpak-app-env || true
 # Spaced metathemes shipped CursorTheme=Adwaita through 11.26.1, which replaced
 # the distribution's red xkill cursor when an existing user selected a theme.
 # Repair only that known old value while a Spaced metatheme is active; leave an
