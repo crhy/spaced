@@ -69,8 +69,6 @@ graphics:
   - xserver-xorg-video-vesa
   - libgl1-mesa-dri
   - mesa-vulkan-drivers
-file_managers:
-  - caja-open-terminal
 applications:
   - eom
   - gdebi

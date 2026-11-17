@@ -1,5 +1,24 @@
 # Changelog
 
+## 11.26.2-2 - unreleased
+
+Delivered to installed systems through the `11.26.2-2` APT packages
+(`spaced-mate-default-settings`), and it ships in the next ISO's overlay.
+
+**Changes**
+
+- The Caja folder right-click menu opens a terminal without a separate package
+  (issue #302). `overlays/usr/share/caja-python/extensions/spaced-open-terminal.py`
+  is a first-party `Caja.MenuProvider` in the same shape as the Change Theme and
+  Set as Wallpaper actions, so the image no longer installs the upstream
+  `caja-open-terminal` package. It resolves `mate-terminal`, then
+  `x-terminal-emulator`, then the host's terminal through `flatpak-spawn` for a
+  sandboxed caller, hands the folder to the terminal as its working directory
+  rather than as a shell string, and stays inactive when no terminal is installed.
+  `caja-share` deliberately stays a separate package in this release: it is a
+  compiled Caja plugin that carries the Samba folder-share feature, so making it
+  native is a separate, riskier slice.
+
 ## 11.26.2 - 2026-11-14
 
 Built as the 11.26.2 ISO and `11.26.2-1` APT packages. This quick patch

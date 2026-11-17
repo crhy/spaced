@@ -63,6 +63,7 @@ for path in ('usr/lib/spaced-linux/spaced-update.py', 'usr/lib/spaced-linux/spac
               'etc/xdg/autostart/spaced-flatpak-desktop-entries.desktop',
               'usr/local/bin/spaced-flatpak-desktop-entries',
              'usr/share/caja-python/extensions/spaced-set-wallpaper.py',
+             'usr/share/caja-python/extensions/spaced-open-terminal.py',
              'usr/local/sbin/spaced-sync-time', 'usr/local/sbin/spaced-finalize-timezone'):
     assert (payload / path).read_bytes() == (root / 'overlays' / path).read_bytes(), f'Missing/stale overlay: {path}'
 for path in ('postinst', 'triggers'):
