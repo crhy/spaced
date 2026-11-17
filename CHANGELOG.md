@@ -1,5 +1,27 @@
 # Changelog
 
+## Unreleased
+
+Documentation and tooling only. No image behaviour changes, no package set
+changes and no version bump.
+
+- Add the issue #304 PDF viewer capability test. `config/pdf-viewers.yaml`
+  is a reviewed table of the six candidates the 11.26.1 review compares
+  (`atril`, `mupdf`, `okular`, `xpdf`, `zathura`, `pdfcraft`) with the seven
+  axes it names - printing, forms, accessibility, search, encrypted files,
+  sandbox/update provenance and MIME integration - and keeps
+  `default_app: atril` with `decision: pending`. `scripts/pdf-capability-matrix.py`
+  fills that table from this machine's own metadata only (`apt-cache policy`,
+  the dpkg status database, installed `.desktop` files, `config/packages.yaml`,
+  `overlays/usr/share/applications/mimeapps.list`) and prints
+  `EVIDENCE <source>`, `NO-EVIDENCE` or `NOT-PACKAGED` per candidate per axis;
+  its `--check` refuses a default that is not packaged - `pdfcraft` has no
+  candidate in the configured sources - and any capability asserted without a
+  printed source. `scripts/check.sh` now fails if the shipped default PDF
+  application stops agreeing with `config/packages.yaml` and the reviewed
+  table, and `docs/PDF-VIEWER-CAPABILITY-TEST.md` records the generated matrix
+  plus the printer reproduction and the default-app decision still owed.
+
 ## 11.26.2 - 2026-11-14
 
 Built as the 11.26.2 ISO and `11.26.2-1` APT packages. This quick patch

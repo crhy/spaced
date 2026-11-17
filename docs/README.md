@@ -38,6 +38,9 @@ folders.
   upstream strategy.
 - [APPLICATION-DELIVERY.md](APPLICATION-DELIVERY.md) — Welcome, SpacedBazaar,
   the signed Flatpak catalog, release pins and end-to-end tests.
+- [PDF-VIEWER-CAPABILITY-TEST.md](PDF-VIEWER-CAPABILITY-TEST.md) — the issue #304
+  capability/package test for the default PDF application: the reviewed candidate
+  table, what each axis accepts as evidence, and the two things still owed.
 - [FIXES.md](FIXES.md) — current resolutions of recurring issues across
   releases.
 - [SESSION-REGRESSIONS.md](SESSION-REGRESSIONS.md) — session regression
