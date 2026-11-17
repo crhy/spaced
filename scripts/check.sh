@@ -872,6 +872,12 @@ assert "usermod -a -G sambashare" in meta_postinst and "sambashare-v1" in meta_p
     "upgraded systems' users cannot create Samba user shares (issue #253)"
 assert "usershare max shares = 100" in meta_postinst, \
     "Samba user shares stay disabled, so Caja Sharing Options fails (issue #253)"
+freecad_override = (root / "var/lib/flatpak/overrides/org.freecad.FreeCAD").read_text(encoding="utf-8")
+assert freecad_override == "[Environment]\nQT_LOGGING_RULES=qt.accessibility.atspi=false\n", \
+    "the FreeCAD flatpak freeze workaround is not shipped for that application alone (#425)"
+assert "freecad-flatpak-override-11.26.3" in meta_postinst \
+    and "var/lib/flatpak/overrides/org.freecad.FreeCAD" in meta_postinst, \
+    "upgraded systems never receive the FreeCAD flatpak override (#425)"
 assert "sambashare user" in Path("scripts/iso/01-configure.chroot").read_text(encoding="utf-8"), \
     "the live user cannot share folders (issue #253)"
 assert "update-rc.d smbd defaults" in Path("scripts/iso/01-configure.chroot").read_text(encoding="utf-8") \

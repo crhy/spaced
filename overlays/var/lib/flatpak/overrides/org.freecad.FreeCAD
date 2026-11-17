@@ -1,0 +1,2 @@
+[Environment]
+QT_LOGGING_RULES=qt.accessibility.atspi=false

@@ -1,5 +1,29 @@
 # Changelog
 
+## 11.26.3 - Unreleased
+
+Fixes collected after the published 11.26.2 release. Carried by the next ISO,
+and delivered to installed systems through the next `spaced-meta` package
+revision.
+
+**Fixes**
+
+- Keep the FreeCAD 1.1.4 Flatpak from freezing gray out of the box (#425). The
+  freeze is FreeCAD's own notification-area self-deadlock re-entered by a Qt 6.11
+  AT-SPI warning, so the real fix belongs upstream; the measured workaround
+  `QT_LOGGING_RULES=qt.accessibility.atspi=false` for `org.freecad.FreeCAD` is
+  what ships. The image carries it as a system flatpak override
+  `/var/lib/flatpak/overrides/org.freecad.FreeCAD`, and the `spaced-meta` postinst
+  migration `freecad-flatpak-override-11.26.3` gives the same file to systems that
+  only upgrade packages: it writes its marker only after the override is in place,
+  keeps a system override an administrator already wrote, and never writes into a
+  home directory. flatpak merges the per-user layer after the system layer, so an
+  override you set yourself keeps its own value. Note that flatpak reads the system
+  layer only for Flatpaks installed with `--system`: a per-user FreeCAD install
+  still needs `flatpak override --user --env=QT_LOGGING_RULES=qt.accessibility.atspi=false
+  org.freecad.FreeCAD` or the AppImage Bazaar now defaults to (spacedbazaar#35). The
+  upstream report text travels in `docs/upstream/freecad-notificationarea-deadlock.md`.
+
 ## 11.26.2 - 2026-11-14
 
 Built as the 11.26.2 ISO and `11.26.2-1` APT packages. This quick patch

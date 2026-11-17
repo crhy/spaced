@@ -122,7 +122,7 @@ PACKAGE_VERSION = '11.26.2-1'
 # are expected to survive a failure.
 FAKE_PATHS = (
     '/usr/lib/os-release', '/etc/os-release', '/etc/lsb-release', '/etc/issue.net',
-    '/etc/issue', '/etc/samba/smb.conf', '/var/lib/spaced-linux', '/etc/init.d/smbd',
+    '/etc/issue', '/etc/samba/smb.conf', '/var/lib/spaced-linux', '/var/lib/flatpak', '/etc/init.d/smbd',
     '/etc/NetworkManager/dispatcher.d/90-spaced-samba-ready',
     '/usr/lib/spaced-linux/spaced-home-traverse',
 )
@@ -181,6 +181,17 @@ class FullConfigureTests(unittest.TestCase):
             self.assertIn('   usershare max shares = 100\n',
                           (root / 'etc/samba/smb.conf').read_text().split('[printers]')[0])
             self.assert_release_identity_written(root)
+
+    def test_configure_carries_the_freecad_flatpak_override(self):
+        # #425: an installed system that only upgrades its packages must receive
+        # the same system flatpak override layer the ISO ships.
+        with tempfile.TemporaryDirectory() as temp:
+            result, root = self.configure(Path(temp), f'exec "{REAL_SED}" "$@"')
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(
+                (root / 'var/lib/flatpak/overrides/org.freecad.FreeCAD').read_text(),
+                '[Environment]\nQT_LOGGING_RULES=qt.accessibility.atspi=false\n')
+            self.assertTrue((root / 'var/lib/spaced-linux/freecad-flatpak-override-11.26.3').exists())
 
 
 if __name__ == '__main__':

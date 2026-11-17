@@ -109,4 +109,27 @@ if [ "$1" = configure ] && [ ! -e "$marker" ] && [ -x /usr/lib/spaced-linux/spac
     : > "$marker"
 fi
 
+# FreeCAD 1.1.4's flatpak GUI self-deadlocks: Qt 6.11's AT-SPI warning is routed
+# back into the notification area that already holds its own mutex (#425). Silence
+# that one log category for that one application id in the system override layer,
+# the same file the image ships. flatpak merges the per-user layer after the system
+# layer, so an override a user already wrote keeps its own value; this step never
+# writes into a home directory, and an existing system override is kept as it is.
+override=/var/lib/flatpak/overrides/org.freecad.FreeCAD
+marker=/var/lib/spaced-linux/freecad-flatpak-override-11.26.3
+if [ "$1" = configure ] && [ ! -e "$marker" ]; then
+    applied=false
+    if [ -e "$override" ]; then
+        printf 'Keeping the existing system flatpak override for org.freecad.FreeCAD\n' >&2
+        applied=true
+    elif install -d -m 0755 /var/lib/flatpak/overrides \
+        && printf '%s\n' '[Environment]' 'QT_LOGGING_RULES=qt.accessibility.atspi=false' > "$override" \
+        && chmod 0644 "$override"; then
+        applied=true
+    fi
+    if [ "$applied" = true ] && install -d -m 0755 /var/lib/spaced-linux; then
+        : > "$marker"
+    fi
+fi
+
 exit 0

@@ -52,6 +52,8 @@ folders.
   Voxa feature video; not shipped documentation.
 - `notes/` — working notes and standing decisions, indexed in
   [notes/README.md](notes/README.md).
+- `upstream/` — bug report text drafted for other projects, kept here until it
+  is filed there: [freecad-notificationarea-deadlock.md](upstream/freecad-notificationarea-deadlock.md).
 
 ## Release records
 
