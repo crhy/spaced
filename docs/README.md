@@ -28,6 +28,8 @@ folders.
   delivery and validation for each subsystem.
 - [ROADMAP.md](ROADMAP.md) — the open findings of the 11.26.1 release audit,
   sorted by area and priority, for later releases.
+- [VM-BENCHMARKS.md](VM-BENCHMARKS.md) — the cross-OS benchmark probe, ISO matrix,
+  comparator and what #424 still leaves unmeasured.
 - [MATE-theming.md](MATE-theming.md) — canonical theming guide: component
   ownership, runtime switching, source-to-installed workflow, testing.
 - [THEME-COLORS.md](THEME-COLORS.md) — inventory of the color-bearing parts of
