@@ -1,5 +1,29 @@
 # Changelog
 
+## Unreleased
+
+Tooling and documentation only. No version bump, and no change to what a
+Spaced Linux image installs.
+
+- Make the Xlibre display server an opt-in test image (issue #314).
+  `config/xlibre-test-image.yaml` holds the reviewed Xlibre server, input and
+  driver entries, the `xserver-xorg-*` entries that set replaces, the nine
+  hardware matrix rows from the 11.26.1 review and the Xorg rollback entry.
+  `scripts/iso/xlibre-package-list.sh` is its only reader and refuses to emit
+  anything while an entry is still `UNRELEASED` or missing a 64-hex SHA-256,
+  naming every unpinned entry, so a half-pinned set cannot reach an image.
+- Keep Xorg the default display server. `scripts/iso/package-list.sh` still emits
+  the Xorg stack from `config/packages.yaml` and never reads the opt-in file;
+  `tests/test_xlibre_optin_image.py` asserts that, and that the Xorg ABI guard from
+  issue #298 is byte-unchanged and still refuses the X server that crashes the
+  amdgpu driver, so the opt-in path cannot smuggle it in.
+- Document the build path, the matrix rows and how each is measured, and the
+  Xorg fallback/rollback in `docs/XLIBRE-OPT-IN-TEST-IMAGE.md`, linked from
+  `docs/README.md`. Still open: pinning the Xlibre packages, because
+  `deb.xlibre.org` is unreachable from the build host today, the driver and
+  hardware rows, which need real machines, and any default switch, which waits
+  until that gate is green.
+
 ## 11.26.2 - 2026-11-14
 
 Built as the 11.26.2 ISO and `11.26.2-1` APT packages. This quick patch

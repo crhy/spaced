@@ -1,0 +1,83 @@
+# Opt-in Xlibre display-server test image (issue #314).
+#
+# This file is reviewed input for a test image only. scripts/iso/package-list.sh
+# never reads it, so the default Spaced Linux image keeps installing Xorg from
+# config/packages.yaml and nothing here changes what an ordinary system boots.
+# scripts/iso/xlibre-package-list.sh is the only reader, and it refuses to emit
+# any package while an entry below is still UNRELEASED or lacks a 64-hex SHA-256.
+#
+# Every version and SHA-256 is UNRELEASED on purpose: upstream deb.xlibre.org
+# (project site xlibre.org) is unreachable from this build host, so no entry is
+# pinned and none may be described as verified. Confirm each package name,
+# version and archive checksum against the XLibre package index published at
+# https://deb.xlibre.org before replacing an UNRELEASED value, the same way
+# config/external-artifacts.conf requires a release tag, SHA-256 or fingerprint
+# for production release builds.
+# The Xlibre server, its libraries, input and drivers, and the entry that points
+# the already-installed LightDM display manager at it. Confirm each name, version
+# and archive checksum against https://deb.xlibre.org before pinning it.
+display_server:
+  - package: xlibre-server
+    version: UNRELEASED
+    sha256: UNRELEASED
+  - package: xlibre-libs
+    version: UNRELEASED
+    sha256: UNRELEASED
+  - package: xlibre-input
+    version: UNRELEASED
+    sha256: UNRELEASED
+  - package: xlibre-drivers
+    version: UNRELEASED
+    sha256: UNRELEASED
+  - package: xlibre-config-lightdm
+    version: UNRELEASED
+    sha256: UNRELEASED
+
+# The Xorg server and driver entries this set replaces in the default image
+# (config/packages.yaml:60-69). Named here so the opt-in script can drop them
+# without reading config/packages.yaml; mesa-utils, libgl1-mesa-dri and
+# mesa-vulkan-drivers stay, they are not X server packages.
+replaces:
+  - xserver-xorg-video-amdgpu
+  - xserver-xorg-video-ati
+  - xserver-xorg-video-radeon
+  - xserver-xorg-input-libinput
+  - xserver-xorg-video-intel
+  - xserver-xorg-video-all
+  - xserver-xorg-video-nouveau
+  - xserver-xorg-video-fbdev
+  - xserver-xorg-video-vesa
+
+# Hardware and session matrix from the 11.26.1 review of issue #314. Every row
+# is pending: no row has been measured, and a default switch waits until the
+# whole matrix is green. See docs/XLIBRE-OPT-IN-TEST-IMAGE.md for how each row
+# is measured.
+matrix:
+  compiz-mate:
+    result: pending
+  mesa:
+    result: pending
+  nvidia:
+    result: pending
+  amd:
+    result: pending
+  intel:
+    result: pending
+  virtualbox:
+    result: pending
+  qemu:
+    result: pending
+  multi-monitor-hotplug:
+    result: pending
+  suspend-reboot:
+    result: pending
+
+# Xorg stays the fallback boot path for the test image: the Spaced-rebuilt Xorg
+# server package is kept installed so the Xorg boot entry survives if Xlibre
+# fails on real hardware. The APT pin in overlays/etc/apt/preferences.d/spaced-xorg-abi
+# and the transaction guard in overlays/usr/lib/spaced-linux/spaced-update-apt-guard
+# still refuse the X server that crashes the amdgpu driver (issue #298), and
+# scripts/iso/xlibre-package-list.sh never reads or edits them.
+fallback_boot: xorg
+fallback_packages:
+  - xserver-xorg-core
