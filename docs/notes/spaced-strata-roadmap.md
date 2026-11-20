@@ -8,7 +8,7 @@ metadata:
   modified: 2026-11-20T10:17:58.454Z
 ---
 
-**Order (rhY 2026-11-20):** 1) harness benchmark (f157 kit, then run-all with the fleet paused) and the thermal check;
+**Order (rhY 2026-11-20):** (3 also includes GPU Manager #426) 1) harness benchmark (f157 kit, then run-all with the fleet paused) and the thermal check;
 2) Spaced Monitor: cards for the second GPU ([[spaced-monitor-issue385]]); 3) Strata works Spaced 11.26.3: the milestone issues
 ([[spaced-11263-release]]) and **#422 xkill red X - must NEVER regress again**; 4) the improvement ideas below, as issues/tasks.
 
@@ -41,4 +41,6 @@ ISO build if xkill's cursor is not the red X; (d) theme switching must never dro
    the 4070's HDMI-0 and Xorg+Compiz hold ~310 MiB of its VRAM. Plan: monitor on the board port, xorg.conf.d PrimaryGPU on amdgpu,
    games via PRIME render offload (__NV_PRIME_RENDER_OFFLOAD=1, __GLX_VENDOR_LIBRARY_NAME=nvidia; Vulkan picks NVIDIA) set by
    default for Steam/Lutris/Wine. Costs: few % game FPS + frame-copy latency, no NVIDIA G-Sync/VRR, board-port refresh limits.
-   Next: rhY moves the cable; Claude writes the snippet and measures VRAM/tok/s freed; then a Spaced "GPU roles" task for Strata.
+   rhY 2026-11-20: build it INTO the GPU driver app (crhy/spaced#426, milestone 11.26.3): premium redesign matching Monitor/Bazaar/RGB,
+   GPU role picker, guided monitor-cable move with why/how, safe rollback; must pass on bigboy before 11.26.3. Strata builds it
+   (design spec task first, then backend, UI, bigboy test with rhY moving the cable).
