@@ -44,3 +44,7 @@ ISO build if xkill's cursor is not the red X; (d) theme switching must never dro
    rhY 2026-11-20: build it INTO the GPU driver app (crhy/spaced#426, milestone 11.26.3): premium redesign matching Monitor/Bazaar/RGB,
    GPU role picker, guided monitor-cable move with why/how, safe rollback; must pass on bigboy before 11.26.3. Strata builds it
    (design spec task first, then backend, UI, bigboy test with rhY moving the cable).
+12. **#427 (high, 11.26.3):** updating 11.26.1-1 -> 11.26.2 on bigboy 2026-11-20 still wiped /run/user: elogind postinst restart
+   at 12:45:25, guard policy-rc.d (spaced-mate-default-settings) installed 12:45:26.5. Fix: Spaced Update writes the guard before
+   dist-upgrade; elogind postinst skips restart with active sessions; Pre-Depends; session-survival VM test. bigboy fixed live by
+   killing flatpak-session-helper + portals (D-Bus reactivates); re-login still needed later for at-spi etc.
