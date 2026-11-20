@@ -36,3 +36,9 @@ ISO build if xkill's cursor is not the red X; (d) theme switching must never dro
    support - things found the hard way on bigboy.
 10. Cgroup note: elogind leaves the memory controller off (valid, no limit); keep it so, but document for app developers
    (Strata's RAM-mode bug came from assuming systemd cgroups).
+11. **GPU roles (rhY asked 2026-11-20):** desktop/Compiz on the CPU's iGPU, discrete GPU free for AI/games. bigboy facts: Radeon 610M
+   (Raphael, 1002:164e, amdgpu loaded, X provider "AMD Ryzen 7 7800X3D", outputs card0 DP-1/HDMI-A-1); today the 1080p monitor is on
+   the 4070's HDMI-0 and Xorg+Compiz hold ~310 MiB of its VRAM. Plan: monitor on the board port, xorg.conf.d PrimaryGPU on amdgpu,
+   games via PRIME render offload (__NV_PRIME_RENDER_OFFLOAD=1, __GLX_VENDOR_LIBRARY_NAME=nvidia; Vulkan picks NVIDIA) set by
+   default for Steam/Lutris/Wine. Costs: few % game FPS + frame-copy latency, no NVIDIA G-Sync/VRR, board-port refresh limits.
+   Next: rhY moves the cable; Claude writes the snippet and measures VRAM/tok/s freed; then a Spaced "GPU roles" task for Strata.
