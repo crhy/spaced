@@ -26,8 +26,12 @@ ensure_disk() {
 }
 
 build_common_args() {
+    # The memory and CPU count stay configurable so the cross-OS benchmark
+    # (scripts/vm/bench/run-bench.sh) can give every guest the identical,
+    # larger machine the comparison needs without touching this default.
     QEMU_COMMON=(
-        -enable-kvm -cpu host -m 4096 -smp 4
+        -enable-kvm -cpu host -m "${SPACED_QEMU_RAM:-4096}" \
+        -smp "${SPACED_QEMU_CPUS:-4}"
         -device qemu-xhci,id=xhci
         -device usb-kbd,bus=xhci.0
         -device usb-tablet,bus=xhci.0

@@ -114,7 +114,9 @@ class BenchMatrixTests(unittest.TestCase):
                               'debian build/iso/also-absent.iso\n',
                               encoding='utf-8')
             result = self.run_command(['bash', RUNNER, matrix, '1'],
-                                      env={'BENCH_OUT_DIR': tmp}, cwd=ROOT)
+                                      env={'BENCH_OUT_DIR': tmp,
+                                           'BENCH_VM_DIR': str(Path(tmp) / 'vms')},
+                                      cwd=ROOT)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertIn('SKIP: spaced-linux no iso at', result.stdout)
             self.assertIn('SKIP: debian no iso at', result.stdout)
@@ -126,7 +128,9 @@ class BenchMatrixTests(unittest.TestCase):
             matrix = Path(tmp) / 'matrix.conf'
             matrix.write_text('# nothing fetched yet\n\n', encoding='utf-8')
             result = self.run_command(['bash', RUNNER, matrix, '1'],
-                                      env={'BENCH_OUT_DIR': tmp}, cwd=ROOT)
+                                      env={'BENCH_OUT_DIR': tmp,
+                                           'BENCH_VM_DIR': str(Path(tmp) / 'vms')},
+                                      cwd=ROOT)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertIn('SKIP:', result.stdout)
             self.assertIn('RESULT: measured=0 skipped=0', result.stdout)
@@ -151,7 +155,11 @@ class BenchMatrixTests(unittest.TestCase):
             entries.append(line.split())
         self.assertTrue(entries, 'matrix.conf names no operating system')
         self.assertEqual(entries[0][0], 'spaced-linux')
-        self.assertEqual(len(entries[0]), 2, 'matrix lines are "<label> <iso-path>"')
+        self.assertGreaterEqual(len(entries[0]), 2,
+                                'matrix lines are "<label> <iso-path> [key=value]"')
+        self.assertTrue(entries[0][1].endswith('.iso'))
+        for option in entries[0][2:]:
+            self.assertRegex(option, r'^[a-z]+=')
 
     def test_comparator_tables_ranking_and_missing_cells(self):
         with tempfile.TemporaryDirectory() as tmp:
