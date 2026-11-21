@@ -173,12 +173,18 @@ iface=\$(for path in /sys/class/net/*/address; do
     [ \"\$(cat \"\$path\")\" = '$mac' ] && basename \"\$(dirname \"\$path\")\" && break
 done)
 test -n \"\$iface\"
+# NetworkManager also manages this NIC and flushes hand-added addresses when its own profile activates
+# (RC3 run: the server lost 192.168.76.10). The isolated test LAN is ours: take it away from NM first.
+command -v nmcli >/dev/null && nmcli device set \"\$iface\" managed no 2>/dev/null || true
+sleep 1
 ip link set \"\$iface\" up
 ip addr flush dev \"\$iface\"
 ip addr add '$address/24' dev \"\$iface\"
 printf '%s\\n' '$hostname' > /etc/hostname
 hostname '$hostname'
 printf '%s %s\\n' '$address' '$hostname' '$hostname.local' >> /etc/hosts
+sleep 3
+ip -4 addr show dev \"\$iface\" | grep -q '$address/' || { echo 'LAN address $address did not stick' >&2; exit 1; }
 "
 }
 configure_lan "$SERVER_SSH_PORT" 52:54:00:76:00:10 192.168.76.10 spaced-share
