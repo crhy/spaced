@@ -119,8 +119,9 @@ class CompizScreenshotWhileFireTests(unittest.TestCase):
                          "the MATE screenshot command changed")
         self.assertEqual(parser["commands"]["as_run_command0_key"], "<Shift>Print",
                          "Shift+Print no longer takes a screenshot")
-        self.assertNotIn("as_initiate_button", parser["firepaint"],
-                         "the profile now overrides the fire drawing gesture")
+        # #421 (f050, rhY-tested 2026-11-16): the profile deliberately binds fire drawing to Shift+Super+left-drag
+        self.assertEqual(parser["firepaint"].get("as_initiate_button"), "<Shift><Super>Button1",
+                         "fire drawing lost its Shift+Super+left-drag binding")
 
     def test_the_queue_applies_to_the_extracted_source(self):
         source = ROOT / "build/compiz-0.8.18"
