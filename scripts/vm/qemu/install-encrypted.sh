@@ -354,9 +354,21 @@ echo "LUKS_DEVICE=${luks:-none}"
 [ -n "$luks" ] || exit 0
 luks_uuid=$(blkid -s UUID -o value "$luks"); echo "LUKS_UUID=$luks_uuid"
 cryptsetup close spacedtestroot 2>/dev/null || true
-printf '%s' "$pass" | cryptsetup open --key-file=- "$luks" spacedtestroot && echo UNLOCK=ok || { echo UNLOCK=failed; exit 0; }
+# Calamares may leave its own mapping of the new root open; reuse it (cryptsetup refuses a device in use).
+mapped=$(lsblk -lnpo NAME,TYPE "$luks" | awk '$2=="crypt"{print $1; exit}')
+umount --recursive /tmp/calamares-root-* 2>/dev/null || true
+if [ -n "$mapped" ]; then
+    printf '%s' "$pass" | cryptsetup open --test-passphrase --key-file=- "$luks" 2>/tmp/luks-err && echo UNLOCK=ok \
+        || { echo "UNLOCK=failed $(tr '\n' ' ' < /tmp/luks-err)"; exit 0; }
+    dev=$mapped
+else
+    printf '%s' "$pass" | cryptsetup open --key-file=- "$luks" spacedtestroot 2>/tmp/luks-err && echo UNLOCK=ok \
+        || { echo "UNLOCK=failed $(tr '\n' ' ' < /tmp/luks-err)"; exit 0; }
+    dev=/dev/mapper/spacedtestroot
+fi
+echo "MAPPED=$dev"
 mkdir -p /mnt/t; umount --recursive /mnt/t 2>/dev/null || true
-mount -o ro /dev/mapper/spacedtestroot /mnt/t
+mount -o ro "$dev" /mnt/t
 for part in $(lsblk -lnpo NAME,FSTYPE /dev/vda | awk '$2=="ext4"||$2=="vfat"{print $1}'); do
     mkdir -p /mnt/b; mount -o ro "$part" /mnt/b 2>/dev/null && { ls /mnt/b | grep -q '^initrd.img' && echo "SEPARATE_BOOT=$part"; umount /mnt/b; }
 done
@@ -371,7 +383,7 @@ if [ -n "$initrd" ]; then
     lsinitramfs "$initrd" 2>/dev/null | grep -qE 'cryptroot|sbin/cryptsetup' && echo INITRD_CRYPT=ok || echo INITRD_CRYPT=missing
 fi
 grep -E '^(NAME|VERSION)=' /mnt/t/etc/os-release
-umount /mnt/t; cryptsetup close spacedtestroot
+umount /mnt/t; [ "$dev" != /dev/mapper/spacedtestroot ] || cryptsetup close spacedtestroot
 VERIFY
 }
 
@@ -555,16 +567,23 @@ qemu-system-x86_64 -enable-kvm -cpu host -m "$RAM" -smp "$CPUS" \
     -qmp "unix:$QMP_SOCKET,server=on,wait=off" -drive "if=virtio,file=$DISK" -boot order=c \
     > "$OUT/qemu-installed.log" 2>&1 &
 QEMU_PID=$!
-prompts=0 booted=no started=$SECONDS
+prompts=0 booted=no typed_kinds='' started=$SECONDS
 while (( SECONDS - started < 420 )); do
     sleep 5
     gui_shot "$OUT/screens/installed-boot.png" >/dev/null 2>&1 || continue
     text=$(tesseract "$OUT/screens/installed-boot.png" - --psm 11 2>/dev/null || true)
-    if printf '%s\n' "$text" | grep -qiE 'passphrase|unlock'; then
-        prompts=$((prompts + 1)); echo "Passphrase prompt $prompts after $((SECONDS - started))s"
-        cp "$OUT/screens/installed-boot.png" "$PAGES/12-unlock-prompt-$prompts.png"
-        qmp_type "$PASSPHRASE"; sleep 10
-        (( prompts < 4 )) || break
+    # Type once per DISTINCT prompt: GRUB ("Enter passphrase for hd0,...") and the initramfs ("Please unlock
+    # disk ..."). Never type while GRUB is still deriving the key: stray keys reach the GRUB menu ("c" opens its
+    # command line), which is what sabotaged the first RC3 run.
+    kind=''
+    if printf '%s\n' "$text" | grep -qiE 'attempting to decrypt|slot [0-9]+ opened'; then kind=busy
+    elif printf '%s\n' "$text" | grep -qiE 'enter passphrase for (hd|crypto)'; then kind=grub
+    elif printf '%s\n' "$text" | grep -qiE 'unlock disk|passphrase'; then kind=initramfs; fi
+    if [ -n "$kind" ] && [ "$kind" != busy ] && ! printf ' %s ' "$typed_kinds" | grep -q " $kind "; then
+        prompts=$((prompts + 1)); typed_kinds="$typed_kinds $kind"
+        echo "Passphrase prompt $prompts ($kind) after $((SECONDS - started))s"
+        cp "$OUT/screens/installed-boot.png" "$PAGES/12-unlock-prompt-$prompts-$kind.png"
+        qmp_type "$PASSPHRASE"; sleep 15
     elif printf '%s\n' "$text" | grep -qiE 'test user|tester|log ?in|password'; then
         booted=yes; cp "$OUT/screens/installed-boot.png" "$PAGES/13-installed-login.png"; break
     fi
