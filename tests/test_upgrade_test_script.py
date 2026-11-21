@@ -36,6 +36,41 @@ def rewrite_program():
 
 
 class UpgradeTestScriptTests(unittest.TestCase):
+    def test_audio_survival_rejects_missing_or_replaced_state(self):
+        source = SCRIPT.read_text()
+        function = re.search(r'^audio_survived\(\) \{\n.*?^\}', source,
+                             re.MULTILINE | re.DOTALL).group(0)
+        baseline = 'boot=uuid\nruntime=1:2\nsocket=1:3\npulse=42\n'
+        cases = [(baseline, baseline, 0), ('', '', 1),
+                 (baseline, '', 1),
+                 (baseline, baseline.replace('pulse=42', 'pulse=43'), 1),
+                 (baseline, baseline.replace('socket=1:3', 'socket=1:4'), 1),
+                 (baseline, baseline.replace('runtime=1:2', 'runtime=1:5'), 1),
+                 (baseline, baseline.replace('boot=uuid', 'boot=new'), 1)]
+        with tempfile.TemporaryDirectory() as directory:
+            before = Path(directory) / 'before'
+            after = Path(directory) / 'after'
+            for old, new, expected in cases:
+                with self.subTest(old=old, new=new):
+                    before.write_text(old)
+                    after.write_text(new)
+                    result = subprocess.run(
+                        ['bash', '-c', function + '\naudio_survived "$1" "$2"',
+                         'test', str(before), str(after)], capture_output=True,
+                        text=True, timeout=5)
+                    self.assertEqual(result.returncode, expected, result.stderr)
+
+    def test_audio_probe_does_not_repair_away_the_failure(self):
+        source = SCRIPT.read_text()
+        probe = source.split("<<'AUDIO'\n", 1)[1].split('\nAUDIO', 1)[0]
+        self.assertIn('test -S "$socket"', probe)
+        self.assertIn('su -s /bin/sh user', probe)
+        self.assertIn('pactl --server=unix:$socket info', probe)
+        self.assertNotIn('pulseaudio --start', probe)
+        self.assertNotIn('kill ', probe)
+        self.assertLess(source.index('while ! audio_state'),
+                        source.index('UPGRADE_STATUS=$(run_guest_upgrade'))
+
     def run_script(self, *args):
         return subprocess.run(['bash', str(SCRIPT), *args], text=True,
                               capture_output=True, timeout=60)

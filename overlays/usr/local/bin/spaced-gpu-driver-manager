@@ -1,2 +1,2 @@
 #!/bin/sh
-exec /usr/bin/python3 /usr/lib/spaced-linux/spaced-nvidia-installer.py "$@"
+exec /usr/local/bin/spaced-gpu-manager "$@"

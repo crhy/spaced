@@ -87,6 +87,8 @@ class CleanupHelperTests(unittest.TestCase):
         self.env = dict(os.environ,
                         PATH=str(self.fakebin) + os.pathsep + os.environ['PATH'],
                         SPACED_UPDATE_TEST='1',
+                        SPACED_UPDATE_TEST_SESSION_PAYLOAD=str(ROOT / 'overlays/usr/lib/spaced-linux/spaced-policy-rc.d'),
+                        SPACED_UPDATE_TEST_SESSION_POLICY=str(self.state / 'policy-rc.d'),
                         SPACED_UPDATE_TEST_CACHE_DIR=str(self.cache),
                         SPACED_UPDATE_TEST_GUARD=str(self.guard),
                         FAKE_APT_LOG=str(self.log),

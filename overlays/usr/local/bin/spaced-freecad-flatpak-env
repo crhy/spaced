@@ -1,0 +1,41 @@
+#!/bin/bash
+# #425: suppress only the Qt AT-SPI logging category which can re-enter
+# FreeCAD's NotificationArea mutex. Do not disable accessibility itself.
+# A per-user application override covers both user and system installations.
+set -euo pipefail
+
+flatpak_binary=${SPACED_FLATPAK_REAL:-/usr/bin/flatpak}
+state_dir=${SPACED_APP_STATE_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/spaced}
+marker="$state_dir/freecad-flatpak-env-11.26.3"
+app=org.freecad.FreeCAD
+rule=qt.accessibility.atspi=false
+[ ! -e "$marker" ] || exit 0
+[ -x "$flatpak_binary" ] || exit 0
+
+# Never follow an administrator/user-managed link when applying this migration.
+override_dir="${XDG_DATA_HOME:-$HOME/.local/share}/flatpak/overrides"
+if [ -L "$override_dir" ] || [ -L "$override_dir/$app" ]; then
+    printf 'FreeCAD workaround: keeping symlinked Flatpak overrides; apply %s manually if needed.\n' "$rule" >&2
+    exit 1
+fi
+
+# Inspect both layers before writing. A failure is not an empty configuration.
+# Preserve explicit logging preferences rather than replacing all Qt rules.
+# --show returns GKeyFile syntax; only this key in Environment matters here.
+for scope in --system --user; do
+    current=$("$flatpak_binary" override "$scope" --show "$app") || exit 1
+    logging=$(printf '%s\n' "$current" | awk '
+        /^\[/ { environment = ($0 == "[Environment]") }
+        environment && /^QT_LOGGING_RULES=/ { print }
+    ')
+    if [ -n "$logging" ] && [ "$logging" != "QT_LOGGING_RULES=$rule" ]; then
+        printf 'FreeCAD workaround: keeping custom QT_LOGGING_RULES in %s overrides; add %s if affected by #425.\n' "$scope" "$rule" >&2
+        exit 1
+    fi
+done
+
+# Let Flatpak merge the single key so unrelated permissions and environment
+# variables survive. Write completion only after a successful override.
+"$flatpak_binary" override --user "--env=QT_LOGGING_RULES=$rule" "$app"
+mkdir -p "$state_dir"
+touch "$marker"

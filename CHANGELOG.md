@@ -1,5 +1,41 @@
 # Changelog
 
+## 11.26.3 - Unreleased
+
+Working-tree changes; not yet delivered through APT or an ISO. Release gates
+and outstanding issues are tracked in `docs/11.26.3-RELEASE-PLAN.md`.
+
+- Keep elogind restart guidance visible on both Spaced Update tabs, including
+  recovery advice for lost app networking/audio or an unresponsive Restart
+  button. Tell users to wait for package installation to stop before rebooting.
+- Prevent the candidate elogind package from stopping/restarting the login
+  daemon during upgrade, independently of desktop-settings configure order.
+  Preserve fresh-install startup and removal behavior. Spaced Update also
+  validates session protection before pending package configuration, refusing
+  unsafe custom policies without replacing them. Reboot after upgrading to
+  activate the new daemon. Real skipped-revision VM upgrades remain a gate
+  for #427; generated maintainer-script tests pass.
+- Force the red-X cursor theme for PATH-based xkill launches without changing
+  the user's desktop cursor preference (#422). A private Xvfb pixel test
+  verifies the displayed cursor with Adwaita selected. Server-font fallback
+  and installed-image validation remain pending.
+- Apply OrcaSlicer's scoped WebKit rendering overrides at login and after a
+  matching Flatpak installation (#423). Record completion only on success;
+  failures remain retryable. Real application workflow validation is pending.
+- Apply a per-user FreeCAD Flatpak workaround for the Qt accessibility logging
+  deadlock (#425), covering both installation scopes without disabling
+  accessibility. Preserve unrelated overrides; custom Qt logging rules and
+  symlink-managed overrides require manual review. Application validation remains
+  pending.
+- Restore selected-calendar-date contrast using each theme's selection colors
+  (#428), including unfocused popups. Real GTK color resolution passes across
+  all 13 themes; live panel-popup review remains pending.
+- Add the Compiz five-minute tutorial link to the shipped help and website (#158).
+- Include `cryptsetup-initramfs` and verify encrypted-root crypttab mappings
+  against Calamares's LUKS UUID (#420). Repair missing mappings with a real
+  passphrase fallback; reject conflicting mappings and missing referenced
+  keyfiles. Encrypted BIOS/UEFI installation validation remains pending.
+
 ## 11.26.2 - 2026-11-14
 
 Built as the 11.26.2 ISO and `11.26.2-1` APT packages. This quick patch

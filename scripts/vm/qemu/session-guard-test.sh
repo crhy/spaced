@@ -63,7 +63,7 @@ ROOT_PASSWORD=${SPACED_LIVE_ROOT_PASSWORD:-spaced}
 BOOT_TIMEOUT=${SPACED_ISO_BOOT_TIMEOUT:-420}
 POLL=${SPACED_VM_POLL:-5}
 REINSTALL_TIMEOUT=${SPACED_ELOGIND_REINSTALL_TIMEOUT:-900}
-EXPECTED_VERSION=$(cat "$PROJECT_ROOT/VERSION")
+EXPECTED_VERSION=${SPACED_EXPECTED_VERSION:-$(cat "$PROJECT_ROOT/VERSION")}
 OUT=${SPACED_SESSION_GUARD_TEST_DIR:-$PROJECT_ROOT/build/vm-tests/g01}
 
 for value in "$SSH_PORT" "$VNC_DISPLAY" "$RAM" "$CPUS" "$BOOT_TIMEOUT" "$POLL" \
@@ -205,12 +205,22 @@ PY
 # The three values this test is about, plus whether the runtime directory
 # itself still exists.
 cat > "$STATE_FILE" <<'GUEST'
+uid=$(id -u user)
+runtime=/run/user/$uid
 session_count=$(loginctl list-sessions --no-legend 2>/dev/null | wc -l)
 daemon_pid=$(pgrep -x elogind | head -n 1)
 echo "sessions=$session_count"
 echo "elogind_pid=${daemon_pid:-0}"
-echo "runtime_dir=$([ -d /run/user/1000 ] && echo present || echo missing)"
-echo "runtime_entries=$(ls -A /run/user/1000 2>/dev/null | wc -l)"
+echo "runtime_dir=$([ -d "$runtime" ] && echo present || echo missing)"
+echo "runtime_entries=$(ls -A "$runtime" 2>/dev/null | wc -l)"
+echo "runtime_inode=$(stat -c '%d:%i' "$runtime" 2>/dev/null || true)"
+echo "pulse_socket_inode=$(stat -c '%d:%i' "$runtime/pulse/native" 2>/dev/null || true)"
+echo "pulse_pid=$(pgrep -u "$uid" -x pulseaudio || true)"
+if timeout 10 su -s /bin/sh user -c "pactl --server=unix:$runtime/pulse/native info" >/dev/null 2>&1; then
+    echo 'pulse_reachable=yes'
+else
+    echo 'pulse_reachable=no'
+fi
 GUEST
 
 record() {
@@ -223,6 +233,20 @@ record() {
 
 value() {
     awk -F= -v key="$2" '$1 == key { print $2; exit }' "$1"
+}
+
+check_audio_survived() {
+    local stage=$1 key before after
+    for key in runtime_inode pulse_socket_inode pulse_pid pulse_reachable; do
+        before=$(value "$OUT/B-before.txt" "$key")
+        after=$(value "$OUT/B-$stage.txt" "$key")
+        if [ -z "$before" ] || [ "$before" != "$after" ] \
+           || { [ "$key" = pulse_reachable ] && [ "$before" != yes ]; }; then
+            fail "round B/$stage: audio $key changed or unavailable ($before -> $after)"
+            return
+        fi
+    done
+    pass "round B/$stage: PulseAudio responds on the original socket with unchanged runtime inode and daemon"
 }
 
 # Exactly what the elogind package's own prerm and postinst do through
@@ -341,6 +365,7 @@ info "guard installed: $(tr '\n' ' ' < "$OUT/B-setup.txt")"
 record B before
 guest_sh < "$RESTART_FILE" | tee "$OUT/B-stop-start.txt"
 record B after
+check_audio_survived after
 
 sessions_before=$(value "$OUT/B-before.txt" sessions)
 sessions_after=$(value "$OUT/B-after.txt" sessions)
@@ -365,7 +390,7 @@ if grep -q 'start_status=[^0]' "$OUT/B-stop-start.txt"; then
 fi
 
 # A real package transaction: the installed elogind's own prerm/postinst run
-# against the running session. Ask APT for the installed version first; the
+# against the running session. APT may select a newer published version; the
 # live image's lists are from build time, so refresh them once before giving
 # up. APT exits 0 while printing "Reinstallation of elogind is not possible, it
 # cannot be downloaded" when the patched +spaced build is not in any configured
@@ -396,7 +421,7 @@ if [ "$transaction_ran" -eq 0 ]; then
         info "installing the identical $local_deb from this build tree instead"
         guest_ssh 'mkdir -p /var/tmp/spaced-g01'
         guest_scp "$local_deb" root@127.0.0.1:/var/tmp/spaced-g01/
-        if guest_ssh "timeout $REINSTALL_TIMEOUT env DEBIAN_FRONTEND=noninteractive apt-get install -y /var/tmp/spaced-g01/${local_deb##*/}" \
+        if guest_ssh "timeout $REINSTALL_TIMEOUT env DEBIAN_FRONTEND=noninteractive apt-get install --reinstall -y /var/tmp/spaced-g01/${local_deb##*/}" \
             > "$OUT/B-reinstall-local.txt" 2>&1; then
             transaction_ran=1
         else
@@ -406,10 +431,11 @@ if [ "$transaction_ran" -eq 0 ]; then
 fi
 
 if [ "$transaction_ran" -eq 0 ]; then
-    info 'round B package transaction skipped: this elogind version could not be downloaded and no identical .deb exists in build/local-packages'
+    fail 'round B package transaction unavailable: no successful archive or local package transaction; this gate cannot pass without running package scripts'
 else
     sleep 3
     record B after-reinstall
+    check_audio_survived after-reinstall
     sessions_now=$(value "$OUT/B-after-reinstall.txt" sessions)
     pid_now=$(value "$OUT/B-after-reinstall.txt" elogind_pid)
     entries_now=$(value "$OUT/B-after-reinstall.txt" runtime_entries)

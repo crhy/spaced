@@ -2,12 +2,13 @@
 # Spaced issue #409: on 11.26 the elogind reboot helper crashed
 # (kernel: e-reboot[...]: segfault at 0 ...) and the PC sometimes stayed up.
 # This test boots a live ISO headless and asks elogind for a reboot the way the
-# desktop menu does, ROUNDS times, then powers the guest off.  A round passes
+# desktop menu does, but from an SSH/su caller, ROUNDS times, then powers the
+# guest off. This does not prove graphical-seat authorization. A round passes
 # only when the guest really rebooted (a different kernel boot_id) and the
 # captured guest kernel log contains no "segfault" line.
 #
 # QEMU must NOT be started with the flag that disables guest reboots: a guest
-# reboot must restart the QEMU process, exactly like a real machine rebooting.
+# reboot must reset the guest, while the QEMU process stays running.
 set -euo pipefail
 
 usage() {
@@ -16,12 +17,18 @@ Usage: reboot-loop.sh ISO [ROUNDS=5]
 
 Boot the live ISO headless in QEMU (BIOS, -boot order=d, no disk) and run
 ROUNDS elogind reboot rounds, then one power-off round.  Each round triggers
-org.freedesktop.login1.Manager.Reboot from the logged-in desktop session
-(falling back to "loginctl reboot" as root when polkit refuses it), captures
+org.freedesktop.login1.Manager.Reboot as the live user through SSH/su
+(without a privileged fallback when polkit refuses it), captures
 the guest kernel log with "dmesg --follow", and fails if that log contains
 "segfault" or if the guest does not come back over SSH with a different
 /proc/sys/kernel/random/boot_id.  The final round uses
 org.freedesktop.login1.Manager.PowerOff and requires QEMU to exit.
+SSH/su is not the graphical seat: authorization refusals require separate
+desktop-menu testing, not a privileged fallback or weakened polkit policy.
+Set SPACED_REBOOT_TRIGGER=desktop to activate the actual English MATE shutdown
+dialog in the disposable live guest instead (requires guest xdotool/xprop).
+Its automatic shutdown countdown is disabled during the test dialog so a
+missing Restart button cannot accidentally pass as PowerOff.
 
 QEMU is started without the flag that would disable guest reboots.
 
@@ -57,6 +64,8 @@ BOOT_TIMEOUT=${SPACED_ISO_BOOT_TIMEOUT:-300}
 REBOOT_TIMEOUT=${SPACED_REBOOT_TIMEOUT:-240}
 POWEROFF_TIMEOUT=${SPACED_POWEROFF_TIMEOUT:-120}
 SESSION_TIMEOUT=${SPACED_SESSION_TIMEOUT:-120}
+TRIGGER_MODE=${SPACED_REBOOT_TRIGGER:-ssh}
+case "$TRIGGER_MODE" in ssh|desktop) ;; *) echo 'Invalid reboot trigger mode' >&2; exit 2 ;; esac
 POLL=${SPACED_VM_POLL:-5}
 ISO_NAME=${ISO##*/}
 ISO_NAME=${ISO_NAME%.iso}
@@ -131,6 +140,14 @@ read_boot_id() {
     guest_ssh 'cat /proc/sys/kernel/random/boot_id' 2>/dev/null | tr -d '[:space:]'
 }
 
+valid_boot_id() {
+    [[ "$1" =~ ^[[:xdigit:]]{8}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{12}$ ]]
+}
+
+boot_changed() {
+    valid_boot_id "$1" && valid_boot_id "$2" && [ "$1" != "$2" ]
+}
+
 read_elogind_version() {
     guest_ssh "dpkg-query -W -f='\${Version}' elogind" 2>/dev/null | tr -d '\n'
 }
@@ -140,7 +157,7 @@ wait_for_ssh() {
     while (( SECONDS - started < timeout )); do
         if ssh_is_ready; then
             id=$(read_boot_id || true)
-            if [ -n "$id" ] && { [ -z "$old_id" ] || [ "$id" != "$old_id" ]; }; then
+            if valid_boot_id "$id" && { [ -z "$old_id" ] || boot_changed "$old_id" "$id"; }; then
                 return 0
             fi
         fi
@@ -188,13 +205,22 @@ stop_dmesg_capture() {
     DMESG_PID=''
 }
 
-# Ask elogind for the power action exactly like the desktop menu does: a
-# D-Bus call from the logged-in session.  When polkit refuses that caller the
-# error text is recorded and the same request is retried as root with loginctl;
-# $TRIGGER_METHOD says which one was used.
+# Exercise the desktop's elogind API as the live user. This SSH/su caller is
+# not a substitute for testing an actual menu click in the graphical session.
+# Never hide an authorization failure by retrying as root.
 trigger_power_action() {
     local action=$1 log=$2 status=0
     TRIGGER_METHOD=''
+    if [ "${TRIGGER_MODE:-ssh}" = desktop ]; then
+        TRIGGER_METHOD="MATE shutdown dialog ($action)"
+        guest_ssh "su - user -s /bin/bash -c 'timeout 180 bash -s -- --disposable-live-vm $action'" \
+            < "$SCRIPT_DIR/guest-desktop-power.sh" > "$log" 2>&1 || status=$?
+        if grep -q "^DESKTOP_ACTION_SENT: $action " "$log"; then
+            return 0
+        fi
+        echo "  desktop activation failed (status $status); see $log"
+        return 1
+    fi
     if guest_ssh "su - user -c 'DISPLAY=:0 XAUTHORITY=/home/user/.Xauthority dbus-send --system --print-reply --dest=org.freedesktop.login1 /org/freedesktop/login1 org.freedesktop.login1.Manager.${action} boolean:false'" \
             > "$log" 2>&1; then
         status=0
@@ -202,26 +228,20 @@ trigger_power_action() {
         status=$?
     fi
     if grep -qi 'method return' "$log"; then
-        TRIGGER_METHOD="dbus-send Manager.${action} (user session)"
+        TRIGGER_METHOD="dbus-send Manager.${action} (SSH/su user)"
         return 0
     fi
-    if grep -qiE 'interactive auth|not authorized|access denied|rejected execution' "$log"; then
-        echo "  desktop session call refused: $(grep -m1 -iE 'error|refus' "$log" || cat "$log")"
+    if grep -qiE 'interactive auth|not authorized|access denied|rejected execution|^Error ' "$log"; then
+        echo "  SSH/su user call refused (not a desktop-menu test): $(grep -m1 -iE 'error|refus' "$log" || cat "$log")"
+        TRIGGER_METHOD="dbus-send Manager.${action} (user request failed)"
+        return 1
     else
         # The connection usually drops before ssh can show the reply, which
-        # still means the call reached elogind.
+        # may mean the call reached elogind; only the boot/exit check proves it.
         echo "  session call returned status $status without a readable reply; treating it as sent"
-        TRIGGER_METHOD="dbus-send Manager.${action} (user session, no reply captured)"
+        TRIGGER_METHOD="dbus-send Manager.${action} (SSH/su user, no reply captured)"
         return 0
     fi
-    if guest_ssh "loginctl ${action,,}" > "$log.fallback" 2>&1; then
-        status=0
-    else
-        status=$?
-    fi
-    echo "  root fallback: loginctl ${action,,} (status $status)"
-    TRIGGER_METHOD="loginctl ${action,,} (root fallback after polkit refusal)"
-    return 0
 }
 
 report_round() {
@@ -253,20 +273,31 @@ reboot_round() {
         return 1
     fi
     boot_before=$(read_boot_id || true)
-    if [ -n "$boot_before" ]; then
-        ELOGIND_VERSION=$(read_elogind_version || true)
-        [ -n "$ELOGIND_VERSION" ] || ELOGIND_VERSION=unknown
+    if ! valid_boot_id "$boot_before"; then
+        echo "round $n: FAIL cannot establish the pre-reboot kernel boot ID"
+        FAILURES=$((FAILURES + 1))
+        return 1
     fi
+    ELOGIND_VERSION=$(read_elogind_version || true)
+    [ -n "$ELOGIND_VERSION" ] || ELOGIND_VERSION=unknown
     echo "round $n: boot_id=$boot_before elogind=$ELOGIND_VERSION"
     start_dmesg_capture "$log"
     if ! wait_for_user_session; then
-        echo "  no elogind session for the live user after ${SESSION_TIMEOUT}s; the menu call is attempted anyway"
+        echo "  FAIL no elogind session for the live user after ${SESSION_TIMEOUT}s"
+        stop_dmesg_capture
+        TRIGGER_METHOD='not attempted (no user session)'
+        report_round "round $n" rebooted "$boot_before" '' no "$log"
+        return 1
     fi
-    trigger_power_action Reboot "$OUT/round-$n-trigger.log"
+    if ! trigger_power_action Reboot "$OUT/round-$n-trigger.log"; then
+        stop_dmesg_capture
+        report_round "round $n" rebooted "$boot_before" '' no "$log"
+        return 1
+    fi
     stop_dmesg_capture
     if wait_for_ssh "$REBOOT_TIMEOUT" "$boot_before"; then
         boot_after=$(read_boot_id || true)
-        [ -n "$boot_after" ] && rebooted=yes
+        boot_changed "$boot_before" "$boot_after" && rebooted=yes
     fi
     report_round "round $n" rebooted "$boot_before" "$boot_after" "$rebooted" "$log"
     [ "$rebooted" = yes ]
@@ -278,7 +309,12 @@ poweroff_round() {
     boot_before=$(read_boot_id || true)
     echo "round $n (power-off): boot_id=$boot_before elogind=$ELOGIND_VERSION"
     start_dmesg_capture "$log"
-    trigger_power_action PowerOff "$OUT/round-$n-poweroff-trigger.log"
+    if ! wait_for_user_session || ! trigger_power_action PowerOff "$OUT/round-$n-poweroff-trigger.log"; then
+        stop_dmesg_capture
+        TRIGGER_METHOD='user session unavailable or request failed'
+        report_round "round $n (power-off)" powered_off "$boot_before" "$boot_after" no "$log"
+        return 1
+    fi
     local started=$SECONDS
     while (( SECONDS - started < POWEROFF_TIMEOUT )); do
         if [ -z "$QEMU_PID" ] || ! kill -0 "$QEMU_PID" 2>/dev/null; then

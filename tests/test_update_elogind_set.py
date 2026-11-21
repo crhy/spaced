@@ -38,6 +38,8 @@ esac
             PATH=str(self.bin) + os.pathsep + os.environ['PATH'],
             TEST_STATE=str(self.state),
             SPACED_UPDATE_TEST='1',
+            SPACED_UPDATE_TEST_SESSION_PAYLOAD=str(ROOT / 'overlays/usr/lib/spaced-linux/spaced-policy-rc.d'),
+            SPACED_UPDATE_TEST_SESSION_POLICY=str(self.state / 'policy-rc.d'),
             SPACED_UPDATE_TEST_GUARD=str(guard),
         )
 

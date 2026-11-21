@@ -6,6 +6,52 @@ Current theme architecture is documented in [MATE-theming.md](MATE-theming.md). 
 
 This record tracks the current tree; update it with the implementation.
 
+### 11.26.3 working-tree follow-up (not published)
+
+Encrypted root #420 now includes `cryptsetup-initramfs`. The post-fstab guard
+checks the root mapping against `luksUuid`, never the inner filesystem UUID or
+GPT PARTUUID. Missing mappings use `none` for a genuine passphrase prompt;
+conflicting mappings and missing referenced keyfiles stop installation. Existing
+supported keyfiles are restricted to mode 0400. This is not the unverified f049
+fallback implementation: the shipped 11.26.2 Calamares fstab module was inspected
+in a disposable live VM and uses `luksUuid` and `none` itself. Fresh encrypted
+BIOS/UEFI boot tests, key enrollment and initramfs-content checks remain pending.
+
+FreeCAD #425 now uses a per-user app override, not the proposed system-only
+file: this covers both user and system Flatpak installations. The helper merges
+only `QT_LOGGING_RULES=qt.accessibility.atspi=false`, preserves unrelated keys,
+and leaves custom logging rules and symlink-managed overrides for manual review.
+Read/write failures remain retryable; login and successful wrapper installs run
+the migration. Tests include the real Flatpak override command in a temporary
+profile. Sustained editing and installed-image validation remain release gates.
+
+Calendar #428 has explicit selected-date rules, including focus/backdrop states,
+using the semantic selection colors rather than inherited shaded backgrounds.
+A real GTK probe reproduced insufficient contrast before the change and passes
+for all 13 themes afterwards. Adjacent-month and disabled states are excluded;
+actual panel-popup visual acceptance remains pending.
+
+#427 demonstrates that installing the session guard in settings `postinst`
+alone is too late for skipped-revision upgrades. The candidate elogind build
+now uses `dh_installinit --no-stop-on-upgrade`, tested against generated
+maintainer scripts, and Spaced Update establishes protection before pending
+configuration. Keep the older delivery record below as historical evidence,
+not proof that the ordering regression was solved. Real upgrade VM gates are
+still pending.
+
+Spaced Update now keeps a conditional elogind restart notice visible on both
+update tabs, outside transient status messages and collapsed logs. It explains
+session symptoms and terminal restart recovery, and warns users to wait until
+package installation has stopped before restarting. This is guidance, not
+transaction-specific detection of a pending reboot.
+
+#422 also requires protection independent of the selected desktop theme.
+The new `/usr/local/bin/xkill` wrapper scopes the red-X theme to xkill itself;
+a private Xvfb test verifies actual cursor pixels under Adwaita. Server-font
+fallback work remains open. OrcaSlicer's #423 helper is integrated with
+success-only completion markers and scoped per-user overrides. See the
+[release checkpoint](11.26.3-RELEASE-PLAN.md) for limitations and remaining gates.
+
 | Area | Current resolution | Main implementation |
 |---|---|---|
 | An elogind package upgrade drops the running desktop session (11.26.1-2) | The distribution's elogind `prerm`/`postinst` call `invoke-rc.d elogind stop` and `restart` on every upgrade, which ends the live session, empties `/run/user/<uid>` and leaves Flatpak applications without name resolution or sound until the PC restarts. Rule: **a package update must never stop or restart the login service under a running desktop.** `spaced-mate-default-settings` now installs a `policy-rc.d` session guard that answers 101 (forbidden) for `stop`, `restart`, `try-restart`, `force-reload` and `reload` while `Xorg` runs or a `/run/user/<uid>` directory exists, and always allows `start` and every other service; the upgraded daemon is simply used after the next restart. An update that replaces elogind still requires a PC restart and the release notes say so. Measured in a live VM: without the guard the session count and `/run/user/1000` fall to 0; with it the session count, the elogind PID and the runtime directory entries are unchanged, including through a real `apt-get install --reinstall elogind`. | `overlays/usr/lib/spaced-linux/spaced-policy-rc.d`, settings-package `postinst`/`prerm`, `tests/test_policy_rc_d.py`, `scripts/vm/qemu/session-guard-test.sh` |

@@ -14,6 +14,12 @@ PATCHES="$ROOT/patches/elogind"
 BASE_VERSION=257.13-1
 RELEASE_VERSION=$(<"$ROOT/VERSION")
 VERSION="${BASE_VERSION}+spaced${RELEASE_VERSION}"
+# Never produce changed bytes with the already-published 11.26.2 identity.
+# Source preparation remains available before the coordinated release bump.
+if [[ $MODE == --build ]] && ! dpkg --compare-versions "$RELEASE_VERSION" ge 11.26.3; then
+    echo 'Session-safe elogind requires the coordinated 11.26.3 version bump before building binaries.' >&2
+    exit 1
+fi
 for tool in curl sha256sum dpkg-source patch; do
     command -v "$tool" >/dev/null || { echo "Missing build tool: $tool" >&2; exit 1; }
 done
@@ -40,11 +46,15 @@ cp "$PATCHES/0001-fix-poweroff-reboot-segfault.patch" "$source_dir/debian/patche
 cp "$PATCHES/0002-enable-xml-entity-resolution.patch" "$source_dir/debian/patches/$xml_patch"
 printf '%s\n%s\n' "$runtime_patch" "$xml_patch" >> "$source_dir/debian/patches/series"
 dpkg-source --before-build "$source_dir"
+# Debian packaging changes belong in the Debian source tarball, not quilt's
+# upstream series. This protects direct APT/dpkg and already-running updaters.
+patch --batch --forward -d "$source_dir" -p1 < "$PATCHES/0003-preserve-session-on-upgrade.patch"
 cat > "$build_dir/changelog" <<EOF
 elogind ($VERSION) unstable; urgency=medium
 
   * Backport the upstream fix for the e-poweroff/e-reboot completion crash
     and clean up manager state if the action worker cannot be started.
+  * Preserve the running login manager during upgrades (issue #427).
 
  -- Spaced Linux Developers <dev@spacedlinux.com>  Fri, 13 Nov 2026 00:00:00 +0000
 

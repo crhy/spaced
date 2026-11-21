@@ -2,6 +2,7 @@
 """Guarantee that Calamares keeps a planned separate /home in fstab."""
 
 import os
+import re
 
 import libcalamares
 
@@ -74,11 +75,72 @@ def _append_home(path, partition):
     return True
 
 
+def _ensure_encrypted_root(root, partitions):
+    """Debian initramfs-tools needs the root mapping in the target crypttab.
+
+    Only luksUuid identifies the outer container. Never substitute the inner
+    filesystem UUID or GPT PARTUUID. Missing metadata is an installer error,
+    not a reason to guess a device which might become unbootable.
+    """
+    encrypted = [p for p in partitions
+                 if p.get("mountPoint") == "/" and p.get("luksMapperName")]
+    if not encrypted:
+        return None
+
+    def fail(detail):
+        libcalamares.utils.warning(detail)
+        return ("Encrypted root configuration error", detail)
+
+    if len(encrypted) != 1 or not root:
+        return fail("The encrypted root partition plan is incomplete or ambiguous.")
+    partition = encrypted[0]
+    mapper, uuid = partition["luksMapperName"], partition.get("luksUuid", "")
+    if not re.fullmatch(r"[A-Za-z0-9_+.-]+", mapper) or not re.fullmatch(
+            r"[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}", uuid):
+        return fail("The encrypted root has no valid mapper name or LUKS UUID.")
+    path = os.path.join(root, "etc", "crypttab")
+    try:
+        if os.path.islink(path):
+            return fail("The installed crypttab must not be a symbolic link.")
+        text = ""
+        if os.path.exists(path):
+            with open(path, encoding="utf-8") as handle:
+                text = handle.read()
+        entries = [line.split() for line in text.splitlines()
+                   if line.strip() and not line.lstrip().startswith("#")]
+        matches = [fields for fields in entries if fields[0] == mapper]
+        if matches:
+            if len(matches) != 1 or len(matches[0]) < 3 or matches[0][1] != "UUID=" + uuid:
+                return fail("The installed encrypted root mapping conflicts with the partition plan.")
+            key = matches[0][2]
+            if key not in ("none", "-"):
+                key_path = os.path.join(root, key.lstrip("/"))
+                if key != "/crypto_keyfile.bin" or os.path.islink(key_path) or not os.path.isfile(key_path):
+                    return fail("The encrypted root crypttab references an unavailable or unsupported keyfile.")
+                os.chmod(key_path, 0o400)
+            return None
+        # Repair only a missing mapping. A passphrase prompt is safe even when
+        # a keyfile exists: its presence alone does not prove an enrolled keyslot.
+        with open(path, "a", encoding="utf-8") as handle:
+            if text and not text.endswith("\n"):
+                handle.write("\n")
+            handle.write("{} UUID={} none luks\n".format(mapper, uuid))
+            handle.flush()
+            os.fsync(handle.fileno())
+    except OSError as error:
+        return fail("Cannot verify the encrypted root crypttab: {}".format(error))
+    return None
+
+
 def run():
     storage = libcalamares.globalstorage
     partitions = storage.value("partitions") or []
     reuse_home = bool(storage.value("reuseHome"))
     homes = [p for p in partitions if p.get("mountPoint") == "/home"]
+
+    encryption_error = _ensure_encrypted_root(storage.value("rootMountPoint"), partitions)
+    if encryption_error:
+        return encryption_error
 
     if reuse_home and not homes:
         return _error(

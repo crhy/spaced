@@ -38,11 +38,29 @@ ensure_remote() {
     "$real_flatpak" remote-add --user --if-not-exists "$name" "$descriptor"
 }
 
+apply_app_env() {
+    local argument
+
+    # Apply app-specific workarounds in the installation session, not just at
+    # the next login. Never apply these settings globally.
+    for argument in "$@"; do
+        case $argument in
+            com.orcaslicer.OrcaSlicer|com.orcaslicer.OrcaSlicer/*|com.orcaslicer.OrcaSlicer:*)
+                SPACED_FLATPAK_REAL="$real_flatpak" /usr/local/bin/spaced-flatpak-app-env || true
+                ;;
+            org.freecad.FreeCAD|org.freecad.FreeCAD/*|org.freecad.FreeCAD:*)
+                SPACED_FLATPAK_REAL="$real_flatpak" /usr/local/bin/spaced-freecad-flatpak-env || true
+                ;;
+        esac
+    done
+}
+
 run_install() {
     local status
 
     if "$real_flatpak" "$@"; then
         refresh_desktop_menus
+        apply_app_env "$@"
         return 0
     else
         status=$?

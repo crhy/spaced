@@ -221,6 +221,11 @@ the steps that reproduce it, what you expected instead, and the output of
 `spaced-graphics-report` for any display problem. Report security problems
 through [SECURITY.md](SECURITY.md) instead of a public issue.
 
+Watch the Compiz tutorial: [Compiz on Spaced Linux: a 5-minute tour](https://youtu.be/csKKNzKwrMg)
+shows the desktop shortcuts while their effect is on screen — moving and resizing, the
+workspace cube, zoom, transparency and inverted colours, the built-in shortcuts, fire
+painting and CompizConfig Settings Manager.
+
 ## Build Spaced Linux
 
 A Devuan- or Debian-based build host is recommended.

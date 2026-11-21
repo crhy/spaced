@@ -290,6 +290,23 @@ NaTrayApplet,
     box-shadow: none;
 }
 
+/* #428: keep the selected calendar date on the semantic selection pair.
+ * Outrank late .view:selected:focus surface rules, including unfocused popups.
+ * Do not change indeterminate (adjacent-month) or disabled dates. */
+calendar:selected:not(:indeterminate):not(:disabled),
+calendar:selected:focus:not(:indeterminate):not(:disabled),
+calendar:selected:backdrop:not(:indeterminate):not(:disabled),
+calendar:selected:focus:backdrop:not(:indeterminate):not(:disabled),
+calendar.view:selected:not(:indeterminate):not(:disabled),
+calendar.view:selected:focus:not(:indeterminate):not(:disabled),
+calendar.view:selected:backdrop:not(:indeterminate):not(:disabled),
+calendar.view:selected:focus:backdrop:not(:indeterminate):not(:disabled) {
+    background-image: none;
+    background-color: @theme_selected_bg_color;
+    color: @theme_selected_fg_color;
+    text-shadow: none;
+}
+
 /* Caja paints the selected MATE wallpaper before chaining to GTK's window
  * draw handler. A solid GTK window background would cover that image. */
 window.caja-desktop-window,

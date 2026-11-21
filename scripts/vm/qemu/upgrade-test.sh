@@ -159,6 +159,34 @@ guest_ssh() {
         -o UserKnownHostsFile=/dev/null root@127.0.0.1 "$@"
 }
 
+# Probe the existing live user's server, never root's or an autospawned one.
+# A successful connection alone would miss a daemon/session replacement.
+audio_state() {
+    guest_ssh 'bash -se' <<'AUDIO'
+uid=$(id -u user)
+test "$uid" -gt 0
+runtime=/run/user/$uid
+socket=$runtime/pulse/native
+test -S "$socket"
+pid=$(pgrep -u "$uid" -x pulseaudio)
+[[ "$pid" =~ ^[0-9]+$ ]]
+timeout 10 su -s /bin/sh user -c "pactl --server=unix:$socket info" >/dev/null
+printf 'boot=%s\n' "$(cat /proc/sys/kernel/random/boot_id)"
+printf 'runtime=%s\n' "$(stat -c '%d:%i' "$runtime")"
+printf 'socket=%s\n' "$(stat -c '%d:%i' "$socket")"
+printf 'pulse=%s\n' "$pid"
+AUDIO
+}
+
+audio_survived() {
+    local before=$1 after=$2 key
+    for key in boot runtime socket pulse; do
+        grep -qE "^$key=.+$" "$before" || return 1
+        grep -qE "^$key=.+$" "$after" || return 1
+    done
+    cmp -s "$before" "$after"
+}
+
 # Run a python3 program in the guest (stdin) with shell-quoted arguments.
 guest_python() {
     local argument quoted=''
@@ -292,6 +320,17 @@ if ! ssh_is_ready 2>/dev/null; then
     exit 2
 fi
 echo "Live ISO is up after $((SECONDS - started))s"
+
+# SSH can precede the desktop. Establish a working audio baseline before any
+# package operation; missing baseline is not a passing survival test.
+started=$SECONDS
+while ! audio_state > "$OUT/audio-before.txt" 2> "$OUT/audio-before-error.txt"; do
+    if (( SECONDS - started >= 120 )); then
+        echo 'No working desktop PulseAudio baseline; upgrade not started.' >&2
+        exit 2
+    fi
+    sleep "$POLL"
+done
 
 guest_ssh "mkdir -p $GUEST_WORK"
 {
@@ -480,6 +519,12 @@ else
 fi
 
 # e. verify the running upgraded system
+if audio_state > "$OUT/audio-after.txt" 2> "$OUT/audio-after-error.txt" \
+    && audio_survived "$OUT/audio-before.txt" "$OUT/audio-after.txt"; then
+    pass 'e: user PulseAudio remains reachable with the same daemon and runtime/socket inodes'
+else
+    fail 'e: user audio connection or session identity was lost during upgrade (#427)'
+fi
 {
     echo "date: $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
     guest_ssh 'grep -E "^(NAME|VERSION|VERSION_ID|PRETTY_NAME)=" /etc/os-release'

@@ -7,6 +7,13 @@ SOURCE_DIR="$(cd "$(dirname "$0")/../overlays" && pwd)"
 STAMP="$(date +%Y%m%d-%H%M%S)"
 BACKUP_DIR="/root/spaced-nvidia-installer-backup-$STAMP"
 FILES=(
+    usr/lib/spaced-linux/spaced_gpu.py
+    usr/lib/spaced-linux/spaced-gpu-manager.py
+    usr/lib/spaced-linux/spaced-gpu-helper
+    usr/local/bin/spaced-gpu-manager
+    etc/init.d/spaced-gpu-guard
+    etc/xdg/autostart/spaced-gpu-trial.desktop
+    usr/share/polkit-1/actions/com.spacedlinux.gpu.policy
     usr/lib/spaced-linux/spaced-nvidia-helper
     usr/lib/spaced-linux/spaced-nvidia-config.py
     usr/lib/spaced-linux/spaced-nvidia-compat.py
@@ -36,7 +43,8 @@ from pathlib import Path
 import sys
 root = Path(sys.argv[1]) / "usr/lib/spaced-linux"
 for name in ("spaced-nvidia-config.py", "spaced-nvidia-compat.py", "spaced_nvidia_state.py",
-             "spaced-nvidia-installer.py", "spaced-nvidia-postboot.py"):
+             "spaced-nvidia-installer.py", "spaced-nvidia-postboot.py",
+             "spaced_gpu.py", "spaced-gpu-manager.py", "spaced-gpu-helper"):
     compile((root / name).read_text(), name, "exec")
 PY_CHECK
 
@@ -47,13 +55,14 @@ for target in "${FILES[@]}"; do
     fi
     mode=0644
     case "$target" in
-        usr/local/bin/*|usr/lib/spaced-linux/spaced-nvidia-*) mode=0755 ;;
+        usr/local/bin/*|usr/lib/spaced-linux/spaced-nvidia-*|usr/lib/spaced-linux/spaced-gpu-*|etc/init.d/*) mode=0755 ;;
     esac
     install -D -o root -g root -m "$mode" "$SOURCE_DIR/$target" "/$target"
 done
 update-desktop-database /usr/share/applications 2>/dev/null || true
+update-rc.d spaced-gpu-guard defaults
 rm -f /usr/share/applications/spaced-nvidia-installer.desktop
 
-echo "Installed Spaced GPU Driver Manager application files."
+echo "Installed Spaced GPU Manager application files. Graphics configuration is unchanged."
 echo "Backup: $BACKUP_DIR"
-echo "Launch with: spaced-gpu-driver-manager"
+echo "Launch with: spaced-gpu-manager"

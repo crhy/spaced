@@ -20,6 +20,14 @@ GITHUB_API = "https://api.github.com/repos/crhy/spaced/releases/latest"
 APP_VERSION = "0.2.3"
 HELPER = "/usr/lib/spaced-linux/spaced-update-helper"
 REFRESH_HELPER = "/usr/lib/spaced-linux/spaced-update-refresh"
+ELOGIND_REBOOT_NOTICE = (
+    "Restart required after elogind updates: If an update includes elogind "
+    "(the login/session service), save your work and restart the computer after "
+    "the update finishes to activate the new service. If apps lose network or "
+    "audio, or session controls stop working after an update, restart the computer. "
+    "If the desktop Restart button does not work, run sudo reboot in a terminal. "
+    "Always wait until package installation has stopped before restarting."
+)
 APT_RE = re.compile(
     r"^(\S+?)/\S+\s+(\S+)\s+(\S+)\s+\[upgradable from:\s+(.+)\]$"
 )
@@ -552,6 +560,14 @@ def make_scroller(child, min_height=0):
     return scroller
 
 
+def make_reboot_notice():
+    # Separate from transient status and collapsed logs, including on failure.
+    notice = make_label(ELOGIND_REBOOT_NOTICE, "spaced-card", wrap=True)
+    notice.set_max_width_chars(80)
+    notice.set_selectable(True)
+    return notice
+
+
 class UpdateRow(Gtk.ListBoxRow):
     def __init__(self, item, changed_callback):
         super().__init__()
@@ -733,6 +749,7 @@ class App(Gtk.Window):
         status_card.pack_start(self.status_icon, False, False, 0)
         status_card.pack_start(status_text, True, True, 0)
         page.pack_start(status_card, False, False, 0)
+        page.pack_start(make_reboot_notice(), False, False, 0)
 
         controls = Gtk.Box(spacing=10)
         self.selectall = Gtk.CheckButton(label="Select all")
@@ -1586,6 +1603,7 @@ class OsUpdateTab(Gtk.Box):
         hero.pack_start(self.message_icon, False, False, 0)
         hero.pack_start(message_box, True, True, 0)
         self.pack_start(hero, False, False, 0)
+        self.pack_start(make_reboot_notice(), False, False, 0)
 
         versions = add_style(Gtk.Box(spacing=24), "spaced-card")
         installed_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)

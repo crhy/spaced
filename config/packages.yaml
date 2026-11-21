@@ -103,6 +103,7 @@ backup:
 rescue:
   - gddrescue
   - cryptsetup
+  - cryptsetup-initramfs
   - exfatprogs
   - lvm2
   - ntfs-3g

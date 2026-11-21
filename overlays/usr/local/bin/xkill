@@ -1,0 +1,6 @@
+#!/bin/sh
+# Scope the red X to xkill, even when the desktop selects another cursor theme.
+# Use the absolute binary to avoid recursively invoking this PATH wrapper.
+export XCURSOR_THEME=Spaced-Cursors
+export XCURSOR_THEME_CORE=1
+exec /usr/bin/xkill "$@"

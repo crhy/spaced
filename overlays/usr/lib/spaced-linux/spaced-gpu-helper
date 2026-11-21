@@ -1,0 +1,88 @@
+#!/usr/bin/python3 -I
+"""Fixed-action privileged entry point; never accepts paths or shell commands."""
+import argparse
+import os
+from pathlib import Path
+import subprocess
+import sys
+import syslog
+import time
+
+sys.path.insert(0, '/usr/lib/spaced-linux')
+from spaced_gpu import Trial, discover, driver_lock, driver_reboot_pending, read
+
+
+def boot_id():
+    value = read('/proc/sys/kernel/random/boot_id')
+    if not value:
+        raise ValueError('Cannot identify this boot; refusing a graphics trial.')
+    return value
+
+
+def watchdog():
+    trial = Trial()
+    boot = boot_id()
+    with driver_lock(True):
+        if not trial.begin_boot(boot):
+            return
+        stale = trial.load().get('trial_boot') != boot
+    # Monotonic timeout also works before network time is synchronized.
+    deadline = time.monotonic() + (0 if stale else 180)
+    while time.monotonic() < deadline:
+        if trial.load().get('phase') != 'trial':
+            return
+        time.sleep(2)
+    with driver_lock(True):
+        if trial.load().get('phase') != 'trial':
+            return
+        trial.revert()
+    # No reboot and no dependency on a working desktop. A trial explicitly warns
+    # that its session will end if not confirmed. Never restart on manual revert.
+    subprocess.run(['/usr/sbin/service', 'lightdm', 'restart'], check=True, timeout=60)
+
+
+def main():
+    os.environ['PATH'] = '/usr/sbin:/usr/bin:/sbin:/bin'
+    os.environ['LC_ALL'] = 'C'
+    parser = argparse.ArgumentParser()
+    parser.add_argument('action', choices=['stage', 'confirm', 'revert', 'watchdog'])
+    parser.add_argument('pci', nargs='?')
+    args = parser.parse_args()
+    if os.geteuid() != 0:
+        raise ValueError('Administrator authentication is required.')
+    if args.action == 'watchdog':
+        if args.pci:
+            raise ValueError('Unexpected argument')
+        watchdog()
+        return
+    with driver_lock():
+        trial = Trial()
+        if args.action == 'stage':
+            # Both pending driver install and pending driver recovery must finish.
+            boot_started = time.time() - float(read('/proc/uptime').split()[0])
+            if driver_reboot_pending(Path('/var/lib/spaced-nvidia-installer'), boot_id(), boot_started):
+                raise ValueError('Finish the driver reboot and repair any NVIDIA startup failure before assigning a desktop GPU.')
+            if not Path('/etc/rc2.d/S01spaced-gpu-guard').exists() and not list(Path('/etc/rc2.d').glob('S*spaced-gpu-guard')):
+                raise ValueError('The automatic recovery service is not registered. Install GPU Manager completely first.')
+            gpu = next((g for g in discover() if g['pci'] == args.pci), None)
+            if gpu is None:
+                raise ValueError('Select a currently detected GPU by its full PCI address.')
+            trial.stage(gpu, boot_id())
+            print('Desktop trial staged. Save your work and reboot. Confirm within three minutes of startup or the previous configuration will return.')
+        elif args.pci:
+            raise ValueError('Unexpected argument')
+        elif args.action == 'confirm':
+            trial.confirm(boot_id())
+            print('Desktop assignment kept. Revert remains available.')
+        else:
+            trial.revert()
+            print('Previous configuration restored. Save your work and reboot to use it.')
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except (OSError, ValueError, subprocess.SubprocessError) as error:
+        syslog.syslog(syslog.LOG_ERR, 'Spaced GPU Manager: ' + str(error))
+        print(str(error), file=sys.stderr)
+        sys.exit(1)

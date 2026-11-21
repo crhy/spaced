@@ -1,0 +1,18 @@
+Description: Keep the running login manager across package upgrades
+ A restart destroys /run/user and the desktop's session registrations. Do not
+ depend on another package's postinst installing policy-rc.d first (#427).
+ dh_installinit still starts fresh installations and stops actual removals;
+ upgrades use start (idempotent), never stop/restart. Reboot loads the new daemon.
+Author: Spaced Linux Developers
+Forwarded: not-needed
+--- a/debian/rules
++++ b/debian/rules
+@@ -45,3 +45,8 @@
+ 
++# Session lifetime must not depend on desktop-settings package ordering.
++override_dh_installinit:
++	dh_installinit --no-stop-on-upgrade
++
++
+ %:
+ 	dh $@  --builddirectory=build --without autoreconf,systemd --buildsystem=meson

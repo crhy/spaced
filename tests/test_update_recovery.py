@@ -65,6 +65,8 @@ fi
                         SIMULATE_STATUS='0', AUDIT_FAILURE_AT='0',
                         ROOT_FSTYPE='ext4',
                         SPACED_UPDATE_TEST='1',
+                        SPACED_UPDATE_TEST_SESSION_PAYLOAD=str(ROOT / 'overlays/usr/lib/spaced-linux/spaced-policy-rc.d'),
+                        SPACED_UPDATE_TEST_SESSION_POLICY=str(self.state / 'policy-rc.d'),
                         SPACED_UPDATE_TEST_GUARD=str(self.guard))
 
     def command(self, name, body):
@@ -107,6 +109,45 @@ fi
         self.assertEqual((self.state / 'install-count').read_text(), '1\n')
         self.assertNotIn('retrying pending package configuration once',
                          result.stdout)
+
+    def test_session_policy_exists_before_pending_configuration(self):
+        self.command('dpkg', '''
+[[ -L "$SPACED_UPDATE_TEST_SESSION_POLICY" ]] || exit 93
+printf 'dpkg %s\\n' "$*" >> "$TEST_STATE/commands"
+''')
+        result = self.run_helper(0)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_custom_allow_policy_blocks_configuration_without_overwrite(self):
+        policy = self.state / 'policy-rc.d'
+        original = '#!/bin/sh\nexit 0\n'
+        policy.write_text(original)
+        policy.chmod(0o755)
+        result = self.run_helper(0)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(policy.read_text(), original)
+        self.assertFalse(self.lines('dpkg'))
+        self.assertFalse((self.state / 'install-count').exists())
+
+    def test_custom_deny_policy_is_preserved(self):
+        policy = self.state / 'policy-rc.d'
+        original = '#!/bin/sh\nexit 101\n'
+        policy.write_text(original)
+        policy.chmod(0o755)
+        result = self.run_helper(0)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(policy.read_text(), original)
+
+    def test_missing_payload_and_dangling_policy_fail_closed(self):
+        self.env['SPACED_UPDATE_TEST_SESSION_PAYLOAD'] = str(self.state / 'missing')
+        result = self.run_helper(0)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse(self.lines('dpkg'))
+        self.env['SPACED_UPDATE_TEST_SESSION_PAYLOAD'] = str(ROOT / 'overlays/usr/lib/spaced-linux/spaced-policy-rc.d')
+        (self.state / 'policy-rc.d').symlink_to(self.state / 'missing')
+        result = self.run_helper(0)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse(self.lines('dpkg'))
 
     def test_grub_refresh_runs_for_an_installed_root(self):
         result = self.run_helper(0)

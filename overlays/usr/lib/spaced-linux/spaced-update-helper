@@ -12,6 +12,49 @@ update_failed() {
 }
 trap update_failed ERR
 
+# Install session protection BEFORE even configuring a pending old elogind.
+# Never replace an administrator's policy or silently continue without safety.
+ensure_session_guard() {
+  local payload=/usr/lib/spaced-linux/spaced-policy-rc.d
+  local policy=/usr/sbin/policy-rc.d owner mode action status
+  if [[ ${SPACED_UPDATE_TEST:-} == 1 ]]; then
+    payload=${SPACED_UPDATE_TEST_SESSION_PAYLOAD:?test session payload required}
+    policy=${SPACED_UPDATE_TEST_SESSION_POLICY:?isolated test policy required}
+  fi
+  if [[ ! -f $payload || -L $payload || ! -x $payload ]]; then
+    log 'Session protection is missing; refusing package changes. Reinstall Spaced Update first.'
+    return 1
+  fi
+  read -r owner mode <<< "$(stat -c '%u %a' "$payload")"
+  if [[ ${SPACED_UPDATE_TEST:-} != 1 && $owner != 0 ]] || (( (8#$mode & 8#022) != 0 )); then
+    log 'Session protection has unsafe ownership or permissions; refusing package changes.'
+    return 1
+  fi
+  if [[ ! -e $policy && ! -L $policy ]]; then
+    # No force: a concurrently installed administrator policy must win.
+    ln -s "$payload" "$policy" || return 1
+  fi
+  [[ $(readlink "$policy" 2>/dev/null || true) == "$payload" ]] && return 0
+  if [[ ! -f $policy || ! -x $policy ]]; then
+    log 'The existing service policy is unusable; refusing package changes.'
+    return 1
+  fi
+  read -r owner mode <<< "$(stat -Lc '%u %a' "$policy")"
+  if [[ ${SPACED_UPDATE_TEST:-} != 1 && $owner != 0 ]] || (( (8#$mode & 8#022) != 0 )); then
+    log 'The existing service policy has unsafe ownership or permissions; refusing package changes.'
+    return 1
+  fi
+  # A custom policy remains untouched. Require an explicit denial of every
+  # destructive elogind action; fallback/unknown/error results are not safe.
+  for action in stop restart try-restart force-reload reload; do
+    if "$policy" elogind "$action"; then status=0; else status=$?; fi
+    if [[ $status != 101 ]]; then
+      log "The existing service policy does not protect elogind ($action). It was left unchanged; refusing package changes."
+      return 1
+    fi
+  done
+}
+
 # Optional cleanup safety list (issue #217). The privileged helper never
 # cleans up during updates; cleanup only runs through the explicit
 # cleanup-plan/cleanup-apply modes below. Any candidate matching one of
@@ -305,6 +348,7 @@ if [[ $MODE == cleanup-apply ]]; then
     exit 0
   fi
   step 70 'Removing unused packages'
+  ensure_session_guard
   apt_run -y autoremove
   step 100 'Cleanup complete'
   exit 0
@@ -320,6 +364,7 @@ fi
 # A retry can finish packages left unpacked by an interrupted transaction.
 # Do not guess at dependency repairs or force-remove packages on failure.
 step 10 'Completing pending package configuration'
+ensure_session_guard
 dpkg --force-confdef --force-confold --configure --pending
 step 12 'Verifying package database health'
 verify_package_health 'before the update'

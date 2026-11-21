@@ -11,6 +11,15 @@ INDEX = ICONS / "Spaced-Cursors/index.theme"
 
 
 class XkillCursorTests(unittest.TestCase):
+    def test_wrapper_forces_red_x_without_changing_desktop_theme(self):
+        wrapper = OVERLAY / 'usr/local/bin/xkill'
+        text = wrapper.read_text()
+        self.assertTrue(wrapper.stat().st_mode & 0o111)
+        self.assertIn('export XCURSOR_THEME=Spaced-Cursors', text)
+        self.assertIn('export XCURSOR_THEME_CORE=1', text)
+        self.assertIn('exec /usr/bin/xkill "$@"', text)
+        self.assertNotIn('gsettings set', text)
+
     def test_cursor_is_xcur_binary(self):
         self.assertTrue(CURSOR.is_file(), "the xkill cursor file is missing")
         self.assertEqual(b"Xcur", CURSOR.read_bytes()[:4],
