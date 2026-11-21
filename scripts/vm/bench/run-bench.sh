@@ -37,7 +37,8 @@
 # (15), BENCH_QEMU_RAM (8192), BENCH_QEMU_CPUS (4), BENCH_DISK_SIZE (40G),
 # BENCH_OS_CAP_SECONDS (1200), BENCH_PROBE_IDLE_SECONDS (20), BENCH_HTTP_PORT
 # (8099), BENCH_VM_SSH_PORT (2240), BENCH_VNC_DISPLAY (90), BENCH_ISO_BOOT_
-# TIMEOUT (300), BENCH_SSH_POLL_SECONDS (2), BENCH_OUT_DIR.
+# TIMEOUT (300), BENCH_SSH_POLL_SECONDS (2), BENCH_BOOT_MENU_TAPS (3),
+# BENCH_OUT_DIR.
 set -euo pipefail
 
 usage() {
@@ -52,7 +53,8 @@ Missing ISOs print "SKIP: <label> no iso at <path>" and do not stop the run.
 Environment: BENCH_VM_DIR (/media/rhy/data/bench-vms), BENCH_FREE_MIN_GB (15),
 BENCH_QEMU_RAM (8192), BENCH_QEMU_CPUS (4), BENCH_DISK_SIZE (40G),
 BENCH_OS_CAP_SECONDS (1200), BENCH_PROBE_IDLE_SECONDS (20), BENCH_HTTP_PORT
-(8099), BENCH_VM_SSH_PORT (2240), BENCH_VNC_DISPLAY (90), BENCH_OUT_DIR.
+(8099), BENCH_VM_SSH_PORT (2240), BENCH_VNC_DISPLAY (90),
+BENCH_ISO_BOOT_TIMEOUT (300), BENCH_BOOT_MENU_TAPS (3), BENCH_OUT_DIR.
 USAGE
 }
 
@@ -82,6 +84,7 @@ VM_SSH_PORT=${BENCH_VM_SSH_PORT:-2240}
 VNC_BASE=${BENCH_VNC_DISPLAY:-90}
 BOOT_TIMEOUT=${BENCH_ISO_BOOT_TIMEOUT:-300}
 SSH_POLL=${BENCH_SSH_POLL_SECONDS:-2}
+BOOT_MENU_TAPS=${BENCH_BOOT_MENU_TAPS:-3}
 ROOT_PASSWORD=${SPACED_LIVE_ROOT_PASSWORD:-spaced}
 OUT_DIR=${BENCH_OUT_DIR:-$PROJECT_ROOT/build/bench}
 
@@ -323,7 +326,13 @@ write_bootstrap() {
         echo "PORT=$HTTP_PORT"
         echo "IDLE_SECONDS=$IDLE_SECONDS"
         echo "CAP_SECONDS=$CAP_SECONDS"
-        echo "SUDO='$rootcmd'"
+        if [ "$rootcmd" = none ]; then
+            # The guest already runs as root (ssh access): no privilege command,
+            # and an empty expansion, never the word "none" as a command.
+            echo "SUDO=''"
+        else
+            echo "SUDO='$rootcmd'"
+        fi
         echo "FETCH_TOOL=$fetch"
         echo "PTS_TESTS='pts/compress-zstd pts/sqlite-speedtest pts/openssl'"
         cat "$BOOTSTRAP"
@@ -402,7 +411,7 @@ measure_entry() {
     sleep 1
 
     local started=$SECONDS boot_ready=no desktop_s=unknown attempt=0
-    local next_try=$((SECONDS + 15)) command
+    local next_try=$((SECONDS + 8)) command
     command=$(typed_bootstrap_command "$label" "$fetch")
     # Live ISO boot menus wait for a keyboard: send Enter so the default entry
     # starts, and keep doing it while the ISO is still booting (harmless once
@@ -425,21 +434,35 @@ measure_entry() {
         fi
         if (( SECONDS >= next_try )); then
             attempt=$((attempt + 1))
-            echo "TRY: $label terminal recipe set attempt $attempt"
-            local recipe
-            IFS=";" read -ra recipes <<< "$terminal"
-            for recipe in "${recipes[@]}"; do
-                open_terminal "$recipe" "$qmp_sock" || true
-                python3 "$QMP_TYPE" --qmp "$qmp_sock" type "$command" || true
-                python3 "$QMP_TYPE" --qmp "$qmp_sock" key ret || true
-                local waited=0
-                while [ $waited -lt 12 ] && [ ! -f "$inbox/$label/beacon" ]; do
+            if (( attempt <= BOOT_MENU_TAPS )); then
+                # Still at the ISO's boot menu: tap Enter and type nothing. A
+                # Tab/F2 or a whole command lands on the menu here, which can
+                # switch to a help screen and stop the default entry booting.
+                echo "BOOT: $label tapping Enter at the boot menu (attempt $attempt)"
+                tapped=0
+                while [ "$tapped" -lt 3 ] && [ ! -f "$inbox/$label/beacon" ]; do
+                    python3 "$QMP_TYPE" --qmp "$qmp_sock" key ret || true
                     sleep 2
-                    waited=$((waited + 2))
+                    tapped=$((tapped + 1))
                 done
-                [ -f "$inbox/$label/beacon" ] && break
-            done
-            next_try=$((SECONDS + 30))
+                next_try=$((SECONDS + 15))
+            else
+                echo "TRY: $label terminal recipe set attempt $attempt"
+                local recipe
+                IFS=";" read -ra recipes <<< "$terminal"
+                for recipe in "${recipes[@]}"; do
+                    open_terminal "$recipe" "$qmp_sock" || true
+                    python3 "$QMP_TYPE" --qmp "$qmp_sock" type "$command" || true
+                    python3 "$QMP_TYPE" --qmp "$qmp_sock" key ret || true
+                    local waited=0
+                    while [ $waited -lt 12 ] && [ ! -f "$inbox/$label/beacon" ]; do
+                        sleep 2
+                        waited=$((waited + 2))
+                    done
+                    [ -f "$inbox/$label/beacon" ] && break
+                done
+                next_try=$((SECONDS + 30))
+            fi
         fi
         echo "Waiting for $label desktop ($((SECONDS - started))s/${BOOT_TIMEOUT}s, attempt $attempt)"
         sleep 3

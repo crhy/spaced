@@ -81,6 +81,15 @@ class BenchSweepTests(unittest.TestCase):
             self.assertIn('REFUSED:', result.stdout)
             self.assertIn('RESULT: measured=0 skipped=9', result.stdout)
 
+    def test_runner_taps_the_boot_menu_before_typing_into_the_desktop(self):
+        # A live ISO menu swipes at Tab/F2 and stops booting on a stray key:
+        # Enter is tapped first, and only then is the recipe typed.
+        text = RUNNER.read_text(encoding='utf-8')
+        self.assertIn('BENCH_BOOT_MENU_TAPS', text)
+        tap = text.index('tapping Enter at the boot menu')
+        typed = text.index('terminal recipe set attempt')
+        self.assertLess(tap, typed, 'the Enter tap must precede the typed recipe')
+
     def test_runner_types_only_supported_characters_into_the_guest(self):
         # The one command typed into every live desktop: whatever it contains
         # has to be typeable through QMP, because a lost character is a guest
@@ -103,6 +112,33 @@ class BenchSweepTests(unittest.TestCase):
                                    'type', 'ls'])
         self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
         self.assertIn('no QMP socket', result.stdout + result.stderr)
+
+    def test_bootstrap_for_a_root_access_entry_never_runs_none_as_a_command(self):
+        # rootcmd=none means the guest is already root: an empty expansion, so
+        # guest-pts.sh cannot exec the word "none" and lose the PTS row.
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            stubs = tmp / 'stubs'
+            stubs.mkdir()
+            (stubs / 'qemu-system-x86_64').write_text('#!/bin/sh\nexit 1\n')
+            (stubs / 'qemu-system-x86_64').chmod(0o755)
+            iso = tmp / 'fake.iso'
+            iso.write_bytes(b'iso')
+            matrix = tmp / 'matrix.conf'
+            matrix.write_text('rootos %s distro=debian version=13 desktop=MATE '
+                              'access=ssh rootcmd=none fetch=wget\n' % iso,
+                              encoding='utf-8')
+            result = self.run_command(['bash', RUNNER, matrix, '1'],
+                                      env={'PATH': '%s:/usr/bin:/bin:/usr/local/bin'
+                                                   % stubs,
+                                           'BENCH_OUT_DIR': str(tmp / 'out'),
+                                           'BENCH_VM_DIR': str(tmp / 'vms')})
+            self.assertIn('SKIP: rootos qemu refused to start',
+                          result.stdout + result.stderr)
+            bootstrap = (tmp / 'out' / 'rootos-1-pub' / 'rootos' / 'b.sh') \
+                .read_text(encoding='utf-8')
+            self.assertIn("SUDO=''", bootstrap)
+            self.assertNotIn("SUDO='none'", bootstrap)
 
     def test_http_report_round_trips_a_probe_and_its_result(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -164,6 +200,10 @@ class BenchSweepTests(unittest.TestCase):
                 landed = inbox / 'debian/probe.txt'
                 self.assertTrue(landed.is_file(), 'the POST did not land in inbox')
                 self.assertIn('mem_used_mib', landed.read_text(encoding='utf-8'))
+                put = request('PUT', '/debian/pts.tsv', b'PTS\tvalue\n')
+                self.assertIn(b'200 OK', put.split(b'\r\n', 1)[0],
+                              'curl -T uploads (PUT) must be collected too')
+                self.assertIn('PTS', (inbox / 'debian/pts.tsv').read_text())
                 escaped = request('POST', '/../../escape', b'nope')
                 self.assertIn(b'400', escaped.split(b'\r\n', 1)[0])
                 self.assertFalse((inbox.parent / 'escape').exists(),
