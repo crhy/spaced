@@ -10,11 +10,17 @@ from pathlib import Path
 import re
 import subprocess
 import tempfile
+import time
 
 
 PCI = re.compile(r"^[0-9a-f]{4}:[0-9a-f]{2}:[0-9a-f]{2}\.[0-7]$")
 STATE = Path('/var/lib/spaced-gpu-manager/trial.json')
 CONFIG = Path('/etc/X11/xorg.conf.d/90-spaced-gpu-manager.conf')
+
+
+def boot_seconds():
+    """Elapsed boot time, including suspend; independent of wall-clock corrections."""
+    return time.clock_gettime(time.CLOCK_BOOTTIME)
 
 
 def read(path, default=''):
@@ -46,6 +52,13 @@ def discover(sysroot=Path('/sys'), runner=command):
         address, _, description = line.partition(' ')
         names[address.lower()] = description
     nvidia = {}
+    uuids = {}
+    for row in csv.reader(runner(['nvidia-smi', '--query-gpu=pci.bus_id,uuid',
+                                 '--format=csv,noheader']).splitlines()):
+        if len(row) == 2 and normalize_pci(row[0]):
+            value = row[1].strip()
+            if re.fullmatch(r'GPU-[0-9a-fA-F-]{36}', value):
+                uuids[normalize_pci(row[0])] = value
     output = runner(['nvidia-smi', '--query-gpu=pci.bus_id,name,memory.total,memory.used,driver_version',
                      '--format=csv,noheader,nounits'])
     for row in csv.reader(output.splitlines()):
@@ -68,7 +81,7 @@ def discover(sysroot=Path('/sys'), runner=command):
         gpu = dict(pci=device.name, vendor=vendor, name=names.get(device.name, vendor + ' graphics'),
                    driver=driver, driver_version=read(sysroot / 'module' / driver / 'version', 'Kernel driver'),
                    boot_vga=read(device / 'boot_vga') == '1', connectors=connectors,
-                   vram_total=None, vram_used=None,
+                   vram_total=None, vram_used=None, uuid=uuids.get(device.name),
                    link=read(device / 'current_link_speed', 'Unknown') + ' × ' + read(device / 'current_link_width', '?'))
         for field, attribute in [('vram_total', 'mem_info_vram_total'), ('vram_used', 'mem_info_vram_used')]:
             value = read(device / attribute)
@@ -107,6 +120,18 @@ def offload_environment(gpu, gpus):
     if gpu['driver'] in ('amdgpu', 'radeon', 'i915', 'xe', 'nouveau'):
         return {'DRI_PRIME': 'pci-' + gpu['pci'].replace(':', '_').replace('.', '_')}
     raise ValueError('Render offload is unavailable for this driver.')
+
+
+def compute_environment(gpu):
+    """Select one physical CUDA device without relying on unstable GPU indices."""
+    uuid = gpu.get('uuid') or ''
+    if gpu['driver'] != 'nvidia':
+        raise ValueError('This device does not use the NVIDIA CUDA driver. Select it inside your '
+                         'ROCm, OpenCL or other compute application; those device indices are not PCI indices.')
+    if not re.fullmatch(r'GPU-[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}', uuid):
+        raise ValueError('A verified NVIDIA GPU UUID is unavailable. Refresh after repairing the driver; '
+                         'GPU Manager will not guess a compute device index.')
+    return {'CUDA_VISIBLE_DEVICES': uuid}
 
 
 def xorg_config(gpu):
@@ -230,7 +255,7 @@ class Trial:
     def begin_boot(self, boot):
         state = self.load()
         if state.get('phase') == 'staged' and state['staged_boot'] != boot:
-            state.update(phase='trial', trial_boot=boot)
+            state.update(phase='trial', trial_boot=boot, deadline_boot_seconds=boot_seconds() + 180)
             self.save(state)
             return True
         return state.get('phase') == 'trial'
@@ -239,6 +264,8 @@ class Trial:
         state = self.load()
         if state.get('phase') != 'trial' or state.get('trial_boot') != boot:
             raise ValueError('Boot into the desktop trial before confirming it.')
+        if boot_seconds() >= state.get('deadline_boot_seconds', 0):
+            raise ValueError('The desktop trial has expired. Wait for recovery before trying again.')
         if self.config.is_symlink() or read(self.config) != state['candidate'].strip():
             raise ValueError('The trial configuration changed; confirmation is unsafe.')
         state['phase'] = 'confirmed'

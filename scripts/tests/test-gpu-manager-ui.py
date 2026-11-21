@@ -5,6 +5,7 @@ from pathlib import Path
 import sys
 import tempfile
 import time
+from unittest.mock import patch
 
 root = Path(__file__).resolve().parents[2]
 lib = root / 'overlays/usr/lib/spaced-linux'
@@ -23,6 +24,34 @@ assert not window.busy, 'Inventory did not finish'
 assert not window.driver_button.get_sensitive(), 'Preview must not allow driver mutations'
 assert window.get_title() == 'Spaced GPU Manager'
 assert len(window.cards.get_children()) == max(1, len(window.gpus))
+
+# Exercise the real modal and clipboard path without launching any application.
+for card in window.gpus:
+    if card['driver'] != 'nvidia' or not card.get('uuid'):
+        continue
+    def respond(response):
+        for dialog in ui.Gtk.Window.list_toplevels():
+            if isinstance(dialog, ui.Gtk.MessageDialog):
+                dialog.response(response)
+        return False
+    def copy_then_close():
+        respond(ui.Gtk.ResponseType.APPLY)
+        ui.GLib.timeout_add(100, respond, ui.Gtk.ResponseType.CLOSE)
+        return False
+    ui.GLib.timeout_add(100, copy_then_close)
+    window.compute(card)
+    copied = ui.Gtk.Clipboard.get(ui.Gdk.SELECTION_CLIPBOARD).wait_for_text()
+    assert copied == 'env CUDA_VISIBLE_DEVICES=' + card['uuid'], copied
+
+with patch.object(ui, 'trial_state', return_value={'phase': 'trial', 'deadline_boot_seconds': 190}), \
+     patch.object(ui, 'boot_seconds', return_value=100):
+    window.update_trial()
+    assert '1:30 remaining' in window.trial_bar.get_children()[0].get_text()
+    assert not window.trial_bar.get_children()[1].get_children()[0].get_sensitive()
+    keep_button = window.keep_button
+    window.poll_trial()
+    assert window.keep_button is keep_button, 'Countdown must preserve keyboard focus'
+window.update_trial()
 window.resize(880, 680)
 for _ in range(20):
     while ui.Gtk.events_pending():

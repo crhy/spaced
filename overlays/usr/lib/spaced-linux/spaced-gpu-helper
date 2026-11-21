@@ -9,7 +9,7 @@ import syslog
 import time
 
 sys.path.insert(0, '/usr/lib/spaced-linux')
-from spaced_gpu import Trial, discover, driver_lock, driver_reboot_pending, read
+from spaced_gpu import Trial, discover, driver_lock, driver_reboot_pending, read, boot_seconds
 
 
 def boot_id():
@@ -25,10 +25,12 @@ def watchdog():
     with driver_lock(True):
         if not trial.begin_boot(boot):
             return
-        stale = trial.load().get('trial_boot') != boot
-    # Monotonic timeout also works before network time is synchronized.
-    deadline = time.monotonic() + (0 if stale else 180)
-    while time.monotonic() < deadline:
+        state = trial.load()
+        stale = state.get('trial_boot') != boot
+    # Persisted within this boot: restarting the guard never extends a trial.
+    # Old trials without a deadline fail closed, as do trials from another boot.
+    deadline = 0 if stale else state.get('deadline_boot_seconds', 0)
+    while boot_seconds() < deadline:
         if trial.load().get('phase') != 'trial':
             return
         time.sleep(2)

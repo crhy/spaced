@@ -12,7 +12,7 @@ import gi
 gi.require_version('Gtk', '3.0')
 gi.require_version('Gdk', '3.0')
 from gi.repository import Gdk, GLib, Gtk
-from spaced_gpu import STATE, discover, offload_environment, recommendation
+from spaced_gpu import STATE, discover, offload_environment, compute_environment, recommendation, boot_seconds
 
 HELPER = '/usr/lib/spaced-linux/spaced-gpu-helper'
 
@@ -32,6 +32,12 @@ def label(text, title=False):
     if title:
         item.get_style_context().add_class('gpu-title')
     return item
+
+
+def countdown(state):
+    remaining = max(0, int(state.get('deadline_boot_seconds', 0) - boot_seconds()))
+    return remaining, (f'DESKTOP TRIAL: {remaining // 60}:{remaining % 60:02d} remaining. '
+                       'Keep this desktop now or recovery will end this session. Do not start work yet.')
 
 
 class Manager(Gtk.Window):
@@ -79,9 +85,15 @@ class Manager(Gtk.Window):
         self.last_phase = None
 
     def poll_trial(self):
-        phase = trial_state().get('phase')
+        state = trial_state()
+        phase = state.get('phase')
         if not self.busy and phase != self.last_phase:
             self.update_trial()
+        elif not self.busy and phase == 'trial':
+            # Preserve keyboard focus; do not recreate buttons on each tick.
+            remaining, message = countdown(state)
+            self.countdown_label.set_text(message)
+            self.keep_button.set_sensitive(not self.preview and remaining > 0)
         return True
 
     def update_trial(self):
@@ -90,18 +102,24 @@ class Manager(Gtk.Window):
         state = trial_state()
         phase = state.get('phase')
         self.last_phase = phase
+        self.driver_button.set_sensitive(not self.preview and phase not in ('staged', 'trial'))
+        self.driver_button.set_tooltip_text('Confirm or revert a pending desktop trial before changing drivers.')
         messages = {
             'staged': 'Desktop trial staged for the next boot. Save your work, reboot and confirm promptly.',
             'trial': 'DESKTOP TRIAL: keep this configuration within three minutes of startup. '
                      'Otherwise the previous configuration returns and this session ends. Do not start work yet.',
             'confirmed': 'Desktop assignment confirmed. Revert restores the configuration from before this assignment.',
             'reverted': 'Previous desktop configuration restored. If you reverted manually, reboot when ready.'}
+        if phase == 'trial':
+            remaining, messages['trial'] = countdown(state)
         if phase in messages:
-            self.trial_bar.pack_start(label(messages[phase]), False, False, 0)
+            self.countdown_label = label(messages[phase])
+            self.trial_bar.pack_start(self.countdown_label, False, False, 0)
         row = Gtk.Box(spacing=8)
         if phase == 'trial':
             button = Gtk.Button(label='Keep This Desktop')
-            button.set_sensitive(not self.preview)
+            self.keep_button = button
+            button.set_sensitive(not self.preview and remaining > 0)
             button.connect('clicked', lambda *_: self.action('confirm'))
             row.pack_start(button, False, False, 0)
         if phase in ('staged', 'trial', 'confirmed'):
@@ -165,17 +183,18 @@ class Manager(Gtk.Window):
                                             or 'Not exposed by this driver')), False, False, 0)
             buttons = Gtk.Box(spacing=8)
             desktop = Gtk.Button(label='Use for Desktop…')
-            desktop.set_sensitive(not self.preview and trial_state().get('phase') not in ('staged', 'trial'))
+            connected = any(c['status'] == 'connected' for c in outputs)
+            desktop.set_sensitive(not self.preview and connected and
+                                  gpu['driver'] in ('amdgpu', 'radeon', 'i915', 'xe', 'nvidia') and
+                                  trial_state().get('phase') not in ('staged', 'trial'))
+            desktop.set_tooltip_text('Connect a monitor to this GPU, then refresh before staging a desktop trial.')
             desktop.connect('clicked', lambda _, g=gpu: self.stage(g))
             buttons.pack_start(desktop, False, False, 0)
             games = Gtk.Button(label='Games / Offload…')
             games.connect('clicked', lambda _, g=gpu: self.offload(g))
             buttons.pack_start(games, False, False, 0)
             compute = Gtk.Button(label='AI / Compute…')
-            compute.connect('clicked', lambda _, g=gpu: self.message('AI / Compute',
-                f"{g['name']} • PCI {g['pci']}\n\nCompute remains available when another GPU drives the desktop. "
-                'Select the device inside your AI/compute application. This manager does not install CUDA/ROCm '
-                'or change application device selection. VRAM usage above includes desktop and application allocations.'))
+            compute.connect('clicked', lambda _, g=gpu: self.compute(g))
             buttons.pack_start(compute, False, False, 0)
             box.pack_start(buttons, False, False, 0)
             self.cards.pack_start(frame, False, False, 0)
@@ -209,6 +228,31 @@ class Manager(Gtk.Window):
         dialog.show_all()
         while dialog.run() == Gtk.ResponseType.APPLY:
             Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD).set_text(entry.get_text(), -1)
+        dialog.destroy()
+
+    def compute(self, gpu):
+        try:
+            env = compute_environment(gpu)
+        except ValueError as error:
+            self.message('Compute device selection', str(error))
+            return
+        prefix = 'env ' + ' '.join(shlex.quote(f'{key}={value}') for key, value in env.items())
+        dialog = Gtk.MessageDialog(transient_for=self, modal=True, buttons=Gtk.ButtonsType.CLOSE,
+                                   text='Use this GPU for CUDA / AI')
+        dialog.format_secondary_text(
+            f"{gpu['name']} • PCI {gpu['pci']}\n\n"
+            'Paste this prefix before your native compute application command. Its CUDA device 0 will '
+            'be this GPU, even if NVIDIA enumeration order changes. Only that newly launched process '
+            'and its children are affected. Existing applications and desktop assignment are unchanged. '
+            'The application must support CUDA; this does not install a toolkit, reserve VRAM, '
+            'or configure Flatpak/container access. MIG applications require their own device selection.')
+        entry = Gtk.Entry(text=prefix)
+        entry.set_editable(False)
+        dialog.get_content_area().pack_start(entry, False, False, 8)
+        dialog.add_button('Copy Launch Prefix', Gtk.ResponseType.APPLY)
+        dialog.show_all()
+        while dialog.run() == Gtk.ResponseType.APPLY:
+            Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD).set_text(prefix, -1)
         dialog.destroy()
 
     def stage(self, gpu):
@@ -251,7 +295,10 @@ class Manager(Gtk.Window):
 
     def drivers(self, *_):
         if not self.preview and not self.busy:
-            subprocess.Popen(['/usr/bin/python3', '/usr/lib/spaced-linux/spaced-nvidia-installer.py'])
+            try:
+                subprocess.Popen(['/usr/bin/python3', '/usr/lib/spaced-linux/spaced-nvidia-installer.py'])
+            except OSError as error:
+                self.message('Cannot open Drivers & Recovery', str(error))
 
 
 if __name__ == '__main__':

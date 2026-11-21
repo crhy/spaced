@@ -29,6 +29,21 @@ def device(pci='0000:10:00.0', driver='amdgpu'):
 
 
 class DiscoveryTests(unittest.TestCase):
+    def test_compute_uses_uuid_not_enumeration(self):
+        card = device(driver='nvidia')
+        card['uuid'] = 'GPU-b38e5856-b893-b0e3-5e2e-74253b1fe303'
+        self.assertEqual(gpu.compute_environment(card), {'CUDA_VISIBLE_DEVICES': card['uuid']})
+
+    def test_compute_missing_or_invalid_identity_refused(self):
+        for value in (None, '0', 'GPU-; touch /tmp/unsafe', 'GPU-' + '-' * 36):
+            card = dict(device(driver='nvidia'), uuid=value)
+            with self.assertRaises(ValueError):
+                gpu.compute_environment(card)
+
+    def test_non_cuda_driver_refused(self):
+        with self.assertRaisesRegex(ValueError, 'ROCm'):
+            gpu.compute_environment(device())
+
     def test_pci_normalization(self):
         self.assertEqual(gpu.normalize_pci('00000000:0A:00.0'), '0000:0a:00.0')
         self.assertIsNone(gpu.normalize_pci('0000:01:00.0\nSection "Device"'))
@@ -52,10 +67,15 @@ class DiscoveryTests(unittest.TestCase):
             def run(args):
                 if args[0] == 'lspci':
                     return ''
+                if args[1] == '--query-gpu=pci.bus_id,uuid':
+                    return ('00000000:08:00.0, GPU-8c4b1594-c374-3f99-1354-953ba52ab76a\n'
+                            '00000000:01:00.0, GPU-b38e5856-b893-b0e3-5e2e-74253b1fe303\n')
                 return '00000000:08:00.0, Second GPU, 8192, 12, 610\n00000000:01:00.0, First GPU, 16384, 20, 610\n'
             found = gpu.discover(root, run)
             self.assertEqual([(g['pci'], g['name'], g['vram_total']) for g in found],
                              [('0000:01:00.0', 'First GPU', 16384), ('0000:08:00.0', 'Second GPU', 8192)])
+            self.assertEqual(found[0]['uuid'], 'GPU-b38e5856-b893-b0e3-5e2e-74253b1fe303')
+            self.assertEqual(found[1]['uuid'], 'GPU-8c4b1594-c374-3f99-1354-953ba52ab76a')
 
     def test_missing_sysfs(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -86,6 +106,23 @@ class DiscoveryTests(unittest.TestCase):
 
 
 class TrialTests(unittest.TestCase):
+    def test_guard_restart_does_not_extend_deadline(self):
+        self.stage()
+        with patch.object(gpu, 'boot_seconds', return_value=10):
+            self.trial.begin_boot('boot-b')
+        with patch.object(gpu, 'boot_seconds', return_value=100):
+            self.trial.begin_boot('boot-b')
+        self.assertEqual(self.trial.load()['deadline_boot_seconds'], 190)
+
+    def test_expired_trial_cannot_be_confirmed(self):
+        self.stage()
+        with patch.object(gpu, 'boot_seconds', return_value=10):
+            self.trial.begin_boot('boot-b')
+        with patch.object(gpu, 'boot_seconds', return_value=190):
+            with self.assertRaisesRegex(ValueError, 'expired'):
+                self.trial.confirm('boot-b')
+        self.assertEqual(self.trial.load()['phase'], 'trial')
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
@@ -213,11 +250,39 @@ class TrialTests(unittest.TestCase):
 
 
 class WatchdogTests(unittest.TestCase):
+    def test_restart_uses_persisted_deadline(self):
+        trial = Mock()
+        trial.load.return_value = {'phase': 'trial', 'trial_boot': 'new', 'deadline_boot_seconds': 180}
+        with patch.object(helper, 'Trial', return_value=trial), \
+             patch.object(helper, 'boot_id', return_value='new'), \
+             patch.object(helper, 'driver_lock', side_effect=nullcontext), \
+             patch.object(helper, 'boot_seconds', side_effect=[179, 181]), \
+             patch.object(helper.time, 'sleep') as sleep, \
+             patch.object(helper.subprocess, 'run') as run:
+            helper.watchdog()
+        sleep.assert_called_once_with(2)
+        trial.revert.assert_called_once()
+        run.assert_called_once()
+
+    def test_confirmation_during_countdown_prevents_restart(self):
+        trial = Mock()
+        trial.load.side_effect = [
+            {'phase': 'trial', 'trial_boot': 'new', 'deadline_boot_seconds': 180},
+            {'phase': 'confirmed'}]
+        with patch.object(helper, 'Trial', return_value=trial), \
+             patch.object(helper, 'boot_id', return_value='new'), \
+             patch.object(helper, 'driver_lock', side_effect=nullcontext), \
+             patch.object(helper, 'boot_seconds', return_value=100), \
+             patch.object(helper.subprocess, 'run') as run:
+            helper.watchdog()
+        trial.revert.assert_not_called()
+        run.assert_not_called()
+
     def run_watchdog(self, trial, boot='new'):
         with patch.object(helper, 'Trial', return_value=trial), \
              patch.object(helper, 'boot_id', return_value=boot), \
              patch.object(helper, 'driver_lock', side_effect=nullcontext), \
-             patch.object(helper.time, 'monotonic', side_effect=[0, 181]), \
+             patch.object(helper, 'boot_seconds', return_value=181), \
              patch.object(helper.subprocess, 'run') as run:
             helper.watchdog()
             return run

@@ -33,6 +33,18 @@ if [ "$(id -u)" -ne 0 ]; then
     exit 1
 fi
 
+# Do not replace a running transaction's helper or an active trial's guard.
+mkdir -p /var/lib/spaced-nvidia-installer
+exec 7>/var/lib/spaced-nvidia-installer/transaction.lock
+flock -n 7 || { echo 'Another graphics operation is running.' >&2; exit 1; }
+python3 - <<'PY_TRIAL'
+import json
+from pathlib import Path
+path = Path('/var/lib/spaced-gpu-manager/trial.json')
+if path.exists() and json.loads(path.read_text()).get('phase') in ('staged', 'trial'):
+    raise SystemExit('Confirm or revert the existing desktop trial before installing.')
+PY_TRIAL
+
 # Check the complete source before changing any installed file.
 for target in "${FILES[@]}"; do
     [ -f "$SOURCE_DIR/$target" ] || { echo "Missing source: $SOURCE_DIR/$target" >&2; exit 1; }

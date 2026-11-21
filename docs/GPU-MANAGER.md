@@ -30,7 +30,8 @@ spaced-gpu-manager
 The installer prints its backup directory under `/root`. This is a local source
 installation, not an APT release. Drivers & Recovery opens the existing driver
 installer/recovery UI; merely installing or opening the manager does not install
-a driver. Do not run the installer during an existing driver operation or trial.
+a driver. The installer refuses to replace files during a driver transaction or
+an unconfirmed desktop trial.
 
 ## Desktop trial safety and test sequence
 
@@ -44,6 +45,8 @@ a driver. Do not run the installer during an existing driver operation or trial.
    Administrator authentication must complete within **three minutes of service
    startup**, not three minutes after login. Do not start other work during the
    trial. The confirmation window opens automatically in the new session.
+   The window shows the remaining time. Restarting the guard cannot extend the
+   deadline, suspend counts toward it, and expired confirmations are refused.
 4. Without confirmation, the guard restores the previous configuration and
    restarts LightDM, ending the trial session. If the screen is black, wait for
    that recovery, then reconnect the monitor to the previous GPU if necessary.
@@ -71,11 +74,14 @@ block driver changes, and pending driver reboots block new desktop trials.
 - Games/Offload provides launch settings for Mesa PCI selection and a single
   proprietary NVIDIA device. Multiple proprietary NVIDIA devices are explicitly
   refused until PCI-to-RandR-provider mapping is verified; no guessed indices.
-- AI/Compute currently explains application-specific device selection; it does
-  not assign devices to applications or install CUDA/ROCm. Desktop assignment
-  does not disable another GPU's compute capability.
-- Hard GPU power-off is not implemented. Neither compute assignment nor hard-off
-  is represented as an operational role toggle.
+- AI/Compute provides a copyable native CUDA launch prefix using the selected
+  GPU's full UUID, not its enumeration index. Both NVIDIA cards on the local
+  machine have passed actual CUDA-driver enumeration checks: each prefix exposes
+  exactly the selected PCI device as CUDA device 0. This is per-process selection,
+  not a permanent role assignment, VRAM reservation or toolkit installation.
+  AMD/Intel, MIG, Flatpak and container selection remain application-specific.
+  UUID selection follows [NVIDIA's CUDA documentation](https://docs.nvidia.com/cuda/cuda-programming-guide/05-appendices/environment-variables.html#cuda-visible-devices).
+- Hard GPU power-off is not implemented or represented as an operational toggle.
 - Before release, measure desktop VRAM before/after under equivalent workloads,
   verify the actual renderer, test game offload and driver recovery, and exercise
   the timeout and manual revert on real hardware. Moving the desktop does not
@@ -83,14 +89,18 @@ block driver changes, and pending driver reboots block new desktop trials.
 
 ## Automated evidence
 
-Full host suite: 540 tests passed, including 34 GPU Manager tests. These cover
+On 2026-11-21, the host unittest suite ran 604 tests successfully (2 skipped).
+The focused GPU Manager suite has 41 passing tests. These cover
 PCI normalization, offload refusal, Xorg preservation, journaling, reboot
-interlocks, confirmation, rollback and watchdog restart behavior. The GTK/Xvfb
-smoke test detects three local GPUs and verifies an 880 × 680 preview window.
-`scripts/check.sh` passes. These are not substitutes for the physical trial gates.
+interlocks, confirmation, rollback, persistent watchdog deadlines and UUID-based
+compute selection. The GTK/Xvfb smoke test detects three local GPUs, exercises
+both NVIDIA compute copy dialogs and the countdown, and verifies an 880 × 680
+preview window. The CUDA probe initializes the driver and enumerates devices;
+it creates no CUDA contexts and launches no kernels. These checks are not
+substitutes for physical reboot/rollback trials or application workload testing.
 
 ```sh
 PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests
 PYTHONDONTWRITEBYTECODE=1 xvfb-run -a python3 scripts/tests/test-gpu-manager-ui.py
-bash scripts/check.sh
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/tests/test-gpu-manager-cuda.py
 ```
