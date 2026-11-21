@@ -567,11 +567,21 @@ qemu-system-x86_64 -enable-kvm -cpu host -m "$RAM" -smp "$CPUS" \
     -qmp "unix:$QMP_SOCKET,server=on,wait=off" -drive "if=virtio,file=$DISK" -boot order=c \
     > "$OUT/qemu-installed.log" 2>&1 &
 QEMU_PID=$!
+# The LightDM greeter is dark and OCR reads it poorly; its blue "Log In" button is unmistakable instead.
+# Calibrated on RC3: greeter 2712 such pixels, GRUB passphrase prompt 0.
+greeter_blue() {
+    python3 - "$OUT/screens/installed-boot.png.ppm" <<'BPY' 2>/dev/null || echo 0
+import sys
+d = open(sys.argv[1], 'rb').read()
+p = d.split(maxsplit=4); w, h, px = int(p[1]), int(p[2]), p[4]
+print(sum(1 for i in range(0, w * h * 3, 3) if px[i+2] > 200 and 90 < px[i+1] < 160 and px[i] < 110))
+BPY
+}
 prompts=0 booted=no typed_kinds='' started=$SECONDS
 while (( SECONDS - started < 420 )); do
     sleep 5
     gui_shot "$OUT/screens/installed-boot.png" >/dev/null 2>&1 || continue
-    text=$(tesseract "$OUT/screens/installed-boot.png" - --psm 11 2>/dev/null || true)
+    text=$(gui_ocr "$OUT/screens/installed-boot.png" 2>/dev/null || true)   # inverted fallback reads the dark greeter
     # Type once per DISTINCT prompt: GRUB ("Enter passphrase for hd0,...") and the initramfs ("Please unlock
     # disk ..."). Never type while GRUB is still deriving the key: stray keys reach the GRUB menu ("c" opens its
     # command line), which is what sabotaged the first RC3 run.
@@ -584,7 +594,7 @@ while (( SECONDS - started < 420 )); do
         echo "Passphrase prompt $prompts ($kind) after $((SECONDS - started))s"
         cp "$OUT/screens/installed-boot.png" "$PAGES/12-unlock-prompt-$prompts-$kind.png"
         qmp_type "$PASSPHRASE"; sleep 15
-    elif printf '%s\n' "$text" | grep -qiE 'test user|tester|log ?in|password'; then
+    elif printf '%s\n' "$text" | grep -qiE 'test user|tester|log ?in' || [ "$(greeter_blue)" -gt 1500 ]; then
         booted=yes; cp "$OUT/screens/installed-boot.png" "$PAGES/13-installed-login.png"; break
     fi
 done
