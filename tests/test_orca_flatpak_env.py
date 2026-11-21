@@ -68,10 +68,14 @@ class OrcaFlatpakEnvTests(unittest.TestCase):
             encoding='utf-8').replace(
             '/usr/local/bin/spaced-flatpak-app-env', str(HELPER)).replace(
             '/usr/local/bin/spaced-flatpak-theme-migration',
-            str(self.bindir / 'theme-migration')))
+            str(self.bindir / 'theme-migration')).replace(
+            '/usr/local/bin/spaced-freecad-flatpak-env',
+            str(self.bindir / 'freecad-env')))
         repair.chmod(0o755)
         (self.bindir / 'theme-migration').write_text('#!/bin/sh\nexit 0\n')
         (self.bindir / 'theme-migration').chmod(0o755)
+        (self.bindir / 'freecad-env').write_text('#!/bin/sh\nexit 0\n')
+        (self.bindir / 'freecad-env').chmod(0o755)
         for tool in ('python3', 'gsettings'):
             stub = self.bindir / tool
             stub.write_text('#!/bin/sh\nexit 0\n')
