@@ -17,6 +17,9 @@ export SUDO_ASKPASS=$ask SPACED_SUDO_PW; trap 'rm -f "$ask"' EXIT
 export SPACED_WELCOME_DEB=/home/rhy/spacedwelcome-11263/dist/spaced-welcome_0.1.23_all.deb
 export SPACED_MONITOR_DEB=/home/rhy/spacedmonitor-0110/build/spaced-monitor_0.1.10_all.deb
 say "11.26.3 RC build start ($(git rev-parse --short HEAD) on $(git branch --show-current))"
+# A previous RC ISO makes check.sh compare it with the website checksum (set only from the FINAL ISO); make clean
+# removes it anyway, so remove it before the checks.
+rm -f build/iso/spaced-linux-11.26.3-amd64.iso build/iso/spaced-linux-11.26.3-amd64.iso.sha256
 say "checks"; bash scripts/check.sh >> "$LOG" 2>&1
 PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests >> "$LOG" 2>&1
 say "clean"; nice -n 10 make clean ROOT_RUN='sudo -A' >> "$LOG" 2>&1
