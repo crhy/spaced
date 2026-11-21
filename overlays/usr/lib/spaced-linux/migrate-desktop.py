@@ -168,6 +168,10 @@ def migrate_compiz_focus(path):
         save_ini(path, parser)
 
 
+FIREPAINT_INITIATE = "<Shift><Super>Button1"
+FIREPAINT_WORKAROUND_INITIATE = "<Control><Alt><Shift>Button1"
+
+
 def migrate_firepaint(path):
     """Enable fire writing and apply the Spaced firepaint defaults (#353, #419)."""
     if not path.exists():
@@ -183,6 +187,7 @@ def migrate_firepaint(path):
         "s0_fire_life": "0.800000",
         "s0_bg_brightness": "80",
         "s0_num_particles": "4000",
+        "as_initiate_button": FIREPAINT_INITIATE,
         "as_clear_button": "<Shift><Super>Button3",
     }
     changed = False
@@ -202,6 +207,13 @@ def migrate_firepaint(path):
         if key not in parser["firepaint"]:
             parser["firepaint"][key] = value
             changed = True
+    # A desktop session recorded Ctrl+Alt+Shift+Button1 as a temporary workaround
+    # while the ezoom wheel grab hid this shortcut (see the 11.26.2 changelog
+    # entry). Now that the grab yields, only that exact workaround is restored;
+    # any other binding is the user's own choice and is left alone.
+    if parser["firepaint"].get("as_initiate_button", "") == FIREPAINT_WORKAROUND_INITIATE:
+        parser["firepaint"]["as_initiate_button"] = FIREPAINT_INITIATE
+        changed = True
     if changed:
         save_ini(path, parser)
 
@@ -313,6 +325,12 @@ def migrate(config):
         if not firepaint_marker.exists():
             migrate_firepaint(config / "compiz/compizconfig/Default.ini")
             atomic_write(firepaint_marker, "11.26.2\n")
+        # The wheel-grab conflict is fixed: accounts that carry the recorded
+        # workaround get their documented Shift+Super initiate back.
+        firepaint_initiate_marker = state / "desktop-migration-11.26.2-firepaint-v3"
+        if not firepaint_initiate_marker.exists():
+            migrate_firepaint(config / "compiz/compizconfig/Default.ini")
+            atomic_write(firepaint_initiate_marker, "11.26.2\n")
         previews_marker = state / "desktop-migration-10.26-window-previews-v1"
         if not previews_marker.exists():
             migrate_window_previews(config / "compiz/compizconfig/Default.ini")

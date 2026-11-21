@@ -11,7 +11,7 @@ OUTPUT=${2:-$ROOT/build/compiz-plugins-main}
 mkdir -p "$OUTPUT"
 OUTPUT=$(cd "$OUTPUT" && pwd)
 PATCHES="$ROOT/patches/compiz-plugins-main"
-VERSION=2:0.8.18-8+spaced10.26.8
+VERSION=2:0.8.18-8+spaced11.26
 for tool in curl sha256sum dpkg-source patch; do
     command -v "$tool" >/dev/null || { echo "Missing build tool: $tool" >&2; exit 1; }
 done
@@ -45,6 +45,9 @@ compiz-plugins-main ($VERSION) unstable; urgency=medium
 
   * ezoom: consume high-resolution scrolling while the configured zoom wheel
     modifiers are held, so Qt clients do not scroll as well (Spaced #371).
+  * ezoom: release that wheel grab while a button other than the configured
+    wheel buttons is pressed, so shortcuts that share the modifier chord
+    (Shift+Super+left-drag paints Fire Writing) start again.
 
  -- Spaced Linux Developers <dev@spacedlinux.com>  Fri, 30 Oct 2026 00:00:00 +0000
 

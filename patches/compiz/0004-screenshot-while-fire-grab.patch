@@ -1,0 +1,25 @@
+Description: Let Compiz screenshots start while fire painting holds its screen grab
+ Ctrl+Shift+Button1 refused to start whenever any other plug-in held a screen
+ grab, so drawing fire (Shift+Super+left drag, firepaint) silenced the Compiz
+ screenshot path for the whole stroke.  firepaint only adds points and paints
+ particles, and the core nests a second screen grab onto the one it already
+ holds, so the capture works and includes the fire.
+Author: Spaced Linux Developers <dev@spacedlinux.com>
+Forwarded: no
+--- a/plugins/screenshot.c
++++ b/plugins/screenshot.c
+@@ -91,7 +91,13 @@
+     {
+ 	SHOT_SCREEN (s);
+ 
+-	if (otherScreenGrabExist (s, "screenshot", NULL))
++	/* Fire painting holds a screen grab for the whole stroke.  A capture
++	 * is still correct while that grab is held: pushScreenGrab nests onto
++	 * an existing grab and removeScreenGrab restores it, so only refuse
++	 * grabs belonging to another selection or movement plugin.  Without
++	 * this, Ctrl+Shift+Button1 does nothing at all while fire is drawn.
++	 */
++	if (otherScreenGrabExist (s, "screenshot", "firepaint", NULL))
+ 	    return FALSE;
+ 
+ 	if (!ss->grabIndex)

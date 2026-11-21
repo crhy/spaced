@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 ARTIFACTS=${SPACED_COMPIZ_PLUGINS_MAIN_ARTIFACT_DIR:-$ROOT/build/compiz-plugins-main/artifacts}
 OUTPUT=${LOCAL_PACKAGE_OUTPUT:-$ROOT/build/local-packages}
-VERSION=2:0.8.18-8+spaced10.26.8
+VERSION=2:0.8.18-8+spaced11.26
 FILE_VERSION=${VERSION#*:}
 files=()
 # Ship the rebuilt runtime package; debug symbols stay in the build artifacts.
