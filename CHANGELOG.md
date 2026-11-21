@@ -81,8 +81,27 @@ Not released yet: work landing on the 11.26.4 line.
   SVG bar chart, refusing to rank a metric with data for fewer than two OSes.
   `docs/VM-BENCHMARKS.md` records what is still open on #424: the 5-10 distro
   ISO matrix, installing and booting those distros, and the "adjust until 1st
-  place" loop, because no other operating system's image exists on the build
-  machine and its network cannot fetch one.
+  place" loop. The harness landed before any other operating system's image
+  existed on the build machine, which had no general network; the ISOs arrived
+  with the sweep below.
+- The sweep issue #424 asks for: `run-bench.sh` now boots every
+  `scripts/vm/bench/matrix.conf` ISO in a fresh KVM VM (4 vCPU, 8 GiB, 40G
+  qcow2 virtio disk under `/media/rhy/data/bench-vms/<label>/`, `-display
+  none`, VNC and QMP on 127.0.0.1 only), refuses to start with less than
+  `BENCH_FREE_MIN_GB` (15) free on that device, and destroys the VM and its
+  disk when that OS finishes, so the nine ISOs (Spaced, Debian, Mint, Fedora
+  MATE/Compiz, Ubuntu, Zorin, CachyOS, Void, MX) run one machine at a time
+  and nothing is left on disk. Live ISOs without SSH are driven by typing one
+  command into the live desktop through QMP (`scripts/vm/bench/qmp-type.py`;
+  `ctrl-alt-t`-style terminal shortcuts and root commands are recorded per
+  distro in `matrix.conf`), which fetches `guest-probe.sh` and
+  `guest-bootstrap.sh` from a host HTTP server on `10.0.0.2`/`10.0.2.2` and
+  posts every result back to `http-report.py`; Spaced itself answers SSH and
+  uses that. Each row carries the f093 probe metrics plus a capped Phoronix
+  Test Suite run (`scripts/vm/bench/guest-pts.sh`), the host load while that
+  row was measured, and whether Strata was running, because those numbers are
+  only honest with the noise recorded.
+
 
 ## 11.26.2 - 2026-11-14
 
