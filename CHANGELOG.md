@@ -16,9 +16,11 @@ and outstanding issues are tracked in `docs/11.26.3-RELEASE-PLAN.md`.
   activate the new daemon. Real skipped-revision VM upgrades remain a gate
   for #427; generated maintainer-script tests pass.
 - Force the red-X cursor theme for PATH-based xkill launches without changing
-  the user's desktop cursor preference (#422). A private Xvfb pixel test
-  verifies the displayed cursor with Adwaita selected. Server-font fallback
-  and installed-image validation remain pending.
+  the user's desktop cursor preference (#422). The same red X also ships in the
+  `default` cursor theme, which X falls back to for any theme without its own
+  xkill cursor, so even `/usr/bin/xkill` started directly shows it; the
+  close-window hotkey calls the wrapper by its full path. Private Xvfb pixel
+  tests verify both the wrapper and plain `/usr/bin/xkill` with Adwaita selected.
 - Apply OrcaSlicer's scoped WebKit rendering overrides at login and after a
   matching Flatpak installation (#423). Record completion only on success;
   failures remain retryable. Real application workflow validation is pending.
