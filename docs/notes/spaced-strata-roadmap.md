@@ -48,3 +48,7 @@ ISO build if xkill's cursor is not the red X; (d) theme switching must never dro
    at 12:45:25, guard policy-rc.d (spaced-mate-default-settings) installed 12:45:26.5. Fix: Spaced Update writes the guard before
    dist-upgrade; elogind postinst skips restart with active sessions; Pre-Depends; session-survival VM test. bigboy fixed live by
    killing flatpak-session-helper + portals (D-Bus reactivates); re-login still needed later for at-spi etc.
+13. **#429 (11.26.3):** Sound Preferences (mate-volume-control) looks out of place: generic PCI icons, raw names ("HD-Audio
+   Generic" x2, "HDA NVidia" x2); wants family styling like #426, friendly names/icons, level meters, test sound; Strata
+   proposes restyle vs Spaced Sound panel with mockups first. Also: #427's /run/user wipe killed PulseAudio's socket
+   (no sound for apps started after 12:45 on bigboy); fixed live 21:47 by restarting pulseaudio.
