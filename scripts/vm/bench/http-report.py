@@ -90,6 +90,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
     def do_HEAD(self):
         self.do_GET()
 
+    def do_PUT(self):
+        # curl -T uploads with PUT; the collector treats every upload the same.
+        self.do_POST()
+
 
 def serve(pub, inbox, port, log_path=None):
     Handler.pub = os.path.abspath(pub)
