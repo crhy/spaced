@@ -49,7 +49,7 @@ ERRORS = {
 
 class Installer(Gtk.Window):
     def __init__(self) -> None:
-        super().__init__(title="Spaced GPU Manager — Drivers & Recovery")
+        super().__init__(title="Spaced GPU Driver Manager")
         self.running = False
         self.last_error: Optional[str] = None
         self.last_error_code: Optional[int] = None
@@ -64,7 +64,7 @@ class Installer(Gtk.Window):
         Gtk.Window.add(self, root)
 
         heading = Gtk.Label()
-        heading.set_markup('<span size="xx-large" weight="bold">Spaced GPU Manager — Drivers &amp; Recovery</span>')
+        heading.set_markup('<span size="xx-large" weight="bold">Spaced GPU Driver Manager</span>')
         heading.set_xalign(0)
         root.pack_start(heading, False, False, 0)
 

@@ -1,6 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=Spaced GPU Trial Confirmation
-Exec=spaced-gpu-manager --confirm-trial
-NoDisplay=true
-X-MATE-Autostart-Delay=0

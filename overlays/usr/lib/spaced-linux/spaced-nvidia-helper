@@ -753,10 +753,6 @@ main() {
     install -d -m 0755 "$RUNS_DIR"
     exec 9>"$STATE_DIR/transaction.lock"
     flock -n 9 || fatal 17 "Another graphics operation is already running."
-    if [ -f /var/lib/spaced-gpu-manager/trial.json ]; then
-        python3 -c 'import json,sys; s=json.load(open("/var/lib/spaced-gpu-manager/trial.json")); sys.exit(s.get("phase") in ("staged", "trial"))' || \
-            fatal 17 "Confirm or revert the pending GPU desktop trial before changing drivers."
-    fi
     touch "$LOG_FILE"
     chmod 0644 "$LOG_FILE"
     case "$MODE" in
