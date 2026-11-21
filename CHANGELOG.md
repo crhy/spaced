@@ -1,9 +1,10 @@
 # Changelog
 
-## 11.26.3 - Unreleased
+## 11.26.3 - 2026-11-21
 
-Working-tree changes; not yet delivered through APT or an ISO. Release gates
-and outstanding issues are tracked in `docs/11.26.3-RELEASE-PLAN.md`.
+Delivered as the 11.26.3 ISO and through Spaced Update (APT packages `11.26.3-1`,
+elogind `257.13-1+spaced11.26.3`, Compiz `+spaced11.26.3`, Spaced Monitor 0.1.10,
+Spaced Welcome 0.1.23). Release evidence: `docs/11.26.3-RELEASE-PLAN.md`.
 
 - Keep elogind restart guidance visible on both Spaced Update tabs, including
   recovery advice for lost app networking/audio or an unresponsive Restart
