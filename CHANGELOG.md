@@ -10,7 +10,8 @@ and outstanding issues are tracked in `docs/11.26.3-RELEASE-PLAN.md`.
   button. Tell users to wait for package installation to stop before rebooting.
 - Prevent the candidate elogind package from stopping/restarting the login
   daemon during upgrade, independently of desktop-settings configure order.
-  Preserve fresh-install startup and removal behavior. Spaced Update also
+  Preserve fresh-install startup and removal behavior. Starting elogind while it
+  already runs is now a no-op, so the upgrade never launches a second daemon. Spaced Update also
   validates session protection before pending package configuration, refusing
   unsafe custom policies without replacing them. Reboot after upgrading to
   activate the new daemon. Real skipped-revision VM upgrades remain a gate

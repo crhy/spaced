@@ -16,3 +16,23 @@ Forwarded: not-needed
 +
  %:
  	dh $@  --builddirectory=build --without autoreconf,systemd --buildsystem=meson
+--- a/debian/elogind.init
++++ b/debian/elogind.init
+@@ -21,3 +21,17 @@
+ # Try SIGINT first for graceful stop so that existing sessions are not lost.
+ STOP_ARGS='--retry 30 --signal INT'
+ RELOAD_SIGNAL=HUP
++
++# Spaced Linux (#427): a running elogind must make "start" a successful no-op.
++# start-stop-daemon cannot see it: the process is named "elogind", not
++# COMMAND_NAME, and a package upgrade replaces $DAEMON so --exec no longer
++# matches either. Without this, the upgrade's "start" launched a second daemon
++# that never sent its readiness notification, and the postinst failed.
++do_start_cmd_override() {
++	if [ -s "$PIDFILE" ] && read -r pid < "$PIDFILE" && [ -n "$pid" ] \
++	    && kill -0 "$pid" 2>/dev/null \
++	    && [ "$(cat "/proc/$pid/comm" 2>/dev/null)" = "${DAEMON##*/}" ]; then
++		return 1
++	fi
++	do_start_cmd
++}

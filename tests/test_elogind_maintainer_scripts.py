@@ -49,6 +49,30 @@ class ElogindMaintainerScripts(unittest.TestCase):
             subprocess.run(['sh', '-ec', prerm, 'prerm', 'remove'], env=env, check=True)
             self.assertIn('elogind stop', log.read_text())
 
+    def test_start_is_a_noop_while_elogind_runs(self):
+        # #427 RC2: the upgrade's "start" launched a second elogind (start-stop-daemon cannot match the running one: it
+        # is named "elogind", not COMMAND_NAME, and the upgrade replaced $DAEMON), which never notified -> postinst
+        # failed and the whole update broke. The init script override must report "already running" instead.
+        patch = (ROOT / 'patches/elogind/0003-preserve-session-on-upgrade.patch').read_text()
+        body = '\n'.join(l[1:] for l in patch.split('\n') if l.startswith('+') and not l.startswith('+++'))
+        func = body[body.index('do_start_cmd_override() {'):]
+        func = func[:func.index('\n}') + 2]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            fake = root / 'elogind'
+            fake.write_bytes(Path('/bin/sleep').read_bytes()); fake.chmod(0o755)
+            proc = subprocess.Popen([str(fake), '30'])
+            self.addCleanup(proc.kill)
+            pidfile = root / 'pid'
+            harness = ('DAEMON=/usr/libexec/elogind\nPIDFILE=' + str(pidfile) +
+                       '\ndo_start_cmd() { echo STARTED; }\n' + func + '\ndo_start_cmd_override; echo rc=$?\n')
+            for pid, want_started in ((proc.pid, False), (999999, True)):
+                pidfile.write_text(str(pid) + '\n')
+                out = subprocess.run(['sh', '-c', harness], capture_output=True, text=True).stdout
+                self.assertEqual('STARTED' in out, want_started, out)
+                if not want_started:
+                    self.assertIn('rc=1', out)  # init-d-script: 1 = already running = success
+
     def test_build_applies_packaging_patch(self):
         patch = ROOT / 'patches/elogind/0003-preserve-session-on-upgrade.patch'
         self.assertIn('dh_installinit --no-stop-on-upgrade', patch.read_text())
