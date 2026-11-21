@@ -60,6 +60,30 @@ Spaced Welcome 0.1.23). Release evidence: `docs/11.26.3-RELEASE-PLAN.md`.
   passphrase fallback; reject conflicting mappings and missing referenced
   keyfiles. Encrypted BIOS/UEFI installation validation remains pending.
 
+## 11.26.4 - in progress
+
+Not released yet: work landing on the 11.26.4 line.
+
+**Added**
+
+- The benchmark harness issue #424 needs before any cross-OS measurement can
+  happen. `scripts/vm/bench/guest-probe.sh` prints the same metric names
+  `scripts/vm/qemu/release-measure.sh` reports for whatever machine it runs on,
+  reading `/proc` and its own clock only and printing
+  `SKIP: <metric> not available on this distro` where a distro cannot provide
+  one; `scripts/vm/bench/run-bench.sh` walks `scripts/vm/bench/matrix.conf`,
+  boots each ISO through `common.sh`'s `build_common_args`, copies the probe in
+  over the forwarded SSH port and writes one TSV row per OS under `build/bench/`,
+  reporting `SKIP: <label> no iso at <path>` and a final
+  `RESULT: measured=<n> skipped=<m>` instead of hiding a partial matrix; and
+  `scripts/vm/bench/compare.py` (stdlib only) turns the rows into one table per
+  metric with the best value marked, `not measured` in every empty cell, and an
+  SVG bar chart, refusing to rank a metric with data for fewer than two OSes.
+  `docs/VM-BENCHMARKS.md` records what is still open on #424: the 5-10 distro
+  ISO matrix, installing and booting those distros, and the "adjust until 1st
+  place" loop, because no other operating system's image exists on the build
+  machine and its network cannot fetch one.
+
 ## 11.26.2 - 2026-11-14
 
 Built as the 11.26.2 ISO and `11.26.2-1` APT packages. This quick patch
