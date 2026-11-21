@@ -564,8 +564,8 @@ for split_control in (themes_control, wallpapers_control):
         and "Replaces: spaced-mate-default-settings (<< 9.26.3-1)" in split_control, \
         "split artwork package lacks the Breaks/Replaces takeover for upgrades"
 assert f"spaced-mate-default-settings (= {package_version})" in meta_control \
-    and "spaced-welcome (>= 0.1.22)" in meta_control \
-    and "spaced-monitor (>= 0.1.9)" in meta_control \
+    and "spaced-welcome (>= 0.1.23)" in meta_control \
+    and "spaced-monitor (>= 0.1.10)" in meta_control \
     and "libfuse2t64" in meta_control, \
     "spaced-meta does not pull in the standalone applications and desktop defaults"
 # The artwork split moves payload out of spaced-mate-default-settings. No
@@ -620,10 +620,10 @@ def artifact_default(name):
     return match.group(1)
 
 assert artifact_default("SPACED_WELCOME_REPOSITORY") == "crhy/spacedwelcome"
-assert artifact_default("SPACED_WELCOME_VERSION") == "0.1.22"
+assert artifact_default("SPACED_WELCOME_VERSION") == "0.1.23"
 assert artifact_default("SPACED_MONITOR_REPOSITORY") == "crhy/spacedmonitor"
-assert artifact_default("SPACED_MONITOR_VERSION") == "0.1.9"
-assert artifact_default("SPACED_MONITOR_RELEASE_TAG") == "v0.1.9"
+assert artifact_default("SPACED_MONITOR_VERSION") == "0.1.10"
+assert artifact_default("SPACED_MONITOR_RELEASE_TAG") == "v0.1.10"
 assert artifact_default("SPACED_GITHUB_REMOTE_NAME") == "spaced-github"
 assert artifact_default("SPACED_GITHUB_REMOTE_DESCRIPTOR_URL") == \
     "https://crhy.github.io/spacedbazaar/spaced-github.flatpakrepo"

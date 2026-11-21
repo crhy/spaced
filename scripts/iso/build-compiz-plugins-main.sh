@@ -11,7 +11,7 @@ OUTPUT=${2:-$ROOT/build/compiz-plugins-main}
 mkdir -p "$OUTPUT"
 OUTPUT=$(cd "$OUTPUT" && pwd)
 PATCHES="$ROOT/patches/compiz-plugins-main"
-VERSION=2:0.8.18-8+spaced11.26
+VERSION=2:0.8.18-8+spaced11.26.3
 for tool in curl sha256sum dpkg-source patch; do
     command -v "$tool" >/dev/null || { echo "Missing build tool: $tool" >&2; exit 1; }
 done

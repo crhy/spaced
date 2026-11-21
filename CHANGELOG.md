@@ -31,6 +31,13 @@ and outstanding issues are tracked in `docs/11.26.3-RELEASE-PLAN.md`.
   (#428), including unfocused popups. Real GTK color resolution passes across
   all 13 themes; live panel-popup review remains pending.
 - Add the Compiz five-minute tutorial link to the shipped help and website (#158).
+- Ship Spaced Monitor 0.1.10: CPU and memory first, then each GPU beside its VRAM, per-device detail views,
+  Fahrenheit/Celsius toggle, two-minute histories and session maxima, and no guessed sensor readings; every GPU
+  (for example a primary RTX 4070 Ti SUPER, a second RTX 3050 and an integrated Radeon) gets its own cards.
+- Ship Spaced Welcome 0.1.23: in the live installer session it explains that Spaced Linux must be installed and the
+  computer restarted before applications can be installed, instead of failing.
+- Rebuild Compiz (2:0.8.18-9+spaced11.26.3) and compiz-plugins-main (2:0.8.18-8+spaced11.26.3) so the fire-writing
+  and screenshot fixes reach every installation and sort above earlier test builds.
 - Include `cryptsetup-initramfs` and verify encrypted-root crypttab mappings
   against Calamares's LUKS UUID (#420). Repair missing mappings with a real
   passphrase fallback; reject conflicting mappings and missing referenced
