@@ -74,7 +74,8 @@ for path in ('usr/share/backgrounds/spaced/spaced-orbit-4k.jpg',
     assert not (payload / path).exists(), f'Wallpaper payload duplicated in settings: {path}'
 for path in ('usr/share/spaced-themes/themes.json',
              'boot/grub/themes/spaced/theme.txt',
-             'usr/share/icons/Spaced-Cursors/cursors/pirate'):
+             'usr/share/icons/Spaced-Cursors/cursors/pirate',
+             'usr/share/icons/default/cursors/pirate'):
     assert (themes / path).read_bytes() == (root / 'overlays' / path).read_bytes(), f'Missing/stale theme payload: {path}'
     assert not (payload / path).exists(), f'Theme payload duplicated in settings: {path}'
 for path in ('usr/share/icons/Spaced-Icons-Linux-Dark/index.theme',):

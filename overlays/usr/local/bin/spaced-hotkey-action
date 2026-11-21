@@ -61,7 +61,7 @@ show_help() {
 
 case "${1:-}" in
     voxa) exec spaced-open-target io.github.crhy.voxa ;;
-    close-window) exec xkill ;;
+    close-window) if [ -x /usr/local/bin/xkill ]; then exec /usr/local/bin/xkill; else exec xkill; fi ;;   # #422: the red-X wrapper, never PATH-dependent
     mute) set_all_sinks toggle ;;
     lock) exec mate-screensaver-command --lock ;;
     mute-calc)

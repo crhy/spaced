@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 @unittest.skipUnless(shutil.which('Xvfb') and Path('/usr/bin/xkill').exists(), 'requires Xvfb and xkill')
 class LiveXkillCursor(unittest.TestCase):
-    def test_adwaita_desktop_still_gets_red_x(self):
+    def _red_pixels_while_xkill_runs(self, command):
         read_fd, write_fd = os.pipe()
         server = subprocess.Popen(['Xvfb', '-displayfd', str(write_fd), '-screen', '0', '320x240x24', '-nolisten', 'tcp'], pass_fds=(write_fd,), stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
         os.close(write_fd)
@@ -40,7 +40,7 @@ class LiveXkillCursor(unittest.TestCase):
         fixes.XFixesGetCursorImage.argtypes = [C.c_void_p]
         fixes.XFixesGetCursorImage.restype = C.POINTER(Cursor)
         x11.XFree.argtypes = [C.c_void_p]
-        killer = subprocess.Popen([str(ROOT / 'overlays/usr/local/bin/xkill')], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        killer = subprocess.Popen(command, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         self.addCleanup(stop, killer)
         red = 0
         for _ in range(50):
@@ -52,4 +52,14 @@ class LiveXkillCursor(unittest.TestCase):
             if red > 20:
                 break
             time.sleep(.05)
+        return red
+
+    def test_adwaita_desktop_still_gets_red_x(self):
+        red = self._red_pixels_while_xkill_runs([str(ROOT / 'overlays/usr/local/bin/xkill')])
         self.assertGreater(red, 20, 'xkill grabbed a cursor without the red X')
+
+    def test_direct_usr_bin_xkill_falls_back_to_default_red_x(self):
+        # #422 (rhY: never lose the red X again): no wrapper, Adwaita selected - libXcursor falls back to the
+        # "default" theme, which ships the same red X, so even /usr/bin/xkill shows it.
+        red = self._red_pixels_while_xkill_runs(['/usr/bin/xkill'])
+        self.assertGreater(red, 20, 'plain /usr/bin/xkill showed the stock cursor instead of the red X')

@@ -1425,6 +1425,12 @@ for surface, body_color in (("Spaced-Menu-On-Dark", "#e5e7eb"),
 # theme so it is visible on every desktop (issue #356).
 xkill_cursor = (icon_root / "Spaced-Cursors/cursors/pirate").read_bytes()
 assert xkill_cursor[:4] == b"Xcur", "xkill cursor is not an XCUR binary file (issue #356)"
+# #422: the same red X in the "default" cursor theme. libXcursor falls back to "default" for any theme that has
+# no pirate cursor (Adwaita), so even a direct /usr/bin/xkill, bypassing the wrapper, shows the red X.
+assert (icon_root / "default/cursors/pirate").read_bytes() == xkill_cursor, \
+    "the default-theme xkill fallback cursor is missing or differs from Spaced-Cursors (issue #422)"
+assert not (icon_root / "default/index.theme").exists(), \
+    "never ship default/index.theme: it is the x-cursor-theme alternatives link (issue #422)"
 gschema_override = (root / "usr/share/glib-2.0/schemas/90_spaced-linux.gschema.override").read_text(encoding="utf-8")
 assert "cursor-theme='Spaced-Cursors'" in gschema_override, \
     "the xkill cursor theme override is missing (issue #356)"
