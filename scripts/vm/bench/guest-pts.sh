@@ -82,6 +82,14 @@ install_pts() {
         >> "$PTSDIR/install.log" 2>&1
     $SUDO env DEBIAN_FRONTEND=noninteractive apt-get install -y \
         "$PTSDIR/pts.deb" >> "$PTSDIR/install.log" 2>&1
+    # PTS 10.8.4 (the last release, 2022) multiplies the DIMM count by a memory
+    # size string that is not numeric on QEMU virtual memory, and PHP 8.4 turns
+    # that into a fatal TypeError that kills every test run. A numeric guard on
+    # the same condition is the smallest fix; the value it skips is only used
+    # to guess how many sticks a machine has, never a benchmark result.
+    $SUDO sed -i "s/if((\$mem_count \* \$t)/if(\$t > 0 \&\& (\$mem_count * \$t)/" \
+        /usr/share/phoronix-test-suite/pts-core/objects/phodevi/components/phodevi_memory.php \
+        >> "$PTSDIR/install.log" 2>&1
     command -v phoronix-test-suite >/dev/null 2>&1
 }
 
