@@ -102,6 +102,19 @@ a version difference between distros is visible. It then runs
 with `BENCH_OS_CAP_SECONDS` (default 1200) as the per-OS cap, and posts back
 `pts.tsv`, the PTS status and a tar of the PTS result files, so the comparator
 can rank the same tests across distros and the raw PTS output survives the VM.
+
+Two fixes to PTS 10.8.4 itself are part of that setup, both recorded in the run
+log: PHP 8.4 makes `phodevi_memory` fatal on QEMU's non-numeric virtual DIMM
+size, and the `load_dynamic_result_viewer` module is renamed out of PTS's module
+directory because it forks a `php -S` result viewer and waits for a browser that
+a headless live session never opens, which hangs every `batch-benchmark` before
+its first test. The cap is measured from the desktop being reached, not from the
+boot: a distro that spends ten minutes on `apt-get install build-essential`
+still gets its tests. Even so, 1200s only covers the probe plus a test install —
+`pts/compress-zstd` and `pts/openssl` build or compress for well over half an
+hour on four vCPUs, so a real benchmark wants a much larger
+`BENCH_OS_CAP_SECONDS`.
+
 Every row also records the host's load average at the time it was measured and
 whether the Strata engine (`pgrep -x strata`) was running, because a number
 taken while the machine is doing other work is not comparable without saying
