@@ -63,7 +63,9 @@ def parse_args(argv):
 
 
 def repo_root():
-    return Path(__file__).resolve().parents[1]
+    # scripts/vm/bench/compare.py -> repository root; the no-argument mode has
+    # to find build/bench/, not scripts/vm/build/bench.
+    return Path(__file__).resolve().parents[3]
 
 
 def collect(argv):
