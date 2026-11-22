@@ -108,6 +108,15 @@ install_pts() {
     esac
     if command -v phoronix-test-suite >/dev/null 2>&1; then
         note "install family=$DISTRO: distro package installed"
+        # Void's php8.x ships with openssl commented out in php.ini, so PTS
+        # cannot fetch any HTTPS test file ("PHP OpenSSL support is needed").
+        if ! php -m 2>/dev/null | grep -qix openssl; then
+            for ini in /etc/php*/php.ini /etc/php/php.ini; do
+                [ -f "$ini" ] && $SUDO sed -i 's/^;[[:space:]]*extension=openssl/extension=openssl/' "$ini"
+            done
+            if php -m 2>/dev/null | grep -qix openssl; then note "php openssl: enabled in php.ini"
+            else note "php openssl: STILL MISSING - HTTPS test downloads will fail"; fi
+        fi
         return 0
     fi
     # Debian and Devuan no longer package PTS, so fall back to the official
