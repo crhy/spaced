@@ -217,12 +217,27 @@ run_one() {
     # composite.xml under this name so the value can be re-checked line by line.
     name="b03-$short"
     note "STEP=run test=$test budget=${budget}s"
+    # stdin is a finite run of "1" answers, NOT /dev/null and NOT empty lines.
+    # batch-run still offers the test's option/sub-target menu ("Multiple items
+    # can be selected"); the menu rejects empty input and EOF alike, and each
+    # rejected read re-prints the prompt (empty lines once wrote a 680 MB run
+    # log; /dev/null a 3.3 GB one). "1" picks the FIRST option, which is the
+    # short configuration for every test in the set (c-ray 1080p, zstd level 3).
+    # The run of answers covers tests with several sequential prompts.
+    printf '1\n1\n1\n1\n1\n1\n1\n1\n1\n1\n' | \
     TEST_RESULTS_NAME="$name" TEST_RESULTS_IDENTIFIER="$name" \
     TEST_RESULTS_DESCRIPTION="$test on $DISTRO ($LABEL)" \
         timeout "$budget" phoronix-test-suite batch-run \
-        "$test" < /dev/null > "$log" 2>&1
+        "$test" > "$log" 2>&1
     rc=$?
     note "STEP=run-done test=$test rc=$rc"
+    # A runaway prompt must not flood the guest tmpfs or the posted tar. Keep the
+    # head and the tail (the result line lands at the end) if a log blows past 2MB.
+    if [ -f "$log" ] && [ "$(wc -c < "$log")" -gt 2097152 ]; then
+        { head -c 524288 "$log"; tail -c 524288 "$log"; } > "$log.trunc" 2>/dev/null &&
+            mv -f "$log.trunc" "$log"
+        note "run log for $test truncated (was a prompt loop)"
+    fi
     if [ "$rc" -ne 0 ] && [ "$rc" -ne 124 ] && ! grep -q 'Test Total Time' "$log"; then
         printf '%s\t%s\t\t\t\trun-failed-rc-%s\n' "$LABEL" "$test" "$rc" \
             >> "$WORK/pts.tsv"
