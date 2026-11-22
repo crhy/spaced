@@ -34,6 +34,28 @@ note() {
     printf '%s: %s\n' "$(date -u +%T)" "$*" >> "$PTSDIR/install.log"
 }
 
+post_partial() {
+    # The host's own cap can end the VM at any moment, so every finished test
+    # is posted as it lands rather than only in one final batch.
+    leaf=$1
+    [ -f "$WORK/$leaf" ] || return 0
+    url="http://$HOST:$PORT/$LABEL/$leaf"
+    if command -v curl >/dev/null 2>&1; then
+        curl -s -T "$WORK/$leaf" "$url" >/dev/null 2>&1 && return 0
+    fi
+    if command -v python3 >/dev/null 2>&1; then
+        python3 -c '
+import sys, urllib.request
+name, leaf, host, port, label = sys.argv[1:6]
+data = open(name, "rb").read()
+request = urllib.request.Request("http://%s:%s/%s/%s"
+                                 % (host, port, label, leaf), data=data)
+urllib.request.urlopen(request, timeout=60).read()
+' "$WORK/$leaf" "$leaf" "$HOST" "$PORT" "$LABEL" >/dev/null 2>&1 && return 0
+    fi
+    wget --post-file="$WORK/$leaf" -q -O /dev/null "$url" >/dev/null 2>&1
+}
+
 install_pts() {
     if command -v phoronix-test-suite >/dev/null 2>&1; then
         note "already installed"
@@ -161,10 +183,15 @@ printf 'label\ttest\tmetric\tvalue\tunit\tstatus\n' >> "$WORK/pts.tsv"
 
 if install_pts; then
     printf 'pts_install=ok\n' >> "$WORK/pts-status.txt"
+    post_partial pts-status.txt
     configure_pts
     for test in $TESTS; do
         [ "$(remaining)" -lt 30 ] && break
         run_one "$test"
+        # Whatever finished is visible to the host even if the next test is
+        # still running when the host's cap ends and the VM is destroyed.
+        post_partial pts.tsv
+        post_partial pts-status.txt
     done
     # PTS's own files: result XMLs plus the raw logs, so the numbers can be
     # re-checked line by line later.

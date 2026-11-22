@@ -38,6 +38,7 @@
 # BENCH_OS_CAP_SECONDS (1200), BENCH_PROBE_IDLE_SECONDS (20), BENCH_HTTP_PORT
 # (8099), BENCH_VM_SSH_PORT (2240), BENCH_VNC_DISPLAY (90), BENCH_ISO_BOOT_
 # TIMEOUT (300), BENCH_SSH_POLL_SECONDS (2), BENCH_BOOT_MENU_TAPS (3),
+# BENCH_PTS_TESTS ('pts/compress-zstd pts/sqlite-speedtest pts/openssl'),
 # BENCH_OUT_DIR.
 set -euo pipefail
 
@@ -54,7 +55,8 @@ Environment: BENCH_VM_DIR (/media/rhy/data/bench-vms), BENCH_FREE_MIN_GB (15),
 BENCH_QEMU_RAM (8192), BENCH_QEMU_CPUS (4), BENCH_DISK_SIZE (40G),
 BENCH_OS_CAP_SECONDS (1200), BENCH_PROBE_IDLE_SECONDS (20), BENCH_HTTP_PORT
 (8099), BENCH_VM_SSH_PORT (2240), BENCH_VNC_DISPLAY (90),
-BENCH_ISO_BOOT_TIMEOUT (300), BENCH_BOOT_MENU_TAPS (3), BENCH_OUT_DIR.
+BENCH_ISO_BOOT_TIMEOUT (300), BENCH_BOOT_MENU_TAPS (3),
+BENCH_PTS_TESTS, BENCH_OUT_DIR.
 USAGE
 }
 
@@ -85,6 +87,7 @@ VNC_BASE=${BENCH_VNC_DISPLAY:-90}
 BOOT_TIMEOUT=${BENCH_ISO_BOOT_TIMEOUT:-300}
 SSH_POLL=${BENCH_SSH_POLL_SECONDS:-2}
 BOOT_MENU_TAPS=${BENCH_BOOT_MENU_TAPS:-3}
+PTS_TESTS=${BENCH_PTS_TESTS:-"pts/compress-zstd pts/sqlite-speedtest pts/openssl"}
 ROOT_PASSWORD=${SPACED_LIVE_ROOT_PASSWORD:-spaced}
 OUT_DIR=${BENCH_OUT_DIR:-$PROJECT_ROOT/build/bench}
 
@@ -334,7 +337,7 @@ write_bootstrap() {
             echo "SUDO='$rootcmd'"
         fi
         echo "FETCH_TOOL=$fetch"
-        echo "PTS_TESTS='pts/compress-zstd pts/sqlite-speedtest pts/openssl'"
+        echo "PTS_TESTS='$PTS_TESTS'"
         cat "$BOOTSTRAP"
     } > "$pub/$label/b.sh"
 }
