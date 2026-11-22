@@ -342,14 +342,18 @@ write_bootstrap() {
 typed_bootstrap_command() {
     # The one command typed into the terminal: fetch this OS's bootstrap and
     # run it. 10.0.2.2 is the host in QEMU's user-mode network. wget ships on
-    # every live desktop here; curl is typed instead where the distro has it.
+    # most live desktops; the Debian live image has no wget, so curl and
+    # python3 -c urllib are typed instead where the distro has them.
     local label=$1 fetch=$2
     local url=http://10.0.2.2:$HTTP_PORT/$label/b.sh
-    if [ "$fetch" = curl ]; then
-        printf 'curl -s %s | sh' "$url"
-    else
-        printf 'wget -qO- %s | sh' "$url"
-    fi
+    case "$fetch" in
+        curl) printf 'curl -s %s | sh' "$url" ;;
+        python3)
+            printf 'python3 -c %s | sh' \
+                "'import sys,urllib.request;sys.stdout.buffer.write(urllib.request.urlopen(\"$url\").read())'"
+            ;;
+        *) printf 'wget -qO- %s | sh' "$url" ;;
+    esac
 }
 
 # Boots one ISO, measures it and writes one TSV row. Returns non-zero when
@@ -485,9 +489,10 @@ measure_entry() {
         fi
     fi
 
-    # The guest posts probe output, PTS rows and its own result files; wait for
-    # the done marker or the per-OS cap, whichever comes first.
-    local deadline=$((started + CAP_SECONDS))
+    # The guest posts probe output, PTS rows and its own result files; the
+    # per-OS cap starts here, so a slow ISO boot does not eat the measurement
+    # window, and the run ends at the done marker or the cap.
+    local deadline=$((SECONDS + CAP_SECONDS))
     while [ $SECONDS -lt $deadline ]; do
         [ -f "$inbox/$label/done" ] && break
         if [ -f "$VM_PID_FILE" ] && ! kill -0 "$(cat "$VM_PID_FILE")" 2>/dev/null; then

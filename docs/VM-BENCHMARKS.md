@@ -77,25 +77,35 @@ live desktop's terminal (the shortcut that opens it is recorded per distro as
 which fetches `guest-probe.sh`, `guest-bootstrap.sh` and `guest-pts.sh` from
 `scripts/vm/bench/http-report.py` — a host HTTP server on the `10.0.2.2` gateway
 that serves those files and receives every result back as a POST into a
-per-label inbox — then runs them. The Spaced ISO answers SSH as well and uses
+per-label inbox (a `curl -T` upload is a PUT, and the collector accepts it as
+the same thing) — then runs them. The Spaced ISO answers SSH as well and uses
 that path (`access=ssh`, root password `SPACED_LIVE_ROOT_PASSWORD` = `spaced`).
 A QEMU 11 QMP `send-key` holds a chord only as long as the key list is pressed
 together, so `qmp-type.py` sends chords (like `ctrl-alt-t`) as one multi-key
-press and every other character as its own event.
+press and every other character as its own event. A live ISO still sitting at
+its boot menu swallows a stray Tab/F2 and refuses to boot, so the runner taps
+plain Enter for the first `BENCH_BOOT_MENU_TAPS` (3) rounds and types nothing
+until the menu is behind it. `wget` is not in every live image (Debian's has no
+`wget`), so the one typed command is `wget -qO- URL | sh`, `curl -s URL | sh`
+or a `python3 -c` urllib fetch, whichever `fetch=` says.
 
 Each row holds the probe metrics, the runner's own `boot_to_desktop_s` (VM start
 to the moment the desktop answers), and a short **Phoronix Test Suite** run
 inside the guest: `scripts/vm/bench/guest-pts.sh` installs
 `phoronix-test-suite` with whatever the distro already has (`apt-get`, `dnf`,
-`pacman`, `xbps-install` — no third-party repo is added), runs
-`batch-install`/`batch-benchmark` over the recorded test set with
-`BENCH_OS_CAP_SECONDS` (default 1200) as the per-OS cap, and posts back
-`pts.tsv`, the PTS status and a tar of the PTS result files, so the
-comparator can rank the same tests across distros and the raw PTS output
-survives the VM. Every row also records the host's load average at the time it
-was measured and whether the Strata engine (`pgrep -x strata`) was running,
-because a number taken while the machine is doing other work is not comparable
-without saying so.
+`pacman`, `xbps-install` — no third-party repo is added). Debian and Devuan no
+longer package it, so those fall back to the official upstream release (10.8.4)
+plus `php-cli php-xml php-zip unzip build-essential`, which is what PTS itself
+needs to unpack and build its tests; the fallback is recorded in the run log so
+a version difference between distros is visible. It then runs
+`batch-setup` once, `batch-install`/`batch-benchmark` over the recorded test set
+with `BENCH_OS_CAP_SECONDS` (default 1200) as the per-OS cap, and posts back
+`pts.tsv`, the PTS status and a tar of the PTS result files, so the comparator
+can rank the same tests across distros and the raw PTS output survives the VM.
+Every row also records the host's load average at the time it was measured and
+whether the Strata engine (`pgrep -x strata`) was running, because a number
+taken while the machine is doing other work is not comparable without saying
+so.
 
 A missing ISO or an OS whose desktop is never reached is reported, never
 hidden:
