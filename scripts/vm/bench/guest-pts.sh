@@ -131,7 +131,14 @@ install_pts() {
                 >> "$PTSDIR/install.log" 2>&1 || {
                 # Arch/CachyOS carry PTS only in the AUR: install the official upstream tarball
                 note "install family=pacman($DISTRO): not in repos; upstream $PTS_VERSION tarball + php base-devel unzip"
-                $SUDO pacman -S --noconfirm --needed php openssl unzip base-devel >> "$PTSDIR/install.log" 2>&1
+                # The repos' php links libssl.so.4 while the ISO's curl/cryptsetup still need OpenSSL 3:
+                # install the new openssl beside a compat openssl-3 when the repo has one, else upgrade fully.
+                _compat=""; for _c in openssl-3 openssl-3.0 openssl3; do $SUDO pacman -Si "$_c" >/dev/null 2>&1 && { _compat=$_c; break; }; done
+                note "pacman: openssl compat package: ${_compat:-none}"
+                $SUDO pacman -S --noconfirm --needed php openssl $_compat unzip base-devel >> "$PTSDIR/install.log" 2>&1 || {
+                    note "pacman: partial install refused; full -Syu"
+                    $SUDO pacman -Syu --noconfirm --needed php unzip base-devel >> "$PTSDIR/install.log" 2>&1; }
+                php -v >> "$PTSDIR/install.log" 2>&1 || note "pacman: php still does not start"
                 for ini in /etc/php*/php.ini /etc/php/php.ini; do
                     [ -f "$ini" ] && $SUDO sed -i -e 's/^;[[:space:]]*extension=\(openssl\|zip\|iconv\)/extension=\1/' "$ini"
                 done
