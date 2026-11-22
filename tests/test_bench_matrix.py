@@ -161,6 +161,16 @@ class BenchMatrixTests(unittest.TestCase):
         for option in entries[0][2:]:
             self.assertRegex(option, r'^[a-z]+=')
 
+    def test_comparator_without_arguments_finds_the_run_rows(self):
+        # The no-TSV mode reads the repo's own build/bench; the path is three
+        # levels above compare.py, and one level up points at scripts/vm.
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('bench_compare', str(COMPARATOR))
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        self.assertEqual(module.repo_root(), ROOT)
+        self.assertTrue((ROOT / 'VERSION').is_file())
+
     def test_comparator_tables_ranking_and_missing_cells(self):
         with tempfile.TemporaryDirectory() as tmp:
             rows = [
