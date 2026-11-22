@@ -251,10 +251,17 @@ run_one() {
     xml=""
     for rd in "$HOME/.phoronix-test-suite/test-results" \
         /var/lib/phoronix-test-suite/test-results; do
-        if [ -f "$rd/$name/composite.xml" ]; then
-            xml="$rd/$name/composite.xml"
-            break
-        fi
+        [ -d "$rd" ] || continue
+        # PTS sanitizes the result DIRECTORY differently from the result NAME:
+        # "b03-pts_compress-zstd" is saved under "b03-ptscompress-zstd" (the
+        # underscores are dropped). Match on the prefix and take the saved file.
+        for d in "$rd"/"$name"*; do
+            if [ -f "$d/composite.xml" ]; then
+                xml="$d/composite.xml"
+                break
+            fi
+        done
+        [ -n "$xml" ] && break
     done
     if [ "$rc" -ne 0 ] && [ "$rc" -ne 124 ] && [ -z "$xml" ]; then
         printf '%s\t%s\t\t\t\trun-failed-rc-%s\n' "$LABEL" "$test" "$rc" \
