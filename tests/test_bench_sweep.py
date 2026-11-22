@@ -263,7 +263,8 @@ class BenchSweepTests(unittest.TestCase):
         for name_env in ('TEST_RESULTS_NAME', 'TEST_RESULTS_IDENTIFIER',
                          'TEST_RESULTS_DESCRIPTION'):
             self.assertIn(name_env, pts)
-        self.assertIn('user-config-get', pts)
+        self.assertIn('user-config.xml', pts)
+        self.assertIn('batch-setup', pts)
         self.assertIn('pts-results.tar', pts)
         self.assertIn('phoronix-test-suite', pts)
 

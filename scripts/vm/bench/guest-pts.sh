@@ -151,35 +151,41 @@ configure_pts() {
         /usr/share/phoronix-test-suite/pts-core/modules/load_dynamic_result_viewer.php \
         /usr/share/phoronix-test-suite/pts-core/modules/load_dynamic_result_viewer.php.disabled \
         >> "$PTSDIR/batch-setup.log" 2>&1 || true
-    # EXPLICIT answers, never the defaults. The three Prompt* options are what
-    # the old `printf "\n\n\n" | batch-setup` left ON; SaveResults=TRUE keeps
-    # the composite.xml the comparator ranks; UploadResults/OpenBrowser FALSE
-    # keep the run network-light and browser-free.
-    note "configure: setting PTS batch options explicitly"
-    for opt in \
-        "BatchRunDisplayDynamicGraph FALSE" \
-        "BatchRunDisplayGraph FALSE" \
-        "SaveResults TRUE" \
-        "OpenBrowser FALSE" \
-        "UploadResults FALSE" \
-        "PromptForTestIdentifier FALSE" \
-        "PromptForTestDescription FALSE" \
-        "PromptSaveName FALSE" \
-        "RunAllTestCombinations FALSE" \
-        "NetworkService FALSE" \
-        "NoColorSupport TRUE"; do
+    # Answer the one-time first-run questions so PTS never prompts for a
+    # display name / update opt-in at the start of a batch run.
+    printf 'True\n' | timeout 60 phoronix-test-suite force-configuration \
+        > /dev/null 2>&1
+    # THE b03 FIX. batch-setup writes the batch options to
+    # user-config.xml under Options/BatchMode/* and sets Configured=TRUE, which
+    # is the flag batch-run/batch-benchmark require ("The batch mode must first
+    # be configured"). The old bug was `printf "\n\n\n..." | batch-setup`: an
+    # empty line accepts the DEFAULT, and the defaults are SaveResults=TRUE,
+    # OpenBrowser=FALSE, UploadResults=TRUE, and Prompt{ForTestIdentifier,
+    # ForTestDescription,SaveName}=TRUE, RunAllTestCombinations=TRUE. Answered
+    # explicitly, in the order batch_setup.php prompts:
+    #   SaveResults y | OpenBrowser n | UploadResults n |
+    #   PromptForTestIdentifier n | PromptForTestDescription n | PromptSaveName n |
+    #   RunAllTestCombinations n
+    # (Configured is set to TRUE by batch-setup itself.) With the prompts off,
+    # batch-run uses TEST_RESULTS_NAME/IDENTIFIER/DESCRIPTION and never waits on
+    # a test name after the system-info block.
+    note "configure: answering batch-setup explicitly (save=y, upload/viewer/prompts=n)"
+    printf 'y\nn\nn\nn\nn\nn\nn\n' | timeout 120 phoronix-test-suite batch-setup \
+        > "$PTSDIR/batch-setup.log" 2>&1
+    # Belt and suspenders: the graph options are top-level, not under BatchMode,
+    # so the `option` command can still reach them; a headless run must not try
+    # to open a browser or a live graph.
+    for opt in "BatchRunDisplayDynamicGraph FALSE" "BatchRunDisplayGraph FALSE"; do
         name=${opt% *}
         value=${opt#* }
         timeout 60 phoronix-test-suite option "$name" "$value" \
             >> "$PTSDIR/batch-setup.log" 2>&1
     done
-    # Mark configured so PTS never asks its one-time questions again.
-    printf 'True\n' | timeout 60 phoronix-test-suite force-configuration \
-        > /dev/null 2>&1
     # Prove the config actually took, so an option PTS refused to set is visible
-    # in the log rather than hanging the run later.
-    timeout 60 phoronix-test-suite user-config-get > "$PTSDIR/user-config.log" 2>&1
-    note "configure: user-config-get captured to user-config.log"
+    # in the log rather than hanging the run later. (10.8.4 has no
+    # user-config-get subcommand; read the file it wrote instead.)
+    cat "$HOME/.phoronix-test-suite/user-config.xml" > "$PTSDIR/user-config.log" 2>&1
+    note "configure: user-config.xml captured to user-config.log"
 }
 
 # The result name/identifier/description PTS would otherwise prompt for.
