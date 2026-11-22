@@ -547,15 +547,22 @@ while [ $SECONDS -lt $end ]; do
     fi
     sleep 5
 done
-if [ ! -f "$INBOX/$OS/idle-$OS-$RUN_LABEL.done" ]; then
+tsv=$OUT_DIR/$STEM.tsv
+totals=$OUT_DIR/$STEM-totals.txt
+if [ -f "$INBOX/$OS/idle-$OS-$RUN_LABEL.done" ]; then
+    cp "$INBOX/$OS/idle-$OS-$RUN_LABEL.tsv" "$tsv"
+    cp "$INBOX/$OS/idle-$OS-$RUN_LABEL-totals.txt" "$totals"
+elif [ "$access" = ssh ] && vm_alive \
+    && guest_ssh "cat /tmp/ii-$RUN_LABEL.tsv" > "$tsv" \
+    && guest_ssh "cat /tmp/ii-$RUN_LABEL-totals.txt" > "$totals" \
+    && [ -s "$totals" ]; then
+    # The window ran but the HTTP post never landed; the files are still
+    # small enough to cat back over the same SSH shell the runner used.
+    echo "NOTE: results not posted; rescued from the guest over SSH"
+else
     echo "SKIP: $STEM results never posted (cap ${cap}s)" >&2
     exit 1
 fi
-
-tsv=$OUT_DIR/$STEM.tsv
-totals=$OUT_DIR/$STEM-totals.txt
-cp "$INBOX/$OS/idle-$OS-$RUN_LABEL.tsv" "$tsv"
-cp "$INBOX/$OS/idle-$OS-$RUN_LABEL-totals.txt" "$totals"
 {
     printf 'ran_os %s\n' "$OS"
     printf 'ran_label %s\n' "$RUN_LABEL"
