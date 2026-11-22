@@ -183,8 +183,12 @@ configure_pts() {
     done
     # Prove the config actually took, so an option PTS refused to set is visible
     # in the log rather than hanging the run later. (10.8.4 has no
-    # user-config-get subcommand; read the file it wrote instead.)
-    cat "$HOME/.phoronix-test-suite/user-config.xml" > "$PTSDIR/user-config.log" 2>&1
+    # user-config-get subcommand; read the file it wrote instead. As root the
+    # file lands under the system config directory, not $HOME.)
+    for cfg in "$HOME/.phoronix-test-suite/user-config.xml" \
+        /var/lib/phoronix-test-suite/user-config.xml; do
+        [ -f "$cfg" ] && cat "$cfg" >> "$PTSDIR/user-config.log" 2>&1
+    done
     note "configure: user-config.xml captured to user-config.log"
 }
 
@@ -238,26 +242,46 @@ run_one() {
             mv -f "$log.trunc" "$log"
         note "run log for $test truncated (was a prompt loop)"
     fi
-    if [ "$rc" -ne 0 ] && [ "$rc" -ne 124 ] && ! grep -q 'Test Total Time' "$log"; then
+    # THE b03 RESULT SOURCE. PTS prints its numbers in a per-test banner that
+    # changes shape between tests (compress-zstd prints "Average: N MB/s" with
+    # no "Test Total Time" line at all), but the saved result is stable: PTS
+    # writes one composite.xml per result name, with a <Result> block per
+    # sub-metric carrying Description/Scale/<Value>. Run as root, PTS 10.8.4
+    # saves under the SYSTEM result directory, not $HOME, so look in both.
+    xml=""
+    for rd in "$HOME/.phoronix-test-suite/test-results" \
+        /var/lib/phoronix-test-suite/test-results; do
+        if [ -f "$rd/$name/composite.xml" ]; then
+            xml="$rd/$name/composite.xml"
+            break
+        fi
+    done
+    if [ "$rc" -ne 0 ] && [ "$rc" -ne 124 ] && [ -z "$xml" ]; then
         printf '%s\t%s\t\t\t\trun-failed-rc-%s\n' "$LABEL" "$test" "$rc" \
             >> "$WORK/pts.tsv"
         return
     fi
+    [ -n "$xml" ] && cp "$xml" "$PTSDIR/composite-$short.xml" 2>/dev/null
     captured=0
-    grep -E '^Test (Total Time|Result|Raw Values)' "$log" | while IFS= read -r line; do
-        metric=$(printf '%s' "$line" | sed -n 's/^Test \([A-Za-z ]*\):.*/\1/p' \
-            | tr ' ' '-' | tr 'A-Z' 'a-z')
-        value=$(printf '%s' "$line" | sed -n 's/^.*: *//p' \
-            | sed -n 's/^\([0-9][0-9.]*\).*/\1/p')
-        unit=$(printf '%s' "$line" | sed -n 's/^.*: *[0-9][0-9.]* *\(.*\)$/\1/p' \
-            | tr -d ' ')
-        printf '%s\t%s\t%s\t%s\t%s\tok\n' "$LABEL" "$test" "$metric" \
-            "$value" "$unit" >> "$WORK/pts.tsv"
-    done
-    if ! grep -q 'Test Total Time' "$log"; then
+    if [ -n "$xml" ]; then
+        awk -v label="$LABEL" -v test="$test" '
+            /<Result>/ { desc = ""; scale = ""; val = "" }
+            /<Description>/ { desc = $0; sub(/.*<Description>/, "", desc); sub(/<\/Description>.*/, "", desc) }
+            /<Scale>/ { scale = $0; sub(/.*<Scale>/, "", scale); sub(/<\/Scale>.*/, "", scale) }
+            /<Value>/ { val = $0; sub(/.*<Value>/, "", val); sub(/<\/Value>.*/, "", val) }
+            /<\/Result>/ {
+                if (val != "" && val + 0 > 0) {
+                    metric = tolower(desc); gsub(/[^A-Za-z0-9]+/, "-", metric)
+                    gsub(/^-|-$/, "", metric)
+                    printf "%s\t%s\t%s\t%s\t%s\tok\n", label, test, metric, val, scale
+                }
+            }
+        ' "$xml" >> "$WORK/pts.tsv"
+        captured=$(awk -v t="$test" '$2 == t && $6 == "ok" { n++ } END { print n + 0 }' \
+            FS='\t' "$WORK/pts.tsv")
+    fi
+    if [ "$captured" -eq 0 ]; then
         printf '%s\t%s\t\t\t\tno-result-line\n' "$LABEL" "$test" >> "$WORK/pts.tsv"
-    else
-        captured=1
     fi
     note "$test captured=$captured rc=$rc"
 }
@@ -280,11 +304,13 @@ if install_pts; then
     done
     # PTS's own files: result XMLs (composite.xml included) plus the raw logs,
     # so the numbers can be re-checked line by line later.
-    find "$HOME/.phoronix-test-suite" -type f \
-        \( -name '*.xml' -o -name '*result*' \) 2>/dev/null |
-        while read -r found; do
-            cp "$found" "$PTSDIR/" 2>/dev/null
-        done
+    # The composite XMLs are already copied next to the logs as
+    # composite-*.xml; also pull PTS's own log trees so numbers are checkable.
+    for rd in "$HOME/.phoronix-test-suite/test-results" \
+        /var/lib/phoronix-test-suite/test-results; do
+        [ -d "$rd" ] && tar -cf - -C "$rd" . 2>/dev/null |
+            tar -xf - -C "$PTSDIR/results" 2>/dev/null
+    done
     tar -C "$PTSDIR" -cf "$WORK/pts-results.tar" . 2>/dev/null
     printf 'pts_tests=%s\n' "$(printf '%s' "$TESTS" | wc -w)" \
         >> "$WORK/pts-status.txt"
