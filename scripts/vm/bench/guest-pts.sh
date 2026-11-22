@@ -98,6 +98,12 @@ install_pts() {
                     pgrep -f unattended-upgrade >/dev/null || pgrep -x packagekitd >/dev/null || break
                 sleep 5
             done
+            # Zorin's live installer keeps debconf's database open; nothing on a live session needs it.
+            if [ -e /var/cache/debconf/config.dat ] && command -v fuser >/dev/null 2>&1; then
+                for _f in /var/cache/debconf/config.dat /var/cache/debconf/templates.dat /var/lib/dpkg/lock-frontend; do
+                    _h=$($SUDO fuser "$_f" 2>/dev/null); [ -n "$_h" ] && { note "lock $_f held by:$_h - stopping"; $SUDO fuser -k "$_f" >/dev/null 2>&1; }
+                done
+            fi
             $SUDO dpkg --configure -a >> "$PTSDIR/install.log" 2>&1
             note "install family=apt($DISTRO): apt-get update && apt-get install phoronix-test-suite php-cli php-xml php-zip unzip build-essential"
             $SUDO apt-get update >> "$PTSDIR/install.log" 2>&1
@@ -125,7 +131,7 @@ install_pts() {
                 >> "$PTSDIR/install.log" 2>&1 || {
                 # Arch/CachyOS carry PTS only in the AUR: install the official upstream tarball
                 note "install family=pacman($DISTRO): not in repos; upstream $PTS_VERSION tarball + php base-devel unzip"
-                $SUDO pacman -S --noconfirm --needed php unzip base-devel >> "$PTSDIR/install.log" 2>&1
+                $SUDO pacman -S --noconfirm --needed php openssl unzip base-devel >> "$PTSDIR/install.log" 2>&1
                 for ini in /etc/php*/php.ini /etc/php/php.ini; do
                     [ -f "$ini" ] && $SUDO sed -i -e 's/^;[[:space:]]*extension=\(openssl\|zip\|iconv\)/extension=\1/' "$ini"
                 done
