@@ -122,8 +122,24 @@ configure_pts() {
     export PTS_RESULT_DIRECTORY=$PTSDIR/results
     $SUDO mkdir -p "$PTSDIR/results" 2>/dev/null
     mkdir -p "$HOME/.phoronix-test-suite" 2>/dev/null
-    printf '\n\n\n\n\n\n\n\n' | timeout 120 phoronix-test-suite batch-setup \
+    # The graph options below are not enough: PTS loads load_dynamic_result_viewer
+    # at start-up, which forks `php -S localhost:PORT` and waits for a browser to
+    # poll it. In a headless live session with PHP 8.4 that server never answers,
+    # so every batch-benchmark hangs before the first test starts. PTS globs
+    # *.php in its module directory, so renaming the file keeps it unloaded.
+    $SUDO mv -f \
+        /usr/share/phoronix-test-suite/pts-core/modules/load_dynamic_result_viewer.php \
+        /usr/share/phoronix-test-suite/pts-core/modules/load_dynamic_result_viewer.php.disabled \
+        >> "$PTSDIR/batch-setup.log" 2>&1 || true
+    printf "\n\n\n\n\n\n\n\n" | timeout 120 phoronix-test-suite batch-setup \
         > "$PTSDIR/batch-setup.log" 2>&1
+    # PTS 10 tries to open a dynamic result viewer (it forks `php -S` and waits
+    # on a browser) after every batch run; there is no browser in a headless
+    # live session, so the run never ends.
+    timeout 60 phoronix-test-suite option BatchRunDisplayDynamicGraph FALSE \
+        >> "$PTSDIR/batch-setup.log" 2>&1
+    timeout 60 phoronix-test-suite option BatchRunDisplayGraph FALSE \
+        >> "$PTSDIR/batch-setup.log" 2>&1
     printf 'True\n' | timeout 60 phoronix-test-suite force-configuration \
         > /dev/null 2>&1
     yes 2>/dev/null | timeout 60 phoronix-test-suite system-info \
