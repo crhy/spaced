@@ -254,8 +254,9 @@ run_one() {
         [ -d "$rd" ] || continue
         # PTS sanitizes the result DIRECTORY differently from the result NAME:
         # "b03-pts_compress-zstd" is saved under "b03-ptscompress-zstd" (the
-        # underscores are dropped). Match on the prefix and take the saved file.
-        for d in "$rd"/"$name"*; do
+        # underscores are dropped). Match on both spellings.
+        flat=$(printf '%s' "$name" | tr -d '_')
+        for d in "$rd"/"$name"* "$rd"/"$flat"*; do
             if [ -f "$d/composite.xml" ]; then
                 xml="$d/composite.xml"
                 break

@@ -267,6 +267,13 @@ class BenchSweepTests(unittest.TestCase):
         self.assertIn('batch-setup', pts)
         self.assertIn('pts-results.tar', pts)
         self.assertIn('phoronix-test-suite', pts)
+        # the numbers come from PTS's own composite.xml (stdout has no stable
+        # result line), under the system result dir too, and the option menu
+        # gets a real "1" answer (EOF/empty lines re-print it forever).
+        self.assertIn('composite.xml', pts)
+        self.assertIn('/var/lib/phoronix-test-suite/test-results', pts)
+        self.assertIn("printf '1\\n1", pts)
+        self.assertNotIn('< /dev/null > "$log', pts)
 
     def test_idle_window_starts_at_the_same_fixed_uptime_for_every_os(self):
         # rhY 2026-11-22 / task b03: the old probe sampled each OS at its own
