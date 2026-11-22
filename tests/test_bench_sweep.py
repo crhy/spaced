@@ -106,6 +106,20 @@ class BenchSweepTests(unittest.TestCase):
             self.assertTrue(char in module.CHAR_KEYS or char in module.SHIFTED,
                             'typed command carries %r, which qmp-type cannot send'
                             % char)
+        # A live desktop without wget (Debian live) fetches through python3
+        # instead, and that command has to be typeable too.
+        python3_command = RUNNER.read_text(encoding='utf-8')
+        self.assertIn('urllib.request.urlopen', python3_command,
+                      'the runner has no python3 fetch for wget-less live ISOs')
+        typed = ("python3 -c 'import sys,urllib.request;"
+                 "sys.stdout.buffer.write(urllib.request.urlopen"
+                 "(\"http://10.0.2.2:8099/debian/b.sh\").read())' | sh")
+        for char in typed:
+            if char.isalnum():
+                continue
+            self.assertTrue(char in module.CHAR_KEYS or char in module.SHIFTED,
+                            'the python3 fetch types %r, which qmp-type cannot send'
+                            % char)
 
     def test_qmp_type_refuses_without_the_socket(self):
         result = self.run_command(['python3', QMP_TYPE, '--qmp', '/nope/qmp',
