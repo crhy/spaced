@@ -35,7 +35,8 @@
 #
 # Environment: BENCH_VM_DIR (/media/rhy/data/bench-vms), BENCH_FREE_MIN_GB
 # (15), BENCH_QEMU_RAM (8192), BENCH_QEMU_CPUS (4), BENCH_DISK_SIZE (40G),
-# BENCH_OS_CAP_SECONDS (1200), BENCH_PROBE_IDLE_SECONDS (20), BENCH_HTTP_PORT
+# BENCH_OS_CAP_SECONDS (1200), BENCH_PROBE_IDLE_SECONDS (60),
+# BENCH_IDLE_START_UPTIME (300), BENCH_HTTP_PORT
 # (8099), BENCH_VM_SSH_PORT (2240), BENCH_VNC_DISPLAY (90), BENCH_ISO_BOOT_
 # TIMEOUT (300), BENCH_SSH_POLL_SECONDS (2), BENCH_BOOT_MENU_TAPS (3),
 # BENCH_PTS_TESTS ('pts/compress-zstd pts/sqlite-speedtest pts/openssl'),
@@ -53,10 +54,11 @@ Missing ISOs print "SKIP: <label> no iso at <path>" and do not stop the run.
 
 Environment: BENCH_VM_DIR (/media/rhy/data/bench-vms), BENCH_FREE_MIN_GB (15),
 BENCH_QEMU_RAM (8192), BENCH_QEMU_CPUS (4), BENCH_DISK_SIZE (40G),
-BENCH_OS_CAP_SECONDS (1200), BENCH_PROBE_IDLE_SECONDS (20), BENCH_HTTP_PORT
+BENCH_OS_CAP_SECONDS (1200), BENCH_PROBE_IDLE_SECONDS (60),
+BENCH_IDLE_START_UPTIME (300), BENCH_HTTP_PORT
 (8099), BENCH_VM_SSH_PORT (2240), BENCH_VNC_DISPLAY (90),
-BENCH_ISO_BOOT_TIMEOUT (300), BENCH_BOOT_MENU_TAPS (3),
-BENCH_PTS_TESTS, BENCH_OUT_DIR.
+BENCH_ISO_BOOT_TIMEOUT (300), BENCH_SSH_POLL_SECONDS (2), BENCH_BOOT_MENU_TAPS
+(3), BENCH_PTS_TESTS, BENCH_OUT_DIR.
 USAGE
 }
 
@@ -80,7 +82,8 @@ RAM=${BENCH_QEMU_RAM:-8192}
 CPUS=${BENCH_QEMU_CPUS:-4}
 DISK_SIZE=${BENCH_DISK_SIZE:-40G}
 CAP_SECONDS=${BENCH_OS_CAP_SECONDS:-1200}
-IDLE_SECONDS=${BENCH_PROBE_IDLE_SECONDS:-20}
+IDLE_SECONDS=${BENCH_PROBE_IDLE_SECONDS:-60}
+IDLE_START_UPTIME=${BENCH_IDLE_START_UPTIME:-300}
 HTTP_PORT=${BENCH_HTTP_PORT:-8099}
 VM_SSH_PORT=${BENCH_VM_SSH_PORT:-2240}
 VNC_BASE=${BENCH_VNC_DISPLAY:-90}
@@ -92,8 +95,8 @@ ROOT_PASSWORD=${SPACED_LIVE_ROOT_PASSWORD:-spaced}
 OUT_DIR=${BENCH_OUT_DIR:-$PROJECT_ROOT/build/bench}
 
 for value in "$HTTP_PORT" "$RAM" "$CPUS" "$CAP_SECONDS" "$IDLE_SECONDS" \
-             "$VM_SSH_PORT" "$VNC_BASE" "$BOOT_TIMEOUT" "$SSH_POLL" \
-             "$FREE_MIN_GB"; do
+             "$IDLE_START_UPTIME" "$VM_SSH_PORT" "$VNC_BASE" "$BOOT_TIMEOUT" \
+             "$SSH_POLL" "$FREE_MIN_GB"; do
     [[ "$value" =~ ^[0-9]+$ ]] || { echo "Invalid numeric VM setting: $value" >&2; exit 2; }
 done
 if [[ ! "$RUN_LABEL" =~ ^[A-Za-z0-9._-]+$ ]]; then
@@ -328,6 +331,7 @@ write_bootstrap() {
         echo "HOST=10.0.2.2"
         echo "PORT=$HTTP_PORT"
         echo "IDLE_SECONDS=$IDLE_SECONDS"
+        echo "IDLE_START_UPTIME=$IDLE_START_UPTIME"
         echo "CAP_SECONDS=$CAP_SECONDS"
         if [ "$rootcmd" = none ]; then
             # The guest already runs as root (ssh access): no privilege command,
@@ -533,6 +537,9 @@ METRICS = (
     'mem_used_mib',
     'process_count',
     'top10_rss_kib',
+    'settle_time_s',
+    'idle_sample_start_uptime_s',
+    'idle_status',
     'context_switches_per_s',
     'interrupts_per_s',
     'idle_cpu_percent',

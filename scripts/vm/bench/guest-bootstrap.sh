@@ -81,10 +81,14 @@ status() {
 } > "$BEACON"
 post "$LABEL/beacon" "$BEACON" || status "beacon failed"
 
-# 2. The f093 probe: the same metrics release-measure.sh reports.
+# 2. The f093 probe: the same metrics release-measure.sh reports. The idle
+#    window starts at the fixed guest uptime the runner passed (BENCH_IDLE_
+#    START_UPTIME), equal for every OS, so the idle numbers are comparable.
 if fetch guest-probe.sh "$WORK/guest-probe.sh"; then
     if command -v bash >/dev/null 2>&1; then
-        bash "$WORK/guest-probe.sh" --idle "${IDLE_SECONDS:-20}" \
+        BENCH_IDLE_START_UPTIME="${IDLE_START_UPTIME:-300}" \
+        BENCH_PROBE_IDLE_SECONDS="${IDLE_SECONDS:-60}" \
+            bash "$WORK/guest-probe.sh" --idle "${IDLE_SECONDS:-60}" \
             > "$WORK/probe.txt" 2>&1
     else
         printf 'SKIP: bash is not installed, the probe needs it\n' \

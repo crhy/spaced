@@ -20,6 +20,7 @@ RUNNER = BENCH / 'run-bench.sh'
 MATRIX = BENCH / 'matrix.conf'
 QMP_TYPE = BENCH / 'qmp-type.py'
 HTTP_REPORT = BENCH / 'http-report.py'
+PROBE = BENCH / 'guest-probe.sh'
 BOOTSTRAP = BENCH / 'guest-bootstrap.sh'
 GUEST_PTS = BENCH / 'guest-pts.sh'
 
@@ -249,9 +250,46 @@ class BenchSweepTests(unittest.TestCase):
         self.assertIn('timeout', pts)
         for manager in ('apt-get', 'dnf', 'xbps-install', 'pacman'):
             self.assertIn(manager, pts)
-        self.assertIn('batch-benchmark', pts)
+        # task b03: PTS runs with `batch-run` under a per-test timeout, never
+        # `batch-benchmark` answered with defaults (that hung on the prompts).
+        self.assertIn('batch-run', pts)
+        self.assertIn('batch-install', pts)
+        self.assertIn('STEP=', pts)
+        # the explicit answers that used to be left ON by `printf | batch-setup`
+        for prompt in ('PromptForTestIdentifier', 'PromptForTestDescription',
+                       'PromptSaveName'):
+            self.assertIn(prompt, pts)
+        # the result name/identifier/description handed in through the env
+        for name_env in ('TEST_RESULTS_NAME', 'TEST_RESULTS_IDENTIFIER',
+                         'TEST_RESULTS_DESCRIPTION'):
+            self.assertIn(name_env, pts)
+        self.assertIn('user-config-get', pts)
         self.assertIn('pts-results.tar', pts)
         self.assertIn('phoronix-test-suite', pts)
+
+    def test_idle_window_starts_at_the_same_fixed_uptime_for_every_os(self):
+        # rhY 2026-11-22 / task b03: the old probe sampled each OS at its own
+        # ready time, comparing boot storms not idle. The idle window now opens
+        # at a fixed guest uptime and carries the new columns through the whole
+        # harness (probe emits them, runner writes them, bootstrap passes them).
+        probe = PROBE.read_text(encoding='utf-8')
+        for metric in ('idle_sample_start_uptime_s', 'idle_status',
+                       'settle_time_s'):
+            self.assertIn(f'info {metric}', probe,
+                          f'{metric} is not emitted by the probe')
+        self.assertIn('BENCH_IDLE_START_UPTIME', probe)
+        self.assertIn('late', probe, 'the probe must mark a late desktop')
+        # the window opens at the fixed point, not at the ready time
+        self.assertIn('target_start', probe)
+        self.assertIn('IDLE_START_UPTIME',
+                      RUNNER.read_text(encoding='utf-8'))
+        for metric in ('idle_sample_start_uptime_s', 'idle_status',
+                       'settle_time_s'):
+            self.assertIn(metric, RUNNER.read_text(encoding='utf-8'),
+                          f'{metric} is not a runner TSV column')
+        bootstrap = BOOTSTRAP.read_text(encoding='utf-8')
+        self.assertIn('IDLE_START_UPTIME', bootstrap,
+                      'the guest probe is never told where to start the window')
 
 
 if __name__ == '__main__':

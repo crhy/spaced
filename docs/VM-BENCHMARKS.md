@@ -24,6 +24,9 @@ columns.
 | `mem_used_mib` | `/proc/meminfo` | `free(1)`'s used column: total − free − buffers − cached |
 | `process_count` | `/proc/[0-9]*` | processes running |
 | `top10_rss_kib` | `/proc/<pid>/status` `VmRSS` | resident memory of the 10 biggest processes |
+| `settle_time_s` | `/proc/stat` `cpu` | first guest uptime after desktop-ready at which CPU in use stays under 1% for 10 s in a row; empty if it never settles before the window |
+| `idle_sample_start_uptime_s` | `/proc/uptime` | the guest uptime the 60 s idle window actually started at |
+| `idle_status` | derived | `ok` when the desktop was up by the fixed start point, `late` when it came later and the idle window was not measured |
 | `context_switches_per_s` | `/proc/stat` `ctxt` | scheduler wake-ups per second over the idle window |
 | `interrupts_per_s` | `/proc/stat` `intr` | interrupt counts per second over the idle window |
 | `idle_cpu_percent` | `/proc/stat` `cpu` line | CPU percentage in use while idle, the same formula `scripts/vm/qemu/release-measure.sh` uses |
@@ -46,9 +49,25 @@ which is how the probe is exercised without a VM:
 bash scripts/vm/bench/guest-probe.sh --selftest
 ```
 
-`--idle <seconds>` sets the idle window (default 10, or
+`--idle <seconds>` sets the idle window (default 60, or
 `BENCH_PROBE_IDLE_SECONDS`). Exit codes: 0 = every metric emitted or explicitly
 skipped, 1 = `/proc` is unreadable, 2 = bad arguments.
+
+### The fixed idle point (task b03, issue #424)
+
+rhY 2026-11-22 found the sweep's idle numbers were not comparable: task b02 saw
+Spaced at 29.5% CPU sampled 11 s after boot but 0.05% at 180 s, because the old
+probe sampled each OS at its own ready time — it was measuring each distro's
+desktop autostart storm, not idle. The probe now starts the 60 s idle window at
+the **same fixed guest uptime for every OS**: `BENCH_IDLE_START_UPTIME`
+(default 300, equal to the runner's 300 s desktop timeout, so every OS that
+booted is on its desktop by then). A distro whose desktop comes later than that
+point is marked `idle_status=late` and not measured, rather than being sampled at
+a different uptime. `settle_time_s` records how long after desktop-ready the
+machine actually went quiet (polling `/proc/stat` every 1 s until CPU in use
+stays under 1% for 10 s in a row), and `idle_sample_start_uptime_s` records the
+uptime the window opened at. The Phoronix Test Suite set is run **after** this
+idle window, so the benchmark never competes with the idle measurement.
 
 ## The sweep runner: `scripts/vm/bench/run-bench.sh`
 
@@ -98,22 +117,52 @@ longer package it, so those fall back to the official upstream release (10.8.4)
 plus `php-cli php-xml php-zip unzip build-essential`, which is what PTS itself
 needs to unpack and build its tests; the fallback is recorded in the run log so
 a version difference between distros is visible. It then runs
-`batch-setup` once, `batch-install`/`batch-benchmark` over the recorded test set
-with `BENCH_OS_CAP_SECONDS` (default 1200) as the per-OS cap, and posts back
+`batch-install`/`batch-run` over the recorded test set
+with `BENCH_OS_CAP_SECONDS` as the per-OS cap, and posts back
 `pts.tsv`, the PTS status and a tar of the PTS result files, so the comparator
 can rank the same tests across distros and the raw PTS output survives the VM.
 
-Two fixes to PTS 10.8.4 itself are part of that setup, both recorded in the run
+Three fixes to PTS 10.8.4 itself are part of that setup, all recorded in the run
 log: PHP 8.4 makes `phodevi_memory` fatal on QEMU's non-numeric virtual DIMM
 size, and the `load_dynamic_result_viewer` module is renamed out of PTS's module
 directory because it forks a `php -S` result viewer and waits for a browser that
-a headless live session never opens, which hangs every `batch-benchmark` before
-its first test. The cap is measured from the desktop being reached, not from the
-boot: a distro that spends ten minutes on `apt-get install build-essential`
-still gets its tests. Even so, 1200s only covers the probe plus a test install —
-`pts/compress-zstd` and `pts/openssl` build or compress for well over half an
-hour on four vCPUs, so a real benchmark wants a much larger
-`BENCH_OS_CAP_SECONDS`.
+a headless live session never opens, which hangs every run before its first test.
+
+The third fix is the one task b03 added, and it is why the first sweep produced
+**no PTS number at all**: `guest-pts.sh` used to answer PTS's one-time batch
+questions with `printf "\n\n\n..." | batch-setup`, i.e. every *default*, and the
+defaults turn ON "prompt for test identifier", "prompt for test description",
+"prompt for saved results file-name" and auto-upload. So `batch-benchmark`
+printed the system-info block (spectre/vmscape lines) and then **hung waiting for
+a test name** nobody typed; the host saw `captured=0 rc=124` at the cap, and
+`pts/compress-zstd` etc. logged `no-result-line` / `run-failed-rc-143`. The fix
+names every batch option *explicitly* (`PromptForTestIdentifier`,
+`PromptForTestDescription`, `PromptSaveName` = FALSE, `SaveResults` = TRUE,
+`UploadResults`/`OpenBrowser` = FALSE, `RunAllTestCombinations` = FALSE), marks
+the suite configured, verifies the result with `phoronix-test-suite
+user-config-get`, hands the result name/identifier/description through
+`TEST_RESULTS_NAME`/`TEST_RESULTS_IDENTIFIER`/`TEST_RESULTS_DESCRIPTION`, and
+runs the set with `batch-run`, stdin from `/dev/null`, under a per-test timeout
+that logs `STEP=install`/`STEP=run` so a hang names the step it was in. The
+result each test writes is PTS's own `composite.xml`, copied into the
+`pts-results.tar`, and the `*-*-pts.tsv` row is read from it.
+
+The sweep runs `pts/compress-zstd` plus short single-configuration CPU tests that
+exist and build on every matrix family (sqlite/c-ray/openssl), all offline after
+their install. The cap is measured from the desktop being reached, not from the
+boot: a distro that spends minutes on `apt-get install build-essential` still
+gets its tests, and the fixed idle window (300 s boot-to-desktop + a 60 s window)
+runs before the tests, so the per-OS cap has to cover it. The full nine-OS sweep
+is:
+
+```
+BENCH_OS_CAP_SECONDS=<measured> bash scripts/vm/bench/run-bench.sh \
+    scripts/vm/bench/matrix.conf <run-label>
+```
+
+run in the background with its log polled; the measured per-OS run times and the
+`BENCH_OS_CAP_SECONDS` they justify are recorded in `tasks/notes-b03-*.md` and
+below once the sweep has been taken.
 
 Every row also records the host's load average at the time it was measured and
 whether the Strata engine (`pgrep -x strata`) was running, because a number

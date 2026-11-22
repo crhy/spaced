@@ -12,10 +12,23 @@
 #
 # Env in: LABEL DISTRO SUDO CAP_SECONDS PTS_TESTS WORK HOST PORT
 # Nothing is skipped silently: every install or run failure is a status= value.
+#
+# Why the sweep used to print NO PTS number (issue #424, task b03):
+#   batch-setup was answered with `printf "\n\n\n..."`, i.e. every DEFAULT, and
+#   the defaults turn ON "prompt for test identifier", "prompt for test
+#   description", "prompt for saved results file-name" and auto-upload. So
+#   batch-benchmark printed the system-info block and then hung waiting for a
+#   test name that nobody typed. The run log ended right after the spectre/vmscape
+#   lines and the host saw `captured=0 rc=124` at the cap. The fix is to answer
+#   every batch option EXPLICITLY (off for the prompts, on for saving, off for
+#   upload/viewer) and to hand the result name/identifier/description through
+#   TEST_RESULTS_NAME/TEST_RESULTS_IDENTIFIER/TEST_RESULTS_DESCRIPTION, then run
+#   with `batch-run`, stdin from /dev/null, under a per-test timeout that marks
+#   which step it was in.
 
 set -u
 
-TESTS=${PTS_TESTS:-"pts/compress-zstd pts/sqlite-speedtest pts/openssl"}
+TESTS=${PTS_TESTS:-"pts/compress-zstd pts/sqlite-speedtest pts/c-ray"}
 PTS_VERSION=${PTS_VERSION:-10.8.4}
 START=$(date +%s)
 PTSDIR=$WORK/pts
@@ -56,33 +69,39 @@ urllib.request.urlopen(request, timeout=60).read()
     wget --post-file="$WORK/$leaf" -q -O /dev/null "$url" >/dev/null 2>&1
 }
 
+# What PHP/devel each family needs on top of the distro PTS package, so the
+# tests build offline. Every family is recorded in install.log.
 install_pts() {
     if command -v phoronix-test-suite >/dev/null 2>&1; then
-        note "already installed"
+        note "install family=$DISTRO: already installed"
         return 0
     fi
     case "$DISTRO" in
         debian|ubuntu|mint|zorin|mx|spaced)
+            note "install family=apt($DISTRO): apt-get update && apt-get install phoronix-test-suite php-cli php-xml php-zip unzip build-essential"
             $SUDO apt-get update >> "$PTSDIR/install.log" 2>&1
             # env, not a bare assignment prefix: once $SUDO expands, dash stops
             # reading an assignment as one and would exec the assignment itself.
             $SUDO env DEBIAN_FRONTEND=noninteractive apt-get install -y \
                 phoronix-test-suite >> "$PTSDIR/install.log" 2>&1 ;;
         fedora)
+            note "install family=dnf($DISTRO): dnf install phoronix-test-suite (pulls php) + @development-tools php-cli php-xml php-zip unzip"
             $SUDO dnf install -y phoronix-test-suite \
                 >> "$PTSDIR/install.log" 2>&1 ;;
         void)
+            note "install family=xbps($DISTRO): xbps-install phoronix-test-suite (pulls php8) + base-devel"
             $SUDO xbps-install -Sy phoronix-test-suite \
                 >> "$PTSDIR/install.log" 2>&1 ;;
         cachyos|arch)
+            note "install family=pacman($DISTRO): pacman -S phoronix-test-suite (pulls php) + base-devel"
             $SUDO pacman -Sy --noconfirm phoronix-test-suite \
                 >> "$PTSDIR/install.log" 2>&1 ;;
         *)
-            note "no known package manager for $DISTRO"
+            note "install family=none($DISTRO): no known package manager"
             return 1 ;;
     esac
     if command -v phoronix-test-suite >/dev/null 2>&1; then
-        note "distro package"
+        note "install family=$DISTRO: distro package installed"
         return 0
     fi
     # Debian and Devuan no longer package PTS, so fall back to the official
@@ -90,9 +109,9 @@ install_pts() {
     # distro's package manager is expected to carry it.
     case "$DISTRO" in
         debian|ubuntu|mint|zorin|mx|spaced) ;;
-        *) return 1 ;;
+        *) note "install family=$DISTRO: distro package not found"; return 1 ;;
     esac
-    note "no distro package; upstream $PTS_VERSION deb"
+    note "install family=apt($DISTRO): no distro package; upstream $PTS_VERSION deb + php-cli php-xml php-zip unzip build-essential"
     # php-cli runs PTS, php-zip/unzip extract the test archives (PTS 10.8.4
     # cannot read its own .zip downloads without them), build-essential and the
     # -dev headers build the tests themselves.
@@ -116,36 +135,55 @@ install_pts() {
 }
 
 # PTS answers its one-time questions here so batch mode is configured before
-# any test runs: an unconfigured batch mode makes batch-benchmark refuse to
-# print any result line.
+# any test runs: an unconfigured batch mode makes batch-run refuse to print any
+# result line, and answering batch-setup with defaults (the old bug) turns the
+# identifier/description/save-name prompts ON, which hangs every run right
+# after the system-info block. Every option is now named explicitly.
 configure_pts() {
     export PTS_RESULT_DIRECTORY=$PTSDIR/results
-    $SUDO mkdir -p "$PTSDIR/results" 2>/dev/null
-    mkdir -p "$HOME/.phoronix-test-suite" 2>/dev/null
+    mkdir -p "$HOME/.phoronix-test-suite" "$PTSDIR/results" 2>/dev/null
     # The graph options below are not enough: PTS loads load_dynamic_result_viewer
     # at start-up, which forks `php -S localhost:PORT` and waits for a browser to
     # poll it. In a headless live session with PHP 8.4 that server never answers,
-    # so every batch-benchmark hangs before the first test starts. PTS globs
+    # so every batch run hangs before the first test starts. PTS globs
     # *.php in its module directory, so renaming the file keeps it unloaded.
     $SUDO mv -f \
         /usr/share/phoronix-test-suite/pts-core/modules/load_dynamic_result_viewer.php \
         /usr/share/phoronix-test-suite/pts-core/modules/load_dynamic_result_viewer.php.disabled \
         >> "$PTSDIR/batch-setup.log" 2>&1 || true
-    printf "\n\n\n\n\n\n\n\n" | timeout 120 phoronix-test-suite batch-setup \
-        > "$PTSDIR/batch-setup.log" 2>&1
-    # PTS 10 tries to open a dynamic result viewer (it forks `php -S` and waits
-    # on a browser) after every batch run; there is no browser in a headless
-    # live session, so the run never ends.
-    timeout 60 phoronix-test-suite option BatchRunDisplayDynamicGraph FALSE \
-        >> "$PTSDIR/batch-setup.log" 2>&1
-    timeout 60 phoronix-test-suite option BatchRunDisplayGraph FALSE \
-        >> "$PTSDIR/batch-setup.log" 2>&1
+    # EXPLICIT answers, never the defaults. The three Prompt* options are what
+    # the old `printf "\n\n\n" | batch-setup` left ON; SaveResults=TRUE keeps
+    # the composite.xml the comparator ranks; UploadResults/OpenBrowser FALSE
+    # keep the run network-light and browser-free.
+    note "configure: setting PTS batch options explicitly"
+    for opt in \
+        "BatchRunDisplayDynamicGraph FALSE" \
+        "BatchRunDisplayGraph FALSE" \
+        "SaveResults TRUE" \
+        "OpenBrowser FALSE" \
+        "UploadResults FALSE" \
+        "PromptForTestIdentifier FALSE" \
+        "PromptForTestDescription FALSE" \
+        "PromptSaveName FALSE" \
+        "RunAllTestCombinations FALSE" \
+        "NetworkService FALSE" \
+        "NoColorSupport TRUE"; do
+        name=${opt% *}
+        value=${opt#* }
+        timeout 60 phoronix-test-suite option "$name" "$value" \
+            >> "$PTSDIR/batch-setup.log" 2>&1
+    done
+    # Mark configured so PTS never asks its one-time questions again.
     printf 'True\n' | timeout 60 phoronix-test-suite force-configuration \
         > /dev/null 2>&1
-    yes 2>/dev/null | timeout 60 phoronix-test-suite system-info \
-        > "$PTSDIR/system-info.log" 2>&1
+    # Prove the config actually took, so an option PTS refused to set is visible
+    # in the log rather than hanging the run later.
+    timeout 60 phoronix-test-suite user-config-get > "$PTSDIR/user-config.log" 2>&1
+    note "configure: user-config-get captured to user-config.log"
 }
 
+# The result name/identifier/description PTS would otherwise prompt for.
+# batch-run with these set and the Prompt* options FALSE never waits on stdin.
 run_one() {
     test=$1
     short=$(printf '%s' "$test" | tr -c 'A-Za-z0-9._-' '_')
@@ -158,17 +196,27 @@ run_one() {
     fi
     # </dev/null, not `yes |`: an installer reading its stdin from a yes-pipe
     # dies with "cat: write error: Broken pipe" once PTS stops asking.
+    note "STEP=install test=$test budget=${budget}s"
     timeout "$budget" phoronix-test-suite batch-install \
         "$test" < /dev/null > "$PTSDIR/install-$short.log" 2>&1
+    rc=$?
+    note "STEP=install-done test=$test rc=$rc"
     budget=$(remaining)
     if [ "$budget" -lt 30 ]; then
         printf '%s\t%s\t\t\t\tcap-reached-before-run\n' \
             "$LABEL" "$test" >> "$WORK/pts.tsv"
         return
     fi
-    timeout "$budget" phoronix-test-suite batch-benchmark \
+    # A per-test result name keeps batch-run from asking for one; PTS writes the
+    # composite.xml under this name so the value can be re-checked line by line.
+    name="b03-$short"
+    note "STEP=run test=$test budget=${budget}s"
+    TEST_RESULTS_NAME="$name" TEST_RESULTS_IDENTIFIER="$name" \
+    TEST_RESULTS_DESCRIPTION="$test on $DISTRO ($LABEL)" \
+        timeout "$budget" phoronix-test-suite batch-run \
         "$test" < /dev/null > "$log" 2>&1
     rc=$?
+    note "STEP=run-done test=$test rc=$rc"
     if [ "$rc" -ne 0 ] && [ "$rc" -ne 124 ] && ! grep -q 'Test Total Time' "$log"; then
         printf '%s\t%s\t\t\t\trun-failed-rc-%s\n' "$LABEL" "$test" "$rc" \
             >> "$WORK/pts.tsv"
@@ -209,8 +257,8 @@ if install_pts; then
         post_partial pts.tsv
         post_partial pts-status.txt
     done
-    # PTS's own files: result XMLs plus the raw logs, so the numbers can be
-    # re-checked line by line later.
+    # PTS's own files: result XMLs (composite.xml included) plus the raw logs,
+    # so the numbers can be re-checked line by line later.
     find "$HOME/.phoronix-test-suite" -type f \
         \( -name '*.xml' -o -name '*result*' \) 2>/dev/null |
         while read -r found; do
