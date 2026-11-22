@@ -30,6 +30,14 @@ set -u
 
 TESTS=${PTS_TESTS:-"pts/compress-zstd pts/sqlite-speedtest pts/c-ray"}
 PTS_VERSION=${PTS_VERSION:-10.8.4}
+# download with whatever the live image has (Ubuntu's live desktop has no curl)
+dl() { if command -v curl >/dev/null 2>&1; then curl -sSL -o "$1" "$2"; else wget -q -O "$1" "$2"; fi >> "$PTSDIR/install.log" 2>&1; }
+# PTS 10.8.4 multiplies the DIMM count by a non-numeric QEMU memory size; PHP 8.4 makes that a fatal TypeError.
+pts_memory_guard() {
+    $SUDO sed -i "s/if((\$mem_count \* \$t)/if(\$t > 0 \&\& (\$mem_count * \$t)/" \
+        /usr/share/phoronix-test-suite/pts-core/objects/phodevi/components/phodevi_memory.php \
+        >> "$PTSDIR/install.log" 2>&1
+}
 START=$(date +%s)
 PTSDIR=$WORK/pts
 
@@ -76,8 +84,21 @@ install_pts() {
         note "install family=$DISTRO: already installed"
         return 0
     fi
+    # MX live: `sudo -n` needs a password; the live user's is "demo".
+    if [ "$DISTRO" = mx ] && ! sudo -n true 2>/dev/null; then
+        printf '#!/bin/sh\necho demo\n' > "$PTSDIR/askpass"; chmod +x "$PTSDIR/askpass"
+        export SUDO_ASKPASS="$PTSDIR/askpass"; SUDO="sudo -A"; note "sudo: mx live password via askpass"
+    fi
     case "$DISTRO" in
         debian|ubuntu|mint|zorin|mx|spaced)
+            # Zorin/Ubuntu live start their own updater: wait for its locks, else debconf is
+            # "locked by another process" and php never gets configured.
+            for _i in $(seq 1 60); do
+                pgrep -x apt-get >/dev/null || pgrep -x apt >/dev/null || pgrep -x dpkg >/dev/null || \
+                    pgrep -f unattended-upgrade >/dev/null || pgrep -x packagekitd >/dev/null || break
+                sleep 5
+            done
+            $SUDO dpkg --configure -a >> "$PTSDIR/install.log" 2>&1
             note "install family=apt($DISTRO): apt-get update && apt-get install phoronix-test-suite php-cli php-xml php-zip unzip build-essential"
             $SUDO apt-get update >> "$PTSDIR/install.log" 2>&1
             # env, not a bare assignment prefix: once $SUDO expands, dash stops
@@ -101,7 +122,18 @@ install_pts() {
         cachyos|arch)
             note "install family=pacman($DISTRO): pacman -S phoronix-test-suite (pulls php) + base-devel"
             $SUDO pacman -Sy --noconfirm phoronix-test-suite \
-                >> "$PTSDIR/install.log" 2>&1 ;;
+                >> "$PTSDIR/install.log" 2>&1 || {
+                # Arch/CachyOS carry PTS only in the AUR: install the official upstream tarball
+                note "install family=pacman($DISTRO): not in repos; upstream $PTS_VERSION tarball + php base-devel unzip"
+                $SUDO pacman -S --noconfirm --needed php unzip base-devel >> "$PTSDIR/install.log" 2>&1
+                for ini in /etc/php*/php.ini /etc/php/php.ini; do
+                    [ -f "$ini" ] && $SUDO sed -i -e 's/^;[[:space:]]*extension=\(openssl\|zip\|iconv\)/extension=\1/' "$ini"
+                done
+                dl "$PTSDIR/pts.tar.gz" "https://github.com/phoronix-test-suite/phoronix-test-suite/releases/download/v$PTS_VERSION/phoronix-test-suite-$PTS_VERSION.tar.gz"
+                tar -xzf "$PTSDIR/pts.tar.gz" -C "$PTSDIR" >> "$PTSDIR/install.log" 2>&1
+                (cd "$PTSDIR/phoronix-test-suite" && $SUDO ./install-sh /usr) >> "$PTSDIR/install.log" 2>&1
+                pts_memory_guard
+            } ;;
         *)
             note "install family=none($DISTRO): no known package manager"
             return 1 ;;
@@ -133,9 +165,9 @@ install_pts() {
     $SUDO env DEBIAN_FRONTEND=noninteractive apt-get install -y php-cli \
         php-xml php-zip unzip build-essential pkg-config zlib1g-dev \
         libssl-dev libsqlite3-dev >> "$PTSDIR/install.log" 2>&1
-    curl -sSL -o "$PTSDIR/pts.deb" \
-        "https://github.com/phoronix-test-suite/phoronix-test-suite/releases/download/v$PTS_VERSION/phoronix-test-suite_${PTS_VERSION}_all.deb" \
-        >> "$PTSDIR/install.log" 2>&1
+    dl "$PTSDIR/pts.deb" \
+        "https://github.com/phoronix-test-suite/phoronix-test-suite/releases/download/v$PTS_VERSION/phoronix-test-suite_${PTS_VERSION}_all.deb"
+    $SUDO dpkg --configure -a >> "$PTSDIR/install.log" 2>&1
     $SUDO env DEBIAN_FRONTEND=noninteractive apt-get install -y \
         "$PTSDIR/pts.deb" >> "$PTSDIR/install.log" 2>&1
     # PTS 10.8.4 (the last release, 2022) multiplies the DIMM count by a memory
@@ -143,9 +175,7 @@ install_pts() {
     # that into a fatal TypeError that kills every test run. A numeric guard on
     # the same condition is the smallest fix; the value it skips is only used
     # to guess how many sticks a machine has, never a benchmark result.
-    $SUDO sed -i "s/if((\$mem_count \* \$t)/if(\$t > 0 \&\& (\$mem_count * \$t)/" \
-        /usr/share/phoronix-test-suite/pts-core/objects/phodevi/components/phodevi_memory.php \
-        >> "$PTSDIR/install.log" 2>&1
+    pts_memory_guard
     command -v phoronix-test-suite >/dev/null 2>&1
 }
 
