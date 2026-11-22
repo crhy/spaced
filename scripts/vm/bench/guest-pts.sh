@@ -90,7 +90,13 @@ install_pts() {
                 >> "$PTSDIR/install.log" 2>&1 ;;
         void)
             note "install family=xbps($DISTRO): xbps-install phoronix-test-suite (pulls php8) + base-devel"
-            $SUDO xbps-install -Sy phoronix-test-suite \
+            # The live image's xbps is older than the repository's TLS/metadata
+            # scheme and refuses every package ("The 'xbps' package must be
+            # updated, please run xbps-install -u xbps"). Update the package
+            # manager itself first, then the test toolchain.
+            $SUDO xbps-install -Syu xbps \
+                >> "$PTSDIR/install.log" 2>&1
+            $SUDO xbps-install -Sy phoronix-test-suite base-devel \
                 >> "$PTSDIR/install.log" 2>&1 ;;
         cachyos|arch)
             note "install family=pacman($DISTRO): pacman -S phoronix-test-suite (pulls php) + base-devel"
