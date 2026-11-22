@@ -139,13 +139,22 @@ a test name** nobody typed; the host saw `captured=0 rc=124` at the cap, and
 names every batch option *explicitly* (`PromptForTestIdentifier`,
 `PromptForTestDescription`, `PromptSaveName` = FALSE, `SaveResults` = TRUE,
 `UploadResults`/`OpenBrowser` = FALSE, `RunAllTestCombinations` = FALSE), marks
-the suite configured, verifies the result with `phoronix-test-suite
-user-config-get`, hands the result name/identifier/description through
+the suite configured, verifies the result by reading the `user-config.xml`
+`batch-setup` wrote (10.8.4 has no `user-config-get` subcommand; as root the
+file lands under `/var/lib/phoronix-test-suite`), hands the result
+name/identifier/description through
 `TEST_RESULTS_NAME`/`TEST_RESULTS_IDENTIFIER`/`TEST_RESULTS_DESCRIPTION`, and
-runs the set with `batch-run`, stdin from `/dev/null`, under a per-test timeout
-that logs `STEP=install`/`STEP=run` so a hang names the step it was in. The
-result each test writes is PTS's own `composite.xml`, copied into the
-`pts-results.tar`, and the `*-*-pts.tsv` row is read from it.
+runs the set with `batch-run` under a per-test timeout that logs
+`STEP=install`/`STEP=run` so a hang names the step it was in. The option menu
+`batch-run` still offers ("Multiple items can be selected…") is answered with
+`1` (the first, short option — c-ray 1080p, zstd level 3): `/dev/null` and
+empty lines are both *rejected* by that menu, and every rejected read re-prints
+it forever (once into a 3.3 GB run log). The result each test writes is PTS's
+own `composite.xml` — under the *system* result directory when the guest runs
+as root, in a directory whose name strips the underscores from the result name —
+copied into the `pts-results.tar`, and the `*-*-pts.tsv` row is read from it
+(stdout has no stable result line: `compress-zstd` prints only its
+`Average: … MB/s` blocks).
 
 The sweep runs `pts/compress-zstd` plus short single-configuration CPU tests that
 exist and build on every matrix family (sqlite/c-ray/openssl), all offline after
