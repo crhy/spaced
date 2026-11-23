@@ -1,0 +1,392 @@
+{
+  "measured": "2026-11-22",
+  "distros": [
+    {
+      "distro": "Spaced 11.26.3",
+      "status": "Measured",
+      "boot_s": 26,
+      "settle_s": 24.6,
+      "ram_mib": 236.6,
+      "processes": 131,
+      "idle_cpu_pct": 0.24,
+      "ctxt_per_s": 165,
+      "idle_start_s": 300.4
+    },
+    {
+      "distro": "Debian 13.8",
+      "status": "Measured",
+      "boot_s": 84,
+      "settle_s": 63.6,
+      "ram_mib": 447.3,
+      "processes": 186,
+      "idle_cpu_pct": 0.25,
+      "ctxt_per_s": 111,
+      "idle_start_s": 300.2
+    },
+    {
+      "distro": "Mint 22.3",
+      "status": "Measured",
+      "boot_s": 81,
+      "settle_s": 67,
+      "ram_mib": 563.6,
+      "processes": 184,
+      "idle_cpu_pct": 0.24,
+      "ctxt_per_s": 121.5,
+      "idle_start_s": 300.7
+    },
+    {
+      "distro": "Void",
+      "status": "Measured",
+      "boot_s": 83,
+      "settle_s": 63.8,
+      "ram_mib": 306.5,
+      "processes": 174,
+      "idle_cpu_pct": 0.28,
+      "ctxt_per_s": 134.8,
+      "idle_start_s": 300.8
+    },
+    {
+      "distro": "Ubuntu 26.04.1",
+      "status": "Measured",
+      "boot_s": 126,
+      "settle_s": 107.8,
+      "ram_mib": 1278.6,
+      "processes": 255,
+      "idle_cpu_pct": 1.48,
+      "ctxt_per_s": 339.3,
+      "idle_start_s": 301
+    },
+    {
+      "distro": "Zorin 18.1",
+      "status": "Measured",
+      "boot_s": 172,
+      "settle_s": 154,
+      "ram_mib": 921.9,
+      "processes": 183,
+      "idle_cpu_pct": 0.4,
+      "ctxt_per_s": 150.8,
+      "idle_start_s": 300.6
+    },
+    {
+      "distro": "CachyOS",
+      "status": "Measured",
+      "boot_s": 81,
+      "settle_s": 63.6,
+      "ram_mib": 918.3,
+      "processes": 194,
+      "idle_cpu_pct": 0.35,
+      "ctxt_per_s": 236,
+      "idle_start_s": 300.1
+    },
+    {
+      "distro": "MX 25.3",
+      "status": "Measured",
+      "boot_s": 81,
+      "settle_s": 42.6,
+      "ram_mib": 656.8,
+      "processes": 200,
+      "idle_cpu_pct": 0.61,
+      "ctxt_per_s": 200.4,
+      "idle_start_s": 300.3
+    }
+  ],
+  "phoronix": [
+    {
+      "distro": "Spaced 11.26.3",
+      "bench": "zstd compression",
+      "value": 1528.8,
+      "unit": "MB/s",
+      "better": "higher",
+      "test": "pts/compress-zstd",
+      "metric": "compression-level-3-compression-speed"
+    },
+    {
+      "distro": "Spaced 11.26.3",
+      "bench": "zstd decompression",
+      "value": 1737.3,
+      "unit": "MB/s",
+      "better": "higher",
+      "test": "pts/compress-zstd",
+      "metric": "compression-level-3-decompression-speed"
+    },
+    {
+      "distro": "Spaced 11.26.3",
+      "bench": "SQLite speed test",
+      "value": 53.159,
+      "unit": "Seconds",
+      "better": "lower",
+      "test": "pts/sqlite-speedtest",
+      "metric": "timed-time-size-1-000"
+    },
+    {
+      "distro": "Spaced 11.26.3",
+      "bench": "OpenSSL RSA-4096 sign",
+      "value": 3454.2,
+      "unit": "sign/s",
+      "better": "higher",
+      "test": "pts/openssl",
+      "metric": "algorithm-rsa4096"
+    },
+    {
+      "distro": "Spaced 11.26.3",
+      "bench": "OpenSSL RSA-4096 verify",
+      "value": 87199.1,
+      "unit": "verify/s",
+      "better": "higher",
+      "test": "pts/openssl",
+      "metric": "algorithm-rsa4096"
+    },
+    {
+      "distro": "Debian 13.8",
+      "bench": "zstd compression",
+      "value": 1504.9,
+      "unit": "MB/s",
+      "better": "higher",
+      "test": "pts/compress-zstd",
+      "metric": "compression-level-3-compression-speed"
+    },
+    {
+      "distro": "Debian 13.8",
+      "bench": "OpenSSL RSA-4096 sign",
+      "value": 3449.7,
+      "unit": "sign/s",
+      "better": "higher",
+      "test": "pts/openssl",
+      "metric": "algorithm-rsa4096"
+    },
+    {
+      "distro": "Debian 13.8",
+      "bench": "OpenSSL RSA-4096 verify",
+      "value": 87752.6,
+      "unit": "verify/s",
+      "better": "higher",
+      "test": "pts/openssl",
+      "metric": "algorithm-rsa4096"
+    },
+    {
+      "distro": "Mint 22.3",
+      "bench": "zstd compression",
+      "value": 1426.5,
+      "unit": "MB/s",
+      "better": "higher",
+      "test": "pts/compress-zstd",
+      "metric": "compression-level-3-compression-speed"
+    },
+    {
+      "distro": "Mint 22.3",
+      "bench": "SQLite speed test",
+      "value": 58.035,
+      "unit": "Seconds",
+      "better": "lower",
+      "test": "pts/sqlite-speedtest",
+      "metric": "timed-time-size-1-000"
+    },
+    {
+      "distro": "Mint 22.3",
+      "bench": "OpenSSL RSA-4096 sign",
+      "value": 3441.8,
+      "unit": "sign/s",
+      "better": "higher",
+      "test": "pts/openssl",
+      "metric": "algorithm-rsa4096"
+    },
+    {
+      "distro": "Mint 22.3",
+      "bench": "OpenSSL RSA-4096 verify",
+      "value": 87413.6,
+      "unit": "verify/s",
+      "better": "higher",
+      "test": "pts/openssl",
+      "metric": "algorithm-rsa4096"
+    },
+    {
+      "distro": "Void",
+      "bench": "zstd compression",
+      "value": 1442.4,
+      "unit": "MB/s",
+      "better": "higher",
+      "test": "pts/compress-zstd",
+      "metric": "compression-level-3-compression-speed"
+    },
+    {
+      "distro": "Void",
+      "bench": "OpenSSL RSA-4096 sign",
+      "value": 3437.7,
+      "unit": "sign/s",
+      "better": "higher",
+      "test": "pts/openssl",
+      "metric": "algorithm-rsa4096"
+    },
+    {
+      "distro": "Void",
+      "bench": "OpenSSL RSA-4096 verify",
+      "value": 87486.7,
+      "unit": "verify/s",
+      "better": "higher",
+      "test": "pts/openssl",
+      "metric": "algorithm-rsa4096"
+    },
+    {
+      "distro": "Ubuntu 26.04.1",
+      "bench": "zstd compression",
+      "value": 1423.2,
+      "unit": "MB/s",
+      "better": "higher",
+      "test": "pts/compress-zstd",
+      "metric": "compression-level-3-compression-speed"
+    },
+    {
+      "distro": "Ubuntu 26.04.1",
+      "bench": "SQLite speed test",
+      "value": 56.214,
+      "unit": "Seconds",
+      "better": "lower",
+      "test": "pts/sqlite-speedtest",
+      "metric": "timed-time-size-1-000"
+    },
+    {
+      "distro": "Ubuntu 26.04.1",
+      "bench": "OpenSSL RSA-4096 sign",
+      "value": 3441,
+      "unit": "sign/s",
+      "better": "higher",
+      "test": "pts/openssl",
+      "metric": "algorithm-rsa4096"
+    },
+    {
+      "distro": "Ubuntu 26.04.1",
+      "bench": "OpenSSL RSA-4096 verify",
+      "value": 87129.6,
+      "unit": "verify/s",
+      "better": "higher",
+      "test": "pts/openssl",
+      "metric": "algorithm-rsa4096"
+    },
+    {
+      "distro": "Zorin 18.1",
+      "bench": "zstd compression",
+      "value": 1420.6,
+      "unit": "MB/s",
+      "better": "higher",
+      "test": "pts/compress-zstd",
+      "metric": "compression-level-3-compression-speed"
+    },
+    {
+      "distro": "Zorin 18.1",
+      "bench": "zstd decompression",
+      "value": 1943.7,
+      "unit": "MB/s",
+      "better": "higher",
+      "test": "pts/compress-zstd",
+      "metric": "compression-level-3-decompression-speed"
+    },
+    {
+      "distro": "Zorin 18.1",
+      "bench": "SQLite speed test",
+      "value": 58.457,
+      "unit": "Seconds",
+      "better": "lower",
+      "test": "pts/sqlite-speedtest",
+      "metric": "timed-time-size-1-000"
+    },
+    {
+      "distro": "Zorin 18.1",
+      "bench": "OpenSSL RSA-4096 sign",
+      "value": 3431.6,
+      "unit": "sign/s",
+      "better": "higher",
+      "test": "pts/openssl",
+      "metric": "algorithm-rsa4096"
+    },
+    {
+      "distro": "Zorin 18.1",
+      "bench": "OpenSSL RSA-4096 verify",
+      "value": 87308.9,
+      "unit": "verify/s",
+      "better": "higher",
+      "test": "pts/openssl",
+      "metric": "algorithm-rsa4096"
+    },
+    {
+      "distro": "CachyOS",
+      "bench": "zstd compression",
+      "value": 1438.7,
+      "unit": "MB/s",
+      "better": "higher",
+      "test": "pts/compress-zstd",
+      "metric": "compression-level-3-compression-speed"
+    },
+    {
+      "distro": "CachyOS",
+      "bench": "zstd decompression",
+      "value": 1711,
+      "unit": "MB/s",
+      "better": "higher",
+      "test": "pts/compress-zstd",
+      "metric": "compression-level-3-decompression-speed"
+    },
+    {
+      "distro": "CachyOS",
+      "bench": "SQLite speed test",
+      "value": 52.858,
+      "unit": "Seconds",
+      "better": "lower",
+      "test": "pts/sqlite-speedtest",
+      "metric": "timed-time-size-1-000"
+    },
+    {
+      "distro": "CachyOS",
+      "bench": "OpenSSL RSA-4096 sign",
+      "value": 3420.2,
+      "unit": "sign/s",
+      "better": "higher",
+      "test": "pts/openssl",
+      "metric": "algorithm-rsa4096"
+    },
+    {
+      "distro": "CachyOS",
+      "bench": "OpenSSL RSA-4096 verify",
+      "value": 86668.9,
+      "unit": "verify/s",
+      "better": "higher",
+      "test": "pts/openssl",
+      "metric": "algorithm-rsa4096"
+    },
+    {
+      "distro": "MX 25.3",
+      "bench": "zstd compression",
+      "value": 1490,
+      "unit": "MB/s",
+      "better": "higher",
+      "test": "pts/compress-zstd",
+      "metric": "compression-level-3-compression-speed"
+    },
+    {
+      "distro": "MX 25.3",
+      "bench": "SQLite speed test",
+      "value": 55.036,
+      "unit": "Seconds",
+      "better": "lower",
+      "test": "pts/sqlite-speedtest",
+      "metric": "timed-time-size-1-000"
+    },
+    {
+      "distro": "MX 25.3",
+      "bench": "OpenSSL RSA-4096 sign",
+      "value": 3452.6,
+      "unit": "sign/s",
+      "better": "higher",
+      "test": "pts/openssl",
+      "metric": "algorithm-rsa4096"
+    },
+    {
+      "distro": "MX 25.3",
+      "bench": "OpenSSL RSA-4096 verify",
+      "value": 87672.7,
+      "unit": "verify/s",
+      "better": "higher",
+      "test": "pts/openssl",
+      "metric": "algorithm-rsa4096"
+    }
+  ]
+}
