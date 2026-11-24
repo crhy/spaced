@@ -98,9 +98,20 @@ Not released yet: work landing on the 11.26.4 line.
   `guest-bootstrap.sh` from a host HTTP server on `10.0.0.2`/`10.0.2.2` and
   posts every result back to `http-report.py`; Spaced itself answers SSH and
   uses that. Each row carries the f093 probe metrics plus a capped Phoronix
-  Test Suite run (`scripts/vm/bench/guest-pts.sh`), the host load while that
-  row was measured, and whether Strata was running, because those numbers are
-  only honest with the noise recorded.
+   Test Suite run (`scripts/vm/bench/guest-pts.sh`), the host load while that
+   row was measured, and whether Strata was running, because those numbers are
+   only honest with the noise recorded.
+- Begin the Spaced Sound Manager naming layer for #429:
+  `overlays/usr/lib/spaced-linux/spaced_sound_names.py` (stdlib only, importable
+  with `PYTHONPATH=overlays/usr/lib/spaced-linux`, no audio server or system
+  settings touched) turns a raw device descriptor into a friendly name and one
+  fixed icon kind — speakers, headphones, microphone, webcam, hdmi_output or
+  digital — preferring a stable port/media field over the driver string, so
+  "HD-Audio Generic" names as speakers by its port and "HDA NVidia" names as an
+  HDMI output carrying the GPU it drives. An unrecognised device falls back to
+  its raw name with no icon kind (the panel then uses the generic icon, never a
+  PCI card). `tests/test_sound_device_names.py` fixes the representative names
+  from DESIGN.md §4. Headless naming only: no GTK/UI, colours or theme yet.
 
 
 ## 11.26.2 - 2026-11-14
