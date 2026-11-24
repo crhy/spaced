@@ -14,13 +14,6 @@
     { key: 'ctxt_per_s', title: 'Context switches', unit: ' /s' }
   ];
 
-  var PTS_CHARTS = [
-    { bench: 'zstd compression', better: 'higher' },
-    { bench: 'OpenSSL RSA-4096 verify', better: 'higher' },
-    { bench: 'OpenSSL RSA-4096 sign', better: 'higher' },
-    { bench: 'SQLite speed test', better: 'lower' }
-  ];
-
   function fmt(value) {
     if (Number.isInteger(value)) return String(value);
     return String(Math.round(value * 100) / 100);
@@ -158,33 +151,6 @@
     var heat = document.getElementById('bench-heatmap');
     heat.textContent = '';
     heatmap(heat, data.distros);
-
-    var allNames = data.distros.map(function (d) { return d.distro; });
-    var pts = document.getElementById('bench-pts');
-    pts.textContent = '';
-    PTS_CHARTS.forEach(function (chart) {
-      var results = data.phoronix.filter(function (p) { return p.bench === chart.bench; });
-      if (!results.length) return;
-      var unit = results[0].unit === 'Seconds' ? 's' : results[0].unit;
-      var have = {};
-      results.forEach(function (r) { have[r.distro] = 1; });
-      var missing = allNames.filter(function (n) { return !have[n]; });
-      var card = barChart(pts, {
-        title: chart.bench,
-        subtitle: chart.better + ' is better',
-        unit: ' ' + unit,
-        better: chart.better,
-        aria: chart.bench + ' (' + unit + '), ' + chart.better + ' is better, best first' +
-          (missing.length ? '; no result: ' + missing.join(', ') : ''),
-        rows: results.map(function (r) { return { name: r.distro, value: r.value }; })
-      });
-      if (missing.length) {
-        var p = document.createElement('p');
-        p.className = 'bench-miss';
-        p.textContent = 'No result: ' + missing.join(', ') + '.';
-        card.appendChild(p);
-      }
-    });
   }
 
   function load() {
