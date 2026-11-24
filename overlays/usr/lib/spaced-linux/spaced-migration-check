@@ -1,0 +1,146 @@
+#!/usr/bin/python3
+"""Read-only migration readiness report (issue #417, first slice).
+
+Inspects the running system, or a fixture system given with --root, and
+prints a plain-text report: the distro id and version, the init system, the
+package manager, and the desktop. Classifies exactly three verdicts and
+exits 0 for all of them, because this is a report and not a gate. It never
+changes anything and never migrates.
+"""
+
+import argparse
+import os
+from pathlib import Path
+import sys
+
+MIGRATABLE_IDS = ("devuan", "debian", "ubuntu")
+SPACED_IDS = ("spaced", "spaced-linux")
+OTHER_PACKAGE_MANAGERS = ("pacman", "dnf", "rpm", "apk", "zypper")
+
+
+def parse_os_release(path):
+    fields = {}
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return fields
+    for line in text.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+            value = value[1:-1]
+        fields[key.strip()] = value
+    return fields
+
+
+def read_first_line(path):
+    try:
+        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return ""
+    return lines[0].strip() if lines else ""
+
+
+def detect_init(root):
+    comm = read_first_line(root / "proc/1/comm")
+    if comm == "systemd":
+        return "systemd"
+    if comm == "init" or (root / "etc/inittab").exists():
+        return "sysvinit"
+    return comm or "unknown"
+
+
+def detect_package_manager(root):
+    bin_dir = root / "usr/bin"
+    if any((bin_dir / name).exists() for name in ("apt", "apt-get", "dpkg", "dpkg-deb")):
+        return "apt"
+    for name in OTHER_PACKAGE_MANAGERS:
+        if (bin_dir / name).exists():
+            return name
+    return "unknown"
+
+
+def detect_desktop(env, root):
+    desktop = ""
+    for token in env.get("XDG_CURRENT_DESKTOP", "").split(":"):
+        if token.strip().lower() == "mate":
+            desktop = "MATE"
+            break
+    if not desktop and any((root / "usr/bin").glob("mate-*")):
+        desktop = "MATE"
+    display = "X11" if env.get("DISPLAY") or (root / "usr/bin/Xorg").exists() else ""
+    if desktop and display:
+        return f"{desktop} ({display})"
+    return desktop or display or "not detected"
+
+
+def build_report(root, os_release, env):
+    fields = parse_os_release(os_release)
+    distro_id = fields.get("ID", "").lower()
+    id_like = fields.get("ID_LIKE", "").lower().replace(",", " ").split()
+    in_family = distro_id in MIGRATABLE_IDS or any(id_ in MIGRATABLE_IDS for id_ in id_like)
+    init = detect_init(root)
+    package_manager = detect_package_manager(root)
+    pretty = fields.get("PRETTY_NAME") or fields.get("NAME") or distro_id or "unknown"
+    version = fields.get("VERSION_ID") or fields.get("VERSION") or "unknown"
+
+    lines = [
+        "spaced-migration-check: read-only migration readiness report (issue #417)",
+        f"os-release: {os_release}",
+        f"distro: {pretty} [id={distro_id or 'unknown'} version={version}]",
+    ]
+    if init == "sysvinit":
+        lines.append("init: sysvinit (supported)")
+    elif init == "systemd":
+        lines.append("init: systemd (needs the sysvinit conversion step)")
+    else:
+        lines.append(f"init: unknown ({init})")
+    if package_manager == "apt":
+        lines.append("packages: apt (apt/dpkg found)")
+    else:
+        lines.append(f"packages: {package_manager} (Spaced does not migrate from this)")
+    lines.append(f"desktop: {detect_desktop(env, root)}")
+
+    if distro_id in SPACED_IDS:
+        lines.append("verdict: already-spaced")
+        lines.append("notes: this system is already Spaced Linux; nothing to migrate.")
+    elif not distro_id:
+        lines.append("verdict: not-supported")
+        lines.append(f"notes: no distro id was readable in {os_release}.")
+    elif not in_family:
+        lines.append("verdict: not-supported")
+        lines.append(f"notes: id '{distro_id}' is not a Devuan/Debian/Ubuntu derivative.")
+    elif package_manager != "apt":
+        lines.append("verdict: not-supported")
+        lines.append(f"notes: Spaced migrates from apt/dpkg systems, not from '{package_manager}'.")
+    else:
+        lines.append("verdict: migratable")
+        if init == "systemd":
+            lines.append("notes: Spaced can migrate this system and applies the sysvinit conversion step.")
+        elif init != "sysvinit":
+            lines.append("notes: Spaced can migrate this system, but its init system was unreadable.")
+        else:
+            lines.append("notes: Spaced can migrate this system as-is.")
+    return "\n".join(lines) + "\n"
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(
+        description="Report whether this system is one Spaced Linux can migrate from. "
+                    "Read-only: nothing is changed and nothing is installed.")
+    parser.add_argument("--os-release", metavar="PATH",
+                        help="os-release file to read (default: <root>/etc/os-release)")
+    parser.add_argument("--root", metavar="PATH", default="/",
+                        help="system root to inspect (default: /)")
+    args = parser.parse_args(argv)
+    root = Path(args.root)
+    os_release = Path(args.os_release) if args.os_release else root / "etc/os-release"
+    sys.stdout.write(build_report(root, os_release, os.environ))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
