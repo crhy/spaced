@@ -101,6 +101,16 @@ Not released yet: work landing on the 11.26.4 line.
   Test Suite run (`scripts/vm/bench/guest-pts.sh`), the host load while that
   row was measured, and whether Strata was running, because those numbers are
   only honest with the noise recorded.
+- `scripts/spaced-init-gen` derives a sysvinit init script from a supplied
+  systemd `.service` unit for software that no longer ships one (#431). It reads
+  the unit as text only (`Description`, `After`/`Wants`, `Type`, `User`/`Group`,
+  `PIDFile`, `ExecStart`/`ExecStop`) and writes an init script in the image's
+  hand-written style (`### BEGIN INIT INFO`, `start-stop-daemon` start/stop with
+  `--chuid`, and `restart`/`force-reload`/`condrestart`/`status`), refusing to
+  emit anything for a unit with no `ExecStart`. It is a build/host aid in
+  `scripts/` only: it never invokes, installs, enables or names systemd at
+  runtime, and stays out of the image. `.socket`/`.timer`/`.target` units and
+  `Restart=` supervising loops are not handled yet.
 
 
 ## 11.26.2 - 2026-11-14
