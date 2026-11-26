@@ -267,7 +267,7 @@ ICON_FALLBACK = {
     'fact-pcie': 'drive-harddisk-symbolic',
     'tab-overview': 'view-list-symbolic', 'tab-roles': 'preferences-system-symbolic',
     'tab-move': 'go-next-symbolic', 'tab-drivers': 'application-x-executable-symbolic',
-    'role-desktop': 'video-display-symbolic', 'role-ai': 'processor-symbolic',
+    'role-desktop': 'video-display-symbolic', 'role-ai': 'utilities-system-monitor-symbolic',
     'role-games': 'application-x-executable-symbolic',
     'role-off': 'process-stop-symbolic', 'dot': 'object-select-symbolic',
 }
@@ -298,9 +298,10 @@ class SvgImage(Gtk.Image):
         path = self.assets_dir() / f'{self.icon_name}.svg'
         if not path.is_file():
             # issue #439: a missing file must never paint the no-entry image.
-            self.set_from_icon_name(ICON_FALLBACK.get(self.icon_name,
-                                                      'video-display-symbolic'),
-                                    Gtk.IconSize.BUTTON)
+            fallback = ICON_FALLBACK.get(self.icon_name, 'video-display-symbolic')
+            if not Gtk.IconTheme.get_default().has_icon(fallback):
+                fallback = 'video-display-symbolic'  # a theme without that name
+            self.set_from_icon_name(fallback, Gtk.IconSize.BUTTON)
             return
         data = path.read_bytes()
         if self.tint is not None:
