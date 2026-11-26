@@ -1,8 +1,6 @@
 # Changelog
 
-## 11.26.4 - in progress
-
-Not released yet: work landing on the 11.26.4 line.
+## 11.26.4 - 2026-11-26
 
 **Added**
 
