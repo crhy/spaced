@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Spaced Wine Run
+Comment=Run a Windows program in its own Wine prefix
+Exec=spaced-wine-run %f
+Terminal=false
+Categories=Application;

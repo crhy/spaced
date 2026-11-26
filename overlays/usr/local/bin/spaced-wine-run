@@ -1,0 +1,121 @@
+#!/bin/bash
+# Opt-in launcher for Windows executables (issue #50). Nothing is associated
+# with application/x-ms-dos-executable until the user runs --enable-mime, and
+# no recipe, download or winetricks is ever run: each app gets its own Wine
+# prefix under $XDG_DATA_HOME/wine-prefixes and a visible log under
+# $XDG_STATE_HOME/spaced-wine.
+# Usage: spaced-wine-run [--enable-mime|--disable-mime] <path.exe> [args...]
+set -u
+
+usage() {
+    printf 'Usage: spaced-wine-run [--enable-mime|--disable-mime] <path.exe> [args...]\n' >&2
+}
+
+# The opt-in switch edits only the user's own mimeapps.list, never the system
+# or skeleton ones, so the association stays off by default.
+set_mime_opt_in() {
+    mode="$1"
+    line="application/x-ms-dos-executable=spaced-wine-run.desktop"
+    file="$HOME/.config/mimeapps.list"
+    case "$mode" in
+        enable)
+            if [ ! -e "$file" ]; then
+                mkdir -p -- "${file%/*}"
+                printf '[Default Applications]\n' >"$file"
+                printf 'Created %s with a [Default Applications] header.\n' "$file"
+            fi
+            if grep -qxF -- "$line" "$file"; then
+                printf 'Wine is already the handler for .exe files in %s\n' "$file"
+            else
+                printf '%s\n' "$line" >>"$file"
+                printf 'Added %s to %s: double-clicking a .exe now runs it here.\n' "$line" "$file"
+            fi
+            ;;
+        disable)
+            if [ ! -e "$file" ]; then
+                printf 'Wine is not the handler for .exe files: %s does not exist.\n' "$file"
+            elif grep -qxF -- "$line" "$file"; then
+                grep -vxF -- "$line" "$file" >"$file.tmp" || true
+                mv -- "$file.tmp" "$file"
+                printf 'Removed %s from %s: .exe files open elsewhere again.\n' "$line" "$file"
+            else
+                printf 'Wine is not the handler for .exe files: %s is not in %s.\n' "$line" "$file"
+            fi
+            ;;
+    esac
+}
+
+mode=""
+case "${1:-}" in
+    --enable-mime) mode=enable ;;
+    --disable-mime) mode=disable ;;
+    -h | --help)
+        usage
+        exit 0
+        ;;
+esac
+if [ -n "$mode" ]; then
+    shift
+    set_mime_opt_in "$mode"
+fi
+
+exe="${1:-}"
+if [ -z "$exe" ]; then
+    [ -n "$mode" ] && exit 0
+    usage
+    exit 2
+fi
+shift
+
+if [ ! -f "$exe" ]; then
+    printf 'spaced-wine-run: %s is not a file I can run.\n' "$exe" >&2
+    exit 1
+fi
+
+wine_bin=""
+for candidate in wine wine64; do
+    if command -v "$candidate" >/dev/null 2>&1; then
+        wine_bin="$candidate"
+        break
+    fi
+done
+if [ -z "$wine_bin" ]; then
+    printf 'Wine is not installed, so %s cannot run yet; install Wine first.\n' "$exe" >&2
+    if command -v zenity >/dev/null 2>&1; then
+        zenity --question --no-wrap \
+            --title="Install Wine?" \
+            --text="Wine is needed to run this Windows program. Install it now?" \
+            --ok-label=Install \
+            --cancel-label=Cancel
+        if [ $? -eq 0 ] && command -v flatpak >/dev/null 2>&1; then
+            flatpak run io.github.crhy.SpacedBazaar "appstream://org.winehq.Wine" >/dev/null 2>&1 &
+        fi
+    fi
+    exit 1
+fi
+
+# One prefix per app: the sanitised executable name keeps the prefix path safe
+# and lets two different .exe files keep separate Wine state.
+name=$(basename -- "$exe")
+prefix_name=$(printf '%s' "$name" | sed 's/[^A-Za-z0-9._-]/_/g')
+[ -n "$prefix_name" ] || prefix_name=app
+prefix="${XDG_DATA_HOME:-$HOME/.local/share}/wine-prefixes/$prefix_name"
+log_dir="${XDG_STATE_HOME:-$HOME/.local/state}/spaced-wine"
+log_file="$log_dir/$prefix_name.log"
+mkdir -p -- "$log_dir"
+
+prefix_existed=0
+[ -d "$prefix" ] && prefix_existed=1
+mkdir -p -- "$prefix"
+export WINEPREFIX="$prefix"
+
+# wineboot -i only initialises a prefix this call created; an existing one is
+# left alone so a later run cannot reset a user's installed app state.
+if [ "$prefix_existed" -eq 0 ] && command -v wineboot >/dev/null 2>&1; then
+    wineboot -i >>"$log_file" 2>&1
+fi
+
+printf 'spaced-wine-run: prefix %s\nspaced-wine-run: log %s\n' "$prefix" "$log_file" >&2
+printf '%s %s %s\n' "$(date -Is)" "$wine_bin" "$name" >>"$log_file"
+"$wine_bin" "$exe" "$@" 2>&1 | tee -a -- "$log_file"
+exit "${PIPESTATUS[0]}"

@@ -124,6 +124,32 @@ the reported release version are unchanged and no new ISO is required.
   that matches a package, and the guard matches them before the wildcard case.
   Removing a `systemd-*` package is still allowed, and `runit-init` and `openrc`
   are still refused.
+## 11.26.2-2 - 2026-11-15
+
+Delivered to installed systems through the `11.26.2-2` APT packages
+(`spaced-mate-default-settings`, which stages `usr/local/bin` and the Spaced
+`usr/share/applications` entries; the launcher and its desktop file are both
+staged). The 11.26.2 ISO and the reported release version are unchanged, so no
+new ISO is required.
+
+- Add `spaced-wine-run`, the visible opt-in launcher for issue #50. It runs a
+  Windows program in Wine in its own prefix under
+  `$XDG_DATA_HOME/wine-prefixes/<app>`, initialises that prefix with
+  `wineboot -i` only on the run that creates it, and tees the program's output
+  to `$XDG_STATE_HOME/spaced-wine/<app>.log`, naming the log path as it starts.
+  With no Wine on `PATH` it runs nothing, says so in one line, and offers the
+  install through a zenity question and Spaced Bazaar on the Wine page.
+- `spaced-wine-run --enable-mime` adds the single
+  `application/x-ms-dos-executable=spaced-wine-run.desktop` line to the user's
+  own `~/.config/mimeapps.list`; `--disable-mime` removes that line again and
+  leaves every other line alone. The system and skeleton `mimeapps.list` files
+  are unchanged, so double-clicking a `.exe` still does nothing until the user
+  opts in.
+- Wine stays outside the lean base image: `config/packages.yaml` is unchanged,
+  and the launcher never calls `winetricks`, `curl` or `wget`, so no
+  compatibility recipe is fetched or executed. Automatic Wine AppDB lookups,
+  the runner manager (Bottles, Lutris, Raven), DXVK/VKD3D policy, reset/export
+  controls and the decision to package Wine remain open on issue #50.
 
 ## 11.26.2 - 2026-11-14
 
