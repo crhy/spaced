@@ -1,94 +1,5 @@
 # Changelog
 
-## 11.26.3-2 - 2026-11-25
-
-Prepared as an APT package revision for installed 11.26.3 systems; it does not
-change the OS version.
-
-- Restore Spaced-to-Spaced and Windows Network discovery after a late network
-  connection. The NetworkManager dispatcher now recovers both `smbd` and
-  `spaced-wsdd`, refuses to advertise when Samba failed, respects disabled
-  services, and closes its lock descriptor before starting a daemon.
-- Install the separate `cups-browsed` package, explicitly enable supported LAN
-  IPP queue creation instead of inheriting Ceres's `LocalOnly` default, and
-  start the printing services on both new and upgraded systems while preserving
-  an administrator's active `CreateIPPPrinterQueues` choice.
-- Strengthen the two-machine release gate. It now brings the test LAN up through
-  NetworkManager without manually restarting Samba/WSDD, then requires remote
-  IPP DNS-SD discovery, an automatic CUPS queue, job submission, and receipt of
-  a nonempty print document by the other Spaced machine. The clean monthly ISO
-  build now runs this gate as a fatal release check and retains its logs.
-- Require release-to-candidate evidence before APT publication: a checksummed
-  public ISO must complete a real signed-repository upgrade and then pass the
-  SMB/GVfs and IPP gate between two upgraded clients. Publication is bound to
-  the exact candidate `Packages` index, so rebuilding or changing it invalidates
-  old evidence.
-- Split the live-image configuration hook into ordered, strict-mode phases,
-  remove its redundant rolling-repository install, and inventory upstream
-  defaults that Spaced intentionally pins. Rename the expanded two-machine gate
-  to `network-services-gate`, retaining the old Samba target as a compatibility
-  alias.
-
-## 11.26.3 - 2026-11-21
-
-Delivered as the 11.26.3 ISO and through Spaced Update (APT packages `11.26.3-1`,
-elogind `257.13-1+spaced11.26.3`, Compiz `+spaced11.26.3`, Spaced Monitor 0.1.10,
-Spaced Welcome 0.1.23). Release evidence: `docs/11.26.3-RELEASE-PLAN.md`.
-
-- Keep elogind restart guidance visible on both Spaced Update tabs, including
-  recovery advice for lost app networking/audio or an unresponsive Restart
-  button. Tell users to wait for package installation to stop before rebooting.
-- Prevent the candidate elogind package from stopping/restarting the login
-  daemon during upgrade, independently of desktop-settings configure order.
-  Preserve fresh-install startup and removal behavior. Starting elogind while it
-  already runs is now a no-op, so the upgrade never launches a second daemon. Spaced Update also
-  validates session protection before pending package configuration, refusing
-  unsafe custom policies without replacing them. Reboot after upgrading to
-  activate the new daemon. Real skipped-revision VM upgrades remain a gate
-  for #427; generated maintainer-script tests pass.
-- Force the red-X cursor theme for PATH-based xkill launches without changing
-  the user's desktop cursor preference (#422). The same red X also ships in the
-  `default` cursor theme, which X falls back to for any theme without its own
-  xkill cursor, so even `/usr/bin/xkill` started directly shows it; the
-  close-window hotkey calls the wrapper by its full path. Private Xvfb pixel
-  tests verify both the wrapper and plain `/usr/bin/xkill` with Adwaita selected.
-- Apply OrcaSlicer's scoped WebKit rendering overrides at login and after a
-  matching Flatpak installation (#423). Record completion only on success;
-  failures remain retryable. Real application workflow validation is pending.
-- Apply a per-user FreeCAD Flatpak workaround for the Qt accessibility logging
-  deadlock (#425), covering both installation scopes without disabling
-  accessibility. Preserve unrelated overrides; custom Qt logging rules and
-  symlink-managed overrides require manual review. Application validation remains
-  pending.
-- Restore selected-calendar-date contrast using each theme's selection colors
-  (#428), including unfocused popups. Real GTK color resolution passes across
-  all 13 themes; live panel-popup review remains pending.
-- Turn Shift+Super+left-drag back into Fire Writing. The Enhanced Zoom smooth-scroll
-  fix takes a screen-wide pointer grab as soon as the Shift+Super wheel chord is
-  held, which is needed to beat fractional scroll events to Qt clients, but a
-  Compiz grab outlives a whole button press and plug-ins refuse to start while
-  another screen grab exists. Fire Writing's own Shift+Super shortcut therefore
-  painted nothing over the wallpaper or over windows, while Ctrl+Alt+Shift+left-drag
-  worked because that chord takes no grab. The rebuilt
-  `compiz-plugins-main` (`2:0.8.18-8+spaced11.26.3`) releases the wheel grab for
-  the duration of a press on a button that is not a configured wheel button and
-  takes it again when that button comes back up, so wheel scrolling stays
-  suppressed and fire paints again. The seeded profile now states the shortcut
-  explicitly, and the desktop migration restores it for accounts that carry the
-  recorded Ctrl+Alt+Shift workaround without touching any other binding.
-- Add the Compiz five-minute tutorial link to the shipped help and website (#158).
-- Ship Spaced Monitor 0.1.10: CPU and memory first, then each GPU beside its VRAM, per-device detail views,
-  Fahrenheit/Celsius toggle, two-minute histories and session maxima, and no guessed sensor readings; every GPU
-  (for example a primary RTX 4070 Ti SUPER, a second RTX 3050 and an integrated Radeon) gets its own cards.
-- Ship Spaced Welcome 0.1.23: in the live installer session it explains that Spaced Linux must be installed and the
-  computer restarted before applications can be installed, instead of failing.
-- Rebuild Compiz (2:0.8.18-9+spaced11.26.3) and compiz-plugins-main (2:0.8.18-8+spaced11.26.3) so the fire-writing
-  and screenshot fixes reach every installation and sort above earlier test builds.
-- Include `cryptsetup-initramfs` and verify encrypted-root crypttab mappings
-  against Calamares's LUKS UUID (#420). Repair missing mappings with a real
-  passphrase fallback; reject conflicting mappings and missing referenced
-  keyfiles. Encrypted BIOS/UEFI installation validation remains pending.
-
 ## 11.26.4 - in progress
 
 Not released yet: work landing on the 11.26.4 line.
@@ -152,6 +63,95 @@ Not released yet: work landing on the 11.26.4 line.
   PCI card). `tests/test_sound_device_names.py` fixes the representative names
   from DESIGN.md §4. Headless naming only: no GTK/UI, colours or theme yet.
 
+**Fixes and release gates** (prepared on 2026-11-25 as an 11.26.3-2 APT revision, shipped in 11.26.4 instead)
+
+- Restore Spaced-to-Spaced and Windows Network discovery after a late network
+  connection. The NetworkManager dispatcher now recovers both `smbd` and
+  `spaced-wsdd`, refuses to advertise when Samba failed, respects disabled
+  services, and closes its lock descriptor before starting a daemon.
+- Install the separate `cups-browsed` package, explicitly enable supported LAN
+  IPP queue creation instead of inheriting Ceres's `LocalOnly` default, and
+  start the printing services on both new and upgraded systems while preserving
+  an administrator's active `CreateIPPPrinterQueues` choice.
+- Strengthen the two-machine release gate. It now brings the test LAN up through
+  NetworkManager without manually restarting Samba/WSDD, then requires remote
+  IPP DNS-SD discovery, an automatic CUPS queue, job submission, and receipt of
+  a nonempty print document by the other Spaced machine. The clean monthly ISO
+  build now runs this gate as a fatal release check and retains its logs.
+- Require release-to-candidate evidence before APT publication: a checksummed
+  public ISO must complete a real signed-repository upgrade and then pass the
+  SMB/GVfs and IPP gate between two upgraded clients. Publication is bound to
+  the exact candidate `Packages` index, so rebuilding or changing it invalidates
+  old evidence.
+- Split the live-image configuration hook into ordered, strict-mode phases,
+  remove its redundant rolling-repository install, and inventory upstream
+  defaults that Spaced intentionally pins. Rename the expanded two-machine gate
+  to `network-services-gate`, retaining the old Samba target as a compatibility
+  alias.
+- Printing keeps the legacy CUPS browsing protocol off (`BrowseRemoteProtocols none`,
+  the CVE-2024-47176 path) beside `CreateIPPPrinterQueues All`; LAN discovery is
+  DNS-SD only, and an administrator's own lines are kept.
+
+
+## 11.26.3 - 2026-11-21
+
+Delivered as the 11.26.3 ISO and through Spaced Update (APT packages `11.26.3-1`,
+elogind `257.13-1+spaced11.26.3`, Compiz `+spaced11.26.3`, Spaced Monitor 0.1.10,
+Spaced Welcome 0.1.23). Release evidence: `docs/11.26.3-RELEASE-PLAN.md`.
+
+- Keep elogind restart guidance visible on both Spaced Update tabs, including
+  recovery advice for lost app networking/audio or an unresponsive Restart
+  button. Tell users to wait for package installation to stop before rebooting.
+- Prevent the candidate elogind package from stopping/restarting the login
+  daemon during upgrade, independently of desktop-settings configure order.
+  Preserve fresh-install startup and removal behavior. Starting elogind while it
+  already runs is now a no-op, so the upgrade never launches a second daemon. Spaced Update also
+  validates session protection before pending package configuration, refusing
+  unsafe custom policies without replacing them. Reboot after upgrading to
+  activate the new daemon. Real skipped-revision VM upgrades remain a gate
+  for #427; generated maintainer-script tests pass.
+- Force the red-X cursor theme for PATH-based xkill launches without changing
+  the user's desktop cursor preference (#422). The same red X also ships in the
+  `default` cursor theme, which X falls back to for any theme without its own
+  xkill cursor, so even `/usr/bin/xkill` started directly shows it; the
+  close-window hotkey calls the wrapper by its full path. Private Xvfb pixel
+  tests verify both the wrapper and plain `/usr/bin/xkill` with Adwaita selected.
+- Apply OrcaSlicer's scoped WebKit rendering overrides at login and after a
+  matching Flatpak installation (#423). Record completion only on success;
+  failures remain retryable. Real application workflow validation is pending.
+- Apply a per-user FreeCAD Flatpak workaround for the Qt accessibility logging
+  deadlock (#425), covering both installation scopes without disabling
+  accessibility. Preserve unrelated overrides; custom Qt logging rules and
+  symlink-managed overrides require manual review. Application validation remains
+  pending.
+- Restore selected-calendar-date contrast using each theme's selection colors
+  (#428), including unfocused popups. Real GTK color resolution passes across
+  all 13 themes; live panel-popup review remains pending.
+- Turn Shift+Super+left-drag back into Fire Writing. The Enhanced Zoom smooth-scroll
+  fix takes a screen-wide pointer grab as soon as the Shift+Super wheel chord is
+  held, which is needed to beat fractional scroll events to Qt clients, but a
+  Compiz grab outlives a whole button press and plug-ins refuse to start while
+  another screen grab exists. Fire Writing's own Shift+Super shortcut therefore
+  painted nothing over the wallpaper or over windows, while Ctrl+Alt+Shift+left-drag
+  worked because that chord takes no grab. The rebuilt
+  `compiz-plugins-main` (`2:0.8.18-8+spaced11.26.3`) releases the wheel grab for
+  the duration of a press on a button that is not a configured wheel button and
+  takes it again when that button comes back up, so wheel scrolling stays
+  suppressed and fire paints again. The seeded profile now states the shortcut
+  explicitly, and the desktop migration restores it for accounts that carry the
+  recorded Ctrl+Alt+Shift workaround without touching any other binding.
+- Add the Compiz five-minute tutorial link to the shipped help and website (#158).
+- Ship Spaced Monitor 0.1.10: CPU and memory first, then each GPU beside its VRAM, per-device detail views,
+  Fahrenheit/Celsius toggle, two-minute histories and session maxima, and no guessed sensor readings; every GPU
+  (for example a primary RTX 4070 Ti SUPER, a second RTX 3050 and an integrated Radeon) gets its own cards.
+- Ship Spaced Welcome 0.1.23: in the live installer session it explains that Spaced Linux must be installed and the
+  computer restarted before applications can be installed, instead of failing.
+- Rebuild Compiz (2:0.8.18-9+spaced11.26.3) and compiz-plugins-main (2:0.8.18-8+spaced11.26.3) so the fire-writing
+  and screenshot fixes reach every installation and sort above earlier test builds.
+- Include `cryptsetup-initramfs` and verify encrypted-root crypttab mappings
+  against Calamares's LUKS UUID (#420). Repair missing mappings with a real
+  passphrase fallback; reject conflicting mappings and missing referenced
+  keyfiles. Encrypted BIOS/UEFI installation validation remains pending.
 
 ## 11.26.2 - 2026-11-14
 

@@ -9,10 +9,10 @@ windowPlacement: center
 strings:
     productName:         Spaced Linux
     shortProductName:    Spaced Linux
-    version:             11.26.3
-    shortVersion:        11.26.3
-    versionedName:       Spaced Linux 11.26.3
-    shortVersionedName:  Spaced Linux 11.26.3
+    version:             11.26.4
+    shortVersion:        11.26.4
+    versionedName:       Spaced Linux 11.26.4
+    shortVersionedName:  Spaced Linux 11.26.4
     bootloaderEntryName: Spaced Linux
     productUrl:          https://github.com/crhy/spaced
     supportUrl:          https://github.com/crhy/spaced/issues
