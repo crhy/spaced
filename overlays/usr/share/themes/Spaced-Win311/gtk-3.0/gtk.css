@@ -64,6 +64,23 @@
     color: @panel_fg_color;
 }
 
+/* Issue #387: the Menu, clock/date, volume and show-desktop applets run out
+ * of process. Keep every applet host surface transparent so the panel fill,
+ * or a panel picture the user sets, shows through instead of a grey rectangle.
+ * Only the hosts clear: the buttons above keep their own surfaces. */
+.mate-panel-menu-bar #PanelApplet,
+.gnome-panel-menu-bar #PanelApplet,
+#MatePanelWidget #PanelApplet,
+PanelApplet, MatePanelApplet, NaTrayApplet,
+#PanelPlug, #PanelPlug > box, #PanelPlug > widget,
+#PanelApplet, #PanelApplet > box, #PanelApplet > widget {
+    background-color: transparent;
+    background-image: none;
+    color: @panel_fg_color;
+    border-color: transparent;
+    box-shadow: none;
+}
+
 /* Windows 3.11 keeps the whole lower strip gray. Its active notebook tab uses
  * a white key line instead of carrying the navy selection color into the UI. */
 notebook > header tab:checked,

@@ -1,0 +1,79 @@
+# Reviewed PDF viewer capability table (issue #304).
+#
+# One record per candidate. The packaging keys are facts to resolve; the seven
+# capability axes are the review's own list and stay "unknown" until
+# scripts/pdf-capability-matrix.py prints a source for them. scripts/check.sh
+# refuses a shipped default that this table does not agree with, and
+# scripts/pdf-capability-matrix.py --check refuses any axis value that the
+# machine's own metadata does not back with a printed source.
+#
+# Allowed axis values: unknown, no-evidence, not-packaged, evidence.
+default_app: atril
+decision: pending
+candidates:
+  atril:
+    binary: atril
+    desktop: atril.desktop
+    package: atril
+    printing: unknown
+    forms: unknown
+    accessibility: unknown
+    search: unknown
+    encrypted-files: unknown
+    sandbox-update-provenance: unknown
+    mime-integration: unknown
+  mupdf:
+    binary: mupdf
+    desktop: mupdf.desktop
+    package: mupdf
+    printing: unknown
+    forms: unknown
+    accessibility: unknown
+    search: unknown
+    encrypted-files: unknown
+    sandbox-update-provenance: unknown
+    mime-integration: unknown
+  okular:
+    binary: okular
+    desktop: okular.desktop
+    package: okular
+    printing: unknown
+    forms: unknown
+    accessibility: unknown
+    search: unknown
+    encrypted-files: unknown
+    sandbox-update-provenance: unknown
+    mime-integration: unknown
+  xpdf:
+    binary: xpdf
+    desktop: xpdf-reader.desktop
+    package: xpdf
+    printing: unknown
+    forms: unknown
+    accessibility: unknown
+    search: unknown
+    encrypted-files: unknown
+    sandbox-update-provenance: unknown
+    mime-integration: unknown
+  zathura:
+    binary: zathura
+    desktop: zathura.desktop
+    package: zathura
+    printing: unknown
+    forms: unknown
+    accessibility: unknown
+    search: unknown
+    encrypted-files: unknown
+    sandbox-update-provenance: unknown
+    mime-integration: unknown
+  pdfcraft:
+    binary: pdfcraft
+    desktop: pdfcraft.desktop
+    package: pdfcraft
+    printing: unknown
+    forms: unknown
+    accessibility: unknown
+    search: unknown
+    encrypted-files: unknown
+    sandbox-update-provenance: unknown
+    mime-integration: unknown

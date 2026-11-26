@@ -58,11 +58,13 @@ for path in ('usr/lib/spaced-linux/spaced-update.py', 'usr/lib/spaced-linux/spac
              'usr/share/keyrings/spaced-archive-keyring.gpg', 'etc/apt/sources.list.d/spaced-apt.list',
              'etc/lightdm/lightdm.conf.d/60-spaced-installed.conf',
              'etc/X11/xorg.conf.d/20-spaced-amdgpu.conf', 'usr/local/bin/spaced-graphics-report',
+             'usr/local/bin/spaced-migration-report', 'usr/share/spaced-linux/app-set.txt',
               'etc/xdg/autostart/spaced-desktop-icon-repair-before-caja.desktop',
               'etc/xdg/autostart/spaced-desktop-icon-repair.desktop',
               'etc/xdg/autostart/spaced-flatpak-desktop-entries.desktop',
               'usr/local/bin/spaced-flatpak-desktop-entries',
              'usr/share/caja-python/extensions/spaced-set-wallpaper.py',
+             'usr/share/caja-python/extensions/spaced-open-terminal.py',
              'usr/local/sbin/spaced-sync-time', 'usr/local/sbin/spaced-finalize-timezone'):
     assert (payload / path).read_bytes() == (root / 'overlays' / path).read_bytes(), f'Missing/stale overlay: {path}'
 for path in ('postinst', 'triggers'):
@@ -88,6 +90,7 @@ source = (payload / 'etc/apt/sources.list.d/spaced-apt.list').read_text()
 assert 'trusted=yes' not in source
 assert 'signed-by=/usr/share/keyrings/spaced-archive-keyring.gpg' in source
 preferences = '\n'.join(p.read_text() for p in (payload / 'etc/apt/preferences.d').iterdir() if p.is_file())
-assert 'systemd-sysv' in preferences and 'Pin-Priority: -1' in preferences
+assert 'Package: systemd systemd-*' in preferences and 'Pin-Priority: -1' in preferences
+assert 'systemd-standalone-sysusers systemd-standalone-tmpfiles' in preferences
 print(f'Package payload and {len(expected)} runtime dependency checks passed.')
 PY

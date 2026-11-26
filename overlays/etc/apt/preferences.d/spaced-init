@@ -1,4 +1,9 @@
+Explanation: These two systemd-named packages are the image's sysusers and tmpfiles providers (config/packages.yaml); APT reads pins in stanza order, so this exemption must precede the wildcard below to keep them installable.
+Package: systemd-standalone-sysusers systemd-standalone-tmpfiles
+Pin: version *
+Pin-Priority: 500
+
 Explanation: Spaced Linux uses sysvinit; rolling upgrades must retain it.
-Package: systemd systemd-sysv systemd-resolved systemd-timesyncd
+Package: systemd systemd-*
 Pin: version *
 Pin-Priority: -1

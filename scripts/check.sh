@@ -71,6 +71,34 @@ do
     fi
 done
 
+# Issue #417: the migration report compares a saved inventory against the
+# application set Spaced installs. config/packages.yaml is build-side only, so
+# that set ships as overlays/usr/share/spaced-linux/app-set.txt and must stay
+# generated from the config, the same way the package list above must stay
+# non-empty.
+generated_app_set=$(scripts/gen-app-set.sh -)
+committed_app_set=overlays/usr/share/spaced-linux/app-set.txt
+
+if [[ -z "$generated_app_set" ]]; then
+    echo "scripts/gen-app-set.sh produced an empty application set" >&2
+    exit 1
+fi
+if [[ "$generated_app_set" != "$(cat "$committed_app_set" 2>/dev/null)" ]]; then
+    echo "$committed_app_set is stale; run scripts/gen-app-set.sh" >&2
+    exit 1
+fi
+
+migration_report=overlays/usr/local/bin/spaced-migration-report
+if [[ ! -x "$migration_report" ]]; then
+    echo "$migration_report is missing or not executable" >&2
+    exit 1
+fi
+if [[ "$(bash "$migration_report" --bogus-argument 2>&1 >/dev/null)" != *"Usage: spaced-migration-report"* ]] \
+    || bash "$migration_report" --bogus-argument >/dev/null 2>&1; then
+    echo "spaced-migration-report does not print Usage: and exit 2 for an unknown argument" >&2
+    exit 1
+fi
+
 # The .gitkeep files that keep empty skel directories in git must be pruned on
 # the way to the image: from the staged settings package (installed /etc/skel)
 # and from the live-build rootfs copy that seeds the live user's home. Run the
@@ -255,6 +283,28 @@ assert {"avahi-daemon", "libnss-mdns", "smbclient", "wsdd"}.issubset(packages), 
 assert {package for package in packages if "systemd" in package} == \
     {"systemd-standalone-sysusers", "systemd-standalone-tmpfiles"}, \
     "a systemd-named package entered the image set"
+# Audit row a08-13: the anti-systemd pin and the APT transaction guard must both
+# cover the whole systemd-* family, while the two systemd-named sysusers and
+# tmpfiles providers the image installs stay installable. APT takes the first
+# stanza that matches a package, so the exemption stanza must precede the
+# wildcard stanza in the pin file.
+init_pin = Path("overlays/etc/apt/preferences.d/spaced-init").read_text(encoding="utf-8")
+apt_guard = Path("overlays/usr/lib/spaced-linux/spaced-update-apt-guard").read_text(encoding="utf-8")
+pin_stanzas = [{line.split(":", 1)[0].strip(): line.split(":", 1)[1].strip()
+                for line in block.splitlines() if ":" in line}
+               for block in init_pin.split("\n\n")]
+assert any(stanza.get("Package") == "systemd systemd-*"
+           and stanza.get("Pin-Priority") == "-1" for stanza in pin_stanzas), \
+    "audit row a08-13: the anti-systemd pin no longer covers the systemd-* family"
+assert any(set(stanza.get("Package", "").split()) ==
+           {"systemd-standalone-sysusers", "systemd-standalone-tmpfiles"}
+           and int(stanza.get("Pin-Priority", "-1")) > 0 for stanza in pin_stanzas), \
+    "audit row a08-13: the pin no longer keeps the image's sysusers and tmpfiles providers installable"
+assert init_pin.index("systemd-standalone-sysusers") < init_pin.index("Package: systemd systemd-*"), \
+    "audit row a08-13: the pin's provider exemption must precede the systemd-* stanza, APT takes the first match"
+assert "systemd-standalone-sysusers|systemd-standalone-tmpfiles)" in apt_guard \
+    and "systemd|systemd-*|runit-init|openrc)" in apt_guard, \
+    "audit row a08-13: the APT transaction guard no longer refuses the systemd-* family outside its sysusers and tmpfiles providers"
 assert {"btop", "caja-admin", "eom", "gigolo", "gparted", "mozo", "nvtop", "timeshift", "unrar-free", "zstd"}.issubset(packages), \
     "administrator, partitioning, Windows-share, or backup desktop integration is missing"
 assert "libfuse2t64" in packages, "legacy AppImages cannot start without FUSE 2 compatibility (issue #153)"
@@ -305,6 +355,19 @@ live_build_config = Path("live-build/auto/config").read_text(encoding="utf-8")
 assert "--firmware-chroot false" in live_build_config, "broad live-build firmware injection is enabled"
 assert "docs/BOOTING.md" in Path("README.md").read_text(encoding="utf-8"), \
     "boot documentation reference regressed in README.md"
+# The 11.26.1 review requires a staged contract for the Spaced Welcome Voxa greeter
+# (issue #283) before any implementation, and the contract is only useful if the
+# maintainer-facing index and its absolute rules survive later edits.
+assert Path("docs/VOXA-GREETER-CONTRACT.md").is_file(), \
+    "the staged Voxa greeter contract the 11.26.1 review requires (issue #283) is missing"
+greeter_contract = Path("docs/VOXA-GREETER-CONTRACT.md").read_text(encoding="utf-8")
+assert "VOXA-GREETER-CONTRACT.md" in Path("docs/README.md").read_text(encoding="utf-8"), \
+    "the staged Voxa greeter contract is no longer indexed in docs/README.md"
+for contract_requirement in ("no-audio", "consent", "spacedwelcome", "Never", "qwen2.5:0.5b"):
+    assert contract_requirement in greeter_contract, \
+        f"the staged Voxa greeter contract no longer states {contract_requirement} (issue #283)"
+assert "systemd" not in greeter_contract and "systemctl" not in greeter_contract, \
+    "the staged Voxa greeter contract names an init system Spaced Linux does not use (issue #283)"
 package_config = Path("config/packages.yaml").read_text(encoding="utf-8")
 calamares_settings = Path("overlays/etc/calamares/settings.conf").read_text(encoding="utf-8")
 configure_orchestrator = Path("scripts/iso/01-configure.chroot").read_text(encoding="utf-8")
@@ -891,8 +954,24 @@ assert {"locales", "console-setup"}.issubset(packages), \
 assert {"util-linux-extra", "grub-pc-bin", "grub-efi-amd64-bin", "efibootmgr", "dosfstools"}.issubset(packages), \
     "Calamares offline BIOS/UEFI install dependencies are incomplete"
 assert "os-prober" in packages, "GRUB cannot detect other operating systems without os-prober"
+# caja-share deliberately stays a separate package in this release: it is an
+# upstream Caja C plugin (/usr/lib/*-linux-gnu/caja/extensions-2.0/libcaja-share.so,
+# so it cannot be vendored as a file) and it carries the Samba folder share
+# feature asserted here (tests/test_samba_network_dispatcher.py,
+# tests/test_samba_network_gate.py). Making it first-party is a separate, riskier
+# slice of issue #302; only the terminal action moved in this release.
 assert {"samba", "caja-share", "wsdd"}.issubset(packages), \
     "Caja cannot share folders with Windows computers (issue #253)"
+# Issue #302: the Caja folder right-click terminal action is first-party, so the
+# upstream caja-open-terminal package must not come back into the image set.
+assert "caja-open-terminal" not in packages, \
+    "the Caja right-click terminal action ships as an extension, not a package (issue #302)"
+assert "caja-open-terminal" not in package_groups.get("file_managers", []), \
+    "the file_managers group still installs the upstream Caja terminal plugin (issue #302)"
+open_terminal = Path("overlays/usr/share/caja-python/extensions/spaced-open-terminal.py")
+assert open_terminal.exists() and "Caja.MenuProvider" in open_terminal.read_text(encoding="utf-8") \
+    and 'connect("activate"' in open_terminal.read_text(encoding="utf-8"), \
+    "the first-party Caja Open Terminal menu provider is missing (issue #302)"
 assert "util-linux" in packages, "the testing-channel bootstrap must find runuser from util-linux"
 default_grub = (root / "etc/default/grub").read_text(encoding="utf-8")
 assert "GRUB_DISABLE_OS_PROBER=false" in default_grub and "#GRUB_DISABLE_OS_PROBER=false" not in default_grub, \
@@ -919,6 +998,8 @@ for path in ("etc/init.d/spaced-wsdd", "usr/share/applications/spaced-sharing-pa
              "etc/NetworkManager/dispatcher.d/90-spaced-samba-ready"):
     assert (root / path).exists() and path in local_packages, \
         f"{path} is not shipped, so Windows cannot find or sign in to Spaced shares (issue #297)"
+assert "usr/share/caja-python/extensions/spaced-open-terminal.py" in local_packages, \
+    "the Caja Open Terminal extension is not shipped, so no right-click menu offers it (issue #302)"
 dispatcher = (root / "etc/NetworkManager/dispatcher.d/90-spaced-samba-ready").read_text(encoding="utf-8")
 assert "up|dhcp4-change|dhcp6-change" in dispatcher and "status" in dispatcher \
     and "start" in dispatcher and "rc[2-5].d" in dispatcher \
@@ -1170,6 +1251,15 @@ assert "x-scheme-handler/http=com.brave.Browser.desktop" in skel_mimeapps \
     and "x-scheme-handler/https=com.brave.Browser.desktop" in skel_mimeapps \
     and "text/html=com.brave.Browser.desktop" in skel_mimeapps, \
     "new user profiles do not preserve Brave as the web handler (issue #35)"
+pdf_table = loaded_yaml["config/pdf-viewers.yaml"]
+assert pdf_table["default_app"] == "atril" and "atril" in packages, \
+    "the shipped default PDF application changed without the capability test the review requires (issue #304)"
+assert pdf_table["decision"] == "pending", \
+    "config/pdf-viewers.yaml records a default-app decision the review has not earned yet (issue #304)"
+assert sorted(pdf_table["candidates"]) == sorted(("atril", "mupdf", "okular", "xpdf", "zathura", "pdfcraft")), \
+    "config/pdf-viewers.yaml no longer lists the six PDF viewer candidates the review compares (issue #304)"
+assert pdf_table["candidates"][pdf_table["default_app"]]["package"] in packages, \
+    "the default PDF application in config/pdf-viewers.yaml is not shipped by config/packages.yaml (issue #304)"
 suggest_app_path = root / "usr/local/bin/spaced-suggest-app"
 assert suggest_app_path.is_file() and suggest_app_path.stat().st_mode & 0o111, \
     "magnet/torrent fallback suggester is missing or not executable (issue #290)"
@@ -1453,6 +1543,17 @@ for theme_name, gtk3 in (("Windows 7", win7_gtk), ("Ubuntu", ubuntu_gtk)):
         f"{theme_name}: Brisk category pane escapes the themed popup"
     assert "window.brisk-menu .apps-list" in gtk3, \
         f"{theme_name}: Brisk application pane escapes the themed popup"
+# Issue #387: the Menu, clock/date, volume and show-desktop applets run out of
+# process, so every registry theme must clear their host surfaces; otherwise a
+# panel picture or translucent fill stops at the applet edge.
+for theme in themes:
+    gtk3 = (theme_root / theme["gtk_theme"] / "gtk-3.0/gtk.css").read_text(encoding="utf-8")
+    assert "#PanelPlug" in gtk3 and "background-color: transparent" in gtk3, \
+        f"{theme['name']}: opaque applet hosts cover the panel image"
+    for host in (".mate-panel-menu-bar #PanelApplet", "NaTrayApplet",
+                 "#PanelApplet > box", "#PanelApplet > widget"):
+        assert host in gtk3, \
+            f"{theme['name']}: {host} can paint an opaque rectangle over the panel"
 assert "background-color: rgba(44,37,40,0.92)" in ubuntu_gtk, \
     "Ubuntu Brisk menu does not match the aubergine launcher"
 geoworks_gtk = (theme_root / "Spaced-Geoworks/gtk-3.0/gtk.css").read_text(encoding="utf-8")

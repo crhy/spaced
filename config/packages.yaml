@@ -69,8 +69,7 @@ graphics:
   - xserver-xorg-video-vesa
   - libgl1-mesa-dri
   - mesa-vulkan-drivers
-file_managers:
-  - caja-open-terminal
+file_managers: []   # the Caja terminal plugin became first-party (#302); the group stays for scripts/gen-app-set.sh (issue #417).
 applications:
   - eom
   - gdebi

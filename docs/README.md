@@ -38,8 +38,26 @@ folders.
   backgrounds and Cairo Dock.
 - [COMPIZ.md](COMPIZ.md) — Compiz architecture, runtime behaviour, patches and
   upstream strategy.
+- [XLIBRE-OPT-IN-TEST-IMAGE.md](XLIBRE-OPT-IN-TEST-IMAGE.md) — the opt-in Xlibre
+  test image (#314): its pinned-input guard, the hardware matrix still to fill,
+  and the Xorg fallback the #298 ABI guard still protects.
 - [APPLICATION-DELIVERY.md](APPLICATION-DELIVERY.md) — Welcome, SpacedBazaar,
   the signed Flatpak catalog, release pins and end-to-end tests.
+- [P2P-REPOS.md](P2P-REPOS.md) — design-only threat model and phased plan for
+  peer-to-peer transport of the signed bytes above; nothing in it is implemented.
+- [VOXA-INTEGRATION.md](VOXA-INTEGRATION.md) — the supported v1 boundary for
+  Voxa integration (#238, #283): local versus networked accounts and actions,
+  credential and transcript storage, confirmation policy, sysvinit service
+  lifecycle, offline behaviour, and the conditions for later integration work.
+- [VOXA-GREETER-CONTRACT.md](VOXA-GREETER-CONTRACT.md) — the staged contract the
+  11.26.1 review requires before any Spaced Welcome Voxa greeter work (#283):
+  milestones M0-M5, offline/online behaviour, microphone consent and retention,
+  model and resource ceilings, the no-audio path, privileged and app-install
+  actions, cancellation and rollback, sysvinit service lifecycle, the Never list,
+  and which repository and release carries each milestone.
+- [PDF-VIEWER-CAPABILITY-TEST.md](PDF-VIEWER-CAPABILITY-TEST.md) — the issue #304
+  capability/package test for the default PDF application: the reviewed candidate
+  table, what each axis accepts as evidence, and the two things still owed.
 - [FIXES.md](FIXES.md) — current resolutions of recurring issues across
   releases.
 - [SESSION-REGRESSIONS.md](SESSION-REGRESSIONS.md) — session regression

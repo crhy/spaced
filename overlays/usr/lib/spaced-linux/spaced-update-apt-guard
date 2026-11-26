@@ -36,7 +36,10 @@ while IFS= read -r line || [ -n "$line" ]; do
     esac
     if [ "$action" != '**REMOVE**' ]; then
         case "$package" in
-            systemd|systemd-sysv|runit-init|openrc)
+            # The image's sysusers and tmpfiles providers are systemd-named but
+            # carry no init system; every other systemd-* unit package does.
+            systemd-standalone-sysusers|systemd-standalone-tmpfiles) ;;
+            systemd|systemd-*|runit-init|openrc)
                 fail "Refusing an upgrade that changes the sysvinit system: $package" ;;
         esac
         # This server crashes the amdgpu driver at startup (issue #298).

@@ -1,0 +1,79 @@
+{
+ "gpus": [
+  {
+   "pci": "0000:01:00.0",
+   "vendor": "NVIDIA",
+   "family": "NVIDIA",
+   "integrated": false,
+   "class_code": "0x030000",
+   "name": "NVIDIA GeForce RTX 4070 Ti SUPER",
+   "driver": "nvidia",
+   "driver_version": "570.172",
+   "boot_vga": true,
+   "connectors": [
+    {"name": "HDMI-A-2", "status": "connected", "enabled": "enabled", "mode": "1920x1080"},
+    {"name": "DP-0", "status": "disconnected", "enabled": "disabled", "mode": ""},
+    {"name": "DP-1", "status": "disconnected", "enabled": "disabled", "mode": ""},
+    {"name": "DP-2", "status": "disconnected", "enabled": "disabled", "mode": ""}
+   ],
+   "vram_total": 16384,
+   "vram_used": 300,
+   "uuid": "GPU-0f9e1a2b-3c4d-4e5f-8a9b-0c1d2e3f4a5b",
+   "link_speed": "16.0 GT/s PCIe",
+   "link_speed_max": "16.0 GT/s PCIe",
+   "link_width": "16",
+   "link_width_max": "16",
+   "link": "16.0 GT/s PCIe × 16"
+  },
+  {
+   "pci": "0000:03:00.0",
+   "vendor": "NVIDIA",
+   "family": "NVIDIA",
+   "integrated": false,
+   "class_code": "0x030200",
+   "name": "NVIDIA GeForce RTX 3050",
+   "driver": "nvidia",
+   "driver_version": "570.172",
+   "boot_vga": false,
+   "connectors": [],
+   "vram_total": 8192,
+   "vram_used": 0,
+   "uuid": "GPU-1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+   "link_speed": "16.0 GT/s PCIe",
+   "link_speed_max": "16.0 GT/s PCIe",
+   "link_width": "4",
+   "link_width_max": "16",
+   "link": "16.0 GT/s PCIe × 4"
+  },
+  {
+   "pci": "0000:00:08.0",
+   "vendor": "AMD",
+   "family": "AMD",
+   "integrated": true,
+   "class_code": "0x038000",
+   "name": "AMD Radeon 610M",
+   "driver": "amdgpu",
+   "driver_version": "Kernel driver",
+   "boot_vga": false,
+   "connectors": [
+    {"name": "eDP-1", "status": "disconnected", "enabled": "disabled", "mode": ""},
+    {"name": "DP-3", "status": "disconnected", "enabled": "disabled", "mode": ""}
+   ],
+   "vram_total": null,
+   "vram_used": null,
+   "uuid": null,
+   "link_speed": "Unknown",
+   "link_speed_max": "Unknown",
+   "link_width": "?",
+   "link_width_max": "?",
+   "link": "Unknown × ?"
+  }
+ ],
+ "roles": {
+  "0000:01:00.0": "Desktop",
+  "0000:03:00.0": "AI & compute",
+  "0000:00:08.0": "Off"
+ },
+ "seen": true,
+ "trial": {}
+}

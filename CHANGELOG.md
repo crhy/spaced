@@ -74,6 +74,34 @@ Not released yet: work landing on the 11.26.4 line.
   administrator password through polkit, and refuses while an NVIDIA driver
   reboot is still pending. See `docs/GPU-MANAGER.md`.
 
+- New look, shared by all Spaced apps from now on: a header with the Spaced
+  planet logo, tabs with icons, one card per graphics card (vendor chip, role
+  label such as "Desktop" or "AI & compute", VRAM bar, PCIe link, display and
+  free ports in plain words) and a status footer. Follows the desktop theme,
+  light or dark; first paint under a second; no timers while hidden. Intel Arc
+  and other vendors' discrete cards are detected by bus position and PCI class.
+
+**Spaced Sound Manager** (#429, new)
+
+- A Spaced sound app replaces MATE Sound Preferences in the menu ("Sound"):
+  Output, Input, Applications, Effects and Advanced pages in the same look as
+  the GPU Manager. Devices get real names and icons ("LG monitor", "HDMI audio ·
+  GeForce RTX 4070 Ti SUPER", "Speakers", "Headphones") instead of driver
+  strings, with level meters, volume, connector choice and one-click "Use
+  output". Raw ALSA/PulseAudio names only on Advanced. Uses the PulseAudio
+  protocol, so it works on PipeWire too; opens a microphone for a meter only on
+  the Input page. MATE's classic window stays installed.
+
+**Spaced Bazaar 0.1.16** (spacedbazaar#35)
+
+- AppImage is a third way to install, next to system packages and Flatpak, and
+  every app page starts with "Recommended for you": the format that runs best on
+  Spaced and why (FreeCAD: the AppImage, because the Flatpak freezes on this
+  desktop), with all other formats listed underneath to choose instead.
+  AppImages come only from the project's official releases with a matching
+  published SHA-256, install to ~/Applications with a menu entry and icon, and
+  uninstall cleanly.
+
 **Fixes and release gates** (prepared on 2026-11-25 as an 11.26.3-2 APT revision, shipped in 11.26.4 instead)
 
 - Restore Spaced-to-Spaced and Windows Network discovery after a late network

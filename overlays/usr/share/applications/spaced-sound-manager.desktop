@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Sound
+Comment=Choose your speakers and microphones, set levels, and fix sound that stopped working
+Exec=spaced-sound-manager
+Icon=multimedia-volume-control
+Terminal=false
+Categories=AudioVideo;
+Keywords=sound;audio;volume;microphone;output;input;speaker;

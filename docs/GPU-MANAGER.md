@@ -1,6 +1,6 @@
 # Spaced GPU Manager — local candidate
 
-Ships in 11.26.4 (#426); deferred from 11.26.3. The application
+Working-tree candidate for 11.26.3 / #426, not a published release. The application
 is now named **Spaced GPU Manager**. Existing `spaced-gpu-driver-manager` and
 `spaced-nvidia-installer` commands remain compatible.
 

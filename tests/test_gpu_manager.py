@@ -77,6 +77,68 @@ class DiscoveryTests(unittest.TestCase):
             self.assertEqual(found[0]['uuid'], 'GPU-b38e5856-b893-b0e3-5e2e-74253b1fe303')
             self.assertEqual(found[1]['uuid'], 'GPU-8c4b1594-c374-3f99-1354-953ba52ab76a')
 
+    def test_intel_arc_discrete_and_igpu_by_bus_position(self):
+        # issue #426 review: Intel makes discrete cards too (Arc). The iGPU
+        # enumerates on the root bus; the Arc sits behind a PCIe bridge.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for address in ('0000:00:02.0', '0000:03:00.0'):
+                path = root / 'bus/pci/devices' / address
+                path.mkdir(parents=True)
+                (path / 'class').write_text('0x030000')
+                (path / 'vendor').write_text('0x8086')
+
+            def run(args):
+                if args[0] == 'lspci':
+                    return ('0000:00:02.0 VGA compatible controller: Intel UHD Graphics\n'
+                            '0000:03:00.0 Display controller: Intel Arc A770\n')
+                return ''
+            found = {g['pci']: g for g in gpu.discover(root, run)}
+            self.assertEqual([(g['vendor'], g['family']) for g in found.values()],
+                             [('Intel', 'Intel'), ('Intel', 'Intel')])
+            self.assertTrue(found['0000:00:02.0']['integrated'])
+            self.assertFalse(found['0000:03:00.0']['integrated'])
+
+    def test_3d_controller_is_discrete_whatever_the_bus(self):
+        # class 0x0302 (3D controller, no display engine) is never on-board.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / 'bus/pci/devices' / '0000:04:00.0'
+            path.mkdir(parents=True)
+            (path / 'class').write_text('0x030200')
+            (path / 'vendor').write_text('0x8086')
+
+            def run(args):
+                return '0000:04:00.0 3D controller: Intel Arc A310\n' if args[0] == 'lspci' else ''
+            self.assertFalse(gpu.discover(root, run)[0]['integrated'])
+
+    def test_aspeed_bmc_server_classified_as_other(self):
+        # Matrox, ASPEED, Moore Threads and VIA are Other, by vendor id; the
+        # BMC graphics chip is on the board (integrated), not an add-in card.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / 'bus/pci/devices' / '0000:01:00.0'
+            path.mkdir(parents=True)
+            (path / 'class').write_text('0x030000')
+            (path / 'vendor').write_text('0x1a03')
+            (path / 'boot_vga').write_text('1')
+
+            def run(args):
+                if args[0] == 'lspci':
+                    return '0000:01:00.0 VGA compatible controller: ASPEED AST2500\n'
+                return ''
+            found = gpu.discover(root, run)
+            self.assertEqual([(g['vendor'], g['family'], g['integrated']) for g in found],
+                             [('ASPEED', 'Other', True)])
+            self.assertIn('Keep a monitor connected', gpu.recommendation(found))
+            self.assertIn('modesetting', gpu.xorg_config(dict(found[0], driver='ast')))
+
+    def test_pcie_generation_from_link_speed(self):
+        self.assertEqual(gpu.pcie_generation('16.0 GT/s PCIe'), 'PCIe 4.0')
+        self.assertEqual(gpu.pcie_generation('8.0 GT/s PCIe'), 'PCIe 3.0')
+        self.assertEqual(gpu.pcie_generation('2.5 GT/s PCIe'), 'PCIe 1.0')
+        self.assertEqual(gpu.pcie_generation('Unknown'), '')
+
     def test_missing_sysfs(self):
         with tempfile.TemporaryDirectory() as directory:
             self.assertEqual(gpu.discover(Path(directory), lambda _: ''), [])
@@ -344,6 +406,35 @@ class DriverInterlockTests(unittest.TestCase):
         for path in ('etc/init.d/spaced-gpu-guard', 'etc/xdg/autostart/spaced-gpu-trial.desktop',
                      'usr/share/polkit-1/actions/com.spacedlinux.gpu.policy'):
             self.assertIn(path, paths)
+
+
+class VramFormattingTests(unittest.TestCase):
+    """G4 (issue #426 review): the shipped UI prints used/total in GB with one
+    decimal on the used side, so 300 MiB of a 16 GiB card reads '0.3 / 16 GB',
+    not '300 / 16 GB'. Driven against the real UI module over fake data."""
+
+    @classmethod
+    def setUpClass(cls):
+        sys.path.insert(0, str(LIB))
+        spec = importlib.util.spec_from_file_location(
+            'gpu_manager_ui', str(LIB / 'spaced-gpu-manager.py'))
+        cls.ui = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.ui)
+
+    def test_used_total_in_gb_one_decimal(self):
+        text, fraction, total_gb = self.ui.vram_pair(
+            {'vram_total': 16384, 'vram_used': 300})
+        self.assertEqual(text, '0.3 / 16 GB')
+        self.assertEqual(total_gb, 16)
+        self.assertAlmostEqual(fraction, 300 / 16384, places=4)
+
+    def test_zero_used_shows_a_decimal(self):
+        text, _, total_gb = self.ui.vram_pair({'vram_total': 8192, 'vram_used': 0})
+        self.assertEqual(text, '0.0 / 8 GB')
+        self.assertEqual(total_gb, 8)
+
+    def test_no_memory_reported_is_none(self):
+        self.assertIsNone(self.ui.vram_pair({'vram_total': None}))
 
 
 if __name__ == '__main__':

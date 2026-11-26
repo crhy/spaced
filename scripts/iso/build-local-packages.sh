@@ -59,6 +59,7 @@ SETTINGS_PATHS=(
     etc/xdg/autostart/spaced-enable-flatpak-remotes.desktop
     etc/xdg/autostart/spaced-first-login-repair.desktop
     etc/xdg/autostart/spaced-flatpak-desktop-entries.desktop
+    etc/xdg/autostart/spaced-gpu-trial.desktop
     etc/xdg/autostart/spaced-nvidia-postboot.desktop
     etc/xdg/autostart/spaced-gpu-trial.desktop
     etc/xdg/autostart/spaced-theme-monitor.desktop
@@ -75,9 +76,11 @@ SETTINGS_PATHS=(
     usr/share/applications/spaced-gpu-driver-manager.desktop
     usr/share/applications/spaced-sharing-password.desktop
     usr/share/applications/spaced-update.desktop
+    usr/share/applications/spaced-wine-run.desktop
     usr/share/applications/spaced-window-manager.desktop
     usr/share/caja-python/extensions/spaced-change-theme.py
     usr/share/caja-python/extensions/spaced-set-wallpaper.py
+    usr/share/caja-python/extensions/spaced-open-terminal.py
     usr/share/fastfetch/logos/spaced-linux.txt
     usr/share/flatpak/remotes.d/flathub.flatpakrepo
     usr/share/glib-2.0/schemas/90_spaced-linux.gschema.override
@@ -85,6 +88,7 @@ SETTINGS_PATHS=(
     usr/share/keyrings/spaced-archive-keyring.gpg
     usr/share/mate-panel/layouts
     usr/share/pixmaps
+    usr/share/spaced-linux
     usr/share/spaced-xsessions
     usr/share/polkit-1/actions/com.spacedlinux.nvidia.policy
     usr/share/polkit-1/actions/com.spacedlinux.gpu.policy

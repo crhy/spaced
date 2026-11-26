@@ -25,6 +25,14 @@ scope before computing available updates. When an app's version is missing,
 compare the installed ref/origin/scope with the actual repository commit;
 a GitHub release asset alone does not establish Flatpak availability. See
 the [subsystem map](SUBSYSTEMS.md) and [post-release audit](10.26.6-POST-RELEASE-AUDIT.md).
+A proposed peer-to-peer transport for these same signed bytes is design only, and
+keeps every signature and checksum check in this section mandatory: see
+[P2P repositories](P2P-REPOS.md).
+
+The same split applies to the Welcome installation workflow: a Voxa greeter in
+Welcome (#283) is owned by `crhy/spacedwelcome` and is blocked behind
+[VOXA-GREETER-CONTRACT.md](VOXA-GREETER-CONTRACT.md), which names the repository
+and the release that carries each milestone.
 
 The image registers two signed remotes:
 
