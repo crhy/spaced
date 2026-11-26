@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Spaced Sound Manager">
+  <defs>
+    <radialGradient id="planet" cx="0.4" cy="0.35" r="0.75">
+      <stop offset="0" stop-color="#4f9be0"/>
+      <stop offset="0.55" stop-color="#1e9be0"/>
+      <stop offset="1" stop-color="#0b3a5e"/>
+    </radialGradient>
+  </defs>
+  <circle cx="32" cy="34" r="16" fill="url(#planet)"/>
+  <ellipse cx="32" cy="34" rx="26" ry="8" fill="none" stroke="#7cc6f5"
+           stroke-width="2.4" opacity="0.9"
+           transform="rotate(-22 32 34)"/>
+  <circle cx="14" cy="16" r="1.1" fill="#cfe9ff" opacity="0.85"/>
+  <circle cx="52" cy="14" r="0.9" fill="#cfe9ff" opacity="0.7"/>
+  <circle cx="56" cy="46" r="0.8" fill="#cfe9ff" opacity="0.6"/>
+</svg>

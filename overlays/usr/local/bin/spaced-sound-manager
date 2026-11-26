@@ -1,0 +1,6 @@
+#!/bin/sh
+# Compatibility launcher: the menu, the panel applet's "Sound Preferences" item,
+# spaced-hotkey-action sound and the old mate-volume-control hotkey all run the
+# new Spaced Sound Manager. mate-volume-control itself stays installed, and its
+# upstream binary is still reachable as mate-volume-control-classic.
+exec /usr/bin/python3 /usr/lib/spaced-linux/spaced-sound-manager.py "$@"

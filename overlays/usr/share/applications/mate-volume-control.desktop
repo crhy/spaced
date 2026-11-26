@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Sound Preferences
+Comment=Adjust the volume of applications and system sounds
+Exec=mate-volume-control
+Icon=multimedia-volume-control
+Type=Application
+Categories=GTK;Settings;HardwareSettings;AudioVideo;Audio;
+# 11.26.4 (issue #429): this menu entry is replaced by Spaced Sound Manager
+# ("Sound"). The mate-volume-control package stays installed and its binary is
+# reachable as mate-volume-control-classic, so no feature is unreachable.
+NoDisplay=true
