@@ -42,6 +42,10 @@ folders.
   the signed Flatpak catalog, release pins and end-to-end tests.
 - [P2P-REPOS.md](P2P-REPOS.md) — design-only threat model and phased plan for
   peer-to-peer transport of the signed bytes above; nothing in it is implemented.
+- [VOXA-INTEGRATION.md](VOXA-INTEGRATION.md) — the supported v1 boundary for
+  Voxa integration (#238, #283): local versus networked accounts and actions,
+  credential and transcript storage, confirmation policy, sysvinit service
+  lifecycle, offline behaviour, and the conditions for later integration work.
 - [FIXES.md](FIXES.md) — current resolutions of recurring issues across
   releases.
 - [SESSION-REGRESSIONS.md](SESSION-REGRESSIONS.md) — session regression
