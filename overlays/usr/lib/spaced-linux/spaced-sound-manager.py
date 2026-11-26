@@ -148,6 +148,12 @@ button.primary {{ border: none; border-radius: 8px; background-image: none;
   background-color: {p['accent_ink']}; color: #ffffff; padding: 4px 12px;
   min-height: 0; }}
 list, row {{ background-color: {p['card']}; color: {p['text']}; border: none; }}
+/* Connector dropdown: family navy, readable in every theme (11.26.4 review). */
+combobox button, combobox box.linked button {{ background-image: none;
+  background-color: {p['bg']}; color: {p['text']}; border: 1px solid {p['border']};
+  border-radius: 8px; box-shadow: none; text-shadow: none; }}
+combobox button label, combobox button arrow, combobox cellview {{ color: {p['text']}; }}
+button.link {{ box-shadow: none; outline: none; }}
 combobox, combobox button {{ background-color: {p['card']}; color: {p['text']};
   border: 1px solid {p['border']}; border-radius: 6px; }}
 combobox window, combobox row, combobox list {{ background-color: {p['card']};
