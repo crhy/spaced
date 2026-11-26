@@ -1,0 +1,20 @@
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          spaced-gpu-guard
+# Required-Start:    $local_fs
+# Required-Stop:
+# X-Start-Before:    lightdm
+# Default-Start:     2 3 4 5
+# Default-Stop:
+# Short-Description: Recover unconfirmed Spaced GPU desktop trials
+### END INIT INFO
+case "${1:-}" in
+    start)
+        /sbin/start-stop-daemon --start --quiet --background --make-pidfile \
+            --pidfile /run/spaced-gpu-guard.pid --startas /usr/lib/spaced-linux/spaced-gpu-helper \
+            -- watchdog
+        ;;
+    stop) : ;; # Do not disarm a running trial on a service stop.
+    restart|force-reload) "$0" start ;;
+    *) echo "Usage: $0 {start|stop|restart|force-reload}" >&2; exit 1 ;;
+esac

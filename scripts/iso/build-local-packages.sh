@@ -40,6 +40,7 @@ SETTINGS_PATHS=(
     etc/default/spaced-first-boot-snapshot
     etc/fastfetch
     etc/init.d/spaced-first-boot-snapshot
+    etc/init.d/spaced-gpu-guard
     etc/init.d/spaced-wsdd
     etc/lightdm/lightdm.conf.d/60-spaced-installed.conf
     etc/NetworkManager/dispatcher.d/90-spaced-samba-ready
@@ -58,6 +59,7 @@ SETTINGS_PATHS=(
     etc/xdg/autostart/spaced-enable-flatpak-remotes.desktop
     etc/xdg/autostart/spaced-first-login-repair.desktop
     etc/xdg/autostart/spaced-flatpak-desktop-entries.desktop
+    etc/xdg/autostart/spaced-gpu-trial.desktop
     etc/xdg/autostart/spaced-nvidia-postboot.desktop
     etc/xdg/autostart/spaced-theme-monitor.desktop
     etc/xdg/autostart/spaced-window-decorator.desktop
@@ -88,6 +90,7 @@ SETTINGS_PATHS=(
     usr/share/spaced-linux
     usr/share/spaced-xsessions
     usr/share/polkit-1/actions/com.spacedlinux.nvidia.policy
+    usr/share/polkit-1/actions/com.spacedlinux.gpu.policy
     usr/share/polkit-1/actions/com.spacedlinux.sharing.policy
     usr/share/polkit-1/actions/com.spacedlinux.update.policy
 )
