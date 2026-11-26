@@ -24,6 +24,7 @@ gi.require_version('Gdk', '3.0')
 gi.require_version('GdkPixbuf', '2.0')
 from gi.repository import Gdk, GdkPixbuf, GLib, Gtk
 from spaced_gpu import (STATE, discover, recommendation, boot_seconds, pcie_generation)
+import spaced_family_style as family
 
 HELPER = '/usr/lib/spaced-linux/spaced-gpu-helper'
 NVIDIA_HELPER = '/usr/lib/spaced-linux/spaced-nvidia-helper'
@@ -62,59 +63,36 @@ def _hex(h):
 
 
 class Palette:
-    """One set of tokens - bg, band, card, card-border, text, muted, accent, ok,
-    warn, ai, off - used everywhere; never a hard-coded dark-only look."""
-
-    def __init__(self, window, band, card, border, text, muted, accent, ok, warn,
-                 ai, off, track):
-        self.window, self.band, self.card = window, band, card
-        self.border, self.text, self.muted = border, text, muted
-        self.accent, self.ok, self.warn = accent, ok, warn
-        self.ai, self.off, self.track = ai, off, track
+    """Kept for callers that already name it; the tokens now live in the shared
+    spaced_family_style module so the GPU and Sound managers never drift."""
 
 
-DARK = Palette(_hex('#0b1220'), _hex('#0e1526'), _hex('#111a2e'), _hex('#1e2a44'),
-               _hex('#e6ecf5'), _hex('#8a96ab'), _hex('#1e9be0'), _hex('#22c55e'),
-               _hex('#f59e0b'), _hex('#8b5cf6'), _hex('#6b7488'), _hex('#1e2a44'))
-LIGHT = Palette(_hex('#eef2f8'), _hex('#e7ecf4'), _hex('#ffffff'), _hex('#dfe5ef'),
-                _hex('#1f2937'), _hex('#6b7280'), _hex('#1e9be0'), _hex('#16a34a'),
-                _hex('#d97706'), _hex('#7c3aed'), _hex('#9aa3b2'), _hex('#e5e7eb'))
+# The navy family tokens, single-sourced in spaced_family_style.
+DARK = family.DARK
+LIGHT = family.LIGHT
 
 
 def _mix(base, target, amount):
-    return tuple(b + (t - b) * amount for b, t in zip(base, target))
+    return family.mix(base, target, amount)
 
 
 def _light(c):
-    r, g, b = c
-    return 0.299 * r + 0.587 * g + 0.114 * b
+    return family.lightness(c)
 
 
 def palette_from_gtk(context):
-    """Follow the live desktop theme, the way Spaced Monitor does."""
+    """Navy on every dark desktop theme, light tokens on a light one - exactly
+    like Spaced Monitor (spaced_monitor/theme.py). Only dark/light is read from
+    the desktop; the family navy card/page/band, the cyan accent and the pill
+    colours are fixed, because a grey card is wrong in every dark theme (issue
+    #426 review, G1)."""
     def lookup(name):
         found, rgba = context.lookup_color(name)
         return (rgba.red, rgba.green, rgba.blue) if found else None
 
-    bg, base, fg, sel = (lookup('theme_bg_color'), lookup('theme_base_color'),
-                        lookup('theme_fg_color'), lookup('theme_selected_bg_color'))
-    is_dark = (_light(bg) < 0.5) if bg is not None else True
-    fallback = DARK if is_dark else LIGHT
-    window = bg if bg is not None else fallback.window
-    text = fg if fg is not None else fallback.text
-    card = base if base is not None else fallback.card
-    if card is not None and abs(_light(card) - _light(window)) < 0.04:
-        card = _mix(card, text, 0.06)
-    if fg is not None:
-        muted = _mix(window, fg, 0.65)
-        border = _mix(window, fg, 0.12)
-        track = _mix(window, fg, 0.14)
-    else:
-        muted, border, track = fallback.muted, fallback.border, fallback.track
-    accent = sel if sel is not None else fallback.accent
-    return Palette(window, _mix(window, card, 0.5), card, border, text, muted,
-                   accent, fallback.ok, fallback.warn, fallback.ai,
-                   fallback.off, track)
+    bg = lookup('theme_bg_color')
+    dark = (family.lightness(bg) < 0.5) if bg is not None else True
+    return family.palette_for(dark)
 
 
 def _css_colour(c):
@@ -132,8 +110,12 @@ def build_css(p):
     border, text, muted = map(_css_colour, (p.border, p.text, p.muted))
     accent, ok, warn = map(_css_colour, (p.accent, p.ok, p.warn))
     ai, off, track = map(_css_colour, (p.ai, p.off, p.track))
+    ink = _css_colour(p.accent_ink)
     return f"""
 window, .background {{ background-color: {w}; color: {text}; font-size: 13px; }}
+/* The page area behind the cards is the navy page token, not the GTK theme's
+   grey base colour: scrolledwindow/viewport/stack all paint the family bg. */
+scrolledwindow, viewport, stack, stack > box, .page {{ background-color: {w}; }}
 .band {{ background-color: {band}; border-bottom: 1px solid {border}; }}
 .band-title {{ font-weight: bold; font-size: 16px; color: {text}; }}
 .tagline {{ font-size: 11px; color: {muted}; }}
@@ -141,8 +123,8 @@ window, .background {{ background-color: {w}; color: {text}; font-size: 13px; }}
 .tab {{ background-color: transparent; border: none; border-radius: 999px;
   padding: 4px 12px; color: {muted}; min-height: 0; }}
 .tab:hover {{ background-color: {_rgba(p.accent, 0.12)}; color: {text}; }}
-.tab-active {{ background-color: {accent}; color: #ffffff; }}
-.tab-active:hover {{ background-color: {accent}; color: #ffffff; }}
+.tab-active {{ background-color: {ink}; color: #ffffff; }}
+.tab-active:hover {{ background-color: {ink}; color: #ffffff; }}
 .tab-underline {{ min-height: 2px; background-color: transparent; }}
 .tab-underline-active {{ min-height: 2px; border-radius: 2px;
   background-image: linear-gradient(to right, {accent}, {_rgba(p.accent, 0.1)}); }}
@@ -173,6 +155,12 @@ button:hover, button:active, button:focus {{ background-color: {card}; color: {t
 button:disabled {{ color: {muted}; }}
 button:disabled:hover {{ background-color: {card}; }}
 .icon-button {{ padding: 3px; border-radius: 6px; }}
+/* Header buttons are compact rounded outline buttons (~36 px), not full-height
+   grey boxes (issue #426 review, G3). */
+button.compact, button.compact:active, button.compact:hover,
+button.compact:focus {{ min-height: 24px; padding: 5px 12px; border-radius: 8px;
+  border: 1px solid {border}; background-color: {card}; color: {text};
+  background-image: none; }}
 progressbar.vram progress {{ background-image: linear-gradient(to right, {ai},
   #c084fc); border-radius: 3px; min-height: 6px; }}
 progressbar.vram trough {{ background-color: {track}; border: none; min-height: 6px;
@@ -197,8 +185,23 @@ def mode_text(mode):
     return mode.replace('x', ' \u00d7 ') if mode else ''
 
 
+def connector_type(name):
+    """'HDMI-A-2' -> 'HDMI', 'DP-0' -> 'DisplayPort', 'eDP-1' -> 'built-in
+    screen': the plain connector family, so ports are grouped by type (issue
+    #426 review, G6) rather than listed one numbered socket at a time."""
+    kind = name.split('-', 1)[0].split('_')[0]
+    return {'HDMI': 'HDMI', 'DP': 'DisplayPort', 'DVI': 'DVI',
+            'eDP': 'built-in screen', 'VGA': 'VGA', 'TV': 'TV',
+            'Unknown': 'socket'}.get(kind, kind)
+
+
 def pcie_fact(gpu):
-    """Max capability in big text; the narrower live link when it runs smaller."""
+    """Max capability in big text; the narrower live link when it runs smaller.
+    An integrated GPU is built into the CPU, not slotted (issue #426 review,
+    G6): 'PCIe 4.0 · ×4 link' when a card runs narrower than it can."""
+    if gpu.get('integrated'):
+        return ('Built into your CPU',
+                'Your processor has its own graphics; it is not a separate card.')
     gen = pcie_generation(gpu.get('link_speed_max', ''))
     try:
         width = int(str(gpu.get('link_width', '0')) or 0)
@@ -208,21 +211,22 @@ def pcie_fact(gpu):
     if not gen or not width_max:
         return 'PCIe \u00d7?', 'This card or slot does not report its PCI Express link'
     if width and width < width_max:
-        return (f'\u00d7{width} link',
+        return (f'{gen} \u00b7 \u00d7{width} link',
                 f'Its own speed is {gen}; it runs at {width} lanes because of the slot it is in')
-    return (f'{gen} \u00d7{width_max}', f'{gen}, {width_max} lanes')
+    return (f'{gen} \u00b7 \u00d7{width_max}', f'{gen}, {width_max} lanes')
 
 
 def vram_pair(gpu):
     total, used = gpu.get('vram_total'), gpu.get('vram_used')
     if not total:
         return None
-    def gb(x):
-        return x / 1024 if x > 1024 else x
-    total_gb = round(gb(total))
-    used_gb = round(gb(used), 1) if used is not None else 0
+    # vram values are MiB; show used/total in GB with one decimal on the used
+    # side (issue #426 review, G4): 300 MiB of 16 GiB is "0.3 / 16 GB", not
+    # "300 / 16 GB".
+    total_gb = round(total / 1024)
+    used_gb = round((used or 0) / 1024, 1)
     fraction = min(1.0, max(0.0, (used or 0) / total)) if used is not None else 0
-    return f'{used_gb:g} / {total_gb:g} GB', fraction, total_gb
+    return f'{used_gb:.1f} / {total_gb:d} GB', fraction, total_gb
 
 
 def trial_state():
@@ -315,10 +319,18 @@ class Card(Gtk.Box):
         vendor = gpu.get('vendor', 'Other')
         chip = {'NVIDIA': 'chip-nvidia', 'AMD': 'chip-amd',
                 'Intel': 'chip-intel'}.get(vendor, 'chip-other')
-        head.pack_start(SvgImage(chip, 48, tint), False, False, 0)
+        chip_icon = SvgImage(chip, 56, tint)
+        chip_icon.set_valign(Gtk.Align.CENTER)
+        head.pack_start(chip_icon, False, False, 0)
         head.pack_start(vdiv(), False, False, 0)
         middle = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
-        middle.pack_start(label(gpu.get('name', 'Graphics card'), 'name'), False, False, 0)
+        middle.set_valign(Gtk.Align.CENTER)
+        # name bold, with the small role pill right after it on the same row
+        name_row = Gtk.Box(spacing=8)
+        name_row.pack_start(label(gpu.get('name', 'Graphics card'), 'name'),
+                            False, False, 0)
+        name_row.pack_start(app.pill(app.role_of(gpu)), False, False, 0)
+        middle.pack_start(name_row, False, False, 0)
         pair = vram_pair(gpu)
         if gpu.get('integrated'):
             detail = f'{vendor} \u00b7 built into your'
@@ -330,21 +342,26 @@ class Card(Gtk.Box):
             detail = f'{vendor} \u00b7 graphics memory not reported'
         middle.pack_start(label(detail, 'detail'), False, False, 0)
         head.pack_start(middle, True, True, 0)
-        head.pack_end(app.pill(app.role_of(gpu)), False, False, 0)
-        self.pack_start(head, False, False, 0)
-
+        # VRAM label/value over a thin rounded bar, right side of the top row
         if pair:
-            row = Gtk.Box(spacing=6)
-            row.pack_start(label('VRAM', 'muted'), False, False, 0)
-            row.pack_start(label(pair[0], 'value'), False, False, 0)
-            self.pack_start(row, False, False, 0)
+            right = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)
+            right.set_valign(Gtk.Align.CENTER)
+            vram_row = Gtk.Box(spacing=6)
+            vram_row.pack_start(label('VRAM', 'muted'), False, False, 0)
+            vram_row.pack_start(label(pair[0], 'value'), False, False, 0)
+            right.pack_start(vram_row, False, False, 0)
             bar = Gtk.ProgressBar.new()
             bar.get_style_context().add_class('vram')
             bar.set_fraction(pair[1])
-            self.pack_start(bar, False, False, 0)
+            bar.set_size_request(150, -1)
+            right.pack_start(bar, False, False, 0)
+            head.pack_start(right, False, False, 0)
         elif gpu.get('integrated'):
-            self.pack_start(label('Shared with your PC \u00b7 about 2 GB available to '
-                                  'graphics', 'muted'), False, False, 0)
+            shared = label('Shared with your PC \u00b7 about 2 GB available to '
+                           'graphics', 'muted')
+            shared.set_valign(Gtk.Align.CENTER)
+            head.pack_start(shared, False, False, 0)
+        self.pack_start(head, False, False, 0)
 
         facts = Gtk.Box(spacing=10)
         pcie_text, pcie_tip = pcie_fact(gpu)
@@ -398,17 +415,21 @@ class Card(Gtk.Box):
                 'Nothing is reporting a screen on this card')
 
     def ports_fact(self):
+        # Plain words, grouped by connector type (issue #426 review, G6):
+        # "DisplayPort + HDMI · 2 free", never "DisplayPort 0, DisplayPort 1".
         connectors = self.gpu.get('connectors', [])
-        free = [human_connector(c['name']) for c in connectors
-                if c['status'] in ('disconnected', 'unknown')]
-        if free:
-            return ('fact-ports', 'Free ports: ' + ', '.join(free),
-                    'Sockets on this card with nothing plugged in')
         if not connectors:
-            return ('fact-ports', 'No sockets reported',
-                    'This driver does not expose connector names; the Move monitor page '
-                    'reads /sys/class/drm')
-        return 'fact-ports', '', ''
+            return ('fact-ports', '', '')
+        types = []
+        for c in connectors:
+            t = connector_type(c['name'])
+            if t not in types:
+                types.append(t)
+        free = sum(1 for c in connectors if c['status'] == 'disconnected')
+        label_text = ' + '.join(types)
+        label_text += f' \u00b7 {free} free' if free else ' \u00b7 in use'
+        return ('fact-ports', label_text,
+                'Sockets on this card; a free one is ready for a screen')
 
 
 class Backend:
@@ -446,11 +467,12 @@ class Backend:
 
 class Manager(Gtk.Window):
     def __init__(self, preview=False, backend=None, capture=None, out=None,
-                 self_check=False):
+                 self_check=False, palette=None):
         super().__init__(title='Spaced GPU Manager')
         self.preview = preview
         self.backend = backend or Backend()
         self.capture, self.out, self.self_check = capture, out, self_check
+        self._forced_palette = palette
         self.busy = False
         self.gpus = []
         self.target_pci = None
@@ -462,7 +484,8 @@ class Manager(Gtk.Window):
         self._grabbed = False
         self._last_discovery = 0.0
         self._poll = None
-        self.palette = DARK
+        self.palette = (family.palette_for(palette == 'dark')
+                        if palette in ('dark', 'light') else DARK)
         self.set_default_size(900, 680)
         self.set_size_request(720, 540)
         self.set_position(Gtk.WindowPosition.CENTER)
@@ -510,7 +533,10 @@ class Manager(Gtk.Window):
 
     # ---------------------------------------------------------------- chrome
     def apply_theme(self, *_):
-        self.palette = palette_from_gtk(self.get_style_context())
+        if self._forced_palette in ('dark', 'light'):
+            self.palette = family.palette_for(self._forced_palette == 'dark')
+        else:
+            self.palette = palette_from_gtk(self.get_style_context())
         provider = Gtk.CssProvider()
         provider.load_from_data(build_css(self.palette).encode())
         screen = Gdk.Screen.get_default()
@@ -541,10 +567,14 @@ class Manager(Gtk.Window):
         band.pack_start(titles, False, False, 0)
         band.pack_end(SvgImage('band', 420, height=64), False, False, 0)
         self.refresh_button = Gtk.Button(label='Refresh')
+        self.refresh_button.get_style_context().add_class('compact')
+        self.refresh_button.set_valign(Gtk.Align.CENTER)
         self.refresh_button.connect('clicked', lambda *_: self.refresh(force=True))
         band.pack_end(self.refresh_button, False, False, 0)
         info = Gtk.Button()
         info.get_style_context().add_class('icon-button')
+        info.get_style_context().add_class('compact')
+        info.set_valign(Gtk.Align.CENTER)
         info.add(SvgImage('info', 16, self.palette.text))
         info.set_tooltip_text('About Spaced GPU Manager')
         info.connect('clicked', lambda *_: self.message(
@@ -617,7 +647,8 @@ class Manager(Gtk.Window):
         box.pack_start(self.dot_box(), False, False, 0)
         box.pack_start(label('All systems ready', 'muted', wrap=False), False, False, 0)
         self.footer_status = label('Last checked just now', 'muted', wrap=False)
-        box.pack_end(self.footer_status, True, True, 0)
+        self.footer_status.set_xalign(1.0)
+        box.pack_end(self.footer_status, False, False, 0)
         return box
 
     # ----------------------------------------------------------------- pages
@@ -1332,6 +1363,11 @@ if __name__ == '__main__':
     parser.add_argument('--self-check', action='store_true',
                         help='After first paint, hide the window and report that no '
                              'timer ran (used by the UI budget test)')
+    parser.add_argument('--palette', choices=('auto', 'dark', 'light'),
+                        default='auto',
+                        help='Force the family dark (navy) or light tokens instead of '
+                             'following the desktop; auto follows the desktop like '
+                             'Spaced Monitor. Renders use dark/light.')
     args = parser.parse_args()
     if args.confirm_trial and trial_state().get('phase') != 'trial':
         sys.exit(0)
@@ -1344,6 +1380,7 @@ if __name__ == '__main__':
     else:
         window = Manager(preview, Backend(args.fake_data),
                          capture=args.capture, out=args.out,
-                         self_check=args.self_check)
+                         self_check=args.self_check,
+                         palette=None if args.palette == 'auto' else args.palette)
     window.show_all()
     Gtk.main()
