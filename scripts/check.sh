@@ -1430,6 +1430,17 @@ for theme_name, gtk3 in (("Windows 7", win7_gtk), ("Ubuntu", ubuntu_gtk)):
         f"{theme_name}: Brisk category pane escapes the themed popup"
     assert "window.brisk-menu .apps-list" in gtk3, \
         f"{theme_name}: Brisk application pane escapes the themed popup"
+# Issue #387: the Menu, clock/date, volume and show-desktop applets run out of
+# process, so every registry theme must clear their host surfaces; otherwise a
+# panel picture or translucent fill stops at the applet edge.
+for theme in themes:
+    gtk3 = (theme_root / theme["gtk_theme"] / "gtk-3.0/gtk.css").read_text(encoding="utf-8")
+    assert "#PanelPlug" in gtk3 and "background-color: transparent" in gtk3, \
+        f"{theme['name']}: opaque applet hosts cover the panel image"
+    for host in (".mate-panel-menu-bar #PanelApplet", "NaTrayApplet",
+                 "#PanelApplet > box", "#PanelApplet > widget"):
+        assert host in gtk3, \
+            f"{theme['name']}: {host} can paint an opaque rectangle over the panel"
 assert "background-color: rgba(44,37,40,0.92)" in ubuntu_gtk, \
     "Ubuntu Brisk menu does not match the aubergine launcher"
 geoworks_gtk = (theme_root / "Spaced-Geoworks/gtk-3.0/gtk.css").read_text(encoding="utf-8")

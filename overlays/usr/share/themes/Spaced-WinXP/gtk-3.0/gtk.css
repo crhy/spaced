@@ -171,6 +171,22 @@ button.brisk-button-vertical {
     color: #ffffff;
 }
 
+/* Issue #387: the Menu, clock/date, volume and show-desktop applets run out
+ * of process. Clear only their host surfaces so Luna's blue strip reaches the
+ * applet edges; the blue and green button surfaces above stay as they are. */
+.mate-panel-menu-bar #PanelApplet,
+.gnome-panel-menu-bar #PanelApplet,
+#MatePanelWidget #PanelApplet,
+PanelApplet, MatePanelApplet, NaTrayApplet,
+#PanelPlug, #PanelPlug > box, #PanelPlug > widget,
+#PanelApplet, #PanelApplet > box, #PanelApplet > widget {
+    background-color: transparent;
+    background-image: none;
+    color: @panel_fg_color;
+    border-color: transparent;
+    box-shadow: none;
+}
+
 /* Brisk cannot reproduce Luna's exact two-column Start menu topology, but its
  * category and application panes map naturally to the pale-blue system-links
  * column and white programs column. Blue framing and classic selection states
