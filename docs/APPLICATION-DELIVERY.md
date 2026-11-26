@@ -29,6 +29,11 @@ A proposed peer-to-peer transport for these same signed bytes is design only, an
 keeps every signature and checksum check in this section mandatory: see
 [P2P repositories](P2P-REPOS.md).
 
+The same split applies to the Welcome installation workflow: a Voxa greeter in
+Welcome (#283) is owned by `crhy/spacedwelcome` and is blocked behind
+[VOXA-GREETER-CONTRACT.md](VOXA-GREETER-CONTRACT.md), which names the repository
+and the release that carries each milestone.
+
 The image registers two signed remotes:
 
 | Name | URL | Purpose |

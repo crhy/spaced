@@ -352,6 +352,19 @@ live_build_config = Path("live-build/auto/config").read_text(encoding="utf-8")
 assert "--firmware-chroot false" in live_build_config, "broad live-build firmware injection is enabled"
 assert "docs/BOOTING.md" in Path("README.md").read_text(encoding="utf-8"), \
     "boot documentation reference regressed in README.md"
+# The 11.26.1 review requires a staged contract for the Spaced Welcome Voxa greeter
+# (issue #283) before any implementation, and the contract is only useful if the
+# maintainer-facing index and its absolute rules survive later edits.
+assert Path("docs/VOXA-GREETER-CONTRACT.md").is_file(), \
+    "the staged Voxa greeter contract the 11.26.1 review requires (issue #283) is missing"
+greeter_contract = Path("docs/VOXA-GREETER-CONTRACT.md").read_text(encoding="utf-8")
+assert "VOXA-GREETER-CONTRACT.md" in Path("docs/README.md").read_text(encoding="utf-8"), \
+    "the staged Voxa greeter contract is no longer indexed in docs/README.md"
+for contract_requirement in ("no-audio", "consent", "spacedwelcome", "Never", "qwen2.5:0.5b"):
+    assert contract_requirement in greeter_contract, \
+        f"the staged Voxa greeter contract no longer states {contract_requirement} (issue #283)"
+assert "systemd" not in greeter_contract and "systemctl" not in greeter_contract, \
+    "the staged Voxa greeter contract names an init system Spaced Linux does not use (issue #283)"
 package_config = Path("config/packages.yaml").read_text(encoding="utf-8")
 calamares_settings = Path("overlays/etc/calamares/settings.conf").read_text(encoding="utf-8")
 iso_configure_hook = Path("scripts/iso/01-configure.chroot").read_text(encoding="utf-8")
