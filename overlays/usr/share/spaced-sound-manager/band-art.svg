@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Static space art for the header band (FAMILY-LOOK §1). The band's own CSS
+     colour is the background; this art only adds the glowing planet edge and
+     stars that fade out to the right, so it reads correctly in dark and light.
+     Tiny static SVG, no network, <= 60 KB. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="64" viewBox="0 0 420 64" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+  <defs>
+    <linearGradient id="fade" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0.35" stop-color="#ffffff" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#1e9be0" stop-opacity="0.5"/>
+      <stop offset="0.6" stop-color="#1e9be0" stop-opacity="0.14"/>
+      <stop offset="1" stop-color="#1e9be0" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="edge"><circle cx="120" cy="72" r="52"/></clipPath>
+    <mask id="fadel"><rect width="420" height="64" fill="url(#fade)"/></mask>
+  </defs>
+  <g mask="url(#fadel)">
+    <g clip-path="url(#edge)">
+      <rect x="68" y="20" width="104" height="52" fill="#14324a"/>
+      <rect x="68" y="20" width="104" height="9" fill="#2f7fb8" opacity="0.7"/>
+    </g>
+    <circle cx="120" cy="72" r="52" fill="none" stroke="#2f7fb8" stroke-width="1.5" opacity="0.6"/>
+    <ellipse cx="120" cy="72" rx="70" ry="20" fill="none" stroke="#7cc6f5" stroke-width="1.4" opacity="0.4"/>
+    <circle cx="120" cy="20" r="30" fill="url(#glow)"/>
+    <g fill="#7cc6f5">
+      <circle cx="236" cy="16" r="1.1" opacity="0.8"/>
+      <circle cx="272" cy="30" r="0.8" opacity="0.5"/>
+      <circle cx="304" cy="12" r="1.0" opacity="0.7"/>
+      <circle cx="340" cy="40" r="0.7" opacity="0.45"/>
+      <circle cx="366" cy="22" r="1.2" opacity="0.65"/>
+      <circle cx="394" cy="34" r="0.8" opacity="0.5"/>
+      <circle cx="252" cy="50" r="0.7" opacity="0.4"/>
+    </g>
+  </g>
+</svg>

@@ -141,8 +141,37 @@ Not released yet: work landing on the 11.26.4 line.
   "HD-Audio Generic" names as speakers by its port and "HDA NVidia" names as an
   HDMI output carrying the GPU it drives. An unrecognised device falls back to
   its raw name with no icon kind (the panel then uses the generic icon, never a
-  PCI card). `tests/test_sound_device_names.py` fixes the representative names
-  from DESIGN.md §4. Headless naming only: no GTK/UI, colours or theme yet.
+   PCI card). `tests/test_sound_device_names.py` fixes the representative names
+   from DESIGN.md §4. Headless naming only: no GTK/UI, colours or theme yet.
+- Ship the Spaced Sound Manager app for #429: `overlays/usr/lib/spaced-linux/
+  spaced-sound-manager.py` (GTK3, one window, no daemon) builds the five pages
+  Output · Input · Applications · Effects · Advanced in the family look (header
+  band with the planet logo and "Your sound, beautifully connected.", tabs with
+  shipped line icons, a page heading with the "4 outputs · 2 microphones · Audio
+  is working" dot, a glowing default-output card and compact other-output rows).
+  A default output card shows the friendly name, a green "Default output" pill,
+  an "Audio activity" segmented meter, mute + volume + percent, a Connector
+  dropdown, Test sound / Device settings / "Make this the one apps use"; other
+  outputs are compact rows with a Disconnected/Muted pill and "Use output"
+  (insensitive when disconnected) or "Unmute". The pactl backend lives in a
+  separate module `overlays/usr/lib/spaced-linux/spaced_sound.py` (PulseAudio
+  native protocol only — works on PipeWire too; never ALSA-direct and never a
+  PipeWire-only control) with a deterministic `FakeBackend` so every test and
+  screenshot uses fake bigboy data and opens no device, plays no sound and
+  touches no microphone; the microphone-level monitor is opened only behind the
+  microphone-listening guard (Input page + a click). Colours follow the desktop
+  theme (dark and light tokens, one accent), all timers and meters stop while the
+  window is hidden, and raw ALSA/PulseAudio names appear only on Advanced.
+  `overlays/usr/local/bin/spaced-sound-manager` and a "Sound" menu entry replace
+  mate-volume-control in the menu (the package stays installed, still reachable
+  as mate-volume-control-classic); planet/band art and line icons ship under
+  `overlays/usr/share/spaced-sound-manager/`. `tests/test_sound_manager.py` covers
+  the fake-data cards, the default-switch pactl calls, the guard and parser, and
+  a first-paint-under-Xvfb check under 1.5 s; `render-screens-11264.sh` renders
+  the five pages in Spaced-Dark and Spaced-Linux-Light to
+  `docs/design/sound-manager/screens-11264/` (10 PNGs). rhY's live test on bigboy
+  (real names, test sound on each output, the #427 repair) is still pending.
+
 
 ## 11.26.2-2 - 2026-11-14
 
