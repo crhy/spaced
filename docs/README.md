@@ -40,6 +40,8 @@ folders.
   upstream strategy.
 - [APPLICATION-DELIVERY.md](APPLICATION-DELIVERY.md) — Welcome, SpacedBazaar,
   the signed Flatpak catalog, release pins and end-to-end tests.
+- [P2P-REPOS.md](P2P-REPOS.md) — design-only threat model and phased plan for
+  peer-to-peer transport of the signed bytes above; nothing in it is implemented.
 - [FIXES.md](FIXES.md) — current resolutions of recurring issues across
   releases.
 - [SESSION-REGRESSIONS.md](SESSION-REGRESSIONS.md) — session regression
