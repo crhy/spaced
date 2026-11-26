@@ -38,6 +38,9 @@ folders.
   backgrounds and Cairo Dock.
 - [COMPIZ.md](COMPIZ.md) — Compiz architecture, runtime behaviour, patches and
   upstream strategy.
+- [XLIBRE-OPT-IN-TEST-IMAGE.md](XLIBRE-OPT-IN-TEST-IMAGE.md) — the opt-in Xlibre
+  test image (#314): its pinned-input guard, the hardware matrix still to fill,
+  and the Xorg fallback the #298 ABI guard still protects.
 - [APPLICATION-DELIVERY.md](APPLICATION-DELIVERY.md) — Welcome, SpacedBazaar,
   the signed Flatpak catalog, release pins and end-to-end tests.
 - [P2P-REPOS.md](P2P-REPOS.md) — design-only threat model and phased plan for
