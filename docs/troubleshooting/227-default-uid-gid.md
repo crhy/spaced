@@ -73,7 +73,7 @@ build time:
 id -u user >/dev/null 2>&1 || useradd -m -s /bin/bash user
 ```
 
-(`scripts/iso/01-configure.chroot:64`, installed as a live hook by
+(`scripts/iso/configure.d/30-live-user.sh`, installed through the live hook by
 `Makefile:133-135`). Plain `useradd` in a fresh debootstrap chroot yields
 UID/GID 1000 — the first non-system account. So when the `users` job ran
 `useradd -m -U <newlogin>` inside the target, UID 1000 (and the `user`
@@ -109,12 +109,12 @@ occupant is the live user described above.
 - The live user is `user` (`config/iso.yaml:22`, `live_user: user`, with
   live/root passwords on lines 23-24) and resolves to **UID/GID 1000**:
   it is the first account created in the image chroot
-  (`scripts/iso/01-configure.chroot:54`), and `user` is also live-config's
+  (`scripts/iso/configure.d/30-live-user.sh`), and `user` is also live-config's
   own Debian default, so the boot-time live-config path
   (`live-config`, `live-config-sysvinit` in `config/packages.yaml:158-162`)
   agrees rather than conflicting. LightDM autologs in as `user` by name
-  (`scripts/iso/01-configure.chroot:17`), and the hook seeds and
-  name-chowns its home (`scripts/iso/01-configure.chroot:79-81`).
+  (`scripts/iso/configure.d/10-identity-desktop.sh`), and the live-user phase
+  seeds and name-chowns its home (`scripts/iso/configure.d/30-live-user.sh`).
 - Grep over `overlays scripts config tests` for `1000|1001|useradd|
   adduser|live-config|FIRST_UID` finds **no file that assumes or pins UID
   1000**: the only `1000` hits besides this chain are a Compiz fractional
@@ -193,7 +193,7 @@ Downsides and limits (why "guarantee" is a strong word):
 Status in 11.26.1: **Option B is implemented.** A `shellprocess@spaced-remove-live-user`
 instance runs `userdel` in the target ahead of `users`
 (`overlays/etc/calamares/settings.conf:53` before `:54`), the groups Calamares
-adds are pre-created as system groups (`scripts/iso/01-configure.chroot:59-60`,
+adds are pre-created as system groups (`scripts/iso/configure.d/30-live-user.sh`,
 `overlays/etc/calamares/modules/users.conf:5-26`), and `scripts/check.sh:889`
 fails the build if that ordering regresses.
 
@@ -216,8 +216,8 @@ fails the build if that ordering regresses.
   Option B) —
   - **Option A (recommended): stop baking the live user into the
     squashfs.** Drop the account-creation block
-    (`scripts/iso/01-configure.chroot:53-59`) and the baked-home
-    seeding (`scripts/iso/01-configure.chroot:79-81`), and let
+    (`scripts/iso/configure.d/30-live-user.sh`) and the baked-home
+    seeding (in the same phase), and let
     `live-config`
     (already shipped, `config/packages.yaml:161-162`) create `user`
     (UID 1000) at boot, as stock Debian live does. unpackfs copies the

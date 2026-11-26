@@ -15,7 +15,8 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE_LIST = ROOT / "scripts" / "iso" / "package-list.sh"
-LIVE_HOOK = ROOT / "scripts" / "iso" / "01-configure.chroot"
+LIVE_HOOK = ROOT / "scripts" / "iso" / "configure.d" / "30-live-user.sh"
+SERVICES_HOOK = ROOT / "scripts" / "iso" / "configure.d" / "50-services-boot.sh"
 SKEL = ROOT / "overlays" / "etc" / "skel"
 PACKAGES_YAML = ROOT / "config" / "packages.yaml"
 LOCAL_PACKAGES = ROOT / "scripts" / "iso" / "build-local-packages.sh"
@@ -114,7 +115,7 @@ class LiveRescueTests(unittest.TestCase):
                                       + ", ".join(missing))
 
     def test_smartmontools_daemon_is_disabled_but_stays_installed(self):
-        script = LIVE_HOOK.read_text(encoding="utf-8")
+        script = SERVICES_HOOK.read_text(encoding="utf-8")
         self.assertIn("update-rc.d smartmontools disable", script)
 
     def test_live_desktop_note_carries_the_real_passwords(self):

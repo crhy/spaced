@@ -1,5 +1,34 @@
 # Changelog
 
+## 11.26.3-2 - 2026-11-25
+
+Prepared as an APT package revision for installed 11.26.3 systems; it does not
+change the OS version.
+
+- Restore Spaced-to-Spaced and Windows Network discovery after a late network
+  connection. The NetworkManager dispatcher now recovers both `smbd` and
+  `spaced-wsdd`, refuses to advertise when Samba failed, respects disabled
+  services, and closes its lock descriptor before starting a daemon.
+- Install the separate `cups-browsed` package, explicitly enable supported LAN
+  IPP queue creation instead of inheriting Ceres's `LocalOnly` default, and
+  start the printing services on both new and upgraded systems while preserving
+  an administrator's active `CreateIPPPrinterQueues` choice.
+- Strengthen the two-machine release gate. It now brings the test LAN up through
+  NetworkManager without manually restarting Samba/WSDD, then requires remote
+  IPP DNS-SD discovery, an automatic CUPS queue, job submission, and receipt of
+  a nonempty print document by the other Spaced machine. The clean monthly ISO
+  build now runs this gate as a fatal release check and retains its logs.
+- Require release-to-candidate evidence before APT publication: a checksummed
+  public ISO must complete a real signed-repository upgrade and then pass the
+  SMB/GVfs and IPP gate between two upgraded clients. Publication is bound to
+  the exact candidate `Packages` index, so rebuilding or changing it invalidates
+  old evidence.
+- Split the live-image configuration hook into ordered, strict-mode phases,
+  remove its redundant rolling-repository install, and inventory upstream
+  defaults that Spaced intentionally pins. Rename the expanded two-machine gate
+  to `network-services-gate`, retaining the old Samba target as a compatibility
+  alias.
+
 ## 11.26.3 - 2026-11-21
 
 Delivered as the 11.26.3 ISO and through Spaced Update (APT packages `11.26.3-1`,

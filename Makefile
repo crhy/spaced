@@ -50,7 +50,7 @@ VM_RUN := $(HOST_RUN) env SPACED_VM_SSH_PORT=$(VM_SSH_PORT) SPACED_VM_XRES=$(VM_
 ISO_SMOKE_RUN := $(HOST_RUN) env SPACED_ISO_SMOKE_TIMEOUT=$(ISO_SMOKE_TIMEOUT) SPACED_VM_THEME_TESTS=$(SPACED_VM_THEME_TESTS)
 VBOX_RUN := $(ISO_SMOKE_RUN) SPACED_VBOX_SSH_PORT=$(VBOX_SSH_PORT)
 
-.PHONY: help check deps clean cache-clean marco prepare lb-config lb-build iso-build iso-test iso-smoke iso-smoke-kvm iso-smoke-kvm-efi iso-smoke-kvm-4k iso-smoke-virtualbox iso-smoke-virtualbox-efi samba-network-gate vbox-smoke vbox-smoke-default iso-test-safe iso-test-safe-1024 iso-test-safe-1080 vm-create vm-install vm-start vm-stop release-preflight release apt-repo apt-repo-publish
+.PHONY: help check deps clean cache-clean marco prepare lb-config lb-build iso-build iso-test iso-smoke iso-smoke-kvm iso-smoke-kvm-efi iso-smoke-kvm-4k iso-smoke-virtualbox iso-smoke-virtualbox-efi network-services-gate samba-network-gate published-upgrade-network-gate vbox-smoke vbox-smoke-default iso-test-safe iso-test-safe-1024 iso-test-safe-1080 vm-create vm-install vm-start vm-stop release-preflight release apt-repo apt-repo-publish
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -133,6 +133,10 @@ prepare: marco ## Stage authored live-build configuration
 	cp scripts/iso/01-configure.chroot \
 		$(LB_DIR)/config/hooks/live/01-configure.chroot
 	chmod +x $(LB_DIR)/config/hooks/live/01-configure.chroot
+	mkdir -p $(LB_DIR)/config/includes.chroot/usr/lib/spaced-linux/live-build-configure.d
+	cp scripts/iso/configure.d/*.sh \
+		$(LB_DIR)/config/includes.chroot/usr/lib/spaced-linux/live-build-configure.d/
+	chmod 0755 $(LB_DIR)/config/includes.chroot/usr/lib/spaced-linux/live-build-configure.d/*.sh
 	cp scripts/iso/99-cleanup.chroot \
 		$(LB_DIR)/config/hooks/live/99-cleanup.chroot
 	chmod +x $(LB_DIR)/config/hooks/live/99-cleanup.chroot
@@ -180,7 +184,7 @@ iso-test: ## Boot the current release ISO in KVM
 	test -f $(ISO_DIR)/$(ISO_NAME) || { echo "Missing $(ISO_DIR)/$(ISO_NAME)"; exit 1; }
 	$(VM_RUN) scripts/vm/qemu/test-iso.sh $(abspath $(ISO_DIR)/$(ISO_NAME))
 
-iso-smoke: iso-smoke-kvm iso-smoke-kvm-efi iso-smoke-virtualbox iso-smoke-virtualbox-efi samba-network-gate ## Smoke-test the ISO in KVM/VirtualBox and two-machine Samba
+iso-smoke: iso-smoke-kvm iso-smoke-kvm-efi iso-smoke-virtualbox iso-smoke-virtualbox-efi network-services-gate ## Smoke-test the ISO and two-machine network services
 
 iso-smoke-kvm: ## Headlessly boot the ISO in KVM and wait for live SSH
 	test -f $(ISO_DIR)/$(ISO_NAME) || { echo "Missing $(ISO_DIR)/$(ISO_NAME)"; exit 1; }
@@ -202,9 +206,11 @@ iso-smoke-virtualbox-efi: ## Headlessly boot the ISO in VirtualBox EFI mode
 	test -f $(ISO_DIR)/$(ISO_NAME) || { echo "Missing $(ISO_DIR)/$(ISO_NAME)"; exit 1; }
 	$(VBOX_RUN) SPACED_VBOX_FIRMWARE=efi scripts/vm/virtualbox/smoke-iso.sh $(abspath $(ISO_DIR)/$(ISO_NAME))
 
-samba-network-gate: ## Boot two live ISOs and prove SMB/GVfs file copies across their LAN
+network-services-gate: ## Prove SMB/GVfs and IPP printing across two live ISOs
 	test -f $(ISO_DIR)/$(ISO_NAME) || { echo "Missing $(ISO_DIR)/$(ISO_NAME)"; exit 1; }
-	$(ISO_SMOKE_RUN) scripts/vm/qemu/samba-network-gate.sh $(abspath $(ISO_DIR)/$(ISO_NAME))
+	$(ISO_SMOKE_RUN) scripts/vm/qemu/network-services-gate.sh $(abspath $(ISO_DIR)/$(ISO_NAME))
+
+samba-network-gate: network-services-gate ## Compatibility alias for the network-services gate
 
 vbox-smoke: iso-smoke-virtualbox iso-smoke-virtualbox-efi ## VirtualBox smoke with VBoxSVGA (BIOS+EFI) plus installer launch check
 
@@ -266,6 +272,8 @@ release: release-preflight ## Test and clean-build the current Spaced Linux ISO
 APT_REPO_DIR := spaced-apt
 SPACED_APT_KEEP ?= 2
 UPGRADE_STATUS_FILES ?= $(wildcard build/upgrade-status/*.status)
+PUBLISHED_UPGRADE_EVIDENCE ?= build/test-artifacts/published-upgrade-network/PASS.env
+UPGRADE_BASE_VERSION ?= $(VERSION)
 
 apt-repo: marco ## Rebuild the update repository into ./spaced-apt (from crhy/spaced-apt)
 	@if [ ! -d "$(APT_REPO_DIR)/.git" ]; then \
@@ -279,6 +287,11 @@ apt-repo: marco ## Rebuild the update repository into ./spaced-apt (from crhy/sp
 	$(HOST_RUN) scripts/test-upgrade-packages.sh "$(abspath $(APT_REPO_DIR))" \
 		$(foreach status,$(UPGRADE_STATUS_FILES),"$(abspath $(status))")
 
+published-upgrade-network-gate: apt-repo ## Upgrade the public ISO and run two upgraded network guests
+	$(HOST_RUN) env SPACED_UPGRADE_BASE_VERSION="$(UPGRADE_BASE_VERSION)" \
+		scripts/vm/qemu/published-upgrade-network-gate.sh \
+		"$(abspath $(APT_REPO_DIR))"
+
 apt-repo-publish: ## Rebuild and publish the update repository to crhy/spaced-apt
 	@if [ -z "$(strip $(UPGRADE_STATUS_FILES))" ]; then \
 		echo 'Refusing publication without an installed-system dpkg status fixture.'; \
@@ -286,6 +299,8 @@ apt-repo-publish: ## Rebuild and publish the update repository to crhy/spaced-ap
 		exit 1; \
 	fi
 	$(MAKE) apt-repo UPGRADE_STATUS_FILES="$(UPGRADE_STATUS_FILES)"
+	$(HOST_RUN) scripts/tests/verify-published-upgrade-evidence.sh \
+		"$(abspath $(APT_REPO_DIR))" "$(abspath $(PUBLISHED_UPGRADE_EVIDENCE))"
 	cd "$(APT_REPO_DIR)" && \
 		git add -A && \
 		git -c user.name="Spaced Linux Release" \

@@ -1,0 +1,23 @@
+#!/bin/sh
+# Keep LAN printer discovery explicit across cups-browsed default changes.
+set -eu
+
+config=/etc/cups/cups-browsed.conf
+marker='# Managed by Spaced Linux: make supported LAN IPP printers visible.'
+
+[ -f "$config" ] || exit 0
+
+# Preserve an administrator's active choice. Package defaults have historically
+# moved between All and LocalOnly; an explicit Spaced line avoids inheriting
+# those changes while remaining removable/customizable.
+if ! grep -Eq '^[[:space:]]*CreateIPPPrinterQueues[[:space:]]+' "$config"; then
+    {
+        printf '\n%s\n' "$marker"
+        printf '%s\n' 'CreateIPPPrinterQueues All'
+    } >> "$config"
+fi
+
+for service in cups cups-browsed; do
+    [ -x "/etc/init.d/$service" ] || continue
+    update-rc.d "$service" defaults >/dev/null 2>&1 || true
+done

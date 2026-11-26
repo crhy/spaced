@@ -68,6 +68,8 @@ class SambaNetworkWsddRegressionTests(unittest.TestCase):
 
     def enable(self):
         (self.rc_root / "rc2.d/S06smbd").symlink_to(self.smbd)
+        # 11.26.4: the dispatcher only starts spaced-wsdd when it is enabled at boot.
+        (self.rc_root / "rc2.d/S07spaced-wsdd").symlink_to(self.wsdd)
 
     def run_dispatcher(self, action="up"):
         return subprocess.run(
@@ -96,8 +98,9 @@ class SambaNetworkWsddRegressionTests(unittest.TestCase):
     def test_first_ready_up_starts_wsdd_once_after_smbd(self):
         self.enable()
         self.assertEqual(self.run_dispatcher("up").returncode, 0)
-        # smbd is up first so shares answer, then wsdd announces them.
-        self.assertEqual(self.recorded("smbd"), ["status", "start"])
+        # smbd is up first so shares answer (and is rechecked before anything is
+        # advertised), then wsdd announces them.
+        self.assertEqual(self.recorded("smbd"), ["status", "start", "status"])
         self.assertEqual(self.recorded("wsdd"), ["status", "start"])
         self.assertEqual(self.smbd_state.read_text().strip(), "running")
         self.assertEqual(self.wsdd_state.read_text().strip(), "running")
@@ -106,8 +109,9 @@ class SambaNetworkWsddRegressionTests(unittest.TestCase):
         self.enable()
         self.assertEqual(self.run_dispatcher("up").returncode, 0)
         self.assertEqual(self.run_dispatcher("dhcp4-change").returncode, 0)
-        # The second event sees both daemons already running and starts neither.
-        self.assertEqual(self.recorded("smbd"), ["status", "start", "status"])
+        # The second event sees both daemons already running and starts neither
+        # (smbd: start check + pre-advertise check on each event).
+        self.assertEqual(self.recorded("smbd"), ["status", "start", "status", "status", "status"])
         self.assertEqual(self.recorded("wsdd"), ["status", "start", "status"])
         self.assertEqual(self.smbd_state.read_text().strip(), "running")
         self.assertEqual(self.wsdd_state.read_text().strip(), "running")
@@ -119,6 +123,11 @@ class SambaNetworkWsddRegressionTests(unittest.TestCase):
         # lock descriptor, or it keeps the lock for its whole lifetime. Both
         # starts must have closed fd 9; neither may leak it.
         self.assertEqual(self.fd_state(), ["smbd", "closed", "wsdd", "closed"])
+
+    def test_disabled_wsdd_is_not_started(self):
+        (self.rc_root / "rc2.d/S06smbd").symlink_to(self.smbd)
+        self.assertEqual(self.run_dispatcher("up").returncode, 0)
+        self.assertEqual(self.recorded("wsdd"), [])
 
 
 if __name__ == "__main__":
