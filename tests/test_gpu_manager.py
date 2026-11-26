@@ -5,6 +5,7 @@ import importlib.machinery
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -435,6 +436,45 @@ class VramFormattingTests(unittest.TestCase):
 
     def test_no_memory_reported_is_none(self):
         self.assertIsNone(self.ui.vram_pair({'vram_total': None}))
+
+
+class IntelOnlyClickTests(unittest.TestCase):
+    """crhy/spaced#439: on an Intel-only PC (one UHD 630) every tab and every
+    button of the shipped GPU Manager must visibly do something: a page changes,
+    a dialog opens, or a plain-words message says why it is not available here.
+    tests/gpu_manager_click_probe.py drives the real app under Xvfb over the
+    fake machine; root actions are recorded fakes, never executed. The fake
+    multi-card machine is probed too, so the single-card explanations cannot
+    quietly break a real two-card PC."""
+
+    PROBE = ROOT / 'tests' / 'gpu_manager_click_probe.py'
+    FAKE_INTEL = ROOT / 'docs/design/gpu-manager/fake-intel-only.json'
+    FAKE_BIGBOY = ROOT / 'docs/design/gpu-manager/fake-bigboy.json'
+
+    @unittest.skipUnless(shutil.which('xvfb-run') and shutil.which('Xvfb'),
+                         'requires Xvfb')
+    def run_probe(self, fake, multi=False):
+        argv = ['xvfb-run', '-a', sys.executable, str(self.PROBE),
+                '--fake-data', str(self.fake_path(fake))]
+        if multi:
+            argv.append('--multi')
+        result = subprocess.run(argv, capture_output=True, text=True, timeout=300,
+                                env=dict(os.environ, NO_AT_BRIDGE='1'))
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn('PROBE_ALL_OK', result.stdout)
+        self.assertGreaterEqual(result.stdout.count('PROBE ok '), 15,
+                                'the probe checked too little')
+        return result
+
+    def fake_path(self, path):
+        self.assertTrue(Path(path).is_file(), f'{path} is missing')
+        return path
+
+    def test_intel_only_every_button_does_something(self):
+        self.run_probe(self.FAKE_INTEL)
+
+    def test_multi_card_roles_and_move_still_work(self):
+        self.run_probe(self.FAKE_BIGBOY, multi=True)
 
 
 if __name__ == '__main__':

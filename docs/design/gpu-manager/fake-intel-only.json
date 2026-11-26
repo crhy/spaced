@@ -1,0 +1,30 @@
+{
+ "gpus": [
+  {
+   "pci": "0000:00:02.0",
+   "vendor": "Intel",
+   "family": "Intel",
+   "integrated": true,
+   "class_code": "0x030000",
+   "name": "Intel UHD Graphics 630",
+   "driver": "i915",
+   "driver_version": "Kernel driver",
+   "boot_vga": true,
+   "connectors": [
+    {"name": "HDMI-A-1", "status": "connected", "enabled": "enabled", "mode": "1920x1080"},
+    {"name": "DP-1", "status": "disconnected", "enabled": "disabled", "mode": ""}
+   ],
+   "vram_total": null,
+   "vram_used": null,
+   "uuid": null,
+   "link_speed": "Unknown",
+   "link_speed_max": "Unknown",
+   "link_width": "?",
+   "link_width_max": "?",
+   "link": "Unknown × ?"
+  }
+ ],
+ "roles": {},
+ "seen": true,
+ "trial": {}
+}
