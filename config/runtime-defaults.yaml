@@ -13,11 +13,11 @@ contracts:
   - id: lan-ipp-queues
     packages: [cups, cups-browsed, cups-ipp-utils]
     risk: Ceres split cups-browsed into a separate package and its default no longer creates general LAN queues.
-    policy: Install cups-browsed and explicitly create supported IPP queues unless an administrator set an active override.
+    policy: Install cups-browsed, explicitly create supported IPP queues and keep the legacy CUPS browsing protocol off (CVE-2024-47176), unless an administrator set an active override.
     upstream: https://manpages.debian.org/cups-browsed.conf
     enforcement:
       - path: overlays/usr/lib/spaced-linux/spaced-configure-printing
-        contains: [CreateIPPPrinterQueues All, cups-browsed]
+        contains: [CreateIPPPrinterQueues All, BrowseRemoteProtocols none, cups-browsed]
     tests: [tests/test_printing_network.py, scripts/tests/printing-network-test.sh]
 
   - id: grub-os-discovery

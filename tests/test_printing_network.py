@@ -39,6 +39,24 @@ class PrintingNetworkTests(unittest.TestCase):
         self.assertIn('/usr/lib/spaced-linux/spaced-configure-printing', postinst)
         self.assertIn('invoke-rc.d cups-browsed restart', postinst)
 
+    def test_configure_printing_runs_idempotently_and_keeps_legacy_browsing_off(self):
+        import os, subprocess, tempfile
+        script = ROOT / 'overlays/usr/lib/spaced-linux/spaced-configure-printing'
+        with tempfile.TemporaryDirectory() as tmp:
+            conf = Path(tmp) / 'cups-browsed.conf'
+            env = dict(os.environ, SPACED_CUPS_BROWSED_CONF=str(conf),
+                       SPACED_INIT_DIR=str(Path(tmp) / 'no-init.d'))
+            conf.write_text('# upstream defaults\nCreateIPPPrinterQueues LocalOnly\n'.replace('CreateIPP', '# CreateIPP'))
+            for _ in range(2):
+                subprocess.run(['sh', str(script)], env=env, check=True)
+            text = conf.read_text()
+            self.assertEqual(text.count('\nCreateIPPPrinterQueues All'), 1)
+            self.assertEqual(text.count('\nBrowseRemoteProtocols none'), 1)
+            conf.write_text('CreateIPPPrinterQueues LocalOnly\nBrowseRemoteProtocols dnssd\n')
+            subprocess.run(['sh', str(script)], env=env, check=True)
+            self.assertEqual(conf.read_text(),
+                             'CreateIPPPrinterQueues LocalOnly\nBrowseRemoteProtocols dnssd\n')
+
     def test_printing_scripts_parse_and_avoid_process_wide_kills(self):
         for script in (POLICY, NETWORK_TEST,
                        ROOT / 'scripts/vm/qemu/network-services-gate.sh',

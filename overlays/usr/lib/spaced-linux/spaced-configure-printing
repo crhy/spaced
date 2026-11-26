@@ -2,7 +2,8 @@
 # Keep LAN printer discovery explicit across cups-browsed default changes.
 set -eu
 
-config=/etc/cups/cups-browsed.conf
+config=${SPACED_CUPS_BROWSED_CONF:-/etc/cups/cups-browsed.conf}
+init_dir=${SPACED_INIT_DIR:-/etc/init.d}
 marker='# Managed by Spaced Linux: make supported LAN IPP printers visible.'
 
 [ -f "$config" ] || exit 0
@@ -17,7 +18,14 @@ if ! grep -Eq '^[[:space:]]*CreateIPPPrinterQueues[[:space:]]+' "$config"; then
     } >> "$config"
 fi
 
+# Never re-open the legacy CUPS browsing protocol (UDP 631, the CVE-2024-47176
+# attack path): LAN discovery here is DNS-SD only. An administrator's active
+# BrowseRemoteProtocols line is kept as it is.
+if ! grep -Eq '^[[:space:]]*BrowseRemoteProtocols[[:space:]]+' "$config"; then
+    printf '%s\n' 'BrowseRemoteProtocols none' >> "$config"
+fi
+
 for service in cups cups-browsed; do
-    [ -x "/etc/init.d/$service" ] || continue
+    [ -x "$init_dir/$service" ] || continue
     update-rc.d "$service" defaults >/dev/null 2>&1 || true
 done
