@@ -80,6 +80,9 @@ jobs:
       - name: Validate a 4K virtual desktop
         run: make iso-smoke-kvm-4k
 
+      - name: Validate cross-machine file sharing and printing
+        run: make network-services-gate
+
       - name: Upload ISO, checksum, and desktop evidence
         if: always()
         uses: actions/upload-artifact@v4

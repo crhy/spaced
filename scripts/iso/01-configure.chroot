@@ -1,153 +1,19 @@
 #!/bin/bash
-# Spaced Linux live system configuration
-set -e
+# Run the ordered, independently testable live-image configuration helpers.
+set -euo pipefail
 
-# Keep the distribution identity consistent across tools that read either path.
-install -Dm0644 /etc/os-release /usr/lib/os-release
+helper_dir=/usr/lib/spaced-linux/live-build-configure.d
+shopt -s nullglob
+helpers=("$helper_dir"/*.sh)
+[ "${#helpers[@]}" -gt 0 ] || {
+    echo "No live-build configuration helpers found in $helper_dir" >&2
+    exit 1
+}
 
-# Enable user autologin
-mkdir -p /etc/lightdm/lightdm.conf.d
-cat > /etc/lightdm/lightdm.conf.d/50-spaced.conf <<'LIGHTDM'
-[LightDM]
-# Reuse Plymouth's active VT. Headless KVM can otherwise leave Xorg waiting
-# forever for a switch from tty1 to LightDM's traditional tty7.
-minimum-vt=1
-
-[Seat:*]
-autologin-user=user
-autologin-user-timeout=0
-greeter-session=lightdm-gtk-greeter
-greeter-setup-script=/usr/local/sbin/spaced-lightdm-greeter-setup
-session-setup-script=/usr/local/sbin/spaced-lightdm-session-setup
-user-session=mate
-LIGHTDM
-
-# Install MATE session support after the local Spaced defaults packages.
-for local_package in spaced-mate-default-settings spaced-themes spaced-wallpapers; do
-    dpkg -s "$local_package" >/dev/null 2>&1 || {
-        echo "$local_package was not installed" >&2
-        exit 1
-    }
-done
-DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::ForceIPv4=true -o Acquire::Retries=6 -o Acquire::http::Timeout=30 install -y --no-install-recommends mate-session-manager
-
-# Compile the defaults supplied by the Spaced Linux overlay.
-glib-compile-schemas /usr/share/glib-2.0/schemas/
-
-# Make both signed catalogs visible in the live system before SpacedBazaar or
-# Welcome can start. The descriptors were verified on the build host; no
-# unsigned or dynamically selected repository is accepted here.
-for remote in flathub spaced-github; do
-    descriptor="/usr/share/flatpak/remotes.d/$remote.flatpakrepo"
-    [ -s "$descriptor" ] || {
-        echo "Missing signed Flatpak descriptor: $descriptor" >&2
-        exit 1
-    }
-    /usr/bin/flatpak remote-add --system --if-not-exists "$remote" "$descriptor"
+for helper in "${helpers[@]}"; do
+    echo "Running ${helper##*/}"
+    "$helper"
 done
 
-# Do not install applications or runtimes in the live filesystem. The small
-# native Welcome package installs SpacedBazaar and the optional app catalog for
-# the user only after Calamares has completed.
-
-# Upstream binaries remain package managed. Source-level fixes are built as
-# versioned Debian packages, so installed systems receive the same changes.
-
-# Groups Calamares adds the installed user to must already exist as system
-# groups. Calamares creates a missing one with an ordinary GID, which pushed
-# the first user's own group past 1000 (issue #227).
-for group in autologin bluetooth lpadmin netdev scanner; do
-    getent group "$group" >/dev/null || groupadd --system "$group"
-done
-
-# Create the live user if live-config has not already done so.
-id -u user >/dev/null 2>&1 || useradd -m -s /bin/bash user
-echo "user:1" | chpasswd
-echo "root:spaced" | chpasswd
-usermod -aG sudo,audio,video,plugdev,netdev,sambashare user
-# Guests must reach folders the live user shares (issue #297).
-chmod 0711 /home/user
-printf 'user ALL=(ALL:ALL) NOPASSWD: ALL\n' > /etc/sudoers.d/spaced-live
-chmod 0440 /etc/sudoers.d/spaced-live
-
-# Cairo-Dock requires current_theme to be a directory containing a real theme.
-# Seed its smallest bundled layout at image-build time without carrying a
-# second copy of that upstream data in this repository.
-rm -rf /etc/skel/.config/cairo-dock
-if [ -d /usr/share/cairo-dock/themes/Default-Single ]; then
-    mkdir -p /etc/skel/.config/cairo-dock/current_theme
-    cp -a /usr/share/cairo-dock/themes/Default-Single/. \
-        /etc/skel/.config/cairo-dock/current_theme/
-    rm -rf /etc/skel/.config/cairo-dock/current_theme/launchers
-    mkdir -p /etc/skel/.config/cairo-dock/current_theme/launchers
-    cp -a /usr/share/spaced-themes/cairo-dock/launchers/. \
-        /etc/skel/.config/cairo-dock/current_theme/launchers/
-    sed -i -e 's/^modules=.*/modules=/' \
-        -e 's/^visibility=.*/visibility=0/' \
-        /etc/skel/.config/cairo-dock/current_theme/cairo-dock.conf
-    touch /etc/skel/.config/cairo-dock/current_theme/.spaced-launchers-v1
-fi
-
-cp -a /etc/skel/. /home/user/
-find /home/user/Desktop -maxdepth 1 -type f ! -name install-spaced-linux.desktop -delete
-# The live account's passwords have to be obvious, and the recovery tools have
-# to be discoverable. This note lives only in the live user's home: /etc/skel
-# never sees it, and Calamares removes the live account and its Desktop copy.
-cat > "/home/user/Desktop/Live session passwords.txt" <<'LIVE_PASSWORDS'
-Spaced Linux live session: passwords and rescue tools
-Live user "user", password: 1
-Root account "root", password: spaced
-sudo needs no password in the live session.
-These passwords exist only on this live USB; an installed system uses the
-passwords chosen in the installer and locks the root account.
-Rescue tools are included: GParted, TestDisk, ddrescue, smartctl.
-LIVE_PASSWORDS
-chown -R user:user /home/user
-
-# Keep Debian's Calamares module defaults, but never expose its launcher or
-# branding beside the Spaced Linux installer.
-rm -f /usr/share/applications/calamares-install-debian.desktop \
-    /usr/share/applications/calamares.desktop.orig \
-    /usr/share/pixmaps/install-debian.png \
-    /etc/xdg/autostart/calamares-desktop-icon.desktop \
-    /usr/bin/add-calamares-desktop-icon \
-    /usr/bin/calamares-install-debian
-rm -rf /etc/calamares/branding/debian
-
-for icon_theme in /usr/share/icons/Spaced-*; do
-    [ -d "$icon_theme" ] || continue
-    gtk-update-icon-cache -f "$icon_theme" >/dev/null 2>&1 || true
-done
-
-# Universal NVIDIA-safe live image.
-rm -f /etc/X11/xorg.conf /etc/X11/xorg.conf.d/*nvidia*.conf 2>/dev/null || true
-rm -f /etc/modprobe.d/nvidia-installer-disable-nouveau.conf 2>/dev/null || true
-# Synchronize build/live clock when networking is available.
-/usr/local/sbin/spaced-sync-time || true
-# Enable chrony on installed/live systems.
-[ ! -e /etc/init.d/chrony ] || update-rc.d chrony defaults
-# Enable mDNS/DNS-SD discovery for Network Servers browsing.
-[ ! -e /etc/init.d/avahi-daemon ] || update-rc.d avahi-daemon defaults
-# Serve Caja folder shares at boot; usershares need smbd (issue #297).
-[ ! -e /etc/init.d/smbd ] || update-rc.d smbd defaults
-# Let Windows list this computer under Network (issue #297).
-[ ! -e /etc/init.d/spaced-wsdd ] || update-rc.d spaced-wsdd defaults
-# smartmontools ships a background scanner a desktop does not need; the
-# smartctl command still works from a terminal.
-update-rc.d smartmontools disable 2>/dev/null || true
-[ ! -e /etc/init.d/spaced-first-boot-snapshot ] || \
-  update-rc.d spaced-first-boot-snapshot defaults 98
-# Let GRUB discover other installed operating systems.
-if [ -f /etc/default/grub ]; then
-  sed -i 's/^#\?GRUB_DISABLE_OS_PROBER=.*/GRUB_DISABLE_OS_PROBER=false/' /etc/default/grub
-  grep -q '^GRUB_DISABLE_OS_PROBER=' /etc/default/grub || echo 'GRUB_DISABLE_OS_PROBER=false' >> /etc/default/grub
-fi
-
-apt-get clean
-
-# Enable SSH for remote debugging/administration.
-if [ -f /etc/init.d/ssh ]; then
-    update-rc.d ssh enable 2>/dev/null || true
-    mkdir -p /etc/ssh/sshd_config.d
-    printf 'PasswordAuthentication yes\nPermitRootLogin yes\n' > /etc/ssh/sshd_config.d/10-spaced.conf
-fi
+# These helpers are build inputs, not installed-system runtime components.
+rm -rf "$helper_dir"

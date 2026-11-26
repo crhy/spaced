@@ -242,6 +242,9 @@ assert "libglib2.0-bin" in packages, "glib-compile-schemas is required by the im
 assert "policykit-1" not in packages, "Devuan Ceres replaces policykit-1 with polkitd and pkexec"
 assert {"polkitd", "pkexec"}.issubset(packages), "Spaced utilities require Devuan Ceres polkitd and pkexec packages"
 assert "dbus-x11" in packages, "SysVinit MATE and GTK portals require the dbus-x11 alternative"
+assert {"cups", "cups-browsed", "cups-client", "cups-filters", "cups-ipp-utils",
+        "system-config-printer"}.issubset(packages), \
+    "network printing requires CUPS, its separate discovery daemon, and the desktop tools"
 application_theming = Path("overlays/etc/profile.d/spaced-application-theming.sh").read_text(encoding="utf-8")
 assert "QT_QPA_PLATFORMTHEME=gtk3" in application_theming \
     and "QT_STYLE_OVERRIDE=Fusion" in application_theming, \
@@ -304,7 +307,27 @@ assert "docs/BOOTING.md" in Path("README.md").read_text(encoding="utf-8"), \
     "boot documentation reference regressed in README.md"
 package_config = Path("config/packages.yaml").read_text(encoding="utf-8")
 calamares_settings = Path("overlays/etc/calamares/settings.conf").read_text(encoding="utf-8")
-iso_configure_hook = Path("scripts/iso/01-configure.chroot").read_text(encoding="utf-8")
+configure_orchestrator = Path("scripts/iso/01-configure.chroot").read_text(encoding="utf-8")
+configure_helper_dir = Path("scripts/iso/configure.d")
+configure_helpers = sorted(configure_helper_dir.glob("*.sh"))
+expected_configure_helpers = [
+    "10-identity-desktop.sh",
+    "20-flatpak.sh",
+    "30-live-user.sh",
+    "40-desktop-cleanup.sh",
+    "50-services-boot.sh",
+    "90-clean.sh",
+]
+assert [path.name for path in configure_helpers] == expected_configure_helpers, \
+    "live-build configuration phases or their explicit order changed"
+assert "live-build-configure.d" in configure_orchestrator \
+    and '"$helper_dir"/*.sh' in configure_orchestrator \
+    and 'for helper in' in configure_orchestrator \
+    and 'rm -rf "$helper_dir"' in configure_orchestrator, \
+    "live-build configuration orchestrator does not run and remove its ordered helpers"
+iso_configure_hook = configure_orchestrator + "\n" + "\n".join(
+    path.read_text(encoding="utf-8") for path in configure_helpers
+)
 assert "plymouth" not in package_config and "plymouthcfg" not in calamares_settings \
     and "plymouth-set-default-theme" not in iso_configure_hook, \
     "the fast boot path still carries the unused Plymouth stack (issue #156)"
@@ -372,7 +395,8 @@ assert "make vbox-smoke" in Path("docs/9.26-TESTING.md").read_text(encoding="utf
     "release testing record does not include the VirtualBox smoke checklist (issue #218)"
 monthly_workflow = Path(".github/workflows/monthly-iso.yml").read_text(encoding="utf-8")
 assert 'cron: "23 9 1 * *"' in monthly_workflow and "make release" in monthly_workflow \
-    and "make iso-smoke-kvm" in monthly_workflow and "upload-artifact@v4" in monthly_workflow, \
+    and "make iso-smoke-kvm" in monthly_workflow and "make network-services-gate" in monthly_workflow \
+    and "upload-artifact@v4" in monthly_workflow, \
     "monthly ISO build, desktop boot, or evidence retention is not automated (issue #148)"
 assert "live-build_20250814_all.deb" in monthly_workflow \
     and "a4bffb8e6436ffba260f2e1c37be9dd04a4dacf52c38d7bbe454ec826ba52a4b" in monthly_workflow \
@@ -398,6 +422,9 @@ assert "sha256sum $(ISO_NAME) > $(ISO_NAME).sha256" in makefile_text, \
     "release checksum must use the downloadable ISO basename"
 assert 'chown -R 0:0 "$(abspath $(LB_DIR)/config/includes.chroot)"' in makefile_text, \
     "live-build overlay staging can preserve non-root ownership in /usr"
+assert "scripts/iso/configure.d/*.sh" in makefile_text \
+    and "live-build-configure.d/" in makefile_text, \
+    "ordered live-image configuration helpers are not staged into the chroot"
 assert '$(HOST_RUN) scripts/build-apt-repo.sh "$(abspath $(APT_REPO_DIR))"' in makefile_text, \
     "APT repository builds do not use the host packaging tools"
 assert '$(HOST_RUN) scripts/tests/test-release-package-payload.sh "$(abspath $(APT_REPO_DIR))"' in makefile_text, \
@@ -408,6 +435,11 @@ assert 'scripts/test-upgrade-packages.sh "$(abspath $(APT_REPO_DIR))"' in makefi
     and "UPGRADE_STATUS_FILES" in makefile_text \
     and "Refusing publication without an installed-system dpkg status fixture" in makefile_text, \
     "APT repository publication can bypass rolling-upgrade solver validation"
+publish_recipe = makefile_text.split("apt-repo-publish:", 1)[1]
+assert "published-upgrade-network-gate: apt-repo" in makefile_text \
+    and "verify-published-upgrade-evidence.sh" in publish_recipe \
+    and publish_recipe.index("verify-published-upgrade-evidence.sh") < publish_recipe.index("git add -A"), \
+    "APT publication can bypass the released-ISO upgrade and network-services evidence"
 for gpu_source in (qemu_common, qemu_smoke, makefile_text):
     assert "virtio-gpu-pci" not in gpu_source and "virtio-vga" not in gpu_source, \
         "test VM must use a single GPU; dual virtio VGA leaves the guest on a black screen"
@@ -503,7 +535,7 @@ launcher = root / "etc/skel/Desktop/install-spaced-linux.desktop"
 assert launcher.stat().st_mode & 0o111, "Calamares desktop launcher is not executable"
 assert "Name=Install Spaced Linux" in launcher.read_text(encoding="utf-8")
 
-build_hook = Path("scripts/iso/01-configure.chroot").read_text(encoding="utf-8")
+build_hook = iso_configure_hook
 package_builder = Path("scripts/iso/build-local-packages.sh").read_text(encoding="utf-8")
 stage_script = Path("scripts/iso/stage-external-artifacts.sh").read_text(encoding="utf-8")
 assert "flathub.org" not in build_hook, "image build must not depend on live Flathub access"
@@ -545,6 +577,8 @@ assert f"Version: {package_version}\n" in nm_focus_control \
     "spaced-meta does not deliver the matching spaced-nm-focus package (issue #234)"
 assert package_version.split("-", 1)[0] == version, "Native package version does not match OS release"
 assert f"Version: {package_version}\n" in defaults_control
+assert "cups-browsed" in defaults_control, \
+    "the settings postinst configures cups-browsed without depending on it"
 themes_control = (Path("packages/spaced-themes/DEBIAN/control")
                   .read_text(encoding="utf-8"))
 wallpapers_control = (Path("packages/spaced-wallpapers/DEBIAN/control")
@@ -568,6 +602,8 @@ assert f"spaced-mate-default-settings (= {package_version})" in meta_control \
     and "spaced-monitor (>= 0.1.10)" in meta_control \
     and "libfuse2t64" in meta_control, \
     "spaced-meta does not pull in the standalone applications and desktop defaults"
+assert "cups-browsed" in meta_control, \
+    "spaced-meta does not keep the separate network-printer discovery daemon installed"
 # The artwork split moves payload out of spaced-mate-default-settings. No
 # overlay path may be staged into two packages: dpkg refuses to overwrite a
 # file owned by another package.
@@ -775,7 +811,7 @@ assert "greeter-hide-users=false" in installed_lightdm, \
     "desktop update package lacks the installed-system LightDM user-list policy"
 assert "greeter-setup-script=/usr/local/sbin/spaced-lightdm-greeter-setup" in installed_lightdm, \
     "desktop update package lacks the LightDM first-frame repair"
-live_configure = Path("scripts/iso/01-configure.chroot").read_text(encoding="utf-8")
+live_configure = iso_configure_hook
 assert "[LightDM]\n" in live_configure and "[LightDM]\n# Reuse Plymouth" in live_configure \
     and "minimum-vt=1\n\n[Seat:*]" in live_configure, \
     "live LightDM may deadlock waiting for an inactive VT in headless KVM"
@@ -872,9 +908,9 @@ assert "usermod -a -G sambashare" in meta_postinst and "sambashare-v1" in meta_p
     "upgraded systems' users cannot create Samba user shares (issue #253)"
 assert "usershare max shares = 100" in meta_postinst, \
     "Samba user shares stay disabled, so Caja Sharing Options fails (issue #253)"
-assert "sambashare user" in Path("scripts/iso/01-configure.chroot").read_text(encoding="utf-8"), \
+assert "sambashare user" in iso_configure_hook, \
     "the live user cannot share folders (issue #253)"
-assert "update-rc.d smbd defaults" in Path("scripts/iso/01-configure.chroot").read_text(encoding="utf-8") \
+assert "update-rc.d smbd defaults" in iso_configure_hook \
     and "update-rc.d smbd enable" in meta_postinst, \
     "smbd does not start at boot, so shared folders refuse connections (issue #297)"
 local_packages = Path("scripts/iso/build-local-packages.sh").read_text(encoding="utf-8")
@@ -885,15 +921,24 @@ for path in ("etc/init.d/spaced-wsdd", "usr/share/applications/spaced-sharing-pa
         f"{path} is not shipped, so Windows cannot find or sign in to Spaced shares (issue #297)"
 dispatcher = (root / "etc/NetworkManager/dispatcher.d/90-spaced-samba-ready").read_text(encoding="utf-8")
 assert "up|dhcp4-change|dhcp6-change" in dispatcher and "status" in dispatcher \
-    and "start" in dispatcher and "rc[2-5].d" in dispatcher, \
+    and "start" in dispatcher and "rc[2-5].d" in dispatcher \
+    and "spaced-wsdd" in dispatcher and "9>&-" in dispatcher, \
     "smbd is not retried after asynchronous NetworkManager startup (issue #344)"
-assert "update-rc.d spaced-wsdd defaults" in Path("scripts/iso/01-configure.chroot").read_text(encoding="utf-8") \
+assert "update-rc.d spaced-wsdd defaults" in iso_configure_hook \
     and "update-rc.d spaced-wsdd defaults" in \
     Path("packages/spaced-mate-default-settings/DEBIAN/postinst").read_text(encoding="utf-8"), \
     "spaced-wsdd does not start at boot, so Windows does not list Spaced computers (issue #297)"
+printing_policy = root / "usr/lib/spaced-linux/spaced-configure-printing"
+assert printing_policy.exists() and printing_policy.stat().st_mode & 0o111 \
+    and "CreateIPPPrinterQueues All" in printing_policy.read_text(encoding="utf-8"), \
+    "Spaced does not explicitly enable supported LAN IPP queues in cups-browsed"
+assert "spaced-configure-printing" in iso_configure_hook \
+    and "spaced-configure-printing" in \
+    Path("packages/spaced-mate-default-settings/DEBIAN/postinst").read_text(encoding="utf-8"), \
+    "the network-printing policy is not applied to both images and upgraded systems"
 assert "spaced-home-traverse" in (root / "etc/calamares/modules/shellprocess@spaced-postinstall.conf").read_text(encoding="utf-8") \
     and "spaced-home-traverse" in meta_postinst \
-    and "chmod 0711 /home/user" in Path("scripts/iso/01-configure.chroot").read_text(encoding="utf-8"), \
+    and "chmod 0711 /home/user" in iso_configure_hook, \
     "guests cannot reach folders shared from a 0700 home (issue #297)"
 assert "inode/directory=caja-folder-handler.desktop" in \
     (root / "usr/share/applications/mimeapps.list").read_text(encoding="utf-8"), \
@@ -917,7 +962,7 @@ assert "userdel" not in cleanup, \
     "Calamares cleanup deletes an account after the installed user was created"
 assert "rm -f /etc/ssh/ssh_host_*" in cleanup, \
     "installed systems must not inherit the live image's SSH host keys"
-configure_chroot = Path("scripts/iso/01-configure.chroot").read_text(encoding="utf-8")
+configure_chroot = iso_configure_hook
 assert "for group in autologin bluetooth lpadmin netdev scanner; do" in configure_chroot \
     and 'groupadd --system "$group"' in configure_chroot \
     and configure_chroot.index("groupadd --system") < configure_chroot.index("useradd -m -s /bin/bash user"), \
@@ -958,7 +1003,7 @@ installer_icon = (root / "usr/share/icons/hicolor/scalable/apps/install-spaced-l
 assert 'width="128"' in installer_icon and 'height="128"' in installer_icon \
     and "<circle" in installer_icon, \
     "live installer icon is not large and noticeable (issue #191)"
-live_hook = Path("scripts/iso/01-configure.chroot").read_text(encoding="utf-8")
+live_hook = iso_configure_hook
 assert "find /home/user/Desktop -maxdepth 1 -type f ! -name install-spaced-linux.desktop -delete" in live_hook, \
     "live desktop is not restricted to the installer icon (issue #191)"
 # Caja draws the desktop "Network Servers" item with the icon name
@@ -2003,6 +2048,20 @@ if ! grep -q "PRETTY_NAME=\"Spaced Linux $version\"" overlays/etc/os-release; th
 fi
 if ! grep -q "VERSION_ID=\"$version\"" overlays/etc/os-release; then
     echo "overlays/etc/os-release VERSION_ID does not match VERSION ($version)" >&2
+    exit 1
+fi
+
+# A one-package repository update is still a release. Keep its operator-facing
+# instructions behind the same public-ISO upgrade and two-client network gate
+# as the full repository publication path.
+single_publish=scripts/publish-apt-package.sh
+gate_line=$(grep -n -m1 'published-upgrade-network-gate.sh' "$single_publish" | cut -d: -f1)
+verify_line=$(grep -n -m1 'verify-published-upgrade-evidence.sh' "$single_publish" | cut -d: -f1)
+push_line=$(grep -n -m1 'git push' "$single_publish" | cut -d: -f1)
+if [[ -z $gate_line || -z $verify_line || -z $push_line \
+      || $gate_line -ge $verify_line || $verify_line -ge $push_line ]] \
+    || ! grep -Fq 'Do not push this candidate yet.' "$single_publish"; then
+    echo "Single-package publication can bypass the released-ISO/network evidence gate." >&2
     exit 1
 fi
 

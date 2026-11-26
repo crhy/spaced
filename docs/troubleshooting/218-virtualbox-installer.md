@@ -83,7 +83,7 @@ Chain:
 1. `overlays/etc/skel/Desktop/install-spaced-linux.desktop:7` —
    `Exec=/usr/local/bin/install-spaced-linux`, `Terminal=false` (line 9),
    `StartupNotify=true` (line 11). Only the installer launcher is seeded on
-   the live desktop (`scripts/iso/01-configure.chroot:79-81` deletes every
+   the live desktop (`scripts/iso/configure.d/30-live-user.sh` deletes every
    other desktop file; issue #191).
 2. `overlays/usr/local/bin/install-spaced-linux` (71 lines):
    - Lines 5-8: `pgrep -f '^/usr/bin/calamares([[:space:]]|$)'` guard; exits 1
@@ -102,7 +102,7 @@ Chain:
      and forbids `pkexec calamares`, because pkexec cannot authorize reliably
      in the live MATE session.
 3. The live sudo grant comes from `/etc/sudoers.d/spaced-live`
-   (`scripts/iso/01-configure.chroot:58-59`, `user ALL=(ALL:ALL) NOPASSWD:
+   (`scripts/iso/configure.d/30-live-user.sh`, `user ALL=(ALL:ALL) NOPASSWD:
    ALL`), removed from installed systems by Calamares cleanup
    (`overlays/etc/calamares/modules/shellprocess@spaced-cleanup.conf:13`).
    The live session also runs `overlays/usr/local/bin/spaced-live-session`
@@ -202,7 +202,7 @@ Facts:
   `docs/9.26.2-ISSUE-STATUS.md`).
 - Both live and installed images ship `gvfs-backends` and `gigolo`
   (`config/packages.yaml:4,28`), and the live image compiles the schemas at
-  build time (`01-configure.chroot:32`).
+  build time (`scripts/iso/configure.d/10-identity-desktop.sh`).
 
 Why the two systems differ — most likely first:
 

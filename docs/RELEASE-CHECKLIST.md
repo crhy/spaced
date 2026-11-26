@@ -63,19 +63,30 @@ website that links an absent or wrongly checksummed image. Replace
    pushing to `main` deploys the site (`CLOUDFLARE-PAGES.md`).
 
 8. **Publish the APT repository.**
-   `make apt-repo` to build and test it locally, then
+   `make apt-repo` to build and test it locally, then run
+   `make published-upgrade-network-gate UPGRADE_STATUS_FILES=<paths>`.
+   For a new OS version whose same-version ISO is not public yet, add
+   `UPGRADE_BASE_VERSION=<previous-public-version>`; package revisions of the
+   current public OS version use the default. Only after that passes, run
    `make apt-repo-publish UPGRADE_STATUS_FILES=<paths>`
    Passed: publication refuses to start without an installed-system dpkg status
    fixture (collect one with `scripts/tests/collect-upgrade-status.sh` on the
-   previous ISO); the historical upgrade, payload and trust tests pass; the new
-   packages resolve from the public signed archive.
+   previous ISO); the checksummed public ISO upgrades through its real Spaced
+   Update action from the signed candidate; two upgraded clients complete the
+   SMB/GVfs and IPP round trips; and the historical upgrade, payload and trust
+   tests pass. The gate writes evidence atomically only after every VM passes,
+   and publication rejects missing evidence or any different candidate
+   `Packages` index.
    `scripts/build-apt-repo.sh` refuses to republish different bytes under an
    already published version, so any content change needs a new package
    revision. To publish one already-built package without a full build, use
-   `scripts/publish-apt-package.sh`.
+   `scripts/publish-apt-package.sh`; it stages a candidate but does not publish
+   it. Run its printed public-ISO/network gate and exact-evidence verifier
+   commands before the manual commit and push.
    The signed `Release` expires 180 days after its `Date`, so republish the
    repository at least every 180 days even with no package change
-   (`make apt-repo-publish`, or `scripts/publish-apt-package.sh` to re-sign);
+   (`make apt-repo-publish`, or `scripts/publish-apt-package.sh` to re-sign,
+   followed by the same evidence verification before its manual push);
    otherwise `apt update` reports an expired Release file on every system.
    Not before it: **no OS tag and no GitHub release.** A tag without APT
    packages makes every system loop on the upgrade (#209).

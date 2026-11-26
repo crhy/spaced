@@ -119,7 +119,10 @@ local_sha256=$(sha256sum "$destination" | awk '{print $1}')
 [[ $published_sha256 == "$local_sha256" ]] ||
     die "index SHA256 ($published_sha256) does not match the published file ($local_sha256)"
 
-printf 'Published %s %s (%s) into %s\n' "$package" "$version" "$arch" "$OUT"
+printf 'Staged %s %s (%s) into candidate repository %s\n' "$package" "$version" "$arch" "$OUT"
 printf 'Index entry verified: SHA256 %s\n' "$local_sha256"
-printf 'Next: cd %s && git add -A && git commit -m "Publish %s %s" && git push\n' \
-    "$OUT" "$package" "$version"
+printf '%s\n' \
+    'Do not push this candidate yet.' \
+    "Next: bash $ROOT/scripts/vm/qemu/published-upgrade-network-gate.sh $OUT" \
+    "Then: bash $ROOT/scripts/tests/verify-published-upgrade-evidence.sh $OUT $ROOT/build/test-artifacts/published-upgrade-network/PASS.env" \
+    "Only after both pass: cd $OUT && git add -A && git commit -m 'Publish $package $version' && git push"

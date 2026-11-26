@@ -1,0 +1,51 @@
+version: 1
+contracts:
+  - id: network-service-recovery
+    packages: [network-manager, samba]
+    risk: NetworkManager can report a usable LAN after discovery daemons failed or started too early.
+    policy: Recover smbd before spaced-wsdd after NetworkManager reports an up or DHCP-change event, while respecting disabled services.
+    upstream: https://networkmanager.dev/docs/api/latest/NetworkManager-dispatcher.html
+    enforcement:
+      - path: overlays/etc/NetworkManager/dispatcher.d/90-spaced-samba-ready
+        contains: ["up|dhcp4-change|dhcp6-change", smbd, spaced-wsdd, "9>&-"]
+    tests: [tests/test_samba_network_dispatcher.py, tests/test_samba_network_gate.py]
+
+  - id: lan-ipp-queues
+    packages: [cups, cups-browsed, cups-ipp-utils]
+    risk: Ceres split cups-browsed into a separate package and its default no longer creates general LAN queues.
+    policy: Install cups-browsed and explicitly create supported IPP queues unless an administrator set an active override.
+    upstream: https://manpages.debian.org/cups-browsed.conf
+    enforcement:
+      - path: overlays/usr/lib/spaced-linux/spaced-configure-printing
+        contains: [CreateIPPPrinterQueues All, cups-browsed]
+    tests: [tests/test_printing_network.py, scripts/tests/printing-network-test.sh]
+
+  - id: grub-os-discovery
+    packages: [grub-pc-bin, os-prober]
+    risk: Upstream GRUB defaults can disable discovery of other installed operating systems.
+    policy: Set GRUB_DISABLE_OS_PROBER=false explicitly in every newly built image.
+    upstream: https://www.gnu.org/software/grub/manual/grub/html_node/Simple-configuration.html
+    enforcement:
+      - path: scripts/iso/configure.d/50-services-boot.sh
+        contains: [GRUB_DISABLE_OS_PROBER=false]
+    tests: [tests/test_runtime_defaults.py]
+
+  - id: desktop-smart-monitoring
+    packages: [smartmontools]
+    risk: The package enables a background disk scanner that a desktop does not need by default.
+    policy: Keep smartctl available while explicitly disabling only the smartmontools daemon.
+    upstream: https://manpages.debian.org/smartmontools/smartd.8.en.html
+    enforcement:
+      - path: scripts/iso/configure.d/50-services-boot.sh
+        contains: [update-rc.d smartmontools disable]
+    tests: [tests/test_live_rescue.py]
+
+  - id: signed-flatpak-remotes
+    packages: [flatpak]
+    risk: Catalog selection or trust must not silently follow rolling host defaults.
+    policy: Add only the two signed descriptors pinned and verified by the image build.
+    upstream: https://docs.flatpak.org/en/latest/flatpak-command-reference.html
+    enforcement:
+      - path: scripts/iso/configure.d/20-flatpak.sh
+        contains: [flathub spaced-github, remote-add, --if-not-exists]
+    tests: [tests/test_runtime_defaults.py]

@@ -67,6 +67,16 @@ if [ "$1" = configure ] && [ -x /etc/init.d/spaced-wsdd ]; then
     invoke-rc.d spaced-wsdd start || true
 fi
 
+# cups-browsed is a separate Ceres package and its upstream default currently
+# ignores LAN IPP printers. Install the explicit Spaced policy without
+# replacing an administrator's active CreateIPPPrinterQueues choice.
+if [ -x /usr/lib/spaced-linux/spaced-configure-printing ]; then
+    /usr/lib/spaced-linux/spaced-configure-printing || true
+    if [ -x /etc/init.d/cups-browsed ]; then
+        invoke-rc.d cups-browsed restart || true
+    fi
+fi
+
 # Existing installations do not run the live-image hook again. Register any
 # newly packaged signed sources here as well; a later login retries user-scope
 # registration if networking is not ready during an APT upgrade.

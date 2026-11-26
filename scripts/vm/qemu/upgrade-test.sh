@@ -38,7 +38,8 @@ to the signed candidate repository REPO_DIR:
      (spaced-update-helper all; apt-get -y -o Dpkg::Options::=--force-confold
      full-upgrade only if that helper is not in the old image)
   5. verify the running system: the new /etc/os-release VERSION, spaced-meta
-     "install ok installed <V>-1", empty dpkg --audit, apt-get check, an
+     at the exact version indexed by the candidate Packages file, empty
+     dpkg --audit, apt-get check, an
      elogind +spaced<V> suffix, anacron, the APT transaction guard, no rescue
      tool newly installed, gparted still installed, no Spaced package offered
      a second time (issue #209) and no segfault in dmesg
@@ -109,9 +110,15 @@ if [ ! -e /dev/kvm ]; then
     echo "The upgrade test needs KVM (/dev/kvm): a 2400 s package transaction must be timed like a real PC" >&2
     exit 2
 fi
-SPACED_PACKAGES=$(awk '/^Package: / {print $2}' \
-    "$REPO_DIR/dists/$SUITE/main/binary-amd64/Packages" | sort -u)
+PACKAGES_INDEX=$REPO_DIR/dists/$SUITE/main/binary-amd64/Packages
+SPACED_PACKAGES=$(awk '/^Package: / {print $2}' "$PACKAGES_INDEX" | sort -u)
 [ -n "$SPACED_PACKAGES" ] || { echo "No packages found in $REPO_DIR/dists/$SUITE" >&2; exit 2; }
+META_VERSION=$(awk '
+    /^Package: spaced-meta$/ { in_package = 1; next }
+    in_package && /^Version: / { print substr($0, 10); exit }
+    /^$/ { in_package = 0 }
+' "$PACKAGES_INDEX")
+[ -n "$META_VERSION" ] || { echo "No spaced-meta version found in $PACKAGES_INDEX" >&2; exit 2; }
 
 mkdir -p "$OUT"
 OUT=$(cd "$OUT" && pwd)
@@ -540,9 +547,9 @@ if grep -qxF 'VERSION=\"$RELEASE_VERSION\"' /etc/os-release; then exit 0; fi
 grep -E '^(VERSION|VERSION_ID)=' /etc/os-release >&2
 exit 1
 "
-check "e: spaced-meta is install ok installed $RELEASE_VERSION-1" "
+check "e: spaced-meta is exact candidate $META_VERSION" "
 status=\$(dpkg-query -W -f='\${Status} \${Version}' spaced-meta 2>&1)
-if [ \"\$status\" = 'install ok installed $RELEASE_VERSION-1' ]; then exit 0; fi
+if [ \"\$status\" = 'install ok installed $META_VERSION' ]; then exit 0; fi
 echo \"spaced-meta: \$status\" >&2
 exit 1
 "
