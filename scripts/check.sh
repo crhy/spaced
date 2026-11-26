@@ -252,6 +252,28 @@ assert {"avahi-daemon", "libnss-mdns", "smbclient", "wsdd"}.issubset(packages), 
 assert {package for package in packages if "systemd" in package} == \
     {"systemd-standalone-sysusers", "systemd-standalone-tmpfiles"}, \
     "a systemd-named package entered the image set"
+# Audit row a08-13: the anti-systemd pin and the APT transaction guard must both
+# cover the whole systemd-* family, while the two systemd-named sysusers and
+# tmpfiles providers the image installs stay installable. APT takes the first
+# stanza that matches a package, so the exemption stanza must precede the
+# wildcard stanza in the pin file.
+init_pin = Path("overlays/etc/apt/preferences.d/spaced-init").read_text(encoding="utf-8")
+apt_guard = Path("overlays/usr/lib/spaced-linux/spaced-update-apt-guard").read_text(encoding="utf-8")
+pin_stanzas = [{line.split(":", 1)[0].strip(): line.split(":", 1)[1].strip()
+                for line in block.splitlines() if ":" in line}
+               for block in init_pin.split("\n\n")]
+assert any(stanza.get("Package") == "systemd systemd-*"
+           and stanza.get("Pin-Priority") == "-1" for stanza in pin_stanzas), \
+    "audit row a08-13: the anti-systemd pin no longer covers the systemd-* family"
+assert any(set(stanza.get("Package", "").split()) ==
+           {"systemd-standalone-sysusers", "systemd-standalone-tmpfiles"}
+           and int(stanza.get("Pin-Priority", "-1")) > 0 for stanza in pin_stanzas), \
+    "audit row a08-13: the pin no longer keeps the image's sysusers and tmpfiles providers installable"
+assert init_pin.index("systemd-standalone-sysusers") < init_pin.index("Package: systemd systemd-*"), \
+    "audit row a08-13: the pin's provider exemption must precede the systemd-* stanza, APT takes the first match"
+assert "systemd-standalone-sysusers|systemd-standalone-tmpfiles)" in apt_guard \
+    and "systemd|systemd-*|runit-init|openrc)" in apt_guard, \
+    "audit row a08-13: the APT transaction guard no longer refuses the systemd-* family outside its sysusers and tmpfiles providers"
 assert {"btop", "caja-admin", "eom", "gigolo", "gparted", "mozo", "nvtop", "timeshift", "unrar-free", "zstd"}.issubset(packages), \
     "administrator, partitioning, Windows-share, or backup desktop integration is missing"
 assert "libfuse2t64" in packages, "legacy AppImages cannot start without FUSE 2 compatibility (issue #153)"

@@ -102,6 +102,28 @@ Not released yet: work landing on the 11.26.4 line.
   row was measured, and whether Strata was running, because those numbers are
   only honest with the noise recorded.
 
+## 11.26.2-2 - 2026-11-14
+
+Delivered to installed systems through the `11.26.2-2` APT packages. Both files
+this fix changes ship in `spaced-mate-default-settings` (it owns
+`etc/apt/preferences.d` and `usr/lib/spaced-linux`), so the 11.26.2 ISO and
+the reported release version are unchanged and no new ISO is required.
+
+**Fixes**
+
+- Pin and guard the whole `systemd-*` family (audit row `a08-13` in docs/ROADMAP.md).
+  The anti-systemd APT pin listed four package names, so other Devuan systemd
+  unit packages such as `systemd-container`, `systemd-oomd` and `systemd-coredump`
+  stayed unpinned and could be pulled in as a dependency, and the Spaced Update
+  transaction guard had the same short list. The pin now reads `Package: systemd
+  systemd-*` at priority -1, and the guard refuses any transaction that installs
+  or upgrades a `systemd-*` package. The two systemd-named packages the image
+  needs as its sysusers and tmpfiles providers, `systemd-standalone-sysusers`
+  and `systemd-standalone-tmpfiles`, stay installable: the pin names them in an
+  exemption stanza ahead of the wildcard, because APT takes the first stanza
+  that matches a package, and the guard matches them before the wildcard case.
+  Removing a `systemd-*` package is still allowed, and `runit-init` and `openrc`
+  are still refused.
 
 ## 11.26.2 - 2026-11-14
 

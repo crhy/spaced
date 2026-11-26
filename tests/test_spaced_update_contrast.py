@@ -138,6 +138,7 @@ class HeaderSubtitleContrastTests(unittest.TestCase):
         # ISO instead of a copy installed on the host (~/.local/share/themes,
         # ~/.themes or /usr/share/themes).
         env = dict(os.environ,
+                   PYTHONDONTWRITEBYTECODE='1',
                    GTK_THEME=gtk_theme,
                    HOME=str(workdir),
                    XDG_DATA_HOME=str(workdir / 'share'),
