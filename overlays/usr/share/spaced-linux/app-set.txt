@@ -1,5 +1,4 @@
 atril	apt
-caja-open-terminal	apt
 engrampa	apt
 eom	apt
 flatpak	flatpak
