@@ -58,6 +58,7 @@ for path in ('usr/lib/spaced-linux/spaced-update.py', 'usr/lib/spaced-linux/spac
              'usr/share/keyrings/spaced-archive-keyring.gpg', 'etc/apt/sources.list.d/spaced-apt.list',
              'etc/lightdm/lightdm.conf.d/60-spaced-installed.conf',
              'etc/X11/xorg.conf.d/20-spaced-amdgpu.conf', 'usr/local/bin/spaced-graphics-report',
+             'usr/local/bin/spaced-migration-report', 'usr/share/spaced-linux/app-set.txt',
               'etc/xdg/autostart/spaced-desktop-icon-repair-before-caja.desktop',
               'etc/xdg/autostart/spaced-desktop-icon-repair.desktop',
               'etc/xdg/autostart/spaced-flatpak-desktop-entries.desktop',
