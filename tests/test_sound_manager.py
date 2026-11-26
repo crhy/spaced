@@ -187,5 +187,49 @@ class RenderedScreensTests(unittest.TestCase):
         self.assertGreaterEqual(count, 10)
 
 
+class WcagContrastTests(unittest.TestCase):
+    """FAMILY-LOOK item 5: every painted text/fill pair must clear WCAG AA.
+
+    The concrete colours come from spaced_family_style so the CSS and this test
+    can never drift apart. Both the dark and light family palettes are checked.
+    """
+
+    def test_pills_and_tabs_clear_45(self):
+        import spaced_family_style as family
+        for dark in (True, False):
+            pal = family.palette_for(dark)
+            for name, text, fill in family.contrast_pairs(pal):
+                ratio = family.contrast_ratio(text, fill)
+                self.assertGreaterEqual(
+                    ratio, 4.5,
+                    "%s in %s palette: %.2f < 4.5" % (
+                        name, "dark" if dark else "light", ratio))
+
+
+class RenderedScreensNavyTests(unittest.TestCase):
+    """The screens must be the navy family, never a grey desktop theme."""
+
+    SCREENS = (ROOT / "docs/design/sound-manager/screens-11264")
+
+    def test_dark_is_navy_light_is_not_grey(self):
+        try:
+            from PIL import Image
+        except ImportError:
+            self.skipTest("PIL not available")
+        dark = self.SCREENS / "output-spaced-dark.png"
+        light = self.SCREENS / "output-light.png"
+        if not (dark.is_file() and light.is_file()):
+            self.skipTest("run render-screens-11264.sh first")
+        dim = Image.open(dark).convert("RGB")
+        # page background (top-left) must be blue-dominant navy, not grey
+        r, g, b = dim.getpixel((8, 8))
+        self.assertGreater(b, r + 8, "dark page is not navy: %s" % ((r, g, b),))
+        lim = Image.open(light).convert("RGB")
+        r, g, b = lim.getpixel((8, 8))
+        self.assertGreater(r, 200, "light page is not light: %s" % ((r, g, b),))
+        self.assertGreater(b, r + 2, "light page is not cool navy: %s"
+                           % ((r, g, b),))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -15,8 +15,13 @@ THEME_SHARE="$REPO/overlays/usr/share"
 mkdir -p "$SCREENS"
 
 render() {
-    local page="$1" gtk_theme="$2" palette="$3" suffix="$4"
-    env NO_AT_BRIDGE=1 GTK_THEME="$gtk_theme" \
+    local page="$1" palette="$2" suffix="$3"
+    # --palette forces the family navy (dark) or light tokens so the page and
+    # cards paint the Spaced navy family everywhere; a grey desktop theme can
+    # never make these cards grey. GDK_PIXBUF_MODULE_FILE lets the SVG icons
+    # load under Xvfb. The app captures its own window, never the desktop.
+    env NO_AT_BRIDGE=1 \
+        GDK_PIXBUF_MODULE_FILE="${GDK_PIXBUF_MODULE_FILE:-/usr/lib/x86_64-linux-gnu/gdk-pixbuf-2.0/2.10.0/loaders.cache}" \
         XDG_DATA_DIRS="$THEME_SHARE:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}" \
         xvfb-run -a python3 "$APP" \
             --capture "$page" --palette "$palette" --fake \
@@ -24,8 +29,8 @@ render() {
 }
 
 for page in output input applications effects advanced; do
-    render "$page" Spaced-Dark dark spaced-dark
-    render "$page" Spaced-Linux-Light light light
+    render "$page" dark spaced-dark
+    render "$page" light light
 done
 
 ls -1 "$SCREENS"/*.png
