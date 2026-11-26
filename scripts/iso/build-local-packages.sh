@@ -30,6 +30,7 @@ THEME_PATHS=(
 SETTINGS_PATHS=(
     etc/X11/Xsession.d/05spaced-reset-session-env
     etc/X11/Xsession.d/25spaced-flatpak-exports
+    etc/X11/Xsession.d/26spaced-portal-db-repair
     etc/X11/Xsession.d/40spaced-application-theming
     etc/X11/xorg.conf.d/20-spaced-amdgpu.conf
     etc/apt/apt.conf.d
@@ -61,6 +62,7 @@ SETTINGS_PATHS=(
     etc/xdg/autostart/spaced-flatpak-desktop-entries.desktop
     etc/xdg/autostart/spaced-gpu-trial.desktop
     etc/xdg/autostart/spaced-nvidia-postboot.desktop
+    etc/xdg/autostart/spaced-portal-guard.desktop
     etc/xdg/autostart/spaced-gpu-trial.desktop
     etc/xdg/autostart/spaced-theme-monitor.desktop
     etc/xdg/autostart/spaced-window-decorator.desktop

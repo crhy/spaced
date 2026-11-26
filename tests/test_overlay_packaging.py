@@ -35,7 +35,6 @@ ISO_ONLY = {
     # upgraded systems need them (crhy/spaced#439, #436).
     'etc/xdg/autostart/mate-volume-control-status-icon.desktop',
     'etc/xdg/autostart/localsearch-3.desktop',
-    'etc/X11/Xsession.d/26spaced-portal-db-repair',
     'usr/share/applications/spaced-suggest-qbittorrent.desktop',
 }
 
