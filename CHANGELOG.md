@@ -111,6 +111,17 @@ Not released yet: work landing on the 11.26.4 line.
   `scripts/` only: it never invokes, installs, enables or names systemd at
   runtime, and stays out of the image. `.socket`/`.timer`/`.target` units and
   `Restart=` supervising loops are not handled yet.
+- Begin the Spaced Sound Manager naming layer for #429:
+  `overlays/usr/lib/spaced-linux/spaced_sound_names.py` (stdlib only, importable
+  with `PYTHONPATH=overlays/usr/lib/spaced-linux`, no audio server or system
+  settings touched) turns a raw device descriptor into a friendly name and one
+  fixed icon kind — speakers, headphones, microphone, webcam, hdmi_output or
+  digital — preferring a stable port/media field over the driver string, so
+  "HD-Audio Generic" names as speakers by its port and "HDA NVidia" names as an
+  HDMI output carrying the GPU it drives. An unrecognised device falls back to
+  its raw name with no icon kind (the panel then uses the generic icon, never a
+  PCI card). `tests/test_sound_device_names.py` fixes the representative names
+  from DESIGN.md §4. Headless naming only: no GTK/UI, colours or theme yet.
 
 
 ## 11.26.2 - 2026-11-14
