@@ -17,6 +17,24 @@ PCI = re.compile(r"^[0-9a-f]{4}:[0-9a-f]{2}:[0-9a-f]{2}\.[0-7]$")
 STATE = Path('/var/lib/spaced-gpu-manager/trial.json')
 CONFIG = Path('/etc/X11/xorg.conf.d/90-spaced-gpu-manager.conf')
 
+VENDORS = {'0x10de': 'NVIDIA', '0x1002': 'AMD', '0x8086': 'Intel',
+           '0x102b': 'Matrox', '0x1a03': 'ASPEED', '0x537c': 'Moore Threads',
+           '0x1106': 'VIA'}
+FAMILIES = {'NVIDIA': 'NVIDIA', 'AMD': 'AMD', 'Intel': 'Intel'}
+# issue #426 review: Intel makes discrete cards too (Arc), and discrete is a
+# bus position, not a vendor. Intel/AMD/NVIDIA/Matrox/ASPEED/Moore Threads/VIA
+# are separated by PCI class and bus position, never by vendor alone.
+ONBOARD_VENDORS = {'ASPEED'}  # BMC graphics sits on the management SoC's own board
+
+
+def pcie_generation(speed):
+    """'16.0 GT/s PCIe' -> 'PCIe 4.0'; '' when the kernel does not report it."""
+    match = re.match(r'([0-9.]+)\s*GT/s', str(speed))
+    if not match:
+        return ''
+    return {'2.5': 'PCIe 1.0', '5.0': 'PCIe 2.0', '8.0': 'PCIe 3.0',
+            '16.0': 'PCIe 4.0', '32.0': 'PCIe 5.0'}.get(match.group(1), '')
+
 
 def boot_seconds():
     """Elapsed boot time, including suspend; independent of wall-clock corrections."""
@@ -68,7 +86,14 @@ def discover(sysroot=Path('/sys'), runner=command):
     for device in sorted((sysroot / 'bus/pci/devices').glob('*')):
         if not PCI.fullmatch(device.name) or not read(device / 'class').startswith('0x03'):
             continue
-        vendor = {'0x10de': 'NVIDIA', '0x1002': 'AMD', '0x8086': 'Intel'}.get(read(device / 'vendor'), 'Other')
+        vendor = VENDORS.get(read(device / 'vendor'), 'Other')
+        class_code = read(device / 'class')
+        # Bus position decides discrete vs on-board (issue #426): a device that
+        # enumerates on the root bus (00:xx.0) is on the CPU/board itself; one
+        # behind a PCIe bridge (bus 01 and up) is an add-in or offload card.
+        # A 3D controller (class 0x0302) has no display engine at all: discrete.
+        integrated = vendor in ONBOARD_VENDORS or (
+            int(device.name.split(':')[1], 16) == 0 and not class_code.startswith('0x0302'))
         driver = (device / 'driver').resolve().name if (device / 'driver').exists() else 'Not bound'
         connectors = []
         for card in sorted((device / 'drm').glob('card[0-9]*')):
@@ -77,12 +102,21 @@ def discover(sysroot=Path('/sys'), runner=command):
             for connector in sorted((sysroot / 'class/drm').glob(card.name + '-*')):
                 connectors.append({'name': connector.name[len(card.name)+1:],
                                    'status': read(connector / 'status', 'unknown'),
-                                   'enabled': read(connector / 'enabled', 'unknown')})
-        gpu = dict(pci=device.name, vendor=vendor, name=names.get(device.name, vendor + ' graphics'),
+                                   'enabled': read(connector / 'enabled', 'unknown'),
+                                   'mode': read(connector / 'modes', '').split('\n')[0]})
+        link_speed = read(device / 'current_link_speed', 'Unknown')
+        link_max = read(device / 'max_link_speed', '') or link_speed
+        link_width = read(device / 'current_link_width', '?')
+        link_width_max = read(device / 'max_link_width', '') or link_width
+        gpu = dict(pci=device.name, vendor=vendor, family=FAMILIES.get(vendor, 'Other'),
+                   integrated=integrated, class_code=class_code,
+                   name=names.get(device.name, vendor + ' graphics'),
                    driver=driver, driver_version=read(sysroot / 'module' / driver / 'version', 'Kernel driver'),
                    boot_vga=read(device / 'boot_vga') == '1', connectors=connectors,
                    vram_total=None, vram_used=None, uuid=uuids.get(device.name),
-                   link=read(device / 'current_link_speed', 'Unknown') + ' × ' + read(device / 'current_link_width', '?'))
+                   link_speed=link_speed, link_speed_max=link_max,
+                   link_width=link_width, link_width_max=link_width_max,
+                   link=link_speed + ' × ' + link_width)
         for field, attribute in [('vram_total', 'mem_info_vram_total'), ('vram_used', 'mem_info_vram_used')]:
             value = read(device / attribute)
             if value.isdigit():
@@ -101,10 +135,12 @@ def discover(sysroot=Path('/sys'), runner=command):
 
 def recommendation(gpus):
     display = [g for g in gpus if any(c['status'] == 'connected' for c in g['connectors'])]
-    alternatives = [g for g in gpus if g['vendor'] in ('AMD', 'Intel') and g not in display]
-    if any(g['vendor'] == 'NVIDIA' for g in display) and alternatives:
+    alternatives = [g for g in gpus if g.get('family', g['vendor']) in ('AMD', 'Intel') and g not in display]
+    if any(g.get('family', g['vendor']) == 'NVIDIA' for g in display) and alternatives:
+        on_board = [g for g in alternatives if g.get('integrated')]
+        where = ("the sockets on your motherboard's group" if on_board else "that card's sockets")
         return ('An AMD/Intel GPU may be able to drive the desktop and leave more NVIDIA VRAM for games or AI. '
-                'Move the monitor cable to that GPU first and refresh. A connected port is required for a desktop trial. '
+                'Move the monitor cable to ' + where + ' first and refresh. A connected port is required for a desktop trial. '
                 'Port names identify connectors, not their physical location on your case; memory savings are workload-dependent.')
     return ('Keep a monitor connected to the desktop GPU. Games can use render offload; compute applications '
             'select their own devices. Connected outputs do not prove which GPU renders every application.')
@@ -141,7 +177,8 @@ def xorg_config(gpu):
     device, function = slot.split('.')
     bus_id = f"PCI:{int(bus, 16)}@{int(domain, 16)}:{int(device, 16)}:{int(function, 16)}"
     driver = {'amdgpu': 'amdgpu', 'radeon': 'radeon', 'i915': 'modesetting',
-              'xe': 'modesetting', 'nvidia': 'nvidia'}.get(gpu['driver'])
+              'xe': 'modesetting', 'nvidia': 'nvidia', 'ast': 'modesetting',
+              'nouveau': 'modesetting', 'vmwgfx': 'modesetting'}.get(gpu['driver'])
     if not driver:
         raise ValueError('This GPU has no supported active desktop driver. Repair drivers first.')
     return (f'# Managed by Spaced GPU Manager; use Revert to restore the previous configuration.\n'

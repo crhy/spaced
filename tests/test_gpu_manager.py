@@ -77,6 +77,68 @@ class DiscoveryTests(unittest.TestCase):
             self.assertEqual(found[0]['uuid'], 'GPU-b38e5856-b893-b0e3-5e2e-74253b1fe303')
             self.assertEqual(found[1]['uuid'], 'GPU-8c4b1594-c374-3f99-1354-953ba52ab76a')
 
+    def test_intel_arc_discrete_and_igpu_by_bus_position(self):
+        # issue #426 review: Intel makes discrete cards too (Arc). The iGPU
+        # enumerates on the root bus; the Arc sits behind a PCIe bridge.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for address in ('0000:00:02.0', '0000:03:00.0'):
+                path = root / 'bus/pci/devices' / address
+                path.mkdir(parents=True)
+                (path / 'class').write_text('0x030000')
+                (path / 'vendor').write_text('0x8086')
+
+            def run(args):
+                if args[0] == 'lspci':
+                    return ('0000:00:02.0 VGA compatible controller: Intel UHD Graphics\n'
+                            '0000:03:00.0 Display controller: Intel Arc A770\n')
+                return ''
+            found = {g['pci']: g for g in gpu.discover(root, run)}
+            self.assertEqual([(g['vendor'], g['family']) for g in found.values()],
+                             [('Intel', 'Intel'), ('Intel', 'Intel')])
+            self.assertTrue(found['0000:00:02.0']['integrated'])
+            self.assertFalse(found['0000:03:00.0']['integrated'])
+
+    def test_3d_controller_is_discrete_whatever_the_bus(self):
+        # class 0x0302 (3D controller, no display engine) is never on-board.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / 'bus/pci/devices' / '0000:04:00.0'
+            path.mkdir(parents=True)
+            (path / 'class').write_text('0x030200')
+            (path / 'vendor').write_text('0x8086')
+
+            def run(args):
+                return '0000:04:00.0 3D controller: Intel Arc A310\n' if args[0] == 'lspci' else ''
+            self.assertFalse(gpu.discover(root, run)[0]['integrated'])
+
+    def test_aspeed_bmc_server_classified_as_other(self):
+        # Matrox, ASPEED, Moore Threads and VIA are Other, by vendor id; the
+        # BMC graphics chip is on the board (integrated), not an add-in card.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            path = root / 'bus/pci/devices' / '0000:01:00.0'
+            path.mkdir(parents=True)
+            (path / 'class').write_text('0x030000')
+            (path / 'vendor').write_text('0x1a03')
+            (path / 'boot_vga').write_text('1')
+
+            def run(args):
+                if args[0] == 'lspci':
+                    return '0000:01:00.0 VGA compatible controller: ASPEED AST2500\n'
+                return ''
+            found = gpu.discover(root, run)
+            self.assertEqual([(g['vendor'], g['family'], g['integrated']) for g in found],
+                             [('ASPEED', 'Other', True)])
+            self.assertIn('Keep a monitor connected', gpu.recommendation(found))
+            self.assertIn('modesetting', gpu.xorg_config(dict(found[0], driver='ast')))
+
+    def test_pcie_generation_from_link_speed(self):
+        self.assertEqual(gpu.pcie_generation('16.0 GT/s PCIe'), 'PCIe 4.0')
+        self.assertEqual(gpu.pcie_generation('8.0 GT/s PCIe'), 'PCIe 3.0')
+        self.assertEqual(gpu.pcie_generation('2.5 GT/s PCIe'), 'PCIe 1.0')
+        self.assertEqual(gpu.pcie_generation('Unknown'), '')
+
     def test_missing_sysfs(self):
         with tempfile.TemporaryDirectory() as directory:
             self.assertEqual(gpu.discover(Path(directory), lambda _: ''), [])
