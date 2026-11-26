@@ -74,6 +74,8 @@ SETTINGS_PATHS=(
     usr/local/share/applications/spaced-help.desktop
     usr/share/applications/mimeapps.list
     usr/share/applications/spaced-gpu-driver-manager.desktop
+    usr/share/applications/spaced-sound-manager.desktop
+    usr/local/share/applications/mate-volume-control.desktop
     usr/share/applications/spaced-sharing-password.desktop
     usr/share/applications/spaced-update.desktop
     usr/share/applications/spaced-wine-run.desktop
@@ -89,6 +91,8 @@ SETTINGS_PATHS=(
     usr/share/mate-panel/layouts
     usr/share/pixmaps
     usr/share/spaced-linux
+    usr/share/spaced-gpu-manager
+    usr/share/spaced-sound-manager
     usr/share/spaced-xsessions
     usr/share/polkit-1/actions/com.spacedlinux.nvidia.policy
     usr/share/polkit-1/actions/com.spacedlinux.gpu.policy
