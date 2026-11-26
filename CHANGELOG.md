@@ -63,6 +63,17 @@ Not released yet: work landing on the 11.26.4 line.
   PCI card). `tests/test_sound_device_names.py` fixes the representative names
   from DESIGN.md §4. Headless naming only: no GTK/UI, colours or theme yet.
 
+**Spaced GPU Manager** (#426, deferred from 11.26.3)
+
+- Choose which GPU drives the desktop from one app (`spaced-gpu-manager`; the old
+  `spaced-gpu-driver-manager` and `spaced-nvidia-installer` commands still work).
+  A change is a trial: after the reboot it must be confirmed within three
+  minutes, otherwise the `spaced-gpu-guard` boot service restores the previous
+  configuration by itself, so a GPU that shows no picture never strands you.
+  The root helper takes fixed actions only (never paths or commands), needs an
+  administrator password through polkit, and refuses while an NVIDIA driver
+  reboot is still pending. See `docs/GPU-MANAGER.md`.
+
 **Fixes and release gates** (prepared on 2026-11-25 as an 11.26.3-2 APT revision, shipped in 11.26.4 instead)
 
 - Restore Spaced-to-Spaced and Windows Network discovery after a late network

@@ -1,8 +1,8 @@
 [Desktop Entry]
 Type=Application
-Name=Spaced GPU Driver Manager
-Comment=Check graphics and install or repair AMD and NVIDIA drivers
-Exec=spaced-gpu-driver-manager
+Name=Spaced GPU Manager
+Comment=Inspect GPUs, assign the desktop and repair graphics drivers
+Exec=spaced-gpu-manager
 Icon=video-display
 Terminal=false
 Categories=Settings;HardwareSettings;

@@ -4,7 +4,7 @@
   </a>
 </p>
 
-<h1 align="center">Spaced Linux 11.26.3</h1>
+<h1 align="center">Spaced Linux 11.26.4</h1>
 
 <p align="center"><strong>Spaced. Polished. Agile. Compiz. Efficient. Devuan.</strong></p>
 
@@ -27,7 +27,7 @@
 </p>
 
 <p align="center">
-  <a href="CHANGELOG.md"><strong>11.26.3 changes</strong></a>
+  <a href="CHANGELOG.md"><strong>11.26.4 changes</strong></a>
 </p>
 
 <p align="center">
@@ -36,7 +36,7 @@
   <img alt="Compiz" src="https://img.shields.io/badge/window%20manager-Compiz-5b5bd6">
   <img alt="Init system" src="https://img.shields.io/badge/init-sysvinit-555555">
   <img alt="Architecture" src="https://img.shields.io/badge/architecture-amd64-2563eb">
-  <img alt="Release" src="https://img.shields.io/badge/release-11.26.3-0ea5e9">
+  <img alt="Release" src="https://img.shields.io/badge/release-11.26.4-0ea5e9">
   <img alt="License" src="https://img.shields.io/badge/license-rhY-black">
 </p>
 
@@ -150,9 +150,9 @@ Spaced Linux combines a modern system with visual ideas from the best desktop er
 
 ## Download Spaced Linux
 
-**Spaced Linux 11.26.3 is the current release.** Download the ISO and checksum from the [Spaced Linux 11.26.3 release page](https://github.com/crhy/spaced/releases/tag/v11.26.3).
+**Spaced Linux 11.26.4 is the current release.** Download the ISO and checksum from the [Spaced Linux 11.26.4 release page](https://github.com/crhy/spaced/releases/tag/v11.26.4).
 
-11.26.3 is the stability release of the November 2026 line: updates keep your session (no lost sound, DNS or Flatpak apps), encrypted installs boot, fire writing and xkill work as designed, and the new Spaced Monitor 0.1.10 shows every GPU. Its changes are listed in the [changelog](CHANGELOG.md).
+11.26.4 brings Spaced GPU Manager, reliable Windows-network discovery and LAN printing, and stricter release gates. Its changes are listed in the [changelog](CHANGELOG.md).
 
 Verify the download on Linux:
 

@@ -60,6 +60,12 @@ if [ -x /etc/init.d/spaced-first-boot-snapshot ]; then
     update-rc.d spaced-first-boot-snapshot defaults 98 >/dev/null 2>&1 || true
 fi
 
+# Arm only at boot, before LightDM. Installing the application never changes
+# or restarts the current desktop.
+if [ -x /etc/init.d/spaced-gpu-guard ]; then
+    update-rc.d spaced-gpu-guard defaults >/dev/null
+fi
+
 # Announce this computer to Windows Network browsing (issue #297).
 # Respect policy-rc.d, including image builds.
 if [ "$1" = configure ] && [ -x /etc/init.d/spaced-wsdd ]; then
