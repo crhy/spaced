@@ -408,5 +408,34 @@ class DriverInterlockTests(unittest.TestCase):
             self.assertIn(path, paths)
 
 
+class VramFormattingTests(unittest.TestCase):
+    """G4 (issue #426 review): the shipped UI prints used/total in GB with one
+    decimal on the used side, so 300 MiB of a 16 GiB card reads '0.3 / 16 GB',
+    not '300 / 16 GB'. Driven against the real UI module over fake data."""
+
+    @classmethod
+    def setUpClass(cls):
+        sys.path.insert(0, str(LIB))
+        spec = importlib.util.spec_from_file_location(
+            'gpu_manager_ui', str(LIB / 'spaced-gpu-manager.py'))
+        cls.ui = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.ui)
+
+    def test_used_total_in_gb_one_decimal(self):
+        text, fraction, total_gb = self.ui.vram_pair(
+            {'vram_total': 16384, 'vram_used': 300})
+        self.assertEqual(text, '0.3 / 16 GB')
+        self.assertEqual(total_gb, 16)
+        self.assertAlmostEqual(fraction, 300 / 16384, places=4)
+
+    def test_zero_used_shows_a_decimal(self):
+        text, _, total_gb = self.ui.vram_pair({'vram_total': 8192, 'vram_used': 0})
+        self.assertEqual(text, '0.0 / 8 GB')
+        self.assertEqual(total_gb, 8)
+
+    def test_no_memory_reported_is_none(self):
+        self.assertIsNone(self.ui.vram_pair({'vram_total': None}))
+
+
 if __name__ == '__main__':
     unittest.main()

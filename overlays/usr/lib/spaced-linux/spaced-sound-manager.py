@@ -39,6 +39,7 @@ sys.path.insert(0, "/usr/lib/spaced-linux")
 sys.path.insert(0, _HERE)
 import spaced_sound  # noqa: E402
 from spaced_sound import Backend, Device  # noqa: E402
+import spaced_family_style as family  # noqa: E402
 
 # Icons/logo live beside the install prefix: usr/share/spaced-sound-manager when
 # installed, overlays/usr/share/spaced-sound-manager when run from a source tree.
@@ -61,60 +62,31 @@ KIND_ICON = {
 
 
 # --------------------------------------------------------------- colour tokens
-def _hex(h):
-    h = h.lstrip("#")
-    return tuple(int(h[i:i + 2], 16) / 255 for i in (0, 2, 4))
-
-
-@dataclass(frozen=True)
-class Palette:
-    """The family tokens, defined once (FAMILY-LOOK.md 'Colours and theme')."""
-
-    bg: tuple
-    band: tuple
-    card: tuple
-    border: tuple
-    text: tuple
-    muted: tuple
-    accent: tuple
-    ok: tuple
-    warn: tuple
-    ai: tuple
-    off: tuple
-    meter_track: tuple
-    level_start: tuple
-    level_mid: tuple
-    level_peak: tuple
-
-
-DARK = Palette(
-    bg=_hex("#0b1220"), band=_hex("#0b1220"), card=_hex("#111a2e"),
-    border=_hex("#1e2a44"), text=_hex("#e6ecf5"), muted=_hex("#8a96ab"),
-    accent=_hex("#1e9be0"), ok=_hex("#22c55e"), warn=_hex("#f59e0b"),
-    ai=_hex("#8b5cf6"), off=_hex("#4b5563"), meter_track=_hex("#1e2a44"),
-    level_start=_hex("#22c55e"), level_mid=_hex("#f59e0b"),
-    level_peak=_hex("#ef4444"),
-)
-LIGHT = Palette(
-    bg=_hex("#eef2f8"), band=_hex("#f7f9fc"), card=_hex("#ffffff"),
-    border=_hex("#dfe5ee"), text=_hex("#1f2937"), muted=_hex("#6b7280"),
-    accent=_hex("#1e9be0"), ok=_hex("#22c55e"), warn=_hex("#f59e0b"),
-    ai=_hex("#8b5cf6"), off=_hex("#9ca3af"), meter_track=_hex("#e5e7eb"),
-    level_start=_hex("#22c55e"), level_mid=_hex("#f59e0b"),
-    level_peak=_hex("#ef4444"),
-)
+# The navy family tokens live in spaced_family_style so the GPU and Sound
+# managers never drift; Palette/DARK/LIGHT are that module's. Palette carries
+# bg (window), meter_track and the level_* colours this app reads.
+Palette = family.Palette
+DARK = family.DARK
+LIGHT = family.LIGHT
 
 
 def _css_colour(c):
-    return "#{:02x}{:02x}{:02x}".format(*(int(x * 255) for x in c))
+    return family.css_colour(c)
+
+
+def _rgba(c, a):
+    return family.rgba(c, a)
 
 
 def css(pal: Palette) -> str:
     p = {k: _css_colour(getattr(pal, k)) for k in
-         ("bg", "band", "card", "border", "text", "muted", "accent", "ok",
-          "warn", "ai", "off")}
+         ("bg", "band", "card", "border", "text", "muted", "accent",
+          "accent_ink", "ok", "warn", "ai", "off")}
     return f"""
 window, .background {{ background-color: {p['bg']}; color: {p['text']}; }}
+/* One navy page background behind the heading and cards (issue #429 review,
+   S3): the stack/box paint the family bg, never the GTK theme's grey base. */
+stack, stack > box, box.page {{ background-color: {p['bg']}; }}
 .band {{ background-color: {p['band']}; }}
 .band-title {{ font-weight: bold; font-size: 20px; color: {p['text']}; }}
 .band-tagline {{ font-size: 12px; color: {p['muted']}; }}
@@ -128,14 +100,20 @@ button.tab {{ background-color: transparent; background-image: none;
   border: none; border-radius: 999px; color: {p['muted']};
   padding: 5px 12px; min-height: 0; }}
 button.tab:hover {{ color: {p['text']}; }}
-button.tab.active {{ background-color: {p['accent']}; color: #ffffff; }}
+button.tab label {{ color: {p['muted']}; }}
+/* Active tab: a filled accent pill with white text (issue #429 review, S1).
+   The label follows the button colour, so it is never muted-on-accent. The
+   fill is the darker accent_ink so white text clears WCAG 4.5. */
+button.tab.active {{ background-color: {p['accent_ink']}; color: #ffffff; }}
+button.tab.active label {{ color: #ffffff; }}
 .page-title {{ font-weight: bold; font-size: 28px; color: {p['text']}; }}
 .page-sub {{ font-size: 13px; color: {p['muted']}; }}
 .accent-bar {{ background-color: {p['accent']}; min-width: 4px;
   border-radius: 2px; }}
 .card {{ background-color: {p['card']}; border: 1px solid {p['border']};
   border-radius: 12px; padding: 12px; color: {p['text']}; }}
-.card.primary {{ border: 1px solid {p['accent']}; }}
+.card.primary {{ border: 1px solid {p['accent']};
+  box-shadow: 0 0 14px {_rgba(pal.accent, 0.35)}; }}
 .divider {{ background-color: {p['border']}; min-height: 1px; }}
 .vdiv {{ background-color: {p['border']}; min-width: 1px; }}
 .dev-name {{ font-weight: bold; font-size: 22px; color: {p['text']}; }}
@@ -143,29 +121,48 @@ button.tab.active {{ background-color: {p['accent']}; color: #ffffff; }}
 .detail {{ font-size: 12px; color: {p['muted']}; }}
 .raw {{ font-size: 11px; color: {p['muted']}; font-style: italic; }}
 .small-label {{ font-size: 11px; color: {p['muted']}; }}
-.pill {{ border-radius: 999px; padding: 2px 10px; font-size: 11px; }}
-.pill.ok {{ background-color: {p['ok']}; color: #06281a; }}
-.pill.warn {{ background-color: {p['warn']}; color: #3a2400; }}
-.pill.off {{ background-color: {p['off']}; color: #ffffff; }}
-.pill.ai {{ background-color: {p['ai']}; color: #ffffff; }}
+/* Status pills: tinted translucent fill + coloured border + the theme text
+   colour (issue #429 review, S1) - never solid colour-on-same-colour, which is
+   how "Default output" came out green-on-green. */
+.pill {{ border-radius: 999px; padding: 2px 10px; font-size: 11px;
+  color: {p['text']}; }}
+.pill label {{ color: {p['text']}; }}
+.pill.ok {{ background-color: {_rgba(pal.ok, 0.18)}; border: 1px solid {p['ok']}; }}
+.pill.warn {{ background-color: {_rgba(pal.warn, 0.18)}; border: 1px solid {p['warn']}; }}
+.pill.off {{ background-color: {_rgba(pal.off, 0.20)}; border: 1px solid {p['off']}; }}
+.pill.ai {{ background-color: {_rgba(pal.ai, 0.20)}; border: 1px solid {p['ai']}; }}
+.pill.value {{ background-color: {p['card']}; border: 1px solid {p['border']}; }}
 .footer {{ border-top: 1px solid {p['border']}; }}
 .dot-ok {{ background-color: {p['ok']}; min-width: 8px; min-height: 8px;
   border-radius: 50%; }}
 .dot-warn {{ background-color: {p['warn']}; min-width: 8px; min-height: 8px;
   border-radius: 50%; }}
-.link {{ color: {p['accent']}; }}
+/* Footer link (issue #429 review, S7): accent text, no grey box. */
+button.link {{ background-color: transparent; background-image: none;
+  border: none; color: {p['accent']}; padding: 2px 4px; }}
+button.link:hover {{ background-color: transparent; color: {p['accent']}; }}
 button.outline {{ border: 1px solid {p['border']}; border-radius: 8px;
   background-image: none; background-color: {p['card']}; color: {p['text']};
   padding: 4px 10px; min-height: 0; }}
 button.primary {{ border: none; border-radius: 8px; background-image: none;
-  background-color: {p['accent']}; color: #ffffff; padding: 4px 12px;
+  background-color: {p['accent_ink']}; color: #ffffff; padding: 4px 12px;
   min-height: 0; }}
 list, row {{ background-color: {p['card']}; color: {p['text']}; border: none; }}
+/* Connector dropdown: family navy, readable in every theme (11.26.4 review). */
+combobox button, combobox box.linked button {{ background-image: none;
+  background-color: {p['bg']}; color: {p['text']}; border: 1px solid {p['border']};
+  border-radius: 8px; box-shadow: none; text-shadow: none; }}
+combobox button label, combobox button arrow, combobox cellview {{ color: {p['text']}; }}
+button.link {{ box-shadow: none; outline: none; }}
+combobox, combobox button {{ background-color: {p['card']}; color: {p['text']};
+  border: 1px solid {p['border']}; border-radius: 6px; }}
+combobox window, combobox row, combobox list {{ background-color: {p['card']};
+  color: {p['text']}; }}
 """
 
 
 def resolve_palette(name: str) -> Palette:
-    return DARK if name == "dark" else LIGHT
+    return family.palette_for(name == "dark")
 
 
 # ------------------------------------------------------------------ widgets
@@ -293,6 +290,15 @@ def _status_pill(text, kind):
     return box
 
 
+def _value_pill(text):
+    """A small neutral pill for a value such as the volume percentage (S6)."""
+    box = Gtk.Box()
+    box.get_style_context().add_class("pill")
+    box.get_style_context().add_class("value")
+    box.pack_start(_lbl(text, "detail"), False, False, 0)
+    return box
+
+
 # ------------------------------------------------------------------ the app
 class SoundManager:
     def __init__(self, backend: Backend, pal: Palette, preview=False):
@@ -352,11 +358,13 @@ class SoundManager:
                        False, False, 0)
         band.pack_start(col, False, False, 0)
 
-        # faint space art fades into the band (FAMILY-LOOK §1)
-        art = _art_image()
-        art.set_hexpand(True)
-        art.set_valign(Gtk.Align.CENTER)
-        band.pack_start(art, True, True, 0)
+        # The faint space art is drawn by the band's own navy colour
+        # (FAMILY-LOOK §1: "a pure gradient if simpler"). A shipped SVG here
+        # rendered as a broken white image in the middle of the header (issue
+        # #429 review, S2), so the band keeps just the navy fill.
+        spacer = Gtk.Box()
+        spacer.set_hexpand(True)
+        band.pack_start(spacer, True, True, 0)
 
         info = _line_icon(self.pal, "info", 18)
         info_btn = Gtk.Button()
@@ -610,13 +618,17 @@ class SoundManager:
 
         mid = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
         name_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        name_row.pack_start(_lbl(d.friendly, "dev-name"), False, False, 0)
+        # The big-card name is the short device name; the "(HDMI on RTX 4070
+        # Ti SUPER)" tail lives on the detail line instead, so the name no
+        # longer repeats the detail (issue #429 review, S4).
+        short = d.friendly.split(" (")[0]
+        name_row.pack_start(_lbl(short, "dev-name"), False, False, 0)
         pill = self._pill_for(d)
         if pill is not None:
             name_row.pack_start(pill, False, False, 0)
         mid.pack_start(name_row, False, False, 0)
         if d.icon_kind == "hdmi_output" and getattr(d, "gpu", ""):
-            detail = "HDMI audio · %s" % d.gpu
+            detail = "HDMI audio \u00b7 %s" % d.gpu
         else:
             detail = d.detail
         mid.pack_start(_lbl(detail, "detail"), False, False, 0)
@@ -631,16 +643,17 @@ class SoundManager:
         head.pack_start(meter_col, False, False, 0)
         card.pack_start(head, False, False, 0)
 
-        # mute button + volume slider + percent pill
+        # mute button + "Volume" label + slider + percent pill (issue #429
+        # review, S6).
         vol_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         mute = Gtk.Button()
         mute.add(_line_icon(self.pal, "mute" if d.muted else "unmute", 16))
         mute.get_style_context().add_class("outline")
         mute.connect("clicked", self._toggle_mute, d.raw)
+        vol_row.pack_start(_lbl("Volume", "small-label"), False, False, 0)
         vol_row.pack_start(mute, False, False, 0)
         vol_row.pack_start(_scale(d.volume), True, True, 0)
-        vol_row.pack_start(_lbl("%d%%" % d.volume, "small-label"), False,
-                           False, 0)
+        vol_row.pack_start(_value_pill("%d%%" % d.volume), False, False, 0)
         card.pack_start(vol_row, False, False, 0)
 
         if d.ports:
@@ -666,11 +679,14 @@ class SoundManager:
         dev_btn = Gtk.Button(label="Device settings")
         dev_btn.get_style_context().add_class("outline")
         actions.pack_start(dev_btn, False, False, 0)
-        make = Gtk.Button(
-            label="Make this the one apps use" if not d.is_input
-            else "Make this the one apps record from")
-        make.get_style_context().add_class("primary")
-        actions.pack_end(make, False, False, 0)
+        # The default card already IS the one apps use, so it does not offer to
+        # make itself the default (issue #429 review, S5).
+        if not d.is_default:
+            make = Gtk.Button(
+                label="Make this the one apps use" if not d.is_input
+                else "Make this the one apps record from")
+            make.get_style_context().add_class("primary")
+            actions.pack_end(make, False, False, 0)
         card.pack_start(actions, False, False, 0)
         return card
 
