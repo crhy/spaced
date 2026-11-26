@@ -1,0 +1,227 @@
+#!/bin/bash
+# Derive a sysvinit init script from a systemd .service unit file.
+#
+# This is a Spaced Linux build/host aid (crhy/spaced#431): it reads a systemd
+# unit as plain text and writes a sysvinit script. It NEVER invokes, installs,
+# enables or starts systemd. It parses the unit with sed/awk only and requires
+# no systemd at all, honouring AGENTS.md "No systemd — sysvinit only".
+#
+# Scope is the .service subset only:
+#   [Unit]   Description, After, Wants
+#   [Service] Type, User, Group, PIDFile, ExecStart, ExecStop
+set -u
+
+usage() {
+    printf 'Usage: %s [-o OUT] <unit-file.service>\n' "$(basename "$0")"
+}
+
+die() {
+    printf '%s: %s\n' "$(basename "$0")" "$*" >&2
+    exit 1
+}
+
+out=""
+unit=""
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        -o)
+            [ "$#" -ge 2 ] || { usage >&2; exit 2; }
+            out=$2
+            shift 2
+            ;;
+        -o=*)
+            out=${1#-o=}
+            shift
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        -*)
+            usage >&2
+            exit 2
+            ;;
+        *)
+            [ -z "$unit" ] || { usage >&2; exit 2; }
+            unit=$1
+            shift
+            ;;
+    esac
+done
+
+if [ -z "$unit" ] || [ ! -f "$unit" ] || [ ! -r "$unit" ]; then
+    usage >&2
+    exit 2
+fi
+
+# Print every line that belongs to the named section (without the header).
+section() {
+    awk -v want="$1" '
+        { sub(/\r$/, "") }
+        /^[[:space:]]*\[/ {
+            line = $0
+            sub(/^[[:space:]]*/, "", line)
+            sub(/[[:space:]]*$/, "", line)
+            insec = (line == "[" want "]")
+            next
+        }
+        insec { print }
+    ' "$unit"
+}
+
+# First value of a key inside a section, trimmed of trailing whitespace/CR.
+section_value() {
+    section "$1" \
+        | sed -n "s/^[[:space:]]*$2[[:space:]]*=[[:space:]]*\(.*\)$/\1/p" \
+        | head -n1 \
+        | sed 's/[[:space:]]*$//'
+}
+
+# Every whitespace-separated token of a section key (After=/Wants= lists).
+section_tokens() {
+    section "$1" \
+        | sed -n "s/^[[:space:]]*$2[[:space:]]*=[[:space:]]*\(.*\)$/\1/p" \
+        | tr ' \t' '\n\n' \
+        | sed 's/\r$//;s/[[:space:]]*$//' \
+        | sed '/^$/d'
+}
+
+description=$(section_value Unit Description)
+type=$(section_value Service Type)
+exec_start=$(section_value Service ExecStart)
+exec_stop=$(section_value Service ExecStop)
+pid_file=$(section_value Service PIDFile)
+user=$(section_value Service User)
+group=$(section_value Service Group)
+
+if [ -z "$exec_start" ]; then
+    die "unit has no ExecStart; refusing to emit a script that starts nothing: $unit"
+fi
+
+# Sanitise the unit basename into the Provides: name and script name.
+base=$(basename "$unit")
+provides=${base%.service}
+provides=$(printf '%s' "$provides" | sed -e 's/[^A-Za-z0-9._+-]/-/g')
+[ -n "$provides" ] || provides=spaced-daemon
+
+# Build Required-Start: from After=/Wants= tokens that name the base services.
+required_start=""
+add_required() {
+    case " $required_start " in
+        *" $1 "*) : ;;
+        *) required_start="${required_start:+$required_start }$1" ;;
+    esac
+}
+for key in After Wants; do
+    while IFS= read -r tok; do
+        [ -n "$tok" ] || continue
+        case "$tok" in
+            *network*) add_required '$network' ;;
+            *remote-fs*|*remote_fs*) add_required '$remote_fs' ;;
+            *syslog*) add_required '$syslog' ;;
+        esac
+    done < <(section_tokens Unit "$key")
+done
+
+# Strip systemd ExecStart prefixes (-, @, +, :) then split binary and args.
+strip_prefix() {
+    printf '%s' "$1" | sed -E 's/^[-+@:]+[[:space:]]*//'
+}
+exec_start=$(strip_prefix "$exec_start")
+exec_stop=$(strip_prefix "$exec_stop")
+read -r exec_bin exec_args <<<"$exec_start"
+read -r exec_stop_bin exec_stop_args <<<"$exec_stop"
+
+# PID file: honour PIDFile=, else default under /run for the unit name.
+[ -n "$pid_file" ] || pid_file="/run/$provides.pid"
+
+# A forking daemon writes and manages its own pid file, so the init script only
+# tracks it with --pidfile. Any other Type is a foreground daemon that
+# start-stop-daemon must background and record a pid file for.
+background_opt=""
+if [ "$type" != "forking" ]; then
+    background_opt="--background --make-pidfile"
+fi
+
+chuid_opt=""
+if [ -n "$user" ] || [ -n "$group" ]; then
+    chuid_opt="--chuid ${user}${group:+:$group}"
+fi
+
+start_cmd="start-stop-daemon --start --quiet --oknodo"
+[ -n "$background_opt" ] && start_cmd="$start_cmd $background_opt"
+start_cmd="$start_cmd --pidfile \"\$PIDFILE\""
+[ -n "$chuid_opt" ] && start_cmd="$start_cmd $chuid_opt"
+start_cmd="$start_cmd --exec $exec_bin"
+[ -n "$exec_args" ] && start_cmd="$start_cmd -- $exec_args"
+
+stop_cmd="start-stop-daemon --stop --quiet --oknodo --retry TERM/5/KILL/2 --pidfile \"\$PIDFILE\""
+
+# When the unit carries ExecStop, run that command first in the stop) branch.
+stop_extra=""
+if [ -n "$exec_stop_bin" ]; then
+    stop_extra="        $exec_stop_bin${exec_stop_args:+ $exec_stop_args}
+"
+fi
+
+status_name=$provides
+
+emit() {
+    cat <<EOF
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          $provides
+# Required-Start:    $required_start
+# Required-Stop:     \$remote_fs
+# Should-Start:      \$network
+# Should-Stop:       \$network
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: ${description:-$provides}
+# Description:       SysVinit init script derived from the ${base} unit by
+#                    spaced-init-gen (a build aid; no systemd at runtime).
+### END INIT INFO
+
+PATH=/sbin:/usr/sbin:/bin:/usr/bin
+PIDFILE=$pid_file
+
+case "\${1:-}" in
+    start)
+        [ -x "$exec_bin" ] || { echo "$exec_bin is not installed." >&2; exit 0; }
+        $start_cmd || exit 1
+        ;;
+    stop)
+$stop_extra        $stop_cmd || exit 1
+        rm -f "\$PIDFILE"
+        ;;
+    restart|force-reload)
+        "\$0" stop
+        "\$0" start
+        ;;
+    condrestart)
+        if start-stop-daemon --status --pidfile "\$PIDFILE"; then
+            "\$0" restart
+        fi
+        ;;
+    status)
+        if start-stop-daemon --status --pidfile "\$PIDFILE"; then
+            echo "$status_name is running."
+        else
+            echo "$status_name is not running."
+            exit 3
+        fi
+        ;;
+    *)
+        echo "Usage: \$0 {start|stop|restart|force-reload|condrestart|status}" >&2
+        exit 2
+        ;;
+esac
+exit 0
+EOF
+}
+
+if [ -n "$out" ]; then
+    emit > "$out"
+else
+    emit
+fi
