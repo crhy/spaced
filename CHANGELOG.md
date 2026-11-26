@@ -66,6 +66,24 @@ Not released yet: work landing on the 11.26.4 line.
 
 **Added**
 
+- GPU Manager, rebuilt for 11.26.4 in the look rhY approved on 2026-11-26
+  (#426): a header band with the planet logo and the tagline "Your graphics,
+  in control.", pills for Overview / Roles / Move monitor / Drivers, one card
+  per graphics card - vendor chip, role pill, VRAM bar, and a facts row with
+  its PCIe link ("PCIe 4.0 ×16", or an honest "×4 link" when it runs
+  narrower), its display ("HDMI 2 · 1920 × 1080", or "No display connected")
+  and its free ports - and buttons that only offer what is safe: Configure +
+  Display settings, Move display here, Enable GPU. Underneath sits the whole
+  safety backend: journaled Xorg changes, the sysvinit boot guard, the three-
+  minute confirmation deadline, rollback, PCI addresses as identities and
+  UUID-based CUDA selection; detection classifies cards by bus position and
+  PCI class, not vendor alone, so an Intel Arc counts as discrete and an
+  ASPEED BMC falls into Other. Colours follow the live desktop theme like
+  Spaced Monitor, first paint is under a second, and no timer runs while the
+  window is hidden (tests/test_gpu_manager_ui_budget.py). Pages:
+  `docs/design/gpu-manager/`, screenshots in `screens-11264/`. rhY's
+  real-hardware trial (staging a card, the countdown, rollback) remains the
+  open review item.
 - The benchmark harness issue #424 needs before any cross-OS measurement can
   happen. `scripts/vm/bench/guest-probe.sh` prints the same metric names
   `scripts/vm/qemu/release-measure.sh` reports for whatever machine it runs on,

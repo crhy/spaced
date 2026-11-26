@@ -14,7 +14,7 @@
 # reused-home install path (scripts/vm/qemu/install-reuse-home.sh).
 set -u
 
-INVENTORY_DEFAULT="${XDG_DATA_HOME:-${HOME:-/}/.local/share}/spaced-linux/migration-inventory.txt"
+INVENTORY_DEFAULT="${HOME:-/}/.local/share/spaced-linux/migration-inventory.txt"
 APP_SET=${SPACED_APP_SET:-/usr/share/spaced-linux/app-set.txt}
 
 usage() {

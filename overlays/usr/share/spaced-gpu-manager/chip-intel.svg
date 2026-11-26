@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- vendor chip icon: a chip outline with pins; the face is coloured by
+       vendor and carries the short vendor name in text. No trademark logos. -->
+  <g stroke="currentColor" stroke-width="2" fill="none">
+    <path d="M14 20v-4M22 20v-4M30 20v-4M38 20v-4M46 20v-4M14 44v4M22 44v4M30 44v4M38 44v4M46 44v4
+             M20 14h-4M20 22h-4M20 30h-4M20 38h-4M20 46h-4M44 14h4M44 22h4M44 30h4M44 38h4M44 46h4"/>
+    <rect x="18" y="18" width="28" height="28" rx="6"/>
+  </g>
+  <rect x="23" y="23" width="18" height="18" rx="4" fill="#3f8ee0"/>
+  <text x="32" y="34.5" font-family="sans-serif" font-size="6.5" font-weight="bold"
+        text-anchor="middle" fill="#ffffff">Intel</text>
+</svg>
