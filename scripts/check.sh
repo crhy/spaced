@@ -1188,6 +1188,15 @@ assert "x-scheme-handler/http=com.brave.Browser.desktop" in skel_mimeapps \
     and "x-scheme-handler/https=com.brave.Browser.desktop" in skel_mimeapps \
     and "text/html=com.brave.Browser.desktop" in skel_mimeapps, \
     "new user profiles do not preserve Brave as the web handler (issue #35)"
+pdf_table = loaded_yaml["config/pdf-viewers.yaml"]
+assert pdf_table["default_app"] == "atril" and "atril" in packages, \
+    "the shipped default PDF application changed without the capability test the review requires (issue #304)"
+assert pdf_table["decision"] == "pending", \
+    "config/pdf-viewers.yaml records a default-app decision the review has not earned yet (issue #304)"
+assert sorted(pdf_table["candidates"]) == sorted(("atril", "mupdf", "okular", "xpdf", "zathura", "pdfcraft")), \
+    "config/pdf-viewers.yaml no longer lists the six PDF viewer candidates the review compares (issue #304)"
+assert pdf_table["candidates"][pdf_table["default_app"]]["package"] in packages, \
+    "the default PDF application in config/pdf-viewers.yaml is not shipped by config/packages.yaml (issue #304)"
 suggest_app_path = root / "usr/local/bin/spaced-suggest-app"
 assert suggest_app_path.is_file() and suggest_app_path.stat().st_mode & 0o111, \
     "magnet/torrent fallback suggester is missing or not executable (issue #290)"

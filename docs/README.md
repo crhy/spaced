@@ -52,6 +52,9 @@ folders.
   model and resource ceilings, the no-audio path, privileged and app-install
   actions, cancellation and rollback, sysvinit service lifecycle, the Never list,
   and which repository and release carries each milestone.
+- [PDF-VIEWER-CAPABILITY-TEST.md](PDF-VIEWER-CAPABILITY-TEST.md) — the issue #304
+  capability/package test for the default PDF application: the reviewed candidate
+  table, what each axis accepts as evidence, and the two things still owed.
 - [FIXES.md](FIXES.md) — current resolutions of recurring issues across
   releases.
 - [SESSION-REGRESSIONS.md](SESSION-REGRESSIONS.md) — session regression
