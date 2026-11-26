@@ -252,11 +252,40 @@ def load_roles():
 
 
 # -------------------------------------------------------------------- widgets
+# issue #439: when the shipped asset folder is missing (the 11.26.4 update package
+# did not ship /usr/share/spaced-gpu-manager), never show the no-entry image:
+# fall back to a themed symbolic icon name. SPACED_GPU_MANAGER_ASSETS points the
+# asset lookup somewhere else (empty-folder test).
+ICON_FALLBACK = {
+    'logo': 'preferences-desktop-display',
+    'band': 'image-x-generic-symbolic',
+    'info': 'dialog-information-symbolic',
+    'refresh': 'view-refresh-symbolic',
+    'chip-nvidia': 'video-display-symbolic', 'chip-amd': 'video-display-symbolic',
+    'chip-intel': 'video-display-symbolic', 'chip-other': 'video-display-symbolic',
+    'fact-display': 'video-display-symbolic', 'fact-ports': 'video-display-symbolic',
+    'fact-pcie': 'drive-harddisk-symbolic',
+    'tab-overview': 'view-list-symbolic', 'tab-roles': 'preferences-system-symbolic',
+    'tab-move': 'go-next-symbolic', 'tab-drivers': 'application-x-executable-symbolic',
+    'role-desktop': 'video-display-symbolic', 'role-ai': 'processor-symbolic',
+    'role-games': 'application-x-executable-symbolic',
+    'role-off': 'process-stop-symbolic', 'dot': 'object-select-symbolic',
+}
+
+
 class SvgImage(Gtk.Image):
     """Repo-shipped line icons, one stroke width, tinted with a theme colour;
     no icon-theme or network lookup."""
 
     registry = []
+
+    @staticmethod
+    def assets_dir():
+        from spaced_gpu import __file__ as backend
+        override = os.environ.get('SPACED_GPU_MANAGER_ASSETS')
+        if override:
+            return Path(override)
+        return Path(backend).resolve().parents[2] / 'share' / 'spaced-gpu-manager'
 
     def __init__(self, name, pixels=16, tint=None, height=None):
         super().__init__()
@@ -266,11 +295,12 @@ class SvgImage(Gtk.Image):
         self.reload()
 
     def reload(self):
-        from spaced_gpu import __file__ as backend
-        directory = Path(backend).resolve().parents[2] / 'share' / 'spaced-gpu-manager'
-        path = directory / f'{self.icon_name}.svg'
+        path = self.assets_dir() / f'{self.icon_name}.svg'
         if not path.is_file():
-            self.set_from_icon_name('image-missing', Gtk.IconSize.BUTTON)
+            # issue #439: a missing file must never paint the no-entry image.
+            self.set_from_icon_name(ICON_FALLBACK.get(self.icon_name,
+                                                      'video-display-symbolic'),
+                                    Gtk.IconSize.BUTTON)
             return
         data = path.read_bytes()
         if self.tint is not None:
@@ -881,6 +911,9 @@ class Manager(Gtk.Window):
             undo = Gtk.Button(label='Undo')
             undo.set_sensitive(self.role_data.get('undo', {}).get(gpu['pci'], False)
                                is not False)
+            undo.set_tooltip_text('Put back the role this card had before the change.'
+                                  if undo.get_sensitive() else
+                                  'No role change to undo for this card yet.')
             undo.connect('clicked', lambda _, g=gpu: self.undo_role(g))
             buttons.pack_start(undo, False, False, 0)
             card.pack_start(buttons, False, False, 0)
@@ -922,7 +955,11 @@ class Manager(Gtk.Window):
         confirm = dialog.add_button('Set this role', Gtk.ResponseType.OK)
         area = dialog.get_content_area()
         area.set_spacing(6)
-        area.set_margin(12)
+        # GTK 3 has no set_margin(): role_picker crashed here on every click, so
+        # Configure and "Change role" did nothing at all (issue #439).
+        for margin in (area.set_margin_top, area.set_margin_bottom,
+                       area.set_margin_start, area.set_margin_end):
+            margin(12)
         area.pack_start(label(f"{gpu['name']} \u00b7 {gpu['pci']}", 'value'),
                         False, False, 0)
         radios, chosen = [], {'role': current}
@@ -961,6 +998,14 @@ class Manager(Gtk.Window):
                          'this card first. Use the Move monitor page and follow the '
                          'three steps.')
             self.go('move')
+            return
+        if len(self.gpus) == 1:
+            # issue #439: on an Intel-only PC there is no second card to take a
+            # role; say so in plain words instead of quietly saving a nonsense one.
+            self.message('Only one graphics card',
+                         f"{gpu['name']} is the only graphics card in this PC. It "
+                         'draws your screen and runs your programs; there is no '
+                         'second card to give a different role to. Nothing changed.')
             return
         self.set_role(gpu['pci'], role)
 
@@ -1002,8 +1047,9 @@ class Manager(Gtk.Window):
         if not target:
             box = self.card_box()
             box.pack_start(label('Move your display', 'name'), False, False, 0)
-            box.pack_start(label('Nothing to move \u2014 your display is already on the '
-                                 'only card that reports one.', 'value'),
+            box.pack_start(label('Only one graphics card: nothing to move \u2014 your '
+                                 'display is already on the card that reports it.',
+                                 'value'),
                            False, False, 0)
             self.move_box.pack_start(box, False, False, 0)
             return
@@ -1114,11 +1160,11 @@ class Manager(Gtk.Window):
         install = Gtk.Button(label='Replace working NVIDIA driver' if nvidia else
                              'Install NVIDIA driver')
         self.insensitive_if_preview(install)
-        install.connect('clicked', lambda *_: self.open_installer())
+        install.connect('clicked', lambda *_: self.ask_driver_install('NVIDIA'))
         row.pack_start(install, False, False, 0)
         amd = Gtk.Button(label='Install / repair AMD drivers')
         self.insensitive_if_preview(amd)
-        amd.connect('clicked', lambda *_: self.open_installer())
+        amd.connect('clicked', lambda *_: self.ask_driver_install('AMD'))
         row.pack_start(amd, False, False, 0)
         restore = Gtk.Button(label='Restore graphics')
         self.insensitive_if_preview(restore)
@@ -1162,6 +1208,20 @@ class Manager(Gtk.Window):
         except (OSError, subprocess.SubprocessError) as error:
             self.message('Graphics check', str(error))
 
+    def has_vendor(self, vendor):
+        return any(vendor in (g.get('vendor'), g.get('family')) for g in self.gpus)
+
+    def ask_driver_install(self, vendor):
+        # issue #439: on an Intel-only PC the NVIDIA/AMD buttons must explain
+        # themselves instead of opening an installer for a card this PC hasn't got.
+        if not self.has_vendor(vendor):
+            self.message(f'No {vendor} card',
+                         f'This PC has no {vendor} graphics card: no {vendor} driver '
+                         'to install or repair. The graphics card it does have already '
+                         'runs on its own driver. Nothing changed.')
+            return
+        self.open_installer()
+
     def open_installer(self):
         try:
             subprocess.Popen(['/usr/bin/python3', NVIDIA_INSTALLER])
@@ -1172,8 +1232,10 @@ class Manager(Gtk.Window):
         try:
             text = Path(LOGFILE).read_text(errors='replace')[-20000:]
         except OSError:
-            text = 'No driver log yet.'
+            self.message('Driver log', 'No driver log yet.')
+            return
         Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD).set_text(text, -1)
+        self.message('Driver log', 'The driver log is on your clipboard.')
 
     # ------------------------------------------------------------------ trial
     def update_trial(self):
