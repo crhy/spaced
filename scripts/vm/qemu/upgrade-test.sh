@@ -113,11 +113,13 @@ fi
 PACKAGES_INDEX=$REPO_DIR/dists/$SUITE/main/binary-amd64/Packages
 SPACED_PACKAGES=$(awk '/^Package: / {print $2}' "$PACKAGES_INDEX" | sort -u)
 [ -n "$SPACED_PACKAGES" ] || { echo "No packages found in $REPO_DIR/dists/$SUITE" >&2; exit 2; }
+# The index can list several spaced-meta versions (the pruner keeps recent ones); the
+# candidate is the newest, which is what apt installs.
 META_VERSION=$(awk '
     /^Package: spaced-meta$/ { in_package = 1; next }
-    in_package && /^Version: / { print substr($0, 10); exit }
+    in_package && /^Version: / { print substr($0, 10); in_package = 0 }
     /^$/ { in_package = 0 }
-' "$PACKAGES_INDEX")
+' "$PACKAGES_INDEX" | sort -V | tail -n 1)
 [ -n "$META_VERSION" ] || { echo "No spaced-meta version found in $PACKAGES_INDEX" >&2; exit 2; }
 
 mkdir -p "$OUT"

@@ -121,3 +121,22 @@ class PublishedUpgradeNetworkGateTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CandidateMetaVersionTests(unittest.TestCase):
+    """The upgrade gate compares the guest with the NEWEST spaced-meta in the index (11.26.4 gate, 2026-11-26:
+    the index listed 11.26.2-1, 11.26.3-1 and 11.26.4-1 and the first one was picked)."""
+
+    def test_newest_of_several_spaced_meta_versions_is_the_candidate(self):
+        import re, subprocess, tempfile
+        script = (Path(__file__).resolve().parents[1] / "scripts/vm/qemu/upgrade-test.sh").read_text()
+        block = re.search(r"META_VERSION=\$\(awk '.*?\| tail -n 1\)", script, re.S)
+        self.assertIsNotNone(block, "META_VERSION pipeline not found")
+        with tempfile.TemporaryDirectory() as tmp:
+            index = Path(tmp) / "Packages"
+            index.write_text("".join(f"Package: spaced-meta\nVersion: {v}\n\nPackage: other\nVersion: 99\n\n"
+                                     for v in ("11.26.2-1", "11.26.10-1", "11.26.4-1")))
+            out = subprocess.run(["bash", "-c", block.group(0) + '\nprintf %s "$META_VERSION"'],
+                                 env={"PACKAGES_INDEX": str(index), "PATH": "/usr/bin:/bin"},
+                                 capture_output=True, text=True, check=True).stdout
+        self.assertEqual(out, "11.26.10-1")
