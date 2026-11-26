@@ -918,8 +918,24 @@ assert {"locales", "console-setup"}.issubset(packages), \
 assert {"util-linux-extra", "grub-pc-bin", "grub-efi-amd64-bin", "efibootmgr", "dosfstools"}.issubset(packages), \
     "Calamares offline BIOS/UEFI install dependencies are incomplete"
 assert "os-prober" in packages, "GRUB cannot detect other operating systems without os-prober"
+# caja-share deliberately stays a separate package in this release: it is an
+# upstream Caja C plugin (/usr/lib/*-linux-gnu/caja/extensions-2.0/libcaja-share.so,
+# so it cannot be vendored as a file) and it carries the Samba folder share
+# feature asserted here (tests/test_samba_network_dispatcher.py,
+# tests/test_samba_network_gate.py). Making it first-party is a separate, riskier
+# slice of issue #302; only the terminal action moved in this release.
 assert {"samba", "caja-share", "wsdd"}.issubset(packages), \
     "Caja cannot share folders with Windows computers (issue #253)"
+# Issue #302: the Caja folder right-click terminal action is first-party, so the
+# upstream caja-open-terminal package must not come back into the image set.
+assert "caja-open-terminal" not in packages, \
+    "the Caja right-click terminal action ships as an extension, not a package (issue #302)"
+assert "caja-open-terminal" not in package_groups.get("file_managers", []), \
+    "the file_managers group still installs the upstream Caja terminal plugin (issue #302)"
+open_terminal = Path("overlays/usr/share/caja-python/extensions/spaced-open-terminal.py")
+assert open_terminal.exists() and "Caja.MenuProvider" in open_terminal.read_text(encoding="utf-8") \
+    and 'connect("activate"' in open_terminal.read_text(encoding="utf-8"), \
+    "the first-party Caja Open Terminal menu provider is missing (issue #302)"
 assert "util-linux" in packages, "the testing-channel bootstrap must find runuser from util-linux"
 default_grub = (root / "etc/default/grub").read_text(encoding="utf-8")
 assert "GRUB_DISABLE_OS_PROBER=false" in default_grub and "#GRUB_DISABLE_OS_PROBER=false" not in default_grub, \
@@ -946,6 +962,8 @@ for path in ("etc/init.d/spaced-wsdd", "usr/share/applications/spaced-sharing-pa
              "etc/NetworkManager/dispatcher.d/90-spaced-samba-ready"):
     assert (root / path).exists() and path in local_packages, \
         f"{path} is not shipped, so Windows cannot find or sign in to Spaced shares (issue #297)"
+assert "usr/share/caja-python/extensions/spaced-open-terminal.py" in local_packages, \
+    "the Caja Open Terminal extension is not shipped, so no right-click menu offers it (issue #302)"
 dispatcher = (root / "etc/NetworkManager/dispatcher.d/90-spaced-samba-ready").read_text(encoding="utf-8")
 assert "up|dhcp4-change|dhcp6-change" in dispatcher and "status" in dispatcher \
     and "start" in dispatcher and "rc[2-5].d" in dispatcher, \
