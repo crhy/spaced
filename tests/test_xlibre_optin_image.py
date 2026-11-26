@@ -199,16 +199,32 @@ class AbiGuardUntouchedTests(unittest.TestCase):
             f'{package} {old} < {new} /var/cache/apt/archives/{package}.deb\n'
             for package, old, new in actions)
 
+    # On the 11.26.4 release branch other merged branches legitimately change
+    # these guard files, so origin/main is no longer the baseline this test was
+    # written against. Compare against the state of the branch immediately
+    # before the f101 merge instead: the invariant is that the f101 change
+    # itself never touches the Xorg ABI guard, whatever lands beside it. With no
+    # such merge (the branch alone) fall back to origin/main, the original base.
+    @staticmethod
+    def comparison_base() -> str:
+        result = subprocess.run(
+            ['git', '-C', str(ROOT), 'rev-list', '-1', '--first-parent',
+             '--grep', 'strata/f101-spaced-xlibre-opt-in-test-image into release/11.26.4', 'HEAD'],
+            capture_output=True, timeout=60)
+        merge = result.stdout.decode().strip()
+        return f'{merge}^' if merge and result.returncode == 0 else 'origin/main'
+
     def test_guard_files_are_byte_unchanged(self):
         if not shutil.which('git'):
             self.skipTest('requires git')
+        base = self.comparison_base()
         for path in (PIN, GUARD):
             relative = str(path.relative_to(ROOT))
             result = subprocess.run(['git', '-C', str(ROOT), 'show',
-                                     f'origin/main:{relative}'],
+                                     f'{base}:{relative}'],
                                     capture_output=True, timeout=60)
             if result.returncode != 0:
-                self.skipTest('origin/main is not available to compare against')
+                self.skipTest(f'{base} is not available to compare against')
             self.assertEqual(path.read_bytes(), result.stdout,
                              f'{relative} changed; the opt-in path may not touch '
                              'the Xorg ABI guard')
