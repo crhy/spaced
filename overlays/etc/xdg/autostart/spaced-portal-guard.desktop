@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Spaced Portal Mount Guard
+Comment=Keep the Flatpak document portal mount alive so apps keep starting
+Exec=/usr/lib/spaced-linux/spaced-portal-guard
+Terminal=false
+OnlyShowIn=MATE;
+NoDisplay=true
+X-MATE-Autostart-Phase=Applications

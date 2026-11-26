@@ -1,0 +1,106 @@
+#!/bin/bash
+# Spaced Linux: keep the Flatpak document portal's FUSE mount alive (#436).
+# A user session helper, no root and no init system of its own.
+#
+# /run/user/<uid>/doc is a fuse.portal mount created by xdg-document-portal. It
+# can disappear while the portal process keeps running: every Flatpak app then
+# fails to start (bwrap: "Can't find source path .../doc/by-app/<id>"). The fix
+# rhY used by hand was to kill only this user's xdg-document-portal and let D-Bus
+# re-activate it, which remounts. This guard does exactly that, bounded so it can
+# never spin, and runs the check shortly after login and every 30 s.
+set -u
+
+# Tunables for the test harness; sane defaults for a live session.
+: "${SPACED_PROC_MOUNTS:=/proc/mounts}"
+: "${SPACED_PORTAL_INTERVAL:=30}"
+: "${SPACED_PORTAL_FIRST_DELAY:=5}"
+: "${SPACED_PORTAL_BACKOFF:=600}"
+: "${SPACED_PORTAL_MAX_RESTARTS:=3}"
+
+runtime=${XDG_RUNTIME_DIR:-}
+[ -n "$runtime" ] || exit 0
+
+# One instance per session: the lock dies with this process.
+lock="$runtime/spaced-portal-guard.lock"
+exec 9>"$lock" 2>/dev/null || exit 0
+flock -n 9 || exit 0
+
+: "${SPACED_PORTAL_LOG:=$HOME/.local/state/spaced/portal-guard.log}"
+: "${SPACED_PORTAL_STATE:=$runtime/spaced-portal-guard.state}"
+mkdir -p "$(dirname "$SPACED_PORTAL_LOG")" 2>/dev/null || true
+
+log() {
+    printf '%s %s\n' "$(date '+%Y-%m-%dT%H:%M:%S')" "$*" >>"$SPACED_PORTAL_LOG" 2>/dev/null || true
+}
+
+portal_mountpoint="$runtime/doc"
+
+# Is the document portal FUSE mount present in the mount table?
+portal_mounted() {
+    awk -v mp="$portal_mountpoint" '$2==mp && $3=="fuse.portal"{found=1} END{exit !found}' \
+        "$SPACED_PROC_MOUNTS" 2>/dev/null
+}
+
+# Count restarts already recorded inside the backoff window, pruning the rest.
+restarts_in_window() {
+    tmp="$SPACED_PORTAL_STATE.tmp.$$"
+    cutoff=$((SPACED_PORTAL_NOW - SPACED_PORTAL_BACKOFF))
+    kept=0
+    : >"$tmp"
+    if [ -f "$SPACED_PORTAL_STATE" ]; then
+        while read -r ts; do
+            case $ts in (*[!0-9]*|'') continue ;; esac
+            [ "$ts" -ge "$cutoff" ] || continue
+            printf '%s\n' "$ts" >>"$tmp"
+            kept=$((kept + 1))
+        done <"$SPACED_PORTAL_STATE"
+    fi
+    mv -f "$tmp" "$SPACED_PORTAL_STATE" 2>/dev/null || true
+    printf '%s' "$kept"
+}
+
+# Kill only this user's portal and let D-Bus bring it back, which remounts doc.
+restart_portal() {
+    uid=$(id -u)
+    # Never match this helper's own command line; the pattern is not in it.
+    pkill -u "$uid" -f 'xdg-document-portal' 2>/dev/null || true
+    # Re-activating the service over the session bus remounts the FUSE share.
+    gdbus call --session \
+        --dest org.freedesktop.portal.Documents \
+        --object-path /org/freedesktop/portal/documents \
+        --method org.freedesktop.portal.Documents.GetMountPoint \
+        >/dev/null 2>&1 || true
+}
+
+check_once() {
+    # A fixed clock makes the guard's rate limiting deterministic under test.
+    export SPACED_PORTAL_NOW=${SPACED_PORTAL_NOW:-$(date +%s)}
+    if portal_mounted; then
+        return 0
+    fi
+    count=$(restarts_in_window)
+    if [ "$count" -ge "$SPACED_PORTAL_MAX_RESTARTS" ]; then
+        log "portal mount missing; already $count restarts in ${SPACED_PORTAL_BACKOFF}s, backing off"
+        return 1
+    fi
+    printf '%s\n' "$SPACED_PORTAL_NOW" >>"$SPACED_PORTAL_STATE"
+    restart_portal
+    log "portal mount missing; restarted xdg-document-portal (restart $((count + 1))/${SPACED_PORTAL_MAX_RESTARTS})"
+    return 0
+}
+
+if [ "${SPACED_PORTAL_GUARD_ONCE:-}" = "1" ]; then
+    check_once
+    exit 0
+fi
+
+# A check 5 s after login, then every 30 s; near-zero CPU while mounted.
+sleep "$SPACED_PORTAL_FIRST_DELAY"
+while :; do
+    if check_once; then
+        sleep "$SPACED_PORTAL_INTERVAL"
+    else
+        # Back-off: skip the whole window instead of polling it.
+        sleep "$SPACED_PORTAL_BACKOFF"
+    fi
+done
