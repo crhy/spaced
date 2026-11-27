@@ -6,9 +6,12 @@ import fcntl
 import io
 import os
 from pathlib import Path
+import re
 import shutil
+import subprocess
 import sys
 import tempfile
+import xml.etree.ElementTree as ET
 
 
 IMAGE_TYPES = (
@@ -310,6 +313,76 @@ def migrate_menu_editor(path):
         atomic_write(path, updated)
 
 
+# Up to 11.26.3 the MATE picker could save a wallpaper under its .png alias,
+# while the system catalog lists the .jpg the alias points at (#443). The
+# picker then shows the same wallpaper twice. Only these four shipped alias
+# paths may be rewritten; every other path is the user's own.
+BACKGROUND_ALIAS_JPGS = {
+    "/usr/share/backgrounds/spaced/SpacedBack.png":
+        "/usr/share/backgrounds/spaced/SpacedBack.jpg",
+    "/usr/share/backgrounds/spaced/SpacedBackLight.png":
+        "/usr/share/backgrounds/spaced/SpacedBackLight.jpg",
+    "/usr/share/backgrounds/spaced/euclid-galaxy-garland.png":
+        "/usr/share/backgrounds/spaced/euclid-galaxy-garland.jpg",
+    "/usr/share/backgrounds/spaced/spaced-orbit-4k.png":
+        "/usr/share/backgrounds/spaced/spaced-orbit-4k.jpg",
+}
+
+
+def get_picture_filename():
+    try:
+        result = subprocess.run(
+            ["gsettings", "get", "org.mate.background", "picture-filename"],
+            capture_output=True, text=True, timeout=10)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if result.returncode:
+        return None
+    return result.stdout.strip().strip("'\"")
+
+
+def set_picture_filename(value):
+    try:
+        subprocess.run(
+            ["gsettings", "set", "org.mate.background", "picture-filename",
+             value],
+            capture_output=True, timeout=10)
+    except (OSError, subprocess.SubprocessError):
+        pass
+
+
+def migrate_wallpaper_aliases(config):
+    """Point the desktop at the .jpg and drop duplicate .png picker entries."""
+    picture = get_picture_filename()
+    if picture in BACKGROUND_ALIAS_JPGS:
+        set_picture_filename(BACKGROUND_ALIAS_JPGS[picture])
+    path = config / "mate/backgrounds.xml"
+    if not path.exists():
+        return
+    content = path.read_text(encoding="utf-8")
+    try:
+        root = ET.fromstring(content)
+    except ET.ParseError:
+        return
+    filenames = [(wallpaper.findtext("filename") or "").strip()
+                 for wallpaper in root.findall("wallpaper")]
+    changed = False
+    for alias, jpg in BACKGROUND_ALIAS_JPGS.items():
+        if alias not in filenames or jpg not in filenames:
+            # The user has no duplicate to lose; deleting the only entry
+            # would remove the wallpaper instead.
+            continue
+        updated, count = re.subn(
+            r"[ \t]*<wallpaper\b(?:(?!</wallpaper>).)*?<filename>"
+            + re.escape(alias) + r"</filename>.*?</wallpaper>[ \t]*\n?",
+            "", content, count=1, flags=re.DOTALL)
+        if count:
+            content = updated
+            changed = True
+    if changed:
+        atomic_write(path, content, backup=False)
+
+
 def migrate(config):
     state = config / "spaced"
     state.mkdir(parents=True, exist_ok=True)
@@ -358,6 +431,12 @@ def migrate(config):
         if not hotkeys_marker.exists():
             migrate_default_hotkeys(config / "compiz/compizconfig/Default.ini")
             atomic_write(hotkeys_marker, "10.26.7\n")
+        # #443: picker entries saved under the old .png alias paths make every
+        # Spaced wallpaper show twice in Appearance > Background.
+        aliases_marker = state / "desktop-migration-11.26.4-wallpaper-aliases-v1"
+        if not aliases_marker.exists():
+            migrate_wallpaper_aliases(config)
+            atomic_write(aliases_marker, "11.26.4\n")
 
 
 if __name__ == "__main__":
