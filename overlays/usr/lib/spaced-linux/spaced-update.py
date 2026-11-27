@@ -1826,6 +1826,11 @@ class OsUpdateTab(Gtk.Box):
         close = Gtk.Button(label="Close")
         close.connect("clicked", lambda *_: dialog.destroy())
         box.pack_start(close, False, False, 0)
+        # GTK3 selects the whole text of a selectable GtkLabel once it receives
+        # the window's initial focus, so "What's new" opened fully highlighted
+        # (crhy/spacedupdate#20). Start on the Close button instead; the notes
+        # stay selectable so they remain copyable.
+        dialog.set_focus(close)
         return dialog
 
 
