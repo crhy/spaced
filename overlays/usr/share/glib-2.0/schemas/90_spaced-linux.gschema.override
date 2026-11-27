@@ -67,10 +67,12 @@ show-hidden-files=false
 executable-text-activation='launch'
 
 [org.mate.caja.desktop]
-# Gigolo's network shares are ordinary gvfs mounts. Keep the desktop showing
-# mounted volumes so connecting a share puts its icon back (issue #184).
+# Gigolo's network shares are ordinary gvfs mounts: keep the desktop showing
+# mounted volumes so connecting a share still puts its icon back (issue #184).
+# The top-level Network browse icon is a separate key and is not asked for, so
+# network-icon-visible stays off: no unwanted Network desktop icon (issue #442).
 volumes-visible=true
-network-icon-visible=true
+network-icon-visible=false
 font='Roboto 10'
 
 [org.mate.screensaver]
