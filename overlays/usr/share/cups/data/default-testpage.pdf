@@ -1,0 +1,49 @@
+%PDF-1.4
+% Spaced Linux branded CUPS test page asset
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 252 >>
+stream
+BT
+/F1 36 Tf
+72 720 Td
+(Spaced Linux Test Page) Tj
+/F1 16 Tf
+0 -48 Td
+(Spaced Linux - printer test page) Tj
+0 -28 Td
+(If you can read this page, your Spaced printer works.) Tj
+0 -20 Td
+(A Spaced-branded replacement for the stock CUPS test page.) Tj
+ET
+
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>
+endobj
+6 0 obj
+<< /Title (Spaced Linux Test Page) /Author (Spaced Linux) /Subject (Spaced printer test page) /Creator (Spaced Linux) /Producer (Spaced Linux) >>
+endobj
+xref
+0 7
+0000000000 65535 f 
+0000000053 00000 n 
+0000000102 00000 n 
+0000000159 00000 n 
+0000000285 00000 n 
+0000000588 00000 n 
+0000000685 00000 n 
+trailer
+<< /Size 7 /Root 1 0 R /Info 6 0 R >>
+startxref
+846
+%%EOF
