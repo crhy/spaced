@@ -220,8 +220,10 @@ def main():
         x += 112.0
 
     # 12-step grey wheel to the right of the swatch rows
-    grey_wheel(ctx, 470.0, y1 + 50.0, 46.0, 12)
-    text(ctx, 470.0, y1 + 50.0 + 46.0 + 13, "12-step grey wheel", 8,
+    # its own band under the swatch rows: beside row 1 it overlapped the Black circle
+    wx, wy, wr = PAGE_W / 2.0, y2 + 140.0, 50.0
+    grey_wheel(ctx, wx, wy, wr, 12)
+    text(ctx, wx, wy + wr + 13, "12-step grey wheel", 8,
          align="center")
 
     # footer line
