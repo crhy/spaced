@@ -351,6 +351,31 @@ def set_picture_filename(value):
         pass
 
 
+SYSTEM_BACKGROUND_CATALOGS = Path("/usr/share/mate-background-properties")
+
+
+def system_catalog_lists(filename, catalogs=None):
+    """True when a shipped MATE background catalog already offers ``filename``.
+
+    The picker merges these with the user's backgrounds.xml, so a user entry for
+    the .png alias duplicates the catalog's .jpg even when the user file has no
+    .jpg entry of its own (rhY's PC, #443)."""
+    directory = Path(catalogs) if catalogs else SYSTEM_BACKGROUND_CATALOGS
+    try:
+        files = sorted(directory.glob("*.xml"))
+    except OSError:
+        return False
+    for catalog in files:
+        try:
+            root = ET.parse(catalog).getroot()
+        except (ET.ParseError, OSError):
+            continue
+        for wallpaper in root.findall("wallpaper"):
+            if (wallpaper.findtext("filename") or "").strip() == filename:
+                return True
+    return False
+
+
 def migrate_wallpaper_aliases(config):
     """Point the desktop at the .jpg and drop duplicate .png picker entries."""
     picture = get_picture_filename()
@@ -368,9 +393,11 @@ def migrate_wallpaper_aliases(config):
                  for wallpaper in root.findall("wallpaper")]
     changed = False
     for alias, jpg in BACKGROUND_ALIAS_JPGS.items():
-        if alias not in filenames or jpg not in filenames:
-            # The user has no duplicate to lose; deleting the only entry
-            # would remove the wallpaper instead.
+        if alias not in filenames:
+            continue
+        if jpg not in filenames and not system_catalog_lists(jpg):
+            # Nothing else offers this wallpaper; deleting the only entry
+            # would remove it instead of a duplicate.
             continue
         updated, count = re.subn(
             r"[ \t]*<wallpaper\b(?:(?!</wallpaper>).)*?<filename>"

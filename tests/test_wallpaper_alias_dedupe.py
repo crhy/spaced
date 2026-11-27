@@ -49,6 +49,12 @@ class MigrationTests(unittest.TestCase):
         migration.get_picture_filename = lambda: self.picture
         migration.set_picture_filename = self.set_calls.append
         self.picture = None
+        # Hermetic: never read this machine's real /usr/share catalogs.
+        self.catalogs = Path(self.temp.name) / "catalogs"
+        self.catalogs.mkdir()
+        saved = migration.SYSTEM_BACKGROUND_CATALOGS
+        migration.SYSTEM_BACKGROUND_CATALOGS = self.catalogs
+        self.addCleanup(setattr, migration, "SYSTEM_BACKGROUND_CATALOGS", saved)
 
     def write_backgrounds(self, text):
         self.backgrounds.parent.mkdir(parents=True, exist_ok=True)
@@ -91,6 +97,17 @@ class MigrationTests(unittest.TestCase):
         self.assertIn(personal, text)
         # SimpleBackb.png is a real file, not one of the four aliases.
         self.assertIn(f"{SPACED}/SimpleBackb.png", text)
+
+    def test_an_alias_whose_jpg_only_the_system_catalog_lists_is_dropped(self):
+        # rhY's PC (#443): the user file holds only the .png alias; the shipped
+        # catalog offers the .jpg, so the picker showed the wallpaper twice.
+        (self.catalogs / "spaced-linux.xml").write_text(
+            wp_list(f"{SPACED}/spaced-orbit-4k.jpg"), encoding="utf-8")
+        self.write_backgrounds(wp_list(f"{SPACED}/spaced-orbit-4k.png", f"{SPACED}/win7.jpg"))
+        migration.migrate_wallpaper_aliases(self.config)
+        text = self.backgrounds.read_text(encoding="utf-8")
+        self.assertNotIn(f"{SPACED}/spaced-orbit-4k.png", text)
+        self.assertIn(f"{SPACED}/win7.jpg", text)
 
     def test_an_alias_without_its_jpg_entry_is_kept(self):
         self.write_backgrounds(wp_list(f"{SPACED}/SpacedBack.png"))
