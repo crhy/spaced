@@ -25,16 +25,20 @@ class AppstreamRefreshTests(unittest.TestCase):
 
         def run_capture(command, timeout=60):
             calls.append(command)
-            if command[:2] == ['flatpak', 'list']:
+            # Display listing across every installation (one call).
+            if command[:2] == ['flatpak', 'list'] and '--columns=application,installation,ref,name' in command:
                 return 'io.github.crhy.rhYciv\tsystem\tapp/io.github.crhy.rhYciv/x86_64/master\trhYciv\n'
+            # Per-installation installed-version listing (crhy/spacedupdate#16).
+            if command[:2] == ['flatpak', 'list'] and '--columns=application,branch,version' in command:
+                return 'io.github.crhy.rhYciv\tmaster\t0.2.3\n'
             if command[:2] == ['flatpak', 'remotes']:
-                return 'spaced-github\tsystem\n'
+                return 'spaced-github\tenabled\n'
             if command[:3] == ['flatpak', 'update', '--appstream']:
                 if refresh_fails:
                     raise RuntimeError('offline')
                 return ''
             if command[:2] == ['flatpak', 'remote-ls']:
-                return 'app/io.github.crhy.rhYciv/x86_64/master\n'
+                return 'io.github.crhy.rhYciv\tmaster\t0.2.4\n'
             raise AssertionError(command)
         return calls, run_capture
 

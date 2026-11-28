@@ -1,5 +1,26 @@
 # Changelog
 
+## 11.26.4-1 (APT package revision, unreleased)
+
+**Fixed**
+
+- Spaced Update now authenticates once per update run (crhy/spacedupdate#19,
+  ported into this repository's shipped updater). The first admin action opens a
+  single polkit prompt (`pkexec spaced-update-helper auth`), which primes the
+  invoking user's sudo timestamp; every later privileged step (selected apt
+  install, system Flatpak update, full system update, cleanup) reuses that
+  cached credential through `sudo -n` and never opens another dialog. Closing the
+  window stops the keep-alive. The read-only refresh stays a separate,
+  password-free pkexec so checking never prompts (issue #277). Delivered as an
+  APT package revision of the 11.26.4 line.
+- Spaced Update now offers an installed crhy app whose newer version sits in a
+  remote it was not installed from (crhy/spacedupdate#16, ported here). It
+  stopped trusting `flatpak remote-ls --updates`, which compares an installed ref
+  only against its recorded origin remote, and instead lists each enabled remote's
+  versions and each installation's installed versions, offering an app when a
+  remote of that installation carries the same application and branch with a
+  strictly newer version. Delivered as the same APT package revision.
+
 ## 11.26.4 - 2026-11-26
 
 **Added**
