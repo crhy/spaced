@@ -55,6 +55,113 @@ ensure_session_guard() {
   done
 }
 
+# crhy/spacedupdate#17: the Spaced 8.26.6 GRUB theme pointed its background
+# outside the boot-readable theme directory, and no package ever updates
+# /etc/default/grub, so installs made from that ISO keep pointing
+# GRUB_THEME/GRUB_BACKGROUND at files that are missing or unreadable from the
+# boot partition. Repair that setting idempotently: only a *Spaced* path that
+# cannot be read is changed, an administrator's own theme is never touched,
+# and an already-good configuration is a no-op.
+GRUB_THEME_PATH=/boot/grub/themes/spaced/theme.txt
+
+# Echoes the value of an active (uncommented) GRUB_THEME or GRUB_BACKGROUND
+# assignment; returns 1 for every other line.
+grub_assignment_value() {
+  local line=$1 value
+  case $line in
+    GRUB_THEME=*) value=${line#GRUB_THEME=} ;;
+    GRUB_BACKGROUND=*) value=${line#GRUB_BACKGROUND=} ;;
+    *) return 1 ;;
+  esac
+  if [[ $value == \"*\" || $value == \'*\' ]]; then
+    value=${value:1:${#value}-2}
+  fi
+  value=${value%$'\r'}
+  [[ -n $value ]] || return 1
+  printf '%s' "$value"
+}
+
+# True for the paths the 8.26.6-era Spaced GRUB theme used.
+spaced_era_grub_path() {
+  case $1 in
+    /boot/grub/themes/spaced/*|/usr/share/backgrounds/spaced/*|/usr/share/spaced-themes/*)
+      return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+repair_grub_theme() {
+  local prefix= config tmp line value broken=0 changed=0 any_changed=0
+  if [[ ${SPACED_UPDATE_TEST:-} == 1 ]]; then
+    # Test hook only: repair a temporary root. pkexec strips test variables,
+    # so this cannot redirect the production path. Without the hook a test
+    # run leaves the host's GRUB configuration alone.
+    [[ -n ${SPACED_UPDATE_TEST_GRUB_ROOT:-} ]] || return 0
+    prefix=$SPACED_UPDATE_TEST_GRUB_ROOT
+  elif [[ $EUID != 0 ]]; then
+    return 0
+  fi
+  local configs=("$prefix/etc/default/grub") snippet
+  for snippet in "$prefix"/etc/default/grub.d/*.cfg; do
+    [[ -f $snippet ]] && configs+=("$snippet")
+  done
+  for config in "${configs[@]}"; do
+    [[ -f $config ]] || continue
+    while IFS= read -r line || [[ -n $line ]]; do
+      if value=$(grub_assignment_value "$line") && spaced_era_grub_path "$value" &&
+         [[ ! -r $prefix$value ]]; then
+        broken=1
+      fi
+    done < "$config"
+  done
+  if (( ! broken )); then
+    return 0
+  fi
+  if [[ ! -r $prefix$GRUB_THEME_PATH ]]; then
+    log 'The packaged Spaced GRUB theme is not installed yet; the GRUB configuration was left unchanged.'
+    return 0
+  fi
+  for config in "${configs[@]}"; do
+    [[ -f $config ]] || continue
+    tmp=$(mktemp "${config}.XXXXXX") || return 1
+    local file_broken=0 theme_seen=0
+    local replacement="GRUB_THEME=\"$GRUB_THEME_PATH\""
+    while IFS= read -r line || [[ -n $line ]]; do
+      if value=$(grub_assignment_value "$line") && spaced_era_grub_path "$value"; then
+        if [[ -r $prefix$value ]]; then
+          [[ ${value} == "$GRUB_THEME_PATH" ]] && theme_seen=1
+          printf '%s\n' "$line"
+        elif [[ ${line%%=*} == GRUB_THEME ]]; then
+          file_broken=1; theme_seen=1; changed=1
+          printf '%s\n' "$replacement"
+        else
+          # A 8.26.6-era background line keeps the menu broken; the theme
+          # carries its own background, so drop it.
+          file_broken=1; changed=1
+        fi
+      else
+        printf '%s\n' "$line"
+      fi
+    done < "$config" > "$tmp"
+    if (( file_broken )) && (( ! theme_seen )); then
+      printf '%s\n' "$replacement" >> "$tmp"
+      changed=1
+    fi
+    if (( changed )); then
+      chmod --reference="$config" "$tmp" || return 1
+      mv "$tmp" "$config" || return 1
+      any_changed=1
+    else
+      rm -f "$tmp"
+    fi
+    changed=0
+  done
+  if (( any_changed )); then
+    log 'Repaired the GRUB theme of an old Spaced install (crhy/spacedupdate#17); the boot refresh below applies it.'
+  fi
+  return 0
+}
+
 # Optional cleanup safety list (issue #217). The privileged helper never
 # cleans up during updates; cleanup only runs through the explicit
 # cleanup-plan/cleanup-apply modes below. Any candidate matching one of
@@ -432,8 +539,13 @@ if [[ $ROOT_FSTYPE == overlay ]]; then
   # useful for validating the installed kernels. Do not turn a completed live
   # package transaction into a false update failure (issue #419).
   log 'Skipping GRUB refresh for the live overlay root.'
-elif command -v update-grub >/dev/null 2>&1; then
-  update-grub
+else
+  # crhy/spacedupdate#17: repoint an old broken GRUB theme setting before
+  # refreshing the boot files, so update-grub below applies it exactly once.
+  repair_grub_theme || log 'The GRUB theme repair did not complete; the GRUB configuration was left unchanged.'
+  if command -v update-grub >/dev/null 2>&1; then
+    update-grub
+  fi
 fi
 
 if [[ $MODE == all ]] && command -v flatpak >/dev/null 2>&1; then
