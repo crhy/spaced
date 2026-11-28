@@ -336,6 +336,69 @@ def check_status(status):
         raise RuntimeError(f"Update command exited with status {status}")
 
 
+# crhy/spacedupdate#19: one authentication per update run. The first privileged
+# action authenticates once (a single pkexec of the helper's auth probe), which
+# primes the invoking user's sudo timestamp; every later privileged step reuses
+# that cached credential through sudo -n and never opens another polkit dialog.
+# Only the admin (com.spacedlinux.update) actions go through here; the read-only
+# refresh stays a separate password-free pkexec so checking never prompts
+# (issue #277).
+AUTH_SESSION = {"authorised": False, "closing": False, "keepalive": None}
+
+
+def stop_privileged_keepalive():
+    process = AUTH_SESSION["keepalive"]
+    AUTH_SESSION["keepalive"] = None
+    AUTH_SESSION["authorised"] = False
+    if process is not None:
+        process.terminate()
+
+
+def _start_privileged_keepalive():
+    # Renew the cached sudo timestamp while this process lives, bounded to a day
+    # and to our own lifetime so the credential never outlives the app.
+    script = (
+        'end=$(( $(date +%s) + 86400 )); '
+        f'while kill -0 {os.getpid()} 2>/dev/null && [ "$(date +%s)" -lt "$end" ]; '
+        'do sudo -n true; sleep 60; done'
+    )
+    try:
+        AUTH_SESSION["keepalive"] = subprocess.Popen(
+            host(["sh", "-c", script]),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            env={**os.environ, "LC_ALL": "C"},
+        )
+    except OSError:
+        AUTH_SESSION["keepalive"] = None
+
+
+def _authorize_once():
+    # Exactly one authentication for the whole run. A refused or cancelled
+    # dialog surfaces as the existing not-authorised outcome; later actions
+    # never re-prompt.
+    if AUTH_SESSION["closing"]:
+        raise UpdateCancelled("Authentication was cancelled. The update did not complete.")
+    try:
+        run_capture(["pkexec", HELPER, "auth"], timeout=120)
+    except RuntimeError as error:
+        text = str(error)
+        if "status 126" in text or "cancel" in text.casefold():
+            raise UpdateCancelled("Authentication was cancelled. The update did not complete.")
+        raise
+    AUTH_SESSION["authorised"] = True
+    _start_privileged_keepalive()
+
+
+def privileged(command, invoker):
+    # Route every admin operation through the one privilege session: authenticate
+    # once on the first call, then sudo -n for the rest of the run. `command` is
+    # the helper argv without pkexec (for example [HELPER, "apt-install", ...]).
+    if not AUTH_SESSION["authorised"]:
+        _authorize_once()
+    return invoker(["sudo", "-n", "--"] + list(command))
+
+
 # cleanup-apply exit code meaning "package cache cleaned; autoremove
 # refused for safety". Must match CLEANUP_CACHE_ONLY_STATUS in
 # spaced-update-helper; it is unused by check_status() and every other
@@ -722,7 +785,7 @@ class App(Gtk.Window):
         self.tabs.add_titled(self.os_tab, "os", "OS Release")
         self.tabs.set_visible_child_name("os")
 
-        self.connect("destroy", Gtk.main_quit)
+        self.connect("destroy", self._on_destroy)
         self.connect("delete-event", self._on_close)
 
     def _build_updates_page(self):
@@ -933,7 +996,17 @@ class App(Gtk.Window):
             self.os_tab.message.set_text(
                 "Wait for the update operation to finish before closing Spaced Update."
             )
+        else:
+            # The privilege session ends with the window: stop renewing the
+            # cached credential before the app quits.
+            AUTH_SESSION["closing"] = True
+            stop_privileged_keepalive()
         return self._busy
+
+    def _on_destroy(self, *_):
+        AUTH_SESSION["closing"] = True
+        stop_privileged_keepalive()
+        Gtk.main_quit()
 
     def schedule_autocheck(self):
         if os.environ.get("SPACED_UPDATE_NO_AUTOCHECK") == "1":
@@ -1138,16 +1211,14 @@ class App(Gtk.Window):
                         self.logline,
                         f"Installing {len(values)} selected system package(s)",
                     )
-                    status = self.run_cmd(
-                        [
-                            "pkexec",
-                            HELPER,
-                            "apt-install",
-                        ]
-                        + values,
-                        self.logline,
-                        self.setstep,
-                        (start, end),
+                    status = privileged(
+                        [HELPER, "apt-install"] + values,
+                        lambda command: self.run_cmd(
+                            command,
+                            self.logline,
+                            self.setstep,
+                            (start, end),
+                        ),
                     )
                 elif kind == "user":
                     GLib.idle_add(
@@ -1157,17 +1228,14 @@ class App(Gtk.Window):
                     if not status:
                         GLib.idle_add(self.setstep, end, "Flatpak applications updated")
                 else:
-                    status = self.run_cmd(
-                        [
-                            "pkexec",
-                            HELPER,
-                            "flatpak-update",
-                            flatpak_scope(kind),
-                        ]
-                        + values,
-                        self.logline,
-                        self.setstep,
-                        (start, end),
+                    status = privileged(
+                        [HELPER, "flatpak-update", flatpak_scope(kind)] + values,
+                        lambda command: self.run_cmd(
+                            command,
+                            self.logline,
+                            self.setstep,
+                            (start, end),
+                        ),
                     )
                 check_status(status)
 
@@ -1290,7 +1358,10 @@ class App(Gtk.Window):
 
     def _cleanup_plan_worker(self):
         try:
-            output = run_capture(["pkexec", HELPER, "cleanup-plan"], timeout=300)
+            output = privileged(
+                [HELPER, "cleanup-plan"],
+                lambda command: run_capture(command, timeout=300),
+            )
         except Exception as error:
             GLib.idle_add(self._cleanup_plan_failed, str(error))
             return
@@ -1411,14 +1482,20 @@ class App(Gtk.Window):
 
     def _cleanup_apply_worker(self):
         try:
-            result = subprocess.run(
-                host(["pkexec", HELPER, "cleanup-apply"]),
-                capture_output=True,
-                text=True,
-                timeout=900,
-                check=False,
-                env={**os.environ, "LC_ALL": "C"},
+            result = privileged(
+                [HELPER, "cleanup-apply"],
+                lambda command: subprocess.run(
+                    host(command),
+                    capture_output=True,
+                    text=True,
+                    timeout=900,
+                    check=False,
+                    env={**os.environ, "LC_ALL": "C"},
+                ),
             )
+        except UpdateCancelled as error:
+            GLib.idle_add(self._cleanup_apply_done, False, "failed", str(error))
+            return
         except (OSError, subprocess.TimeoutExpired) as error:
             GLib.idle_add(self._cleanup_apply_done, False, "failed", str(error))
             return
@@ -1528,11 +1605,14 @@ class App(Gtk.Window):
         tab = self.os_tab
         try:
             self._update_warnings = []
-            status = self.run_cmd(
-                ["pkexec", HELPER],
-                tab.logline,
-                tab.setstep,
-                (0, 85),
+            status = privileged(
+                [HELPER],
+                lambda command: self.run_cmd(
+                    command,
+                    tab.logline,
+                    tab.setstep,
+                    (0, 85),
+                ),
             )
             check_status(status)
             if flatpak_available():

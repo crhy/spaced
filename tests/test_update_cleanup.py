@@ -414,13 +414,27 @@ class InstallWarningTests(unittest.TestCase):
             return 0
         app.run_cmd = run_cmd
         original = spaced_update.GLib.idle_add
+        auth = spaced_update.AUTH_SESSION
+        saved = dict(auth)
+        auth.update({'authorised': False, 'closing': False, 'keepalive': None})
+        keep = spaced_update._start_privileged_keepalive
+        capture = spaced_update.run_capture
         try:
+            # crhy/spacedupdate#19: the install shares one privilege session -
+            # absorb the one-time auth probe and the sudo keep-alive so no real
+            # pkexec/sudo runs here.
+            spaced_update.run_capture = lambda command, timeout=60: ''
+            spaced_update._start_privileged_keepalive = lambda: None
             spaced_update.GLib.idle_add = lambda function, *args: function(*args)
             spaced_update.App._install_worker(
                 app, [{'kind': 'apt', 'name': 'mate-panel', 'package': 'mate-panel'}])
         finally:
             spaced_update.GLib.idle_add = original
-        self.assertEqual(calls, [['pkexec', spaced_update.HELPER, 'apt-install',
+            spaced_update.run_capture = capture
+            spaced_update._start_privileged_keepalive = keep
+            auth.update(saved)
+        # The helper now runs through the cached sudo session, not a fresh pkexec.
+        self.assertEqual(calls, [['sudo', '-n', '--', spaced_update.HELPER, 'apt-install',
                                   'mate-panel']])
         self.assertEqual([title for title, _ in statuses][-1],
                          'Update finished with warnings')

@@ -187,19 +187,44 @@ class OsUpdateFlatpakTests(unittest.TestCase):
             return 1 if command[0] == 'flatpak' else 0
         app = types.SimpleNamespace(os_tab=tab, run_cmd=run_cmd, _set_busy=lambda *_: None)
         patches = {'flatpak_available': lambda: True, 'enumerate_apt': lambda: [],
-                   'read_installed_version': lambda: '10.26.3'}
-        originals = {name: getattr(spaced_update, name) for name in patches}
+                   'read_installed_version': lambda: '10.26.3',
+                   # The one-time auth probe and the sudo keep-alive must never
+                   # reach a real pkexec/sudo: absorb them here (crhy/spacedupdate#19).
+                   'run_capture': lambda command, timeout=60: '',
+                   'subprocess.Popen': lambda *args, **kwargs: types.SimpleNamespace(terminate=lambda: None)}
+        originals = {}
+        for name in patches:
+            if '.' in name:
+                obj, attr = name.split('.')
+                originals[name] = getattr(getattr(spaced_update, obj), attr)
+            else:
+                originals[name] = getattr(spaced_update, name)
         original_idle = spaced_update.GLib.idle_add
+        auth = spaced_update.AUTH_SESSION
+        saved_auth = dict(auth)
+        auth.update({'authorised': False, 'closing': False, 'keepalive': None})
         try:
             for name, value in patches.items():
-                setattr(spaced_update, name, value)
+                if '.' in name:
+                    obj, attr = name.split('.')
+                    setattr(getattr(spaced_update, obj), attr, value)
+                else:
+                    setattr(spaced_update, name, value)
             spaced_update.GLib.idle_add = lambda function, *args: function(*args)
             spaced_update.App._os_update_worker(app)
         finally:
             for name, value in originals.items():
-                setattr(spaced_update, name, value)
+                if '.' in name:
+                    obj, attr = name.split('.')
+                    setattr(getattr(spaced_update, obj), attr, value)
+                else:
+                    setattr(spaced_update, name, value)
+            auth.update(saved_auth)
             spaced_update.GLib.idle_add = original_idle
-        self.assertEqual([command[0] for command in calls], ['pkexec', 'flatpak'])
+        # crhy/spacedupdate#19: the system update authenticates once (the auth
+        # probe above) and then runs the helper through sudo -n; the user
+        # Flatpak update follows.
+        self.assertEqual([command[0] for command in calls], ['sudo', 'flatpak'])
         self.assertEqual(errors, [])
         self.assertEqual(len(finished), 1)
         installed, warnings = finished[0]

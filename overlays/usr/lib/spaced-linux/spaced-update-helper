@@ -301,6 +301,17 @@ case "$MODE" in
         log "Invalid Flatpak ref: $REF"; exit 2
       fi
     done ;;
+  auth)
+    # crhy/spacedupdate#19: one polkit authorisation per update run. pkexec ran
+    # this probe as root, so the admin password is already in hand. Prime the
+    # invoking user's sudo timestamp here so every later privileged step runs
+    # through sudo -n and never opens another polkit dialog. If the host's sudo
+    # refuses to prime, the later sudo -n fails fast and the error surfaces
+    # through the existing paths without any further prompt.
+    if [ -n "${PKEXEC_UID:-}" ]; then
+      sudo -u "$PKEXEC_UID" sudo -vk 2>/dev/null || true
+    fi
+    exit 0 ;;
   *) log "Unknown update mode: $MODE"; exit 2 ;;
 esac
 
