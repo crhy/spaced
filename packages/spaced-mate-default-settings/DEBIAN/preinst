@@ -1,0 +1,17 @@
+#!/bin/sh
+set -e
+
+# Issue #440: /usr/share/system-config-printer/statereason.py is a file owned
+# by Debian's system-config-printer-common, and dpkg refuses to let this
+# package ship it ("trying to overwrite ... which is also in package").
+# Divert the Debian copy to statereason.py.distrib so this package's thin
+# corrected override owns statereason.py, and any future upgrade of
+# system-config-printer-common lands on the .distrib name that the override
+# imports. dpkg-divert --add is recorded once; repeating it for the same
+# package (upgrades) is a no-op, and --rename moves an already-installed
+# Debian file aside before dpkg unpacks this package.
+dpkg-divert --package spaced-mate-default-settings \
+    --divert /usr/share/system-config-printer/statereason.py.distrib \
+    --rename --add /usr/share/system-config-printer/statereason.py
+
+exit 0

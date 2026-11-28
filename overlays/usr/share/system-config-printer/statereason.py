@@ -19,173 +19,96 @@
 ## along with this program; if not, write to the Free Software
 ## Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-## Spaced Linux ships this copy over the Debian one (issue #440).  Upstream's
-## get_level () defaults every reason that is not '*-report', '*-warning' or on
-## its special list to ERROR, but a queue that is printing successfully reports
-## reasons like 'cups-waiting-for-job-completed' or 'media-low' all the time -
-## so the tray applet, print monitor and printer manager showed "Printer error"
-## during a normal print job until it completed.  Spaced classifies by the IPP
-## suffix rules instead: only '*-error' reasons (or 'stopped') are errors,
-## '*-warning' reasons are warnings, and '*-report' or unsuffixed reasons are
-## reports, not errors.  Reasons that mean "a job is printing" now describe
-## themselves as "Printing…" instead of an error.
+## Spaced Linux (issue #440): this file owns
+## /usr/share/system-config-printer/statereason.py, a path Debian's
+## system-config-printer-common also owns, so spaced-mate-default-settings'
+## preinst runs "dpkg-divert --package spaced-mate-default-settings --rename
+## --add" and moves the Debian copy to statereason.py.distrib (postrm removes
+## the diversion).  This keeps a thin override of that module rather than a
+## full copy: it loads the diverted file and replaces only get_level (),
+## which defaults every reason that is not '*-report', '*-warning' or on its
+## special list to ERROR - so a queue reporting 'cups-waiting-for-job-completed'
+## or 'media-low' during a successful print showed "Printer error" - and adds
+## the "Printing…" wording for the reasons a printing queue reports.  Every
+## other future Debian change to statereason.py keeps applying.
 
-import cups
+import importlib.machinery
+import importlib.util
 import os
-import config
-import gettext
-gettext.install(domain=config.PACKAGE, localedir=config.localedir)
 
-class StateReason:
-    REPORT=1
-    WARNING=2
-    ERROR=3
 
-    LEVEL_ICON={
-        REPORT: "dialog-information",
-        WARNING: "dialog-warning",
-        ERROR: "dialog-error"
-        }
+def _load_diverted_module():
+    """Load Debian's statereason.py, wherever dpkg's diversion left it."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    for path in (os.path.join(here, 'statereason.py.distrib'),
+                 '/usr/share/system-config-printer/statereason.py.distrib',
+                 '/usr/share/system-config-printer/statereason.py'):
+        if not os.path.exists(path):
+            continue
+        if os.path.realpath(path) == os.path.realpath(__file__):
+            continue  # this override itself, not the file it overrides
+        # The diverted file is named statereason.py.distrib, so a loader
+        # must be given explicitly instead of guessing from the suffix.
+        loader = importlib.machinery.SourceFileLoader('statereason_distrib',
+                                                      path)
+        spec = importlib.util.spec_from_loader('statereason_distrib', loader)
+        module = importlib.util.module_from_spec(spec)
+        loader.exec_module(module)
+        return module
+    raise RuntimeError(
+        'statereason.py: cannot find the Debian statereason.py to override; '
+        'the spaced-mate-default-settings dpkg diversion is missing')
 
-    def __init__(self, printer, reason, ppdcache=None):
-        self.printer = printer
-        self.reason = reason
-        self.level = None
-        self.canonical_reason = None
-        self._ppd = None
-        if ppdcache:
-            ppdcache.fetch_ppd (printer, self._got_ppd)
 
-    def _got_ppd (self, name, result, exc):
-        self._ppd = result
+_distrib = _load_diverted_module()
 
-    def get_printer (self):
-        return self.printer
+StateReason = _distrib.StateReason
 
-    def get_level (self):
-        if self.level is not None:
-            return self.level
 
-        # Spaced Linux (issue #440): the IPP printer-state-reasons registry
-        # says what a level is - the '*-error' suffix marks real errors,
-        # '*-warning' marks warnings, and everything else ('*-report', or
-        # historically unsuffixed reasons like 'media-low' and the normal
-        # printing reason 'cups-waiting-for-job-completed') is a report.
-        # 'stopped' is the one unsuffixed reason that is an error.
-        if self.reason.endswith ("-error") or self.reason == "stopped":
-            self.level = self.ERROR
-        elif self.reason.endswith ("-warning"):
-            self.level = self.WARNING
-        else:
-            self.level = self.REPORT
-
+def _spaced_get_level(self):
+    # Spaced Linux (issue #440): the IPP printer-state-reasons registry
+    # says what a level is - the '*-error' suffix marks real errors,
+    # '*-warning' marks warnings, and everything else ('*-report', or
+    # historically unsuffixed reasons like 'media-low' and the normal
+    # printing reason 'cups-waiting-for-job-completed') is a report.
+    # 'stopped' is the one unsuffixed reason that is an error.
+    if self.level is not None:
         return self.level
 
-    def get_reason (self):
-        if self.canonical_reason:
-            return self.canonical_reason
+    if self.reason.endswith ("-error") or self.reason == "stopped":
+        self.level = self.ERROR
+    elif self.reason.endswith ("-warning"):
+        self.level = self.WARNING
+    else:
+        self.level = self.REPORT
 
-        level = self.get_level ()
-        reason = self.reason
-        if level == self.WARNING and reason.endswith ("-warning"):
-            reason = reason[:-8]
-        elif level == self.ERROR and reason.endswith ("-error"):
-            reason = reason[:-6]
-        self.canonical_reason = reason
-        return self.canonical_reason
+    return self.level
 
-    def __repr__ (self):
-        self.get_level()
-        if self.level == self.REPORT:
-            level = "REPORT"
-        elif self.level == self.WARNING:
-            level = "WARNING"
-        else:
-            level = "ERROR"
 
-        return "<statereason.StateReason (%s,%s,%s)>" % (level,
-                                                         self.get_printer (),
-                                                         self.get_reason ())
+# Spaced Linux (issue #440): these are what a queue reports while a job
+# prints normally, so say so instead of leaving them to the generic report
+# wording in Debian's get_description ().
+_printing_messages = {
+    'cups-waiting-for-job-completed': (_("Printing…"),
+                                       _("Printer '%s' is printing.")),
+    'processing': (_("Printing…"),
+                   _("Printer '%s' is printing.")),
+}
+_debian_get_description = StateReason.get_description
 
-    def get_description (self):
-        messages = {
-            'toner-low': (_("Toner low"),
-                          _("Printer '%s' is low on toner.")),
-            'toner-empty': (_("Toner empty"),
-                            _("Printer '%s' has no toner left.")),
-            'cover-open': (_("Cover open"),
-                           _("The cover is open on printer '%s'.")),
-            'door-open': (_("Door open"),
-                          _("The door is open on printer '%s'.")),
-            'media-low': (_("Paper low"),
-                          _("Printer '%s' is low on paper.")),
-            'media-empty': (_("Out of paper"),
-                            _("Printer '%s' is out of paper.")),
-            'marker-supply-low': (_("Ink low"),
-                                  _("Printer '%s' is low on ink.")),
-            'marker-supply-empty': (_("Ink empty"),
-                                    _("Printer '%s' has no ink left.")),
-            'offline': (_("Printer off-line"),
-                        _("Printer '%s' is currently off-line.")),
-            'connecting-to-device': (_("Not connected?"),
-                                     _("Printer '%s' may not be connected.")),
-            'other': (_("Printer error"),
-                      _("There is a problem on printer '%s'.")),
 
-            'cups-missing-filter': (_("Printer configuration error"),
-                                    _("There is a missing print filter for "
-                                      "printer '%s'.")),
-
-            # Spaced Linux (issue #440): these are what a queue reports while
-            # a job prints normally, so say so instead of leaving them to the
-            # generic report wording.
-            'cups-waiting-for-job-completed': (_("Printing…"),
-                                               _("Printer '%s' is printing.")),
-            'processing': (_("Printing…"),
-                           _("Printer '%s' is printing.")),
-            }
+def _spaced_get_description(self):
+    reason = self.get_reason ()
+    if reason in _printing_messages:
+        title, text = _printing_messages[reason]
         try:
-            (title, text) = messages[self.get_reason ()]
-            try:
-                text = text % self.get_printer ()
-            except TypeError:
-                # Probably an incorrect translation, missing a '%s'.
-                pass
-        except KeyError:
-            if self.get_level () == self.REPORT:
-                title = _("Printer report")
-            elif self.get_level () == self.WARNING:
-                title = _("Printer warning")
-            elif self.get_level () == self.ERROR:
-                title = _("Printer error")
-
-            reason = self.get_reason ()
-            if self._ppd:
-                try:
-                    schemes = ["text", "http", "help", "file"]
-                    localized_reason = ""
-                    for scheme in schemes:
-                        lreason = self._ppd.localizeIPPReason(self.reason,
-                                                              scheme)
-                        if lreason is not None:
-                            localized_reason = localized_reason + lreason + ", "
-                    if localized_reason != "":
-                        reason = localized_reason[:-2]
-                except RuntimeError:
-                    pass
-
-            text = (_("Printer '%s': '%s'.") % (self.get_printer (), reason))
+            text = text % self.get_printer ()
+        except TypeError:
+            # Probably an incorrect translation, missing a '%s'.
+            pass
         return (title, text)
+    return _debian_get_description(self)
 
-    def get_tuple (self):
-        return (self.get_level (), self.get_printer (), self.get_reason ())
 
-    def __eq__(self, other):
-      if type (other) != type (self):
-            return False
-      return self.get_level () == other.get_level ()
-
-    def __lt__(self, other):
-      if type (other) != type (self):
-            return False
-      return self.get_level () < other.get_level ()
+StateReason.get_level = _spaced_get_level
+StateReason.get_description = _spaced_get_description

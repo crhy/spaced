@@ -1,0 +1,15 @@
+#!/bin/sh
+set -e
+
+# Undo only the statereason.py diversion that DEBIAN/preinst added, and only
+# when this package is removed or purged: dpkg then renames the diverted
+# Debian file back to its real path so Debian upgrades can own it again.
+case "${1:-}" in
+    remove|purge)
+        dpkg-divert --package spaced-mate-default-settings \
+            --divert /usr/share/system-config-printer/statereason.py.distrib \
+            --rename --remove /usr/share/system-config-printer/statereason.py
+        ;;
+esac
+
+exit 0

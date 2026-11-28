@@ -94,6 +94,12 @@ SETTINGS_PATHS=(
     usr/share/polkit-1/actions/com.spacedlinux.gpu.policy
     usr/share/polkit-1/actions/com.spacedlinux.sharing.policy
     usr/share/polkit-1/actions/com.spacedlinux.update.policy
+    # Issue #440: the one path here owned by a Debian package, not by Spaced.
+    # spaced-mate-default-settings' DEBIAN/preinst dpkg-diverts the Debian
+    # file to statereason.py.distrib so dpkg accepts the install and future
+    # system-config-printer-common upgrades land on the .distrib name;
+    # DEBIAN/postrm removes the diversion again on removal.
+    usr/share/system-config-printer/statereason.py
 )
 
 build() {
