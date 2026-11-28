@@ -182,16 +182,12 @@ class OsUpdateFlatpakTests(unittest.TestCase):
             details=types.SimpleNamespace(set_expanded=lambda *_: None),
             finish_update=lambda installed, warnings: finished.append((installed, list(warnings))))
 
-        def run_cmd(command, *_):
+        def run_cmd(command, *_, stdin=None):
             calls.append(command)
             return 1 if command[0] == 'flatpak' else 0
         app = types.SimpleNamespace(os_tab=tab, run_cmd=run_cmd, _set_busy=lambda *_: None)
         patches = {'flatpak_available': lambda: True, 'enumerate_apt': lambda: [],
-                   'read_installed_version': lambda: '10.26.3',
-                   # The one-time auth probe and the sudo keep-alive must never
-                   # reach a real pkexec/sudo: absorb them here (crhy/spacedupdate#19).
-                   'run_capture': lambda command, timeout=60: '',
-                   'subprocess.Popen': lambda *args, **kwargs: types.SimpleNamespace(terminate=lambda: None)}
+                   'read_installed_version': lambda: '10.26.3'}
         originals = {}
         for name in patches:
             if '.' in name:
@@ -200,9 +196,6 @@ class OsUpdateFlatpakTests(unittest.TestCase):
             else:
                 originals[name] = getattr(spaced_update, name)
         original_idle = spaced_update.GLib.idle_add
-        auth = spaced_update.AUTH_SESSION
-        saved_auth = dict(auth)
-        auth.update({'authorised': False, 'closing': False, 'keepalive': None})
         try:
             for name, value in patches.items():
                 if '.' in name:
@@ -219,12 +212,11 @@ class OsUpdateFlatpakTests(unittest.TestCase):
                     setattr(getattr(spaced_update, obj), attr, value)
                 else:
                     setattr(spaced_update, name, value)
-            auth.update(saved_auth)
             spaced_update.GLib.idle_add = original_idle
-        # crhy/spacedupdate#19: the system update authenticates once (the auth
-        # probe above) and then runs the helper through sudo -n; the user
-        # Flatpak update follows.
-        self.assertEqual([command[0] for command in calls], ['sudo', 'flatpak'])
+        # crhy/spacedupdate#19: the whole system update is ONE pkexec of the
+        # root helper's run-plan (no sudo); the per-user Flatpak update follows.
+        self.assertEqual([command[0] for command in calls], ['pkexec', 'flatpak'])
+        self.assertEqual(calls[0], ['pkexec', spaced_update.HELPER, 'run-plan'])
         self.assertEqual(errors, [])
         self.assertEqual(len(finished), 1)
         installed, warnings = finished[0]

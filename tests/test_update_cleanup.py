@@ -407,35 +407,27 @@ class InstallWarningTests(unittest.TestCase):
                 (title, detail)),
         )
 
-        def run_cmd(command, *args):
+        def run_cmd(command, log_callback, step_callback, progress_range, stdin=None):
             calls.append(command)
+            # The whole privileged install is now ONE plan: the plan lists the
+            # selected apt-install step (crhy/spacedupdate#19).
+            plan.append(stdin)
             # run_cmd() collects each SPACED_WARNING: line from the helper.
             app._update_warnings.append('mate-panel is held by the administrator')
             return 0
         app.run_cmd = run_cmd
+        plan = []
         original = spaced_update.GLib.idle_add
-        auth = spaced_update.AUTH_SESSION
-        saved = dict(auth)
-        auth.update({'authorised': False, 'closing': False, 'keepalive': None})
-        keep = spaced_update._start_privileged_keepalive
-        capture = spaced_update.run_capture
         try:
-            # crhy/spacedupdate#19: the install shares one privilege session -
-            # absorb the one-time auth probe and the sudo keep-alive so no real
-            # pkexec/sudo runs here.
-            spaced_update.run_capture = lambda command, timeout=60: ''
-            spaced_update._start_privileged_keepalive = lambda: None
             spaced_update.GLib.idle_add = lambda function, *args: function(*args)
             spaced_update.App._install_worker(
                 app, [{'kind': 'apt', 'name': 'mate-panel', 'package': 'mate-panel'}])
         finally:
             spaced_update.GLib.idle_add = original
-            spaced_update.run_capture = capture
-            spaced_update._start_privileged_keepalive = keep
-            auth.update(saved)
-        # The helper now runs through the cached sudo session, not a fresh pkexec.
-        self.assertEqual(calls, [['sudo', '-n', '--', spaced_update.HELPER, 'apt-install',
-                                  'mate-panel']])
+        # crhy/spacedupdate#19: the install is one pkexec of run-plan, no sudo,
+        # and the plan names the apt-install step that the root helper will run.
+        self.assertEqual(calls, [['pkexec', spaced_update.HELPER, 'run-plan']])
+        self.assertEqual(plan, ['apt-install mate-panel\n'])
         self.assertEqual([title for title, _ in statuses][-1],
                          'Update finished with warnings')
         self.assertIn('held by the administrator', statuses[-1][1])

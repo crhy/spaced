@@ -1,12 +1,12 @@
 """crhy/spacedupdate#19: a full update run authenticates exactly once.
 
-A fake pkexec/sudo on PATH counts every invocation. The admin (com.spacedlinux
-.update) steps of a full run - apt-install, system flatpak-update, the full
-system update (which does apt + flatpak + firmware + GRUB repair in one helper
-invocation) and cleanup - share one privilege session: exactly one pkexec, then
-sudo -n for every later step. The read-only refresh stays a separate,
-password-free pkexec (issue #277) and is not an admin authorisation. No real
-pkexec, polkit or sudo runs here.
+The GUI collects the whole plan and runs ONE `pkexec spaced-update-helper
+run-plan` whose stdin lists the allow-listed sub-steps. The root helper
+validates every step before running any, then runs them in order and streams
+the usual SPACED_STEP: lines. A fake pkexec on PATH counts the calls and
+REALLY executes the helper (with a fake apt-get/flatpak on PATH), and a fake
+sudo that fails the test if it is ever called. No real pkexec, polkit, sudo,
+apt or flatpak runs here.
 """
 from pathlib import Path
 import importlib.util
@@ -16,7 +16,6 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.dont_write_bytecode = True
@@ -30,144 +29,189 @@ try:
 except Exception:
     spaced_update = None
 
-HELPER = spaced_update.HELPER if spaced_update else ''
-REFRESH_HELPER = spaced_update.REFRESH_HELPER if spaced_update else ''
+HELPER_PATH = ROOT / 'overlays/usr/lib/spaced-linux/spaced-update-helper'
 
-
-FAKE = """#!/bin/bash
-name=$(basename "$0")
-printf '%s\\t%s\\n' "$name" "$*" >> "$UPDATE_LOG"
-exit ${__EXITVAR__:-0}
+PKEXEC = """#!/bin/bash
+printf 'pkexec\\t%s\\n' "$*" >> "$UPDATE_LOG"
+if [[ -n ${PKEXEC_EXIT:-} ]]; then exit "$PKEXEC_EXIT"; fi
+exec "$@"
+"""
+SUDO = """#!/bin/bash
+printf 'sudo\\t%s\\n' "$*" >> "$UPDATE_LOG"
+echo "FAKE SUDO WAS CALLED: $*" >> "$UPDATE_LOG"
+exit 1
+"""
+APT_GET = """#!/bin/bash
+printf '%s\\n' "$*" >> "$APT_LOG"
+exit ${APT_EXIT:-0}
+"""
+FLATPAK = """#!/bin/bash
+printf '%s\\n' "$*" >> "$FLATPAK_LOG"
+exit ${FLATPAK_EXIT:-0}
 """
 
 
+class _FakeBin:
+    """A PATH of fake pkexec/sudo/apt-get/flatpak plus the logs they write."""
+
+    def __init__(self, temp):
+        base = Path(temp)
+        self.bin = base / 'bin'
+        self.bin.mkdir(exist_ok=True)
+        self.update_log = base / 'update.log'
+        self.apt_log = base / 'apt.log'
+        self.flatpak_log = base / 'flatpak.log'
+        for name, text in (('pkexec', PKEXEC), ('sudo', SUDO),
+                          ('apt-get', APT_GET), ('flatpak', FLATPAK)):
+            script = self.bin / name
+            script.write_text(text)
+            script.chmod(script.stat().st_mode | stat.S_IEXEC)
+        for log in (self.update_log, self.apt_log, self.flatpak_log):
+            log.write_text('')
+
+    def env(self, **overrides):
+        env = dict(os.environ)
+        env['PATH'] = f'{self.bin}{os.pathsep}{os.environ["PATH"]}'
+        env['UPDATE_LOG'] = str(self.update_log)
+        env['APT_LOG'] = str(self.apt_log)
+        env['FLATPAK_LOG'] = str(self.flatpak_log)
+        env['SPACED_UPDATE_TEST'] = '1'
+        env['SPACED_UPDATE_TEST_CACHE_DIR'] = str(self.apt_log.parent / 'cache')
+        env.update({k: str(v) for k, v in overrides.items()})
+        return env
+
+    def rows(self, log):
+        return [line.split('\t') for line in log.read_text().splitlines() if line]
+
+    def pkexec_calls(self):
+        return [r for r in self.rows(self.update_log) if r and r[0] == 'pkexec']
+
+    def sudo_calls(self):
+        return [r for r in self.rows(self.update_log) if r and r[0] == 'sudo']
+
+    def run_helper(self, argv, env, stdin=''):
+        return subprocess.run(['bash', str(HELPER_PATH), *argv], env=env,
+                              input=stdin, capture_output=True, text=True, timeout=60)
+
+
 @unittest.skipIf(spaced_update is None, 'needs PyGObject/GTK')
-class AuthOnceTests(unittest.TestCase):
+class RunPlanTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
-        base = Path(self.temp.name)
-        self.bin = base / 'bin'
-        self.bin.mkdir()
-        self.log = base / 'log'
-        self.log.write_text('')
-        os.environ['UPDATE_LOG'] = str(self.log)
-        for tool, exit_var in (('pkexec', 'PKEXEC_EXIT'), ('sudo', 'SUDO_EXIT')):
-            script = self.bin / tool
-            script.write_text(FAKE.replace('__EXITVAR__', exit_var))
-            script.chmod(script.stat().st_mode | stat.S_IEXEC)
-        self.old_path = os.environ['PATH']
-        os.environ['PATH'] = f'{self.bin}{os.pathsep}{self.old_path}'
-        auth = spaced_update.AUTH_SESSION
-        self.saved = dict(auth)
-        auth.update({'authorised': False, 'closing': False, 'keepalive': None})
-        # The keep-alive loop must not spawn a real background renewer here.
-        self._keepalive = spaced_update._start_privileged_keepalive
-        patcher = mock.patch.object(
-            spaced_update, '_start_privileged_keepalive', lambda: None)
-        patcher.start()
-        self.addCleanup(patcher.stop)
+        self.fake = _FakeBin(self.temp.name)
 
-    def tearDown(self):
-        os.environ['PATH'] = self.old_path
-        os.environ.pop('PKEXEC_EXIT', None)
-        os.environ.pop('SUDO_EXIT', None)
-        spaced_update.AUTH_SESSION.update(self.saved)
-
-    def rows(self):
-        return [line.split('\t') for line in self.log.read_text().splitlines() if line]
-
-    def run_sequence(self):
-        invoker = lambda command: spaced_update.run_capture(command, timeout=60)
-        spaced_update.privileged([HELPER, 'apt-install', 'curl'], invoker)
-        spaced_update.privileged(
-            [HELPER, 'flatpak-update', '--system', 'app/io.github.crhy.rhYciv/x86_64/master'],
-            invoker)
-        # The full system update: one helper invocation does apt + flatpak +
-        # firmware + GRUB repair (helper MODE=all).
-        spaced_update.privileged([HELPER], invoker)
-        spaced_update.privileged([HELPER, 'cleanup-plan'], invoker)
-        spaced_update.privileged([HELPER, 'cleanup-apply'], invoker)
-
-    def test_full_run_authorises_exactly_once(self):
-        self.run_sequence()
-        rows = self.rows()
-        pkexecs = [r for r in rows if r and r[0] == 'pkexec']
-        # Only one pkexec for the whole run, and it is the helper auth probe.
-        self.assertEqual(len(pkexecs), 1)
-        self.assertEqual(pkexecs[0][1].split()[-1], 'auth')
-        self.assertEqual(pkexecs[0][1].split()[0], HELPER)
-        # Every later admin step reused the cached credential via sudo -n.
-        sudos = [r for r in rows if r and r[0] == 'sudo']
-        self.assertEqual(len(sudos), 5)
-        for row in sudos:
-            self.assertEqual(row[1].split()[:3], ['-n', '--', HELPER])
-
-    def test_cancelled_prompt_stops_cleanly(self):
-        invoker = lambda command: spaced_update.run_capture(command, timeout=60)
-        with mock.patch.object(
-                spaced_update, 'run_capture',
-                side_effect=RuntimeError(
-                    'pkexec Authorization cancelled by user request; exited with status 126')):
-            with self.assertRaises(spaced_update.UpdateCancelled):
-                spaced_update.privileged([HELPER, 'apt-install', 'curl'], invoker)
-        # A cancelled auth never runs the privileged command.
-        self.assertEqual(self.rows(), [])
-        self.assertFalse(spaced_update.AUTH_SESSION['authorised'])
-
-    def test_refresh_is_a_separate_password_free_pkexec(self):
-        # issue #277: the read-only refresh never opens the admin session.
-        source = (ROOT / 'overlays/usr/lib/spaced-linux/spaced-update.py').read_text()
-        self.assertIn('run_capture(["pkexec", REFRESH_HELPER]', source)
-
-    def test_keepalive_is_bounded_and_terminates_with_the_window(self):
-        started = []
-
-        class _Proc:
-            def __init__(self, command):
-                self.command = command
-                self.terminated = False
-
-            def terminate(self):
-                self.terminated = True
-
-        def fake_popen(command, **kwargs):
-            process = _Proc(command)
-            started.append(process)
-            return process
-
-        with mock.patch.object(spaced_update.subprocess, 'Popen', side_effect=fake_popen):
-            self._keepalive()
-        process = started[0]
-        script = process.command[-1]
-        self.assertIn('sudo -n true', script)
-        self.assertIn('86400', script)
-        self.assertIn(f'kill -0 {os.getpid()}', script)
-        spaced_update.AUTH_SESSION['keepalive'] = process
-        spaced_update.AUTH_SESSION['authorised'] = True
-        spaced_update.stop_privileged_keepalive()
-        self.assertTrue(process.terminated)
-        self.assertIsNone(spaced_update.AUTH_SESSION['keepalive'])
-        self.assertFalse(spaced_update.AUTH_SESSION['authorised'])
-
-    def test_helper_auth_probe_primes_sudo_once(self):
-        # The shipped helper gained an `auth` mode: pkexec ran it as root, so it
-        # primes the invoking user's sudo timestamp and exits before any lock.
-        helper = ROOT / 'overlays/usr/lib/spaced-linux/spaced-update-helper'
-        sudo_calls = self.bin / 'sudo'
-        sudo_calls.write_text(
-            '#!/bin/bash\nprintf "%s\\n" "$*" >> "$SUDO_LOG"\nexit 0\n')
-        sudo_calls.chmod(sudo_calls.stat().st_mode | stat.S_IEXEC)
-        sudo_log = Path(self.temp.name) / 'sudo-log'
-        env = dict(os.environ)
-        env['PATH'] = f'{self.bin}{os.pathsep}{self.old_path}'
-        env['PKEXEC_UID'] = str(os.getuid())
-        env['SUDO_LOG'] = str(sudo_log)
+    def test_full_run_is_one_pkexec_and_never_sudo(self):
+        # The GUI's whole privileged run: one pkexec of run-plan whose stdin
+        # lists the steps; the fake pkexec really runs the helper, which runs
+        # each step and reaches the fake apt-get/flatpak. No sudo anywhere.
+        plan = ('apt-refresh\n'
+                'flatpak-update --system app/org.gnome.Maps/x86_64/stable\n'
+                'cleanup-plan\n')
         result = subprocess.run(
-            ['bash', str(helper), 'auth'], env=env,
-            capture_output=True, text=True, timeout=30)
+            ['pkexec', str(HELPER_PATH), 'run-plan'], env=self.fake.env(),
+            input=plan, capture_output=True, text=True, timeout=60)
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn('-vk', sudo_log.read_text())
+        self.assertEqual(len(self.fake.pkexec_calls()), 1)
+        self.assertEqual(self.fake.pkexec_calls()[0][1],
+                         f'{HELPER_PATH} run-plan')
+        self.assertEqual(self.fake.sudo_calls(), [])
+        # The helper really executed the steps: apt update, the flatpak update
+        # and the read-only cleanup plan each reached the fake binaries.
+        self.assertTrue(any('update' in line
+                            for line in self.fake.apt_log.read_text().splitlines()))
+        self.assertIn('org.gnome.Maps', self.fake.flatpak_log.read_text())
+
+    def test_module_run_plan_uses_exactly_one_pkexec(self):
+        plan = [['apt-install', 'apt'], ['flatpak-update', '--system',
+                                        'app/org.gnome.Maps/x86_64/stable']]
+        seen = {}
+
+        def invoker(command, plan_text):
+            seen['command'] = command
+            seen['plan'] = plan_text
+            return 0
+
+        spaced_update.run_plan(plan, invoker)
+        self.assertEqual(seen['command'], ['pkexec', spaced_update.HELPER, 'run-plan'])
+        self.assertEqual(
+            seen['plan'],
+            'apt-install apt\nflatpak-update --system app/org.gnome.Maps/x86_64/stable\n')
+
+    def test_cancelled_pkexec_is_cleanly_not_authorised(self):
+        # A cancelled pkexec (126) never executes the helper, and check_status
+        # turns it into UpdateCancelled at the caller (issue #277 path reused).
+        plan = 'apt-refresh\n'
+        result = subprocess.run(
+            ['pkexec', str(HELPER_PATH), 'run-plan'],
+            env=self.fake.env(PKEXEC_EXIT=126),
+            input=plan, capture_output=True, text=True, timeout=60)
+        self.assertEqual(result.returncode, 126)
+        self.assertEqual(self.fake.apt_log.read_text(), '')
+        with self.assertRaises(spaced_update.UpdateCancelled):
+            spaced_update.check_status(result.returncode)
+
+    def test_unknown_step_is_rejected_before_anything_runs(self):
+        # The plan mixes a valid step and an unknown one. The helper validates
+        # every step first, so NOTHING runs and no side effect happens.
+        plan = 'apt-refresh\nfrobnicate\n'
+        result = self.fake.run_helper(['run-plan'], self.fake.env(), stdin=plan)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('Unknown update mode', result.stdout + result.stderr)
+        self.assertEqual(self.fake.apt_log.read_text(), '')
+        self.assertEqual(self.fake.flatpak_log.read_text(), '')
+
+    def test_invalid_flatpak_ref_is_rejected_before_anything_runs(self):
+        plan = 'flatpak-update --system app/../../etc/passwd\napt-refresh\n'
+        result = self.fake.run_helper(['run-plan'], self.fake.env(), stdin=plan)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(self.fake.flatpak_log.read_text(), '')
+        self.assertEqual(self.fake.apt_log.read_text(), '')
+
+    def test_failing_middle_step_skips_later_steps_and_reports(self):
+        # apt-refresh fails (fake apt-get exits 1); the later flatpak step must
+        # be skipped and the helper must say which step failed.
+        plan = ('apt-refresh\n'
+                'flatpak-update --system app/org.gnome.Maps/x86_64/stable\n')
+        result = self.fake.run_helper(['run-plan'], self.fake.env(APT_EXIT=1),
+                                      stdin=plan)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(self.fake.flatpak_log.read_text(), '')
+        self.assertIn('SPACED_PLAN_STOP', result.stdout)
+        self.assertIn('apt-refresh', result.stdout)
+        # The first step did reach the fake apt-get before it failed.
+        self.assertIn('update', self.fake.apt_log.read_text())
+
+
+@unittest.skipIf(spaced_update is None, 'needs PyGObject/GTK')
+class PlanFileGuardTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.fake = _FakeBin(self.temp.name)
+
+    def test_world_writable_plan_file_is_refused(self):
+        plan = Path(self.temp.name) / 'plan'
+        plan.write_text('apt-refresh\n')
+        plan.chmod(0o666)
+        result = self.fake.run_helper(['run-plan', '--plan', str(plan)],
+                                      self.fake.env())
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('writable by other accounts', result.stdout + result.stderr)
+        self.assertEqual(self.fake.apt_log.read_text(), '')
+
+    def test_non_root_owned_plan_file_is_refused(self):
+        # Outside test mode the helper demands a root-owned plan file; a plan
+        # written by the invoking user (not world-writable) is refused.
+        plan = Path(self.temp.name) / 'plan'
+        plan.write_text('apt-refresh\n')
+        plan.chmod(0o600)
+        env = self.fake.env()
+        env.pop('SPACED_UPDATE_TEST')
+        result = self.fake.run_helper(['run-plan', '--plan', str(plan)], env)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('not owned by root', result.stdout + result.stderr)
+        self.assertEqual(self.fake.apt_log.read_text(), '')
 
 
 if __name__ == '__main__':

@@ -11,6 +11,8 @@ update_failed() {
   exit "$status"
 }
 trap update_failed ERR
+SCOPE=''
+FLATPAK_REFS=()
 
 # Install session protection BEFORE even configuring a pending old elogind.
 # Never replace an administrator's policy or silently continue without safety.
@@ -275,45 +277,122 @@ cleanup_compute_plan() {
 # authentication-cancelled code and never comes from this script.
 CLEANUP_CACHE_ONLY_STATUS=3
 
+# crhy/spacedupdate#19: one authentication per update run, done the only way a
+# GUI can actually do it. The GUI collects the whole plan first (which
+# allow-listed sub-steps to run, in order) and authenticates exactly once by
+# running a single `pkexec spaced-update-helper run-plan`. There is NO sudo
+# here at all: sudo -v needs the user's password on a TTY that a GUI never has,
+# and every later `sudo -n` fails "a password is required" unless the user has
+# NOPASSWD sudo. Re-invoking the already-root helper for each step needs no
+# sudo. The read-only refresh stays a separate password-free pkexec (#277).
+
+# Validate a mode and its arguments against the allow-list, setting SCOPE for
+# flatpak-update. Returns non-zero (and logs) for anything unsupported. Used
+# both for a single direct call and, by run_plan, for every step of a plan
+# BEFORE any step runs, so an unknown step rejects the whole plan with no effect.
+validate_mode_args() {
+  local mode=$1; shift
+  local package scope ref
+  case "$mode" in
+    apt-refresh|all) [ "$#" -eq 0 ] || { log 'Unexpected update arguments.'; return 2; } ;;
+    cleanup-plan|cleanup-apply) [ "$#" -eq 0 ] || { log 'Unexpected update arguments.'; return 2; } ;;
+    apt-install)
+      [ "$#" -gt 0 ] || { log 'No APT packages were selected.'; return 2; }
+      for package in "$@"; do
+        # A trailing +/- is an APT install/remove instruction, not a selection.
+        if [[ ! $package =~ ^[a-z0-9][a-z0-9.+-]*[a-z0-9](:[a-z0-9][a-z0-9-]*)?$ ]] ||
+           [[ $(dpkg-query -W -f='${db:Status-Status}' "$package") != installed ]]; then
+          log "Invalid or uninstalled APT package: $package"; return 2
+        fi
+      done ;;
+    flatpak-update)
+      scope=${1:-}
+      if [[ $scope != --system && ! $scope =~ ^--installation=[a-zA-Z0-9._-]+$ ]]; then
+        log 'The privileged helper only updates system Flatpak installations.'; return 2
+      fi
+      SCOPE=$scope
+      shift
+      [ "$#" -gt 0 ] || { log 'No Flatpak refs were selected.'; return 2; }
+      FLATPAK_REFS=("$@")
+      for ref in "$@"; do
+        if [[ ! $ref =~ ^(app/|runtime/)?[a-zA-Z0-9._-]+/[a-zA-Z0-9_-]+/[a-zA-Z0-9._-]+$ ]]; then
+          log "Invalid Flatpak ref: $ref"; return 2
+        fi
+      done ;;
+    *) log "Unknown update mode: $mode"; return 2 ;;
+  esac
+  return 0
+}
+
+# Read the plan (stdin, or a guarded --plan FILE), validate every step first,
+# then run the steps in order by re-invoking this already-root helper for each.
+# Stops on the first failing step and reports which one; later steps are skipped.
+run_plan() {
+  local plan_file='' owner mode
+  case "$#" in
+    0) ;;
+    2) if [[ $1 == --plan ]]; then plan_file=$2; else log 'Unknown run-plan arguments.'; return 2; fi ;;
+    *) log 'Unknown run-plan arguments.'; return 2 ;;
+  esac
+  local -a lines=()
+  if [[ -n $plan_file ]]; then
+    # A plan file must be readable, owned by root and not writable by group or
+    # other, so an unprivileged caller cannot edit a plan that root will run.
+    if [[ ! -f $plan_file || -L $plan_file ]]; then
+      log 'The update plan file is missing; run the plan on stdin instead.'; return 2
+    fi
+    read -r owner mode <<< "$(stat -c '%u %a' "$plan_file")"
+    if (( (8#$mode & 8#022) != 0 )); then
+      log 'The update plan file is writable by other accounts; refusing.'; return 2
+    fi
+    if [[ ${SPACED_UPDATE_TEST:-} != 1 && $owner != 0 ]]; then
+      log 'The update plan file is not owned by root; refusing.'; return 2
+    fi
+    mapfile -t lines < "$plan_file"
+  else
+    mapfile -t lines
+  fi
+
+  # Pass 1: validate every step before running any of them.
+  local -a step=()
+  local -a steps=()
+  local line count=0
+  for line in "${lines[@]}"; do
+    [[ -n ${line//[[:space:]]/} ]] || continue
+    read -ra step <<< "$line"
+    validate_mode_args "${step[0]}" "${step[@]:1}" || return 2
+    steps+=("$line")
+    count=$((count + 1))
+  done
+  if (( count == 0 )); then log 'The update plan was empty.'; return 2; fi
+
+  # Pass 2: run each validated step in order, streaming its existing
+  # SPACED_STEP: lines. Stop at the first failing step; later steps are skipped
+  # (and only reported when there actually are some).
+  local status index=0
+  for line in "${steps[@]}"; do
+    index=$((index + 1))
+    read -ra step <<< "$line"
+    log "SPACED_PLAN_STEP:${step[*]}"
+    status=0
+    bash "$0" "${step[@]}" || status=$?
+    if (( status )); then
+      if (( index < count )); then
+        log "SPACED_PLAN_STOP: step '${step[*]}' exited with status $status; later steps were skipped."
+      fi
+      return "$status"
+    fi
+  done
+  return 0
+}
+
 MODE=${1:-all}
 if [ "$#" -gt 0 ]; then shift; fi
-case "$MODE" in
-  apt-refresh|all) [ "$#" -eq 0 ] || { log 'Unexpected update arguments.'; exit 2; } ;;
-  cleanup-plan|cleanup-apply) [ "$#" -eq 0 ] || { log 'Unexpected update arguments.'; exit 2; } ;;
-  apt-install)
-    [ "$#" -gt 0 ] || { log 'No APT packages were selected.'; exit 2; }
-    for PACKAGE in "$@"; do
-      # A trailing +/- is an APT install/remove instruction, not a selection.
-      if [[ ! $PACKAGE =~ ^[a-z0-9][a-z0-9.+-]*[a-z0-9](:[a-z0-9][a-z0-9-]*)?$ ]] ||
-         [[ $(dpkg-query -W -f='${db:Status-Status}' "$PACKAGE") != installed ]]; then
-        log "Invalid or uninstalled APT package: $PACKAGE"; exit 2
-      fi
-    done ;;
-  flatpak-update)
-    SCOPE=${1:-}
-    if [[ $SCOPE != --system && ! $SCOPE =~ ^--installation=[a-zA-Z0-9._-]+$ ]]; then
-      log 'The privileged helper only updates system Flatpak installations.'; exit 2
-    fi
-    shift
-    [ "$#" -gt 0 ] || { log 'No Flatpak refs were selected.'; exit 2; }
-    for REF in "$@"; do
-      if [[ ! $REF =~ ^(app/|runtime/)?[a-zA-Z0-9._-]+/[a-zA-Z0-9_-]+/[a-zA-Z0-9._-]+$ ]]; then
-        log "Invalid Flatpak ref: $REF"; exit 2
-      fi
-    done ;;
-  auth)
-    # crhy/spacedupdate#19: one polkit authorisation per update run. pkexec ran
-    # this probe as root, so the admin password is already in hand. Prime the
-    # invoking user's sudo timestamp here so every later privileged step runs
-    # through sudo -n and never opens another polkit dialog. If the host's sudo
-    # refuses to prime, the later sudo -n fails fast and the error surfaces
-    # through the existing paths without any further prompt.
-    if [ -n "${PKEXEC_UID:-}" ]; then
-      sudo -u "$PKEXEC_UID" sudo -vk 2>/dev/null || true
-    fi
-    exit 0 ;;
-  *) log "Unknown update mode: $MODE"; exit 2 ;;
-esac
+if [[ $MODE == run-plan ]]; then
+  run_plan "$@"
+  exit $?
+fi
+validate_mode_args "$MODE" "$@" || exit $?
 
 # The patched elogind runtime is published as one coordinated set. In
 # particular, libpam-elogind depends on the exact elogind version and elogind
@@ -423,7 +502,7 @@ fi
 
 if [[ $MODE == flatpak-update ]]; then
   step 30 "Updating selected Flatpak apps and runtimes ($SCOPE)"
-  flatpak update --noninteractive -y "$SCOPE" "$@"
+  flatpak update --noninteractive -y "$SCOPE" "${FLATPAK_REFS[@]}"
   step 100 'Selected Flatpak updates complete'
   exit 0
 fi

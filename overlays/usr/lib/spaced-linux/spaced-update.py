@@ -25,7 +25,7 @@ ELOGIND_REBOOT_NOTICE = (
     "(the login/session service), save your work and restart the computer after "
     "the update finishes to activate the new service. If apps lose network or "
     "audio, or session controls stop working after an update, restart the computer. "
-    "If the desktop Restart button does not work, run sudo reboot in a terminal. "
+    "If the desktop Restart button does not work, reboot from a terminal. "
     "Always wait until package installation has stopped before restarting."
 )
 APT_RE = re.compile(
@@ -310,9 +310,10 @@ def host(command):
     return command
 
 
-def run_capture(command, timeout=60):
+def run_capture(command, timeout=60, input_text=None):
     result = subprocess.run(
         host(command),
+        input=input_text,
         capture_output=True,
         text=True,
         timeout=timeout,
@@ -336,67 +337,39 @@ def check_status(status):
         raise RuntimeError(f"Update command exited with status {status}")
 
 
-# crhy/spacedupdate#19: one authentication per update run. The first privileged
-# action authenticates once (a single pkexec of the helper's auth probe), which
-# primes the invoking user's sudo timestamp; every later privileged step reuses
-# that cached credential through sudo -n and never opens another polkit dialog.
-# Only the admin (com.spacedlinux.update) actions go through here; the read-only
-# refresh stays a separate password-free pkexec so checking never prompts
-# (issue #277).
-AUTH_SESSION = {"authorised": False, "closing": False, "keepalive": None}
+# crhy/spacedupdate#19: one authentication per update run, done the only way a
+# GUI can actually authenticate. Instead of a sudo "session" (which cannot work
+# without a TTY or NOPASSWD sudo), the GUI collects the whole plan first - which
+# allow-listed sub-steps to run, in order - and authenticates exactly once by
+# running a single `pkexec spaced-update-helper run-plan`, feeding the plan on
+# stdin. The root helper validates every step against its allow-list before
+# running any, then runs them in order and streams the usual SPACED_STEP: lines.
+# There is no sudo anywhere. The read-only refresh stays a separate,
+# password-free pkexec so checking never prompts (issue #277).
 
 
-def stop_privileged_keepalive():
-    process = AUTH_SESSION["keepalive"]
-    AUTH_SESSION["keepalive"] = None
-    AUTH_SESSION["authorised"] = False
-    if process is not None:
-        process.terminate()
-
-
-def _start_privileged_keepalive():
-    # Renew the cached sudo timestamp while this process lives, bounded to a day
-    # and to our own lifetime so the credential never outlives the app.
-    script = (
-        'end=$(( $(date +%s) + 86400 )); '
-        f'while kill -0 {os.getpid()} 2>/dev/null && [ "$(date +%s)" -lt "$end" ]; '
-        'do sudo -n true; sleep 60; done'
+def build_plan(steps):
+    # steps: a list of argv lists WITHOUT the helper path, e.g.
+    # [["apt-install", "curl"], ["flatpak-update", "--system", "app/x/y/z"]].
+    # One allow-listed sub-step per line; every token is space-free, and the
+    # helper re-validates each token before running anything.
+    return "".join(
+        " ".join(str(token) for token in step) + "\n"
+        for step in steps
+        if step
     )
-    try:
-        AUTH_SESSION["keepalive"] = subprocess.Popen(
-            host(["sh", "-c", script]),
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            env={**os.environ, "LC_ALL": "C"},
-        )
-    except OSError:
-        AUTH_SESSION["keepalive"] = None
 
 
-def _authorize_once():
-    # Exactly one authentication for the whole run. A refused or cancelled
-    # dialog surfaces as the existing not-authorised outcome; later actions
-    # never re-prompt.
-    if AUTH_SESSION["closing"]:
-        raise UpdateCancelled("Authentication was cancelled. The update did not complete.")
-    try:
-        run_capture(["pkexec", HELPER, "auth"], timeout=120)
-    except RuntimeError as error:
-        text = str(error)
-        if "status 126" in text or "cancel" in text.casefold():
-            raise UpdateCancelled("Authentication was cancelled. The update did not complete.")
-        raise
-    AUTH_SESSION["authorised"] = True
-    _start_privileged_keepalive()
+def plan_command():
+    return ["pkexec", HELPER, "run-plan"]
 
 
-def privileged(command, invoker):
-    # Route every admin operation through the one privilege session: authenticate
-    # once on the first call, then sudo -n for the rest of the run. `command` is
-    # the helper argv without pkexec (for example [HELPER, "apt-install", ...]).
-    if not AUTH_SESSION["authorised"]:
-        _authorize_once()
-    return invoker(["sudo", "-n", "--"] + list(command))
+def run_plan(steps, invoker):
+    # invoker(command, plan_text) runs the single pkexec once and returns its
+    # exit status (or captured output). Every admin operation of a run shares
+    # that one pkexec; check_status() turns a cancelled dialog (126) into
+    # UpdateCancelled at the caller.
+    return invoker(plan_command(), build_plan(steps))
 
 
 # cleanup-apply exit code meaning "package cache cleaned; autoremove
@@ -1068,15 +1041,12 @@ class App(Gtk.Window):
                 "Wait for the update operation to finish before closing Spaced Update."
             )
         else:
-            # The privilege session ends with the window: stop renewing the
-            # cached credential before the app quits.
-            AUTH_SESSION["closing"] = True
-            stop_privileged_keepalive()
+            # There is no cached-credential session to tear down: a run is one
+            # pkexec of the root helper, which ends with its own process.
+            pass
         return self._busy
 
     def _on_destroy(self, *_):
-        AUTH_SESSION["closing"] = True
-        stop_privileged_keepalive()
         Gtk.main_quit()
 
     def schedule_autocheck(self):
@@ -1267,48 +1237,41 @@ class App(Gtk.Window):
         for item in items:
             if item["kind"] == "flatpak":
                 flatpaks.setdefault(item["scope"], []).append(item["ref"])
-        jobs = []
+        # crhy/spacedupdate#19: the privileged steps of this run (system
+        # packages plus every non-user Flatpak installation) share ONE
+        # authentication. Collect them into a single plan that one pkexec of the
+        # root helper runs in order; per-user Flatpaks are updated by this
+        # process, never as root.
+        steps = []
         if apt:
-            jobs.append(("apt", apt))
-        jobs.extend((scope, refs) for scope, refs in flatpaks.items())
+            steps.append(["apt-install"] + apt)
+        for scope, refs in flatpaks.items():
+            if scope != "user":
+                steps.append(["flatpak-update", flatpak_scope(scope)] + refs)
 
         try:
             GLib.idle_add(self.setstep, 5, "Preparing selected updates…")
-            for index, (kind, values) in enumerate(jobs):
-                start = 10 + round(index * 78 / len(jobs))
-                end = 10 + round((index + 1) * 78 / len(jobs))
-                if kind == "apt":
+            if steps:
+                if apt:
                     GLib.idle_add(
                         self.logline,
-                        f"Installing {len(values)} selected system package(s)",
+                        f"Installing {len(apt)} selected system package(s)",
                     )
-                    status = privileged(
-                        [HELPER, "apt-install"] + values,
-                        lambda command: self.run_cmd(
-                            command,
-                            self.logline,
-                            self.setstep,
-                            (start, end),
-                        ),
-                    )
-                elif kind == "user":
-                    GLib.idle_add(
-                        self.setstep, start, "Updating your Flatpak applications…"
-                    )
-                    status = self.run_flatpak_update("--user", values)
-                    if not status:
-                        GLib.idle_add(self.setstep, end, "Flatpak applications updated")
-                else:
-                    status = privileged(
-                        [HELPER, "flatpak-update", flatpak_scope(kind)] + values,
-                        lambda command: self.run_cmd(
-                            command,
-                            self.logline,
-                            self.setstep,
-                            (start, end),
-                        ),
-                    )
+                status = self.run_cmd(
+                    plan_command(),
+                    self.logline,
+                    self.setstep,
+                    (10, 88),
+                    stdin=build_plan(steps),
+                )
                 check_status(status)
+            if flatpaks.get("user"):
+                GLib.idle_add(
+                    self.setstep, 88, "Updating your Flatpak applications…"
+                )
+                status = self.run_flatpak_update("--user", flatpaks["user"])
+                if not status:
+                    GLib.idle_add(self.setstep, 94, "Flatpak applications updated")
 
             GLib.idle_add(self.setstep, 94, "Finishing and refreshing menus…")
             GLib.idle_add(self.setstep, 100, "Updates installed successfully")
@@ -1364,15 +1327,21 @@ class App(Gtk.Window):
                 GLib.idle_add(self.setpulse, f"Updating {match.group(1).split('.')[-1]}")
         return process.wait()
 
-    def run_cmd(self, command, log_callback, step_callback, progress_range=(0, 100)):
+    def run_cmd(self, command, log_callback, step_callback, progress_range=(0, 100), stdin=None):
         process = subprocess.Popen(
             host(command),
+            stdin=(subprocess.PIPE if stdin is not None else None),
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
             bufsize=1,
             env={**os.environ, "LC_ALL": "C"},
         )
+        if stdin is not None:
+            # The plan is small and the helper reads it all before producing any
+            # output, so writing and closing it up front cannot deadlock.
+            process.stdin.write(stdin)
+            process.stdin.close()
         start, end = progress_range
         for line in process.stdout:
             line = line.rstrip()
@@ -1429,9 +1398,10 @@ class App(Gtk.Window):
 
     def _cleanup_plan_worker(self):
         try:
-            output = privileged(
-                [HELPER, "cleanup-plan"],
-                lambda command: run_capture(command, timeout=300),
+            output = run_capture(
+                plan_command(),
+                input_text=build_plan([["cleanup-plan"]]),
+                timeout=300,
             )
         except Exception as error:
             GLib.idle_add(self._cleanup_plan_failed, str(error))
@@ -1553,16 +1523,14 @@ class App(Gtk.Window):
 
     def _cleanup_apply_worker(self):
         try:
-            result = privileged(
-                [HELPER, "cleanup-apply"],
-                lambda command: subprocess.run(
-                    host(command),
-                    capture_output=True,
-                    text=True,
-                    timeout=900,
-                    check=False,
-                    env={**os.environ, "LC_ALL": "C"},
-                ),
+            result = subprocess.run(
+                host(plan_command()),
+                input=build_plan([["cleanup-apply"]]),
+                capture_output=True,
+                text=True,
+                timeout=900,
+                check=False,
+                env={**os.environ, "LC_ALL": "C"},
             )
         except UpdateCancelled as error:
             GLib.idle_add(self._cleanup_apply_done, False, "failed", str(error))
@@ -1676,14 +1644,15 @@ class App(Gtk.Window):
         tab = self.os_tab
         try:
             self._update_warnings = []
-            status = privileged(
-                [HELPER],
-                lambda command: self.run_cmd(
-                    command,
-                    tab.logline,
-                    tab.setstep,
-                    (0, 85),
-                ),
+            # One pkexec of the root helper runs the whole system-update plan
+            # (the allow-listed "all" step: APT + system Flatpaks + GRUB repair),
+            # authenticating once. crhy/spacedupdate#19.
+            status = self.run_cmd(
+                plan_command(),
+                tab.logline,
+                tab.setstep,
+                (0, 85),
+                stdin=build_plan([["all"]]),
             )
             check_status(status)
             if flatpak_available():

@@ -38,7 +38,7 @@ class RebootNoticeTests(unittest.TestCase):
         self.assertTrue(properties["selectable"])
         self.assertEqual(properties["width"], 80)
         for phrase in ("Restart required after elogind updates", "save your work",
-                       "network or audio", "sudo reboot",
+                       "network or audio", "reboot from a terminal",
                        "wait until package installation has stopped"):
             self.assertIn(phrase, properties["text"])
 
